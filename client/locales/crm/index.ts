@@ -476,11 +476,6 @@ const wording = {
   ],
   addContact: ['Add contact role', '添加联系人角色'],
   attachment: ['Attachment', '附件'],
-  fileHint: [
-    'Up to 20 MB per upload. Files require permission to view the linked record.',
-    '每次上传最多 20 MB，附件仅对有权查看关联记录的用户开放。',
-  ],
-  viewDetails: ['View details', '查看详情'],
   openFullPage: ['Open full page', '整页打开'],
   uploadFile: ['Upload file', '上传文件'],
   uploading: ['Uploading…', '上传中…'],
@@ -676,7 +671,6 @@ const wording = {
     'This account already has open opportunities:',
     '该客户已有进行中的商机：',
   ],
-  newAccountName: ['New account name', '新客户名称'],
   // An empty field the conversion needs, in its row.
   requiredEmpty: ['Required', '必填'],
   createOpportunity: ['Also create an opportunity', '同时创建商机'],
@@ -1011,10 +1005,6 @@ const wording = {
   newActivity: ['Schedule activity', '安排活动'],
   newApproval: ['Request approval', '申请审批'],
   linkExisting: ['Link existing', '关联已有'],
-  conversionImpactShort: [
-    'The lead becomes read-only; its activities move to the account.',
-    '线索将永久只读；其活动挂到客户下。',
-  ],
   opportunitySuffix: [' opportunity', '商机'],
   conversionImpact: [
     'On conversion the lead becomes read-only, {{activities}} linked activities move to the account, and the contact and opportunity are attached to it.',
