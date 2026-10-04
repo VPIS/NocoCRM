@@ -39,10 +39,10 @@ Disabling a user ends their sign-in, and they stop being offered as an owner or 
 
 **Settings → System settings → Demo data** imports a Chinese dataset of NocoBase selling its own licences and services (editions and prices as published on nocobase.com/cn/commercial) to fictional customers: related leads, accounts, contacts, opportunities across six months, activities including some due today, and approvals raised by their applicants. Dates are relative to the day of the import, in the business time zone. The import creates the demo accounts when they do not exist and gives each its role; the password is the username followed by `123`, such as `liming123`. The administrator who runs the import owns nothing:
 
-| Username                                     | Name                   | Role          |
-| -------------------------------------------- | ---------------------- | ------------- |
-| `liming`, `zhaomin`                          | 李明, 赵敏             | Sales manager |
-| `wangxiaofang`, `chenxiaohao`, `liuxiaoyang` | 王小芳, 陈小浩, 刘小洋 | Salesperson   |
+| Username                      | Name           | Role          |
+| ----------------------------- | -------------- | ------------- |
+| `liming`, `zhaomin`           | 李明, 赵敏     | Sales manager |
+| `wangxiaofang`, `chenxiaohao` | 王小芳, 陈小浩 | Salesperson   |
 
 The import runs once; **Remove demo data** on the same page deletes exactly the records it created, using the manifest it keeps in the settings table, and leaves the accounts and anything created by hand. The server side lives in `server/providers/crm/demo.ts`.
 

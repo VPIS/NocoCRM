@@ -29,7 +29,7 @@ export interface DemoAccount {
 
 // The people the dataset belongs to. The administrator importing it owns
 // nothing, as administrators do; the manager and the two sellers own the
-// records, the other two accounts exist for signing in. The password is the
+// records, and the other manager decides approvals. The password is the
 // username followed by 123 (liming123): the users plugin wants eight
 // characters, and the platform's own administrator is admin123.
 export const demoAccounts: readonly DemoAccount[] = [
@@ -37,7 +37,6 @@ export const demoAccounts: readonly DemoAccount[] = [
   { username: 'zhaomin', name: '赵敏', role: 'sales-manager' },
   { username: 'wangxiaofang', name: '王小芳', role: 'sales-representative' },
   { username: 'chenxiaohao', name: '陈小浩', role: 'sales-representative' },
-  { username: 'liuxiaoyang', name: '刘小洋', role: 'sales-representative' },
 ];
 
 // How the import gets an account it needs: the users plugin in the running
