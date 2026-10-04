@@ -1379,8 +1379,8 @@ export class OpportunityEvaluator {
     try {
       const locale = language ?? (await this.service.localeOf(ownerId));
       const settings = await this.service.settings();
-      const writeIn =
-        settings.aiLanguage === 'user' ? locale : settings.aiLanguage;
+      // Written in the CRM's AI language, the same for the whole team.
+      const writeIn = settings.aiLanguage;
       const actor = crmActor(this.service.authz, { id: ownerId, locale });
       const opportunity = await this.service.get(
         actor,

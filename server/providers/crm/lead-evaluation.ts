@@ -1203,10 +1203,9 @@ export class LeadEvaluator {
     let asked: EvaluationEntry['ai'] | undefined;
     try {
       const locale = language ?? (await this.service.localeOf(ownerId));
-      // What the verdict is written in: the CRM's AI language, or, set to
-      // follow each user, the owner's (the asker's when that is the owner).
-      const setting = (await this.service.settings()).aiLanguage;
-      const writeIn = setting === 'user' ? locale : setting;
+      // What the verdict is written in: the CRM's AI language, the same for
+      // the whole team.
+      const writeIn = (await this.service.settings()).aiLanguage;
       const actor = crmActor(this.service.authz, { id: ownerId, locale });
       const lead = await this.service.get(actor, 'leads', leadId);
       // A revision: the card it redoes, and what the person asked.

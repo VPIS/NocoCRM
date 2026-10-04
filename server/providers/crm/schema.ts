@@ -437,13 +437,16 @@ export interface CrmSettings {
   // How many days after nurturing a lead its review comes, when the
   // customer named no time (lead-evaluation.ts).
   nurtureReviewDays: number;
-  // The language the AI writes in when it works on its own (a lead's
-  // evaluation) and, in the chat, unless the user asks for another:
-  // `zh-CN`, `en-US`, or `user` for each user's own language.
+  // The language the AI writes in when it works on its own (follow-ups,
+  // approval reviews, the capture's replies, merge proposals, the daily
+  // checks' task titles), the same for everyone so the team's AI records
+  // read alike, and the language of the business guidance in the
+  // assistant's prompt: `zh-CN` or `en-US`. The skills are English either
+  // way. The chat always answers in the language the user writes in.
   aiLanguage: string;
   options: Record<string, string[]>;
 }
-export const aiLanguages = ['zh-CN', 'en-US', 'user'];
+export const aiLanguages = ['zh-CN', 'en-US'];
 export const defaultSettings: CrmSettings = {
   currency: 'USD',
   timeZone: 'Asia/Shanghai',
@@ -453,7 +456,7 @@ export const defaultSettings: CrmSettings = {
   leadStaleDays: 14,
   staleDays: 14,
   nurtureReviewDays: 90,
-  aiLanguage: 'zh-CN',
+  aiLanguage: 'en-US',
   options: {
     source: sources,
     industry: industries,

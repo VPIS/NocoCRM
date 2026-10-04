@@ -192,6 +192,14 @@ export class CrmService {
     delete stored.aiService;
     delete stored.aiModel;
     delete stored.aiEnabled;
+    // The former `user` choice (each user's own language) is gone: the chat
+    // follows the user's language by itself, and the AI's own work uses one
+    // language for the whole team, the default unless one was chosen.
+    if (
+      stored.aiLanguage !== undefined &&
+      !aiLanguages.includes(stored.aiLanguage)
+    )
+      delete stored.aiLanguage;
     return {
       ...defaultSettings,
       ...stored,

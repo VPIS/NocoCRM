@@ -524,11 +524,7 @@ export async function mergeProposal(
   )
     return fallback;
   const settings = await service.settings();
-  const zh = (
-    settings.aiLanguage === 'user'
-      ? (actor.locale ?? 'zh-CN')
-      : settings.aiLanguage
-  ).startsWith('zh');
+  const zh = settings.aiLanguage.startsWith('zh');
   const users = await service.users(actor);
   // A date as the pages show it, in the CRM's time zone.
   const day = (value: unknown): string => {

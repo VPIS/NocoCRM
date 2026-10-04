@@ -48,11 +48,7 @@ export async function organiseFeedback(
   )
     throw new CrmError('assistantUnavailable', 409);
   const settings = await service.settings();
-  const zh = (
-    settings.aiLanguage === 'user'
-      ? (actor.locale ?? 'zh-CN')
-      : settings.aiLanguage
-  ).startsWith('zh');
+  const zh = settings.aiLanguage.startsWith('zh');
   const lead = activity.leadId
     ? await service
         .get(actor, 'leads', toText(activity.leadId))

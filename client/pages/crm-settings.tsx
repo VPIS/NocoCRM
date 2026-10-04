@@ -108,12 +108,12 @@ function SettingsForm({
               onChange={(v) => set(key, v)}
             />
           ) : key === 'aiLanguage' ? (
-            // What the AI writes in when it works on its own, and in the
-            // chat unless the user asks for another language.
+            // What the AI writes in when it works on its own, the same for
+            // the whole team; the chat answers in the user's language.
             <Choice
               label={text('fields.aiLanguage')}
               value={toText(settings.aiLanguage)}
-              choices={['zh-CN', 'en-US', 'user'].map((v) => ({
+              choices={['zh-CN', 'en-US'].map((v) => ({
                 value: v,
                 label: text(`aiLanguages.${v}`),
               }))}

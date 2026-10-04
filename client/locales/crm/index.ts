@@ -816,7 +816,6 @@ const wording = {
   aiLanguages: {
     'zh-CN': ['Chinese', '中文'],
     'en-US': ['English', 'English'],
-    user: ['Each user’s language', '跟随用户的界面语言'],
   },
   decisions: {
     title: ['Waiting on me', '待我处理'],
@@ -919,12 +918,12 @@ const wording = {
   skillsPage: {
     title: ['Sales skills', '销售技能'],
     description: [
-      'How the AI works on leads, opportunities and approvals. The built-in method ships with NocoCRM and changes with it; add your company’s own practice below and the AI follows both.',
-      'AI 跟进线索、跟进商机和辅助审批时遵循的做法。内置做法随 NocoCRM 升级；在下面补充本公司的做法，AI 会一并遵守。',
+      'How the AI works on leads, opportunities and approvals. The built-in method ships with NocoCRM and changes with it; open a skill to add your company’s own practice, and the AI follows both.',
+      'AI 跟进线索、跟进商机和辅助审批时遵循的做法。内置做法随 NocoCRM 升级；打开技能可补充本公司的做法，AI 会一并遵守。',
     ],
     builtIn: ['Built in', '内置'],
-    showMethod: ['Show the built-in method', '查看内置做法'],
-    hideMethod: ['Hide the built-in method', '收起内置做法'],
+    method: ['Built-in method', '内置做法'],
+    hasNotes: ['Has our additions', '已有本公司补充'],
     notes: ['Our additions', '本公司的补充说明'],
     notesHint: [
       'Additions only add to the built-in method; where they conflict with its boundaries, the built-in method applies.',
@@ -1305,7 +1304,7 @@ const wording = {
     createdById: ['Created by', '创建人'],
     actorId: ['Operator', '操作人'],
     timeZone: ['Business timezone', '业务时区'],
-    aiLanguage: ['AI language', 'AI 默认语言'],
+    aiLanguage: ['AI working language', 'AI 工作语言'],
     decision: ['Decision', '处理'],
     comment: ['Comment', '意见'],
     activityReminderMinutes: [

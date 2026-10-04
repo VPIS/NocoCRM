@@ -62,7 +62,16 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         auth: 'required',
         authz: page('crm-skills'),
         navigation: { title: 'crm.skillsPage.title', icon: BookOpenText },
-        componentLoader: () => import('./pages/crm-skills.js'),
+        componentLoader: () => import('./pages/crm-skills/index.js'),
+        // A skill's full text and the company's additions open in a drawer
+        // over the list, at an address of its own (/crm/skills/<name>).
+        children: [
+          {
+            name: 'crm-skill',
+            path: ':skillName',
+            componentLoader: () => import('./pages/crm-skills/skill.js'),
+          },
+        ],
       },
     ],
   },

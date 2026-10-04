@@ -24,8 +24,8 @@ export const CRM_CHAT_SKILLS = [
 // root-relative path that only the CRM's own chat panel resolves.
 export interface CrmAssistantOptions {
   avatar: string;
-  // The CRM's AI language setting (CrmSettings.aiLanguage): a language the
-  // assistant writes in unless the user asks for another, or `user`, the
+  // The CRM's AI language setting (CrmSettings.aiLanguage): the language of
+  // the business guidance in the prompt. The chat itself answers in the
   // language the user writes in.
   language?: string;
   // The follow-up thresholds of the CRM's settings, put into the business
@@ -33,27 +33,18 @@ export interface CrmAssistantOptions {
   days?: GuidanceDays;
 }
 
-// The prompt's two sentences on language, first and last, for the setting.
-function languageRules(setting: string | undefined): {
-  first: string;
-  last: string;
-} {
-  if (setting === 'zh-CN' || setting === 'en-US') {
-    const name = setting === 'zh-CN' ? 'Simplified Chinese' : 'English';
-    return {
-      first: `Write everything in ${name} — the reply, the one-line notes you put before and between tool calls, the card titles and the assumptions — unless the user asks you to use another language; then use the language they asked for from that point on.`,
-      last: `Language, once more because it is easy to slip: the first sentence you write before any tool call, the notes between tool calls, the card titles and the final reply are all in ${name}, unless the user has asked for another language.`,
-    };
-  }
-  return {
-    first:
-      'Write everything in the language the user writes in — the reply, the one-line notes you put before and between tool calls ("I\'ll check the CRM first" is written in Chinese for a Chinese user), the card titles and the assumptions; never switch to English for a Chinese user.',
-    last: 'Language, once more because it is easy to slip: the first sentence you write before any tool call, the notes between tool calls, the card titles and the final reply are all in the user\'s language. A Chinese request gets Chinese from the first word; never "I\'ll check…" or "Let me look up…".',
-  };
-}
+// The prompt's two sentences on language, first and last: the chat always
+// answers in the language the user writes in, whatever the CRM's AI
+// language (which sets what the AI writes when it works on its own, and the
+// language of the guidance below; the skills are English).
+const languageRules = {
+  first:
+    'Write everything in the language the user writes in — the reply, the one-line notes you put before and between tool calls ("I\'ll check the CRM first" is written in Chinese for a Chinese user), the card titles and the assumptions; never switch to English for a Chinese user, nor to Chinese for an English one. The business guidance and the skills may be written in another language than the user\'s; that does not change the language you answer in.',
+  last: 'Language, once more because it is easy to slip: the first sentence you write before any tool call, the notes between tool calls, the card titles and the final reply are all in the user\'s language. A Chinese request gets Chinese from the first word; never "I\'ll check…" or "Let me look up…".',
+};
 
 export function crmAssistant(options: CrmAssistantOptions) {
-  const language = languageRules(options.language);
+  const language = languageRules;
   return defineAIEmployee({
     username: CRM_ASSISTANT,
     category: 'chat',
@@ -77,7 +68,7 @@ The CRM objects and their fields, one object per line, where "!" marks a require
 ${compactSchema()}
 A country is its ISO 3166-1 alpha-2 code (CN, US); a subdivision is its ISO 3166-2 code (CN-44 for Guangdong); a city is free text. A lead is "new" until its first activity is completed, when the system moves it to "working" by itself; a lead converts with convert_lead, not by setting its status. Amounts without a currency use the CRM's default currency. For convert_lead, search accounts for the same company and contacts for the same email or phone first, and link them with accountId / contactId rather than creating duplicates.
 Business guidance for this deployment, which takes precedence over the general guidance above:
-${crmGuidance(options.days)}
+${crmGuidance(options.days, options.language)}
 ${language.last}`,
     tools: [
       { name: 'search_records', autoCall: true },

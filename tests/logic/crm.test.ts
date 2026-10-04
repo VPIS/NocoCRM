@@ -455,9 +455,9 @@ describe('CRM API security and domain rules', () => {
       data: { settings: Record<string, unknown> };
     };
     expect(after.data.settings).not.toHaveProperty('aiEnabled');
-    // The AI's language is one of three, Chinese by default, and a save
+    // The AI's language is one of three, English by default, and a save
     // tells the provider (which registers the assistant's prompt again).
-    expect(after.data.settings.aiLanguage).toBe('zh-CN');
+    expect(after.data.settings.aiLanguage).toBe('en-US');
     expect(
       (
         await request('/settings', 'admin', 'PUT', {
@@ -471,9 +471,9 @@ describe('CRM API security and domain rules', () => {
     try {
       await request('/settings', 'admin', 'PUT', {
         ...current.data.settings,
-        aiLanguage: 'en-US',
+        aiLanguage: 'zh-CN',
       });
-      expect(announced).toEqual(['en-US']);
+      expect(announced).toEqual(['zh-CN']);
     } finally {
       service.settingsSaved = undefined;
       await request('/settings', 'admin', 'PUT', {
@@ -1860,21 +1860,23 @@ describe('CRM API security and domain rules', () => {
     expect(crmAssistant({ avatar: 'https://crm.example/x.png' }).avatar).toBe(
       'https://crm.example/x.png',
     );
-    // The deployment's business guidance is part of the role itself.
+    // The deployment's business guidance is part of the role itself, in the
+    // AI language: English by default, Chinese when it is set.
     expect(crmAssistant({ avatar: 'x' }).systemPrompt).toContain(
-      '公司名称：NocoBase',
+      'Company: NocoBase',
     );
-    // The language follows the setting: a fixed one unless the user asks
-    // for another, or the user's own.
     expect(
       crmAssistant({ avatar: 'x', language: 'zh-CN' }).systemPrompt,
-    ).toContain('Write everything in Simplified Chinese');
-    expect(
-      crmAssistant({ avatar: 'x', language: 'en-US' }).systemPrompt,
-    ).toContain('unless the user asks you to use another language');
-    expect(
-      crmAssistant({ avatar: 'x', language: 'user' }).systemPrompt,
-    ).toContain('in the language the user writes in');
+    ).toContain('公司名称：NocoBase');
+    // The chat answers in the language the user writes in, whatever the AI
+    // language.
+    for (const language of ['zh-CN', 'en-US']) {
+      const prompt = crmAssistant({ avatar: 'x', language }).systemPrompt;
+      expect(prompt).toContain(
+        'Write everything in the language the user writes in',
+      );
+      expect(prompt).not.toContain('Write everything in Simplified Chinese');
+    }
     // A wandering conversation is carried into the CRM only through
     // proposals: offered after an answer, listed at its close and proposed
     // once picked; a lead's message, the enquiry as it arrived, is left be.
@@ -7823,11 +7825,19 @@ describe('opportunity signals', () => {
     ).toBe(undefined);
   });
 
-  it("puts the settings' days into the business guidance", () => {
-    const guidance = crmGuidance({ uncontacted: 3, stale: 10, closing: 5 });
-    expect(guidance).toContain('新线索超过 3 天未首次联系');
-    expect(guidance).toContain('线索或商机超过 10 天没有活动');
-    expect(guidance).toContain('预计成交日期 5 天内到达');
+  it("puts the settings' days into the business guidance, in the AI language", () => {
+    const days = { uncontacted: 3, stale: 10, closing: 5 };
+    const chinese = crmGuidance(days, 'zh-CN');
+    expect(chinese).toContain('新线索超过 3 天未首次联系');
+    expect(chinese).toContain('线索或商机超过 10 天没有活动');
+    expect(chinese).toContain('预计成交日期 5 天内到达');
+    const english = crmGuidance(days, 'en-US');
+    expect(english).toContain('not contacted for more than 3 days');
+    expect(english).toContain('no activity for more than 10 days');
+    expect(english).toContain('expected close date within 5 days');
+    expect(english).not.toMatch(/[\u4e00-\u9fff]/);
+    // English is the default, as the setting's.
+    expect(crmGuidance(days)).toBe(english);
   });
 
   it('starts a follow-up per signal as the owner, never over a waiting card', async () => {

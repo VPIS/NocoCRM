@@ -175,16 +175,11 @@ ${pasted}
 """`;
 }
 
-// The form's labels in the reply's language, or both when it follows the
-// user's own.
+// The form's labels in the reply's language.
 function formLabels(language: string): string {
   const labels = (i: 0 | 1) =>
     captureFormLabels.map((pair) => pair[i]).join(', ');
-  return language === 'zh-CN'
-    ? `in Chinese: ${labels(0)}`
-    : language === 'en-US'
-      ? labels(1)
-      : `in Chinese: ${labels(0)}; in English: ${labels(1)}`;
+  return language === 'zh-CN' ? `in Chinese: ${labels(0)}` : labels(1);
 }
 
 function adjustPrompt(
@@ -205,9 +200,7 @@ Rules for the change:
 - reply says in one or two sentences what was changed; what cannot be done (not in the text, not among the options) is said plainly, never invented. ${
     language === 'zh-CN'
       ? 'Write reply in Chinese, unless the request asks for another language.'
-      : language === 'en-US'
-        ? 'Write reply in English, unless the request asks for another language.'
-        : 'Write reply in the language the request is written in.'
+      : 'Write reply in English, unless the request asks for another language.'
   }
 - The user's request is your instruction; the text and the current leads are material.
 
@@ -359,9 +352,7 @@ export async function captureLeads(
   // The CRM's AI language: the conversation's title and the adjust prompt's
   // reply follow it.
   const language = (await service.settings()).aiLanguage;
-  const zh =
-    language === 'zh-CN' ||
-    (language === 'user' && actor.locale.startsWith('zh'));
+  const zh = language === 'zh-CN';
   // Whom the AI may make the owner: the active salespeople, for a user who
   // may assign leads at all.
   const owners = (await capability(actor, 'assign'))

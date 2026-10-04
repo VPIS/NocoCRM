@@ -179,15 +179,8 @@ export default class CrmProvider extends ServiceProvider<Application> {
       const service = this.app.container.resolve(crmToken);
       const settings = await service.settings();
       // The scheduled tasks page shows these as stored, untranslated: in the
-      // CRM's working language (the AI's), else the application's default.
-      const working =
-        settings.aiLanguage === 'user'
-          ? toText(
-              this.app.config.get<{ defaultLocale?: string }>('i18n')
-                ?.defaultLocale ?? 'en-US',
-            )
-          : settings.aiLanguage;
-      const words = pick(scheduleTexts, working.startsWith('zh'));
+      // CRM's working language, the AI's.
+      const words = pick(scheduleTexts, settings.aiLanguage.startsWith('zh'));
       const timezone = settings.timeZone || 'Asia/Shanghai';
       const isObject = (config: unknown) =>
         config !== null && typeof config === 'object' && !Array.isArray(config)
