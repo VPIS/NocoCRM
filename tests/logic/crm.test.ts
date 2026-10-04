@@ -17,6 +17,7 @@ import geographyMigration from '../../database/main/migrations/202609100001_crm_
 import phoneMigration from '../../database/main/migrations/202610030001_crm_phone_numbers.js';
 import { normalizePhone } from '../../server/providers/crm/phone.js';
 import legacyTimestampsMigration from '../../database/main/migrations/202609200001_legacy_epoch_timestamps.js';
+import salesSetsSeed from '../../database/main/seeds/202610040001_crm_sales_permission_sets.js';
 // @vitest-environment node
 import sqlite from '@nocobase/db-sqlite';
 import { databaseManagerToken } from '@nocobase/db';
@@ -48,6 +49,7 @@ import {
 } from '../../server/providers/crm/authorization.js';
 import {
   crmPages,
+  crmPermissionSet,
   entityGrant,
   pageGrant,
   salesGrant,
@@ -297,6 +299,9 @@ beforeAll(async () => {
     title: 'System administrator',
     grants: [],
   });
+  // The sales sets come from the CRM's installation seed, then boot's
+  // one-time changes run, as on a new installation.
+  await runSalesSetsSeed();
   await provisionCrm(authorization, database);
   for (const [id, role] of [
     ['admin', 'system-administrator'],
@@ -388,6 +393,15 @@ const request = (
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
+
+// The CRM's installation seed for its sales permission sets, run against the
+// test database as the seeder runs it: with the default connection's query
+// adapter and nothing else it needs.
+async function runSalesSetsSeed(): Promise<void> {
+  await salesSetsSeed.run({
+    query: database.query(),
+  } as unknown as Parameters<typeof salesSetsSeed.run>[0]);
+}
 
 describe('CRM API security and domain rules', () => {
   it('rejects anonymous and unpermitted requests and serves permitted users', async () => {
@@ -1313,6 +1327,52 @@ describe('CRM API security and domain rules', () => {
       }),
     ).toBe(true);
   });
+  it('creates the sales sets once at installation and never restores one at boot', async () => {
+    // The seed wrote both sets as the declarations build them, titles and
+    // grants included.
+    for (const role of ['sales-representative', 'sales-manager']) {
+      const set = (await authorization.permissionSets.get(roleKey(role)))!;
+      const declared = crmPermissionSet(role);
+      expect(set.title).toEqual(declared.title);
+      expect(set.grants).toEqual(declared.grants);
+    }
+    // Run again over existing sets, it leaves an administrator's edit alone.
+    const rep = (await authorization.permissionSets.get(
+      roleKey('sales-representative'),
+    ))!;
+    const edited = rep.grants.filter(
+      (g) => !(g.resource.type === 'page' && g.resource.id === 'crm-skills'),
+    );
+    await authorization.permissionSets.update(rep.key, {
+      ...rep,
+      grants: edited,
+    });
+    await runSalesSetsSeed();
+    expect((await authorization.permissionSets.get(rep.key))!.grants).toEqual(
+      edited,
+    );
+    // A set an administrator deleted is not brought back by boot.
+    const manager = (await authorization.permissionSets.get(
+      roleKey('sales-manager'),
+    ))!;
+    const holders = await authorization.permissionSets.listAssignments(
+      manager.key,
+    );
+    for (const holder of holders)
+      await authorization.permissionSets.revoke(holder.id);
+    await authorization.permissionSets.delete(manager.key);
+    await provisionCrm(authorization, database);
+    expect(await authorization.permissionSets.get(manager.key)).toBeUndefined();
+    // Put both back as they were for the tests that follow.
+    await authorization.permissionSets.update(rep.key, rep);
+    await runSalesSetsSeed();
+    for (const holder of holders)
+      await authorization.permissionSets.assign({
+        permissionSet: manager.key,
+        subject: holder.subject,
+      });
+  });
+
   it('enforces field permissions in records, history, export, search and updates', async () => {
     const readable = fieldsFor('leads').filter(
       (field) => !['email', 'message', 'attachments'].includes(field),

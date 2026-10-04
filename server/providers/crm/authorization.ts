@@ -30,7 +30,6 @@ import {
   crmEntityResources,
   crmPages,
   capabilityActions,
-  crmPermissionSet,
   crmSalesResource,
   entityGrant,
   operationOf,
@@ -145,11 +144,11 @@ export async function provisionCrm(
   authz: AppAuthorization,
   database: DatabaseManager,
 ): Promise<void> {
+  // The sales sets themselves are created once, at installation, by the seed
+  // `202610040001_crm_sales_permission_sets`; boot never creates or restores
+  // one, so a set an administrator deleted stays deleted. What follows are
+  // one-time changes to sets that already exist, each done once and marked.
   const salesRoles = roles.filter((role) => role !== 'system-administrator');
-  for (const role of salesRoles) {
-    if (await authz.permissionSets.get(roleKey(role))) continue;
-    await authz.permissionSets.create(crmPermissionSet(role));
-  }
   const marker = async (id: string): Promise<boolean> =>
     Boolean(
       await database

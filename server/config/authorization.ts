@@ -11,7 +11,8 @@ import { type AuthorizationConfig } from '@nocobase/app-plugin-authorization/ser
 // placement are built in. The CRM's
 // administrator is the plugin's own root set (`root`, unrestricted, kept to
 // at least one holder), so nothing here overrides the root set; the CRM's
-// two sales roles are its own sets, created by `provisionCrm`. The plugin's
+// two sales roles are its own sets, created at installation by the seed
+// `202610040001_crm_sales_permission_sets`. The plugin's
 // default `member` set, held by every signed-in user, carries no grants.
 const authorization: AppConfigFactory<AuthorizationConfig> = defineAppConfig(
   (_runtime) => ({

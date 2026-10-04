@@ -224,15 +224,18 @@ export function salesGrant(
   return crmSalesResource.reference().grant(...actions);
 }
 
-// The two sales roles as the plugin's permission sets: values, saved by
-// provisioning once and editable by administrators afterwards. The
+// The two sales roles as the plugin's permission sets: values, saved once
+// at installation by the seed `202610040001_crm_sales_permission_sets` and
+// editable by administrators afterwards. The
 // administrator is the plugin's root set (roles.ts), which has no grants.
 export function crmPermissionSet(role: string) {
   if (role === 'system-administrator')
     throw new Error('The administrator is the root set, not a CRM set.');
   const manager = role === 'sales-manager';
   let set = definePermissionSet(roleKey(role)).title(
-    crm(manager ? 'authz.roles.salesManager' : 'authz.roles.salesRepresentative'),
+    crm(
+      manager ? 'authz.roles.salesManager' : 'authz.roles.salesRepresentative',
+    ),
   );
   for (const page of crmPages) set = set.grant(pageGrant(page.name));
   for (const entity of entities)
