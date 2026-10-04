@@ -51,8 +51,10 @@ export function SidebarFooter({
               {brandLink} keeps it reliable.
             </Trans>
           </div>
+          {/* Application change: the version alone, the application's name
+              being in the brand above; the full label stays in the tooltip. */}
           <div className='mt-1 font-mono text-xs text-sidebar-foreground/70'>
-            {templateLabel}
+            v{templateVersion}
           </div>
         </div>
       </div>
