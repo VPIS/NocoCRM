@@ -71,10 +71,6 @@ const zhCN: AppResource = {
     emptyTitle: '暂无可用开发工具',
     emptyDescription: '没有已启用的插件提供你有权访问的开发页面。',
   },
-  home: {
-    title: '开始构建你的应用',
-    description: '向 AI 助手描述你的需求，逐步构建页面、数据模型和业务流程。',
-  },
 
   appearance: {
     title: '外观',

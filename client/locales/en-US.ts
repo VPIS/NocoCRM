@@ -74,11 +74,6 @@ const messages = {
     emptyDescription:
       'No enabled plugin contributes a dev page you have access to.',
   },
-  home: {
-    title: 'Start building your application',
-    description:
-      'Describe what you need to your AI Agent, then build pages, data models, and business workflows.',
-  },
 
   appearance: {
     title: 'Appearance',
