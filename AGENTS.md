@@ -6,6 +6,7 @@ This repository is a NocoBase Solution. The NocoSolution repository is cloned in
 - Before drafting or revising a plan, changing the skeleton, adding a temporary implementation, or designing cross-Solution integration, read the whole guideline `nocosolution/guidelines/solution-guideline.md`.
 - Every other file in `nocosolution/guidelines/` states at its top what it covers and when it applies; before a task, check them and follow the ones that apply to it.
 - Do not edit anything in `nocosolution/guidelines/`; in `nocosolution/`, change only `nocosolution/NocoCRM/`. When a plan departs from the guideline or needs something it does not cover, mark it in the plan as a departure from guideline section X.Y with the reason, or as a proposal for the guideline; the guideline's maintainer decides whether to update it.
+- Changes to `nocosolution/NocoCRM/` are commits to NocoSolution, not to this repository: make them on a branch in `nocosolution/`, push it and merge it through a NocoSolution pull request, then switch `nocosolution/` back to `main` so the start-of-work command keeps it current. When a change here needs a document change there, open both and link each from the other.
 - Never copy text from `nocosolution/` into this repository; write English documentation here instead.
 
 This is a NocoBase 3 application. Do not apply globally installed NocoBase 2 Skills. You are building the application itself — its pages, its API, its database tables. Everything under this directory is application-owned source code that you may edit directly.
