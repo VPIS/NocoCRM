@@ -68,11 +68,16 @@ import {
   mergeProposal,
 } from '../providers/crm/lead-merge.js';
 import {
+  demoPresent,
   demoStatus,
   populateDemo,
   resetDemo,
   type DemoAccountCreator,
 } from '../providers/crm/demo.js';
+import {
+  demoLanguages,
+  type DemoLanguage,
+} from '../providers/crm/demo-content/index.js';
 import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/tokens';
 import {
   AGENDA_PAGE,
@@ -160,6 +165,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       }
       await conditions(actor, 'leads', 'read');
       const publicSettings = await service.settings();
+      const settingsAccess = await capability(actor, 'manage', 'settings');
       return c.json({
         data: {
           definitions,
@@ -173,7 +179,12 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           export: await capability(actor, 'export'),
           assign: await capability(actor, 'assign'),
           approve: await capability(actor, 'approve'),
-          settingsAccess: await capability(actor, 'manage', 'settings'),
+          settingsAccess,
+          // For whoever may import it: whether a demo dataset is imported,
+          // so the pages can offer one until it is (DemoBanner).
+          ...(settingsAccess
+            ? { demoPresent: await demoPresent(service) }
+            : {}),
           // Whether the pages offer the assistant at all.
           assistant: await service.assistantEnabled(),
         },
@@ -288,17 +299,39 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           );
         }
       },
+      async rename(id, name) {
+        if (!app.container.has(userManagementServiceToken))
+          throw new CrmError('demoAccounts', 500);
+        try {
+          await app.container
+            .resolve(userManagementServiceToken)
+            .update(id, { name });
+        } catch (error) {
+          throw new CrmError(
+            'demoAccounts',
+            500,
+            undefined,
+            error instanceof Error ? error.message : toText(error),
+          );
+        }
+      },
     };
-    routes.post('/demo/populate', async (c) =>
-      c.json({
+    routes.post('/demo/populate', async (c) => {
+      // The language the dataset is written in, Chinese unless asked.
+      const body = object(await c.req.json().catch(() => ({})));
+      const language = body.language ?? 'zh-CN';
+      if (!demoLanguages.includes(language as DemoLanguage))
+        throw new CrmError('invalidInput', 400, 'language');
+      return c.json({
         data: await populateDemo(
           service,
           service.authz,
           c.get('actor'),
           demoAccounts,
+          language as DemoLanguage,
         ),
-      }),
-    );
+      });
+    });
     routes.post('/demo/reset', async (c) =>
       c.json({ data: await resetDemo(service, c.get('actor')) }),
     );

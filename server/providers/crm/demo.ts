@@ -4,6 +4,12 @@ import { convertLead } from './conversion.js';
 import { CrmError, definitions, object, stages, toText } from './schema.js';
 import { CrmService } from './service.js';
 import {
+  demoContent,
+  type DemoCity,
+  type DemoLanguage,
+  type DemoSeat,
+} from './demo-content/index.js';
+import {
   listUsers,
   requireCapability,
   roleKey,
@@ -22,22 +28,36 @@ export const DEMO_MARKER = 'demo-dataset-v1';
 export const demoPassword = (username: string): string => `${username}123`;
 
 export interface DemoAccount {
+  readonly seat: DemoSeat;
   readonly username: string;
   readonly name: string;
   readonly role: 'sales-manager' | 'sales-representative';
 }
 
-// The people the dataset belongs to. The administrator importing it owns
-// nothing, as administrators do; the manager and the two sellers own the
-// records, and the other manager decides approvals. The password is the
-// username followed by 123 (liming123): the users plugin wants eight
-// characters, and the platform's own administrator is admin123.
-export const demoAccounts: readonly DemoAccount[] = [
-  { username: 'liming', name: '李明', role: 'sales-manager' },
-  { username: 'zhaomin', name: '赵敏', role: 'sales-manager' },
-  { username: 'wangxiaofang', name: '王小芳', role: 'sales-representative' },
-  { username: 'chenxiaohao', name: '陈小浩', role: 'sales-representative' },
+// The people the dataset belongs to, each language its own. The
+// administrator importing it owns nothing, as administrators do; the manager
+// and the two sellers own the records, and the other manager decides the
+// manager's approvals. The password is the username followed by 123
+// (liming123): the users plugin wants eight characters, and the platform's
+// own administrator is admin123.
+const demoSeats: readonly (readonly [DemoSeat, DemoAccount['role']])[] = [
+  ['manager', 'sales-manager'],
+  ['secondManager', 'sales-manager'],
+  ['firstSeller', 'sales-representative'],
+  ['secondSeller', 'sales-representative'],
 ];
+
+// The demo accounts of a language.
+export const demoAccountsIn = (
+  language: DemoLanguage,
+): readonly DemoAccount[] =>
+  demoSeats.map(([seat, role]) => ({
+    seat,
+    ...demoContent(language).accounts[seat],
+    role,
+  }));
+
+export const demoAccounts: readonly DemoAccount[] = demoAccountsIn('zh-CN');
 
 // How the import gets an account it needs: the users plugin in the running
 // application, a stub in tests.
@@ -52,22 +72,47 @@ export interface DemoAccountCreator {
   // An account that already exists is reused, and its password set back to
   // the demo one, so the password the settings page states always holds.
   resetPassword(id: string, password: string): Promise<void>;
+  // And its name set back to the demo one, should it have been changed.
+  rename(id: string, name: string): Promise<void>;
 }
 
 export interface DemoStatus {
   present: boolean;
+  // The language the present import was made in.
+  language: DemoLanguage | null;
   createdAt: string | null;
   records: number;
   accounts: readonly { username: string; name: string; role: string }[];
+  // Each language's accounts, so the settings page lists the ones the
+  // import it is about to make will create.
+  accountsByLanguage: Record<
+    DemoLanguage,
+    readonly { username: string; name: string; role: string }[]
+  >;
 }
 
 interface Manifest {
   version: number;
+  // Absent on an import made before the dataset had a language: Chinese.
+  language?: DemoLanguage;
   label: string;
   createdAt: string;
   businessDate: string;
   ownerId: string;
   records: { entity: string; id: string; name: string }[];
+}
+
+// Whether a demo dataset is imported, for the banner that offers one to
+// whoever may import it (the metadata route asks only for them).
+export async function demoPresent(service: CrmService): Promise<boolean> {
+  return Boolean(
+    await service.database
+      .query()
+      .selectFrom('crmSettings')
+      .select('id')
+      .where('id', '=', DEMO_MARKER)
+      .executeTakeFirst(),
+  );
 }
 
 export async function demoStatus(
@@ -82,17 +127,27 @@ export async function demoStatus(
     .where('id', '=', DEMO_MARKER)
     .executeTakeFirst();
   const manifest = row ? (parseManifest(row.value) ?? null) : null;
+  // The accounts of the language of the import present, else of the
+  // reader's.
+  const language: DemoLanguage | null = manifest
+    ? (manifest.language ?? 'zh-CN')
+    : null;
+  const names = language ?? (actor.locale.startsWith('zh') ? 'zh-CN' : 'en-US');
   return {
     present: Boolean(manifest),
+    language,
     createdAt: manifest?.createdAt ?? null,
     records: manifest?.records.length ?? 0,
-    accounts: demoAccounts.map(({ username, name, role }) => ({
-      username,
-      name,
-      role,
-    })),
+    accounts: listed(names),
+    accountsByLanguage: { 'zh-CN': listed('zh-CN'), 'en-US': listed('en-US') },
   };
 }
+const listed = (language: DemoLanguage) =>
+  demoAccountsIn(language).map(({ username, name, role }) => ({
+    username,
+    name,
+    role,
+  }));
 
 function parseManifest(value: unknown): Manifest | undefined {
   const parsed: unknown = typeof value === 'string' ? JSON.parse(value) : value;
@@ -122,8 +177,10 @@ export async function populateDemo(
   authz: AppAuthorization,
   actor: Actor,
   accounts: DemoAccountCreator,
+  language: DemoLanguage = 'zh-CN',
 ): Promise<DemoStatus> {
   await requireCapability(actor, 'manage', 'settings');
+  const text = demoContent(language);
   const query = service.database.query();
   if (
     await query
@@ -137,11 +194,14 @@ export async function populateDemo(
   // Accounts: reuse one that exists by username, create the rest, and make
   // sure each holds its demo role and nothing else among the CRM roles.
   const existing = await listUsers(service.database);
-  const userIds: Record<string, string> = {};
-  for (const account of demoAccounts) {
+  const userIds = {} as Record<DemoSeat, string>;
+  for (const account of demoAccountsIn(language)) {
     const found = existing.find((u) => u.username === account.username);
-    if (found)
+    if (found) {
       await accounts.resetPassword(found.id, demoPassword(account.username));
+      if (found.name !== account.name)
+        await accounts.rename(found.id, account.name);
+    }
     const id = found
       ? found.id
       : (
@@ -162,22 +222,22 @@ export async function populateDemo(
       ].map(roleKey),
       permissionSets: [roleKey(account.role)],
     });
-    userIds[account.username] = id;
+    userIds[account.seat] = id;
   }
   const actorFor = (id: string): Actor => ({
     id,
-    locale: 'zh-CN',
+    locale: language,
     scope: authz.for({
       principal: { type: 'user', id },
       subjects: [{ type: 'authenticated', id: '*' }],
     }),
   });
   const owner = actorFor(actor.id);
-  const managerActor = actorFor(userIds.liming);
-  const manager2 = { id: userIds.zhaomin };
+  const managerActor = actorFor(userIds.manager);
+  const manager2 = { id: userIds.secondManager };
   const sellerActors = [
-    actorFor(userIds.wangxiaofang),
-    actorFor(userIds.chenxiaohao),
+    actorFor(userIds.firstSeller),
+    actorFor(userIds.secondSeller),
   ];
 
   const settings = await service.settings();
@@ -200,7 +260,8 @@ export async function populateDemo(
   const started = now.toISOString();
   const manifest: Manifest = {
     version: 6,
-    label: 'NocoBase 销售演示数据',
+    language,
+    label: text.label,
     createdAt: started,
     businessDate: calendarDay,
     ownerId: actor.id,
@@ -252,7 +313,8 @@ export async function populateDemo(
       return service.get(prepared, entity, toText(record.id), q);
     };
 
-  // Who owns which account (by index): 王小芳 0,1,4 · 陈小浩 2,5,7 · 李明 3,6.
+  // Who owns which account (by index): the first seller 0,1,4 · the second
+  // seller 2,5,7 · the manager 3,6.
   // Leads rotate the same way by position; activities follow their record.
   const accountOwner = (i: number): Actor =>
     [0, 1, 4].includes(i)
@@ -266,135 +328,22 @@ export async function populateDemo(
   const contacts: Row[][] = [];
   const opportunities: Row[] = [];
   const leads: Row[] = [];
-  const companies: [
-    string,
-    string,
-    string,
-    string,
-    string,
-    string,
-    string,
-    string,
-  ][] = [
-    [
-      '华策精密制造',
-      'manufacturing',
-      '上海',
-      'qualified',
-      'exhibition',
-      '201-500',
-      'huace-precision',
-      '三家工厂用 Excel 和旧 OA 管报工与设备巡检，计划用 NocoBase 搭统一的生产管理系统，要求私有化部署。',
-    ],
-    [
-      '星桥连锁零售',
-      'retail',
-      '杭州',
-      'qualified',
-      'customerReferral',
-      '501-1000',
-      'xingqiao-retail',
-      '已用社区版搭了门店巡检应用，准备扩展到会员与供应商协同，需要 SSO 和审批流。',
-    ],
-    [
-      '安和医疗集团',
-      'healthcare',
-      '北京',
-      'qualified',
-      'website',
-      '201-500',
-      'anhe-health',
-      '信息科在选院内流程平台，关注权限、审计日志和人大金仓数据库适配。',
-    ],
-    [
-      '云帆信息科技',
-      'technology',
-      '深圳',
-      'qualified',
-      'partner',
-      '51-200',
-      'yunfan-tech',
-      '系统集成商，用 NocoBase 为最终客户交付定制应用，按项目采购专业版授权。',
-    ],
-    [
-      '知行教育集团',
-      'education',
-      '苏州',
-      'prospect',
-      'marketing',
-      '51-200',
-      'zhixing-edu',
-      '教育集团想把招生、排课和家校沟通从多个 SaaS 迁到自建平台。',
-    ],
-    [
-      '视界数据服务',
-      'professionalServices',
-      '成都',
-      'qualified',
-      'outbound',
-      '11-50',
-      'shijie-data',
-      '数据咨询团队用 NocoBase 搭交付工作台，从标准版起步。',
-    ],
-    [
-      '昊阳能源',
-      'energy',
-      '南京',
-      'inactive',
-      'search',
-      '201-500',
-      'haoyang-energy',
-      '能源企业的巡检与项目协同平台已完成评估，预算审批延后。',
-    ],
-    [
-      '丰味食品',
-      'foodAndBeverage',
-      '广州',
-      'qualified',
-      'partner',
-      '501-1000',
-      'fengwei-foods',
-      '经销商管理系统选型，集团最终统一采用了另一家低代码平台。',
-    ],
+  // [industry, city, status, source, employees]; the names, domains and
+  // descriptions are the language's, and so are the contacts.
+  const companies: [string, DemoCity, string, string, string][] = [
+    ['manufacturing', 'shanghai', 'qualified', 'exhibition', '201-500'],
+    ['retail', 'hangzhou', 'qualified', 'customerReferral', '501-1000'],
+    ['healthcare', 'beijing', 'qualified', 'website', '201-500'],
+    ['technology', 'shenzhen', 'qualified', 'partner', '51-200'],
+    ['education', 'suzhou', 'prospect', 'marketing', '51-200'],
+    ['professionalServices', 'chengdu', 'qualified', 'outbound', '11-50'],
+    ['energy', 'nanjing', 'inactive', 'search', '201-500'],
+    ['foodAndBeverage', 'guangzhou', 'qualified', 'partner', '501-1000'],
   ];
-  const people: [string, string][][] = [
-    [
-      ['陈曼云', 'chen.manyun'],
-      ['吴逸辰', 'wu.yichen'],
-    ],
-    [
-      ['林欣怡', 'lin.xinyi'],
-      ['周昊', 'zhou.hao'],
-    ],
-    [
-      ['王思菲', 'wang.sifei'],
-      ['刘骁', 'liu.xiao'],
-    ],
-    [
-      ['张立昂', 'zhang.liang'],
-      ['孙怡宁', 'sun.yining'],
-    ],
-    [
-      ['徐雅琳', 'xu.yalin'],
-      ['唐睿', 'tang.rui'],
-    ],
-    [
-      ['赵陆', 'zhao.lu'],
-      ['郭萌', 'guo.meng'],
-    ],
-    [
-      ['黄雅雯', 'huang.yawen'],
-      ['何威', 'he.wei'],
-    ],
-    [
-      ['邓晓萱', 'deng.xiaoxuan'],
-      ['钱佳明', 'qian.jiaming'],
-    ],
-  ];
-  // [account, name, amount, stage, close day, business type, created day, last change day, lost reason]
+  // [account, amount, stage, close day, business type, created day, last
+  // change day, lost reason]; the names are the language's, by index.
   const deals: [
     number,
-    string,
     number,
     string,
     number,
@@ -403,412 +352,72 @@ export async function populateDemo(
     number,
     string?,
   ][] = [
-    [
-      0,
-      '生产管理平台（企业版 + 实施）',
-      280000,
-      'proposal',
-      28,
-      'newBusiness',
-      -28,
-      -4,
-    ],
-    [
-      1,
-      '会员与供应商协同（升级专业版）',
-      45000,
-      'contract',
-      5,
-      'expansion',
-      -25,
-      -2,
-    ],
-    [
-      2,
-      '院内流程平台（企业版）',
-      360000,
-      'negotiation',
-      -3,
-      'newBusiness',
-      -22,
-      -3,
-    ],
-    [
-      3,
-      '集成商年度项目授权（专业版 × 3）',
-      150000,
-      'validation',
-      20,
-      'newBusiness',
-      -18,
-      -5,
-    ],
-    [
-      4,
-      '招生与排课平台（专业版）',
-      50000,
-      'contact',
-      45,
-      'newBusiness',
-      -5,
-      -5,
-    ],
-    [5, '交付工作台（升级专业版）', 45000, 'won', -18, 'expansion', -42, -18],
-    [1, '门店巡检插件定制开发', 88000, 'won', -3, 'crossSell', -30, -3],
-    [
-      6,
-      '巡检与项目协同平台（企业版）',
-      260000,
-      'paused',
-      60,
-      'tender',
-      -26,
-      -8,
-    ],
-    [
-      7,
-      '经销商管理系统（专业版 + 实施）',
-      65000,
-      'lost',
-      -22,
-      'newBusiness',
-      -48,
-      -22,
-    ],
-    [0, '实施服务续期', 42000, 'lost', -4, 'renewal', -20, -4],
+    [0, 280000, 'proposal', 28, 'newBusiness', -28, -4],
+    [1, 45000, 'contract', 5, 'expansion', -25, -2],
+    [2, 360000, 'negotiation', -3, 'newBusiness', -22, -3],
+    [3, 150000, 'validation', 20, 'newBusiness', -18, -5],
+    [4, 50000, 'contact', 45, 'newBusiness', -5, -5],
+    [5, 45000, 'won', -18, 'expansion', -42, -18],
+    [1, 88000, 'won', -3, 'crossSell', -30, -3],
+    [6, 260000, 'paused', 60, 'tender', -26, -8],
+    [7, 65000, 'lost', -22, 'newBusiness', -48, -22],
+    [0, 42000, 'lost', -4, 'renewal', -20, -4],
     // Closed in the five months before: enough won and lost each month for the
     // workspace's trend to have a shape. Appended so the indexes above hold.
-    [
-      5,
-      '数据交付平台（标准版 + 培训）',
-      16000,
-      'won',
-      -152,
-      'newBusiness',
-      -185,
-      -152,
-    ],
-    [
-      3,
-      '客户项目：物流调度应用授权',
-      50000,
-      'lost',
-      -148,
-      'newBusiness',
-      -178,
-      -148,
-      'price',
-    ],
-    [
-      1,
-      '门店巡检应用（标准版 + 实施）',
-      36000,
-      'won',
-      -140,
-      'newBusiness',
-      -172,
-      -140,
-    ],
-    [
-      2,
-      '科室排班系统（专业版）',
-      50000,
-      'won',
-      -122,
-      'newBusiness',
-      -160,
-      -122,
-    ],
-    [
-      7,
-      '渠道订单看板',
-      47000,
-      'lost',
-      -118,
-      'newBusiness',
-      -150,
-      -118,
-      'noBudget',
-    ],
-    [
-      4,
-      '校区管理系统（专业版）',
-      50000,
-      'lost',
-      -112,
-      'newBusiness',
-      -145,
-      -112,
-      'timing',
-    ],
-    [
-      0,
-      '设备巡检应用（专业版 + 实施）',
-      175000,
-      'won',
-      -95,
-      'newBusiness',
-      -130,
-      -95,
-    ],
-    [6, '项目协同平台一期（企业版）', 230000, 'won', -88, 'tender', -125, -88],
-    [
-      3,
-      '客户项目：园区管理应用授权',
-      50000,
-      'won',
-      -84,
-      'crossSell',
-      -115,
-      -84,
-    ],
-    [
-      5,
-      '报表自动化插件开发',
-      39000,
-      'lost',
-      -80,
-      'expansion',
-      -110,
-      -80,
-      'noDecision',
-    ],
-    [
-      1,
-      '门店排班系统',
-      118000,
-      'lost',
-      -62,
-      'newBusiness',
-      -95,
-      -62,
-      'requirementMismatch',
-    ],
-    [2, '审计日志与安全加固服务', 64000, 'won', -55, 'expansion', -90, -55],
-    [7, '经销商门户（企业版）', 150000, 'won', -40, 'newBusiness', -75, -40],
-    [
-      0,
-      '供应链协同试点',
-      98000,
-      'lost',
-      -36,
-      'newBusiness',
-      -70,
-      -36,
-      'toCompetitor',
-    ],
+    [5, 16000, 'won', -152, 'newBusiness', -185, -152],
+    [3, 50000, 'lost', -148, 'newBusiness', -178, -148, 'price'],
+    [1, 36000, 'won', -140, 'newBusiness', -172, -140],
+    [2, 50000, 'won', -122, 'newBusiness', -160, -122],
+    [7, 47000, 'lost', -118, 'newBusiness', -150, -118, 'noBudget'],
+    [4, 50000, 'lost', -112, 'newBusiness', -145, -112, 'timing'],
+    [0, 175000, 'won', -95, 'newBusiness', -130, -95],
+    [6, 230000, 'won', -88, 'tender', -125, -88],
+    [3, 50000, 'won', -84, 'crossSell', -115, -84],
+    [5, 39000, 'lost', -80, 'expansion', -110, -80, 'noDecision'],
+    [1, 118000, 'lost', -62, 'newBusiness', -95, -62, 'requirementMismatch'],
+    [2, 64000, 'won', -55, 'expansion', -90, -55],
+    [7, 150000, 'won', -40, 'newBusiness', -75, -40],
+    [0, 98000, 'lost', -36, 'newBusiness', -70, -36, 'toCompetitor'],
     // Early-stage deals, so the first board columns carry more than one card.
-    [
-      6,
-      '巡检数据看板（专业版）',
-      50000,
-      'qualification',
-      35,
-      'newBusiness',
-      -6,
-      -2,
-    ],
-    [
-      6,
-      '安全培训系统（标准版 + 实施）',
-      35000,
-      'contact',
-      55,
-      'newBusiness',
-      -2,
-      -2,
-    ],
-    [2, '患者随访应用定制开发', 68000, 'contact', 50, 'newBusiness', -3, -3],
-    [
-      4,
-      '招生数据看板插件开发',
-      52000,
-      'qualification',
-      40,
-      'crossSell',
-      -9,
-      -4,
-    ],
-    [
-      3,
-      '客户项目：网点绩效应用授权',
-      50000,
-      'validation',
-      32,
-      'crossSell',
-      -14,
-      -6,
-    ],
-    [
-      1,
-      '供应商协同门户（企业版）',
-      156000,
-      'proposal',
-      24,
-      'newBusiness',
-      -20,
-      -5,
-    ],
+    [6, 50000, 'qualification', 35, 'newBusiness', -6, -2],
+    [6, 35000, 'contact', 55, 'newBusiness', -2, -2],
+    [2, 68000, 'contact', 50, 'newBusiness', -3, -3],
+    [4, 52000, 'qualification', 40, 'crossSell', -9, -4],
+    [3, 50000, 'validation', 32, 'crossSell', -14, -6],
+    [1, 156000, 'proposal', 24, 'newBusiness', -20, -5],
   ];
-  const leadSpecs: [string, string, string, string, number, string, string][] =
-    [
-      [
-        '李佳恩',
-        '华策精密制造',
-        'new',
-        'exhibition',
-        -16,
-        '展会上咨询私有化部署和企业版集群，想替换三家工厂的 Excel 报工。',
-        'li.jiaen',
-      ],
-      [
-        '高晗',
-        '知行教育集团',
-        'working',
-        'website',
-        -7,
-        '官网留言：招生和排课想自建系统，问专业版和企业版的区别。',
-        'gao.han',
-      ],
-      [
-        '沈可心',
-        '星桥连锁零售',
-        'new',
-        'website',
-        -1,
-        '已在用社区版，询问升级专业版的价格和 SSO 配置。',
-        'shen.kexin',
-      ],
-      [
-        '蒋煜',
-        '远航物流',
-        'new',
-        'exhibition',
-        -6,
-        '展会到访，想做车队调度和客户协同，首次需求确认电话待安排。',
-        'jiang.yu',
-      ],
-      [
-        '罗雨萱',
-        '新域零售',
-        'new',
-        'marketing',
-        -2,
-        '下载了《用 NocoBase 搭建企业内部系统》白皮书。',
-        'luo.yuxuan',
-      ],
-      [
-        '郑亮',
-        '禾丰农业',
-        'working',
-        'outbound',
-        -9,
-        '已完成需求摸底：农资经销商想把订单和库存从 Excel 迁出来。',
-        'zheng.liang',
-      ],
-      [
-        '韩宓',
-        '安和医疗集团',
-        'working',
-        'customerReferral',
-        -12,
-        '关注审批流、权限、审计日志和人大金仓数据库支持。',
-        'han.mi',
-      ],
-      [
-        '于杰',
-        '佳拓软件',
-        'working',
-        'partner',
-        -8,
-        '软件公司想基于 NocoBase 给客户交付应用，咨询专业版的客户应用开发授权。',
-        'yu.jie',
-      ],
-      [
-        '秦思菲',
-        '星桥教育',
-        'nurturing',
-        'search',
-        -17,
-        '在比较几款低代码平台，预算下季度才决策。',
-        'qin.sifei',
-      ],
-      [
-        '方博',
-        '汇川电子',
-        'nurturing',
-        'exhibition',
-        -19,
-        '社区版试用中，等内部项目立项后再联系。',
-        'fang.bo',
-      ],
-      [
-        '彭雅然',
-        '北辰地产',
-        'nurturing',
-        'marketing',
-        -8,
-        '处于早期调研阶段，希望按季度跟进。',
-        'peng.yaran',
-      ],
-      [
-        '魏飞',
-        '江湾咨询',
-        'invalid',
-        'website',
-        -10,
-        '想找 NocoBase 的兼职开发工作，不是采购需求。',
-        'wei.fei',
-      ],
-      [
-        '谢卓',
-        '华岭纺织',
-        'invalid',
-        'outbound',
-        -13,
-        '联系方式无效。',
-        'xie.zhuo',
-      ],
-      [
-        '冯睿',
-        '佳拓软件',
-        'working',
-        'employeeReferral',
-        -4,
-        '技术负责人在评估插件开发方式和源码交付。',
-        'feng.rui',
-      ],
-      [
-        '曹薇',
-        '丰年农业',
-        'new',
-        'partner',
-        -5,
-        '合作伙伴推荐，想了解 AI 员工在客服场景的用法，待首次沟通。',
-        'cao.wei',
-      ],
-      [
-        '杜楠',
-        '森岳制造',
-        'working',
-        'search',
-        -3,
-        '20 人团队，想用一套系统管客户、项目交付和报表，预算有限。',
-        'du.nan',
-      ],
-    ];
+  // [status, source, created day]; the name, mailbox, company and message
+  // are the language's, by index.
+  const leadSpecs: [string, string, number][] = [
+    ['new', 'exhibition', -16],
+    ['working', 'website', -7],
+    ['new', 'website', -1],
+    ['new', 'exhibition', -6],
+    ['new', 'marketing', -2],
+    ['working', 'outbound', -9],
+    ['working', 'customerReferral', -12],
+    ['working', 'partner', -8],
+    ['nurturing', 'search', -17],
+    ['nurturing', 'exhibition', -19],
+    ['nurturing', 'marketing', -8],
+    ['invalid', 'website', -10],
+    ['invalid', 'outbound', -13],
+    ['working', 'employeeReferral', -4],
+    ['new', 'partner', -5],
+    ['working', 'search', -3],
+  ];
   // The province of each demo city (ISO 3166-2, as the region field
   // stores it), so a demo record carries the whole region: country,
   // province and city.
-  const provinceOf: Record<string, string> = {
-    北京: 'CN-11',
-    上海: 'CN-31',
-    南京: 'CN-32',
-    苏州: 'CN-32',
-    杭州: 'CN-33',
-    广州: 'CN-44',
-    深圳: 'CN-44',
-    成都: 'CN-51',
+  const provinceOf: Record<DemoCity, string> = {
+    beijing: 'CN-11',
+    shanghai: 'CN-31',
+    nanjing: 'CN-32',
+    suzhou: 'CN-32',
+    hangzhou: 'CN-33',
+    guangzhou: 'CN-44',
+    shenzhen: 'CN-44',
+    chengdu: 'CN-51',
   };
   const phone = (n: number): string =>
     `138 0${String(100 + n).slice(-3)} ${String(2000 + n * 37).slice(-4)}`;
@@ -816,16 +425,8 @@ export async function populateDemo(
   await service.mutate(owner, async (prepared, q) => {
     const save = saver(prepared, q);
     for (let i = 0; i < companies.length; i++) {
-      const [
-        name,
-        industry,
-        city,
-        status,
-        source,
-        employees,
-        slug,
-        description,
-      ] = companies[i];
+      const [industry, city, status, source, employees] = companies[i];
+      const { name, domain, description } = text.companies[i];
       const ownerId = accountOwner(i).id;
       const account = await save(
         'accounts',
@@ -833,14 +434,14 @@ export async function populateDemo(
           name,
           ownerId,
           industry,
-          city,
+          city: text.cities[city],
           state: provinceOf[city],
           country: 'CN',
           status,
           source,
           employees,
           type: i === 3 ? 'partner' : 'direct',
-          website: `https://www.${slug}.example`,
+          website: `https://www.${domain}.example`,
           description,
           notes: null,
         },
@@ -849,7 +450,7 @@ export async function populateDemo(
       accounts_.push(account);
       const pair: Row[] = [];
       for (let j = 0; j < 2; j++) {
-        const [personName, mailbox] = people[i][j];
+        const { name: personName, mailbox } = text.people[i][j];
         pair.push(
           await save(
             'contacts',
@@ -857,14 +458,14 @@ export async function populateDemo(
               name: personName,
               ownerId,
               accountId: account.id,
-              jobTitle: j === 0 ? '信息化负责人' : '技术经理',
+              jobTitle: text.contactJobTitles[j],
               gender: j === 0 ? 'female' : 'male',
               source,
-              email: i === 4 && j === 1 ? null : `${mailbox}@${slug}.example`,
+              email: i === 4 && j === 1 ? null : `${mailbox}@${domain}.example`,
               phone: i === 4 && j === 1 ? null : phone(i * 2 + j),
               employed: !(i === 7 && j === 1),
               primary: j === 0,
-              notes: j === 0 ? '主要业务决策人。' : '技术评估对接人。',
+              notes: text.contactNotes[j],
             },
             i === 4 ? -4 - j : -70 + i * 5 + j,
           ),
@@ -873,16 +474,19 @@ export async function populateDemo(
       contacts.push(pair);
     }
     for (const [
-      a,
-      name,
-      amount,
-      stage,
-      close,
-      businessType,
-      created,
-      changed,
-      lostReason = 'toCompetitor',
-    ] of deals) {
+      d,
+      [
+        a,
+        amount,
+        stage,
+        close,
+        businessType,
+        created,
+        changed,
+        lostReason = 'toCompetitor',
+      ],
+    ] of deals.entries()) {
+      const name = text.deals[d];
       const ownerId = accountOwner(a).id;
       let deal = await save(
         'opportunities',
@@ -892,10 +496,10 @@ export async function populateDemo(
           accountId: accounts_[a].id,
           amount,
           currency: 'CNY',
-          source: companies[a][4],
+          source: companies[a][3],
           businessType,
           expectedCloseAt: at(close, 17),
-          description: companies[a][7],
+          description: text.companies[a].description,
           contacts: [
             { contactId: contacts[a][0].id, role: 'decisionMaker' },
             { contactId: contacts[a][1].id, role: 'evaluator' },
@@ -931,7 +535,7 @@ export async function populateDemo(
       {
         status: 'churned',
         churnReason: 'toCompetitor',
-        notes: '集团统一采用了另一家低代码平台，经销商管理系统随之迁移。',
+        notes: text.churnNotes,
       },
       -20,
       toText(accounts_[7].id),
@@ -946,9 +550,15 @@ export async function populateDemo(
         .set({ updatedAt: at(day) })
         .where('id', '=', accounts_[i].id)
         .execute();
+    const leadCities: DemoCity[] = [
+      'shanghai',
+      'beijing',
+      'shenzhen',
+      'hangzhou',
+    ];
     for (let i = 0; i < leadSpecs.length; i++) {
-      const [name, company, status, source, day, description, mailbox] =
-        leadSpecs[i];
+      const [status, source, day] = leadSpecs[i];
+      const { name, mailbox, company, message } = text.leads[i];
       leads.push(
         await save(
           'leads',
@@ -960,14 +570,14 @@ export async function populateDemo(
             ownerId: leadOwner(i).id,
             email: `${mailbox}@lead-${i + 1}.example`,
             phone: i % 4 === 0 ? null : phone(40 + i),
-            jobTitle: i % 2 ? 'IT 负责人' : '信息化主管',
+            jobTitle: text.leadJobTitles[i % 2],
             country: 'CN',
-            state: provinceOf[['上海', '北京', '深圳', '杭州'][i % 4]],
-            city: ['上海', '北京', '深圳', '杭州'][i % 4],
+            state: provinceOf[leadCities[i % 4]],
+            city: text.cities[leadCities[i % 4]],
             industry: ['manufacturing', 'education', 'retail', 'technology'][
               i % 4
             ],
-            message: description,
+            message,
             ...(status === 'invalid'
               ? { invalidReason: i === 12 ? 'badContact' : 'notTarget' }
               : {}),
@@ -994,7 +604,7 @@ export async function populateDemo(
           endAt: at(day, hour + 1),
           status,
           type,
-          description: '回顾最新进展，确认需求，并约定下一步行动。',
+          description: text.activityDescription,
           feedback: feedback ?? null,
         },
         Math.min(day - 2, -1),
@@ -1004,22 +614,22 @@ export async function populateDemo(
       ownerId: leadOwner(i).id,
     });
     await activity(
-      '华策精密 需求摸底电话',
+      text.discoveryCall.name,
       leadLinks(0),
       -12,
       10,
       'completed',
       'call',
-      '确认三家工厂约 200 名报工人员，倾向企业版私有化部署，初步预算 30 万元。',
+      text.discoveryCall.feedback,
     );
     await activity(
-      '知行教育 产品演示',
+      text.productDemo.name,
       leadLinks(1),
       -5,
       14,
       'completed',
       'meeting',
-      '演示了招生和排课原型，团队确认意向，并引荐了教务总监。',
+      text.productDemo.feedback,
     );
     for (const [i, accountIndex, contactIndex, day] of [
       [0, 0, 0, -10],
@@ -1050,29 +660,6 @@ export async function populateDemo(
       leads[i] = converted;
     }
     // Completed notes and upcoming meetings across the active pipeline.
-    const completedNames = [
-      '需求梳理工作坊',
-      '合同评审',
-      '安全与合规评估',
-      '插件开发方式评审',
-      '招生场景 POC',
-      '交付复盘',
-    ];
-    const completedFeedback = [
-      '确定了一期应用范围，并记录了验收标准。',
-      '法务评审已完成，等待采购签批。',
-      '客户要求提供审计日志、SSO 和国产数据库的部署说明。',
-      '集成商确认了插件开发方式，待在最终客户环境验证部署。',
-      '教务总监希望先做一个轻量的概念验证。',
-      '交付完成，客户对上线与报表都比较满意。',
-    ];
-    const plannedNames = [
-      '方案跟进',
-      '最终条款沟通',
-      '采购决策跟进',
-      '技术集成工作坊',
-      '产品演示',
-    ];
     for (let i = 0; i < 6; i++) {
       const a = deals[i][0];
       const links: Row = {
@@ -1082,17 +669,23 @@ export async function populateDemo(
         externalParticipants: [contacts[a][0].id, contacts[a][1].id],
       };
       await activity(
-        `${companies[a][0]} ${completedNames[i]}`,
+        text.activityName(
+          text.companies[a].activitySubject,
+          text.completedMatters[i],
+        ),
         links,
         -6 - i,
         10,
         'completed',
         i % 2 ? 'meeting' : 'demo',
-        completedFeedback[i],
+        text.completedFeedback[i],
       );
       if (i < 5)
         await activity(
-          `${companies[a][0]} ${plannedNames[i]}`,
+          text.activityName(
+            text.companies[a].activitySubject,
+            text.plannedMatters[i],
+          ),
           links,
           [0, 0, -2, 2, 5][i],
           [10, 15, 11, 14, 10][i],
@@ -1103,7 +696,7 @@ export async function populateDemo(
     // Two late-evening calls today, so the workspace's "upcoming today" list
     // still has entries at the end of the working day.
     await activity(
-      '华策精密 晚间电话回访',
+      text.eveningCall,
       {
         accountId: accounts_[0].id,
         opportunityId: opportunities[0].id,
@@ -1116,7 +709,7 @@ export async function populateDemo(
       'call',
     );
     await activity(
-      '星桥零售 SSO 方案确认',
+      text.ssoConfirmation,
       {
         accountId: accounts_[1].id,
         opportunityId: opportunities[1].id,
@@ -1147,21 +740,19 @@ export async function populateDemo(
     ];
     const activityLabel = (status: string): string =>
       status === 'completed'
-        ? '需求记录'
+        ? text.leadActivityMatters.completed
         : status === 'cancelled'
-          ? '改期的初次沟通'
-          : '下一次跟进';
+          ? text.leadActivityMatters.cancelled
+          : text.leadActivityMatters.planned;
     for (const [i, day, hour, status, type] of leadActivities)
       await activity(
-        `${leadSpecs[i][1]} ${activityLabel(status)}`,
+        text.activityName(text.leads[i].company, activityLabel(status)),
         leadLinks(i),
         day,
         hour,
         status,
         type,
-        status === 'completed'
-          ? '联系人已确认意向。发送简要纪要并约定下一步。'
-          : null,
+        status === 'completed' ? text.leadActivityFeedback : null,
       );
     // A steady cadence beyond the hand-placed fortnight, so the calendar
     // and the day's agenda have something on every working day from a
@@ -1172,25 +763,13 @@ export async function populateDemo(
     const activeDeals = opportunities
       .map((deal, index) => ({ deal, index }))
       .filter(
-        ({ index }) => !['won', 'lost', 'paused'].includes(deals[index][3]),
+        ({ index }) => !['won', 'lost', 'paused'].includes(deals[index][2]),
       );
     const openLeads = leads
       .map((lead, index) => ({ lead, index }))
       .filter(
         ({ lead }) => !['converted', 'invalid'].includes(toText(lead.status)),
       );
-    const cadenceNames = [
-      '周度进展沟通',
-      '方案细节确认',
-      '需求澄清会议',
-      '演示准备',
-      '合同条款跟进',
-      '试点验收',
-      '阶段复盘',
-      '采购流程跟进',
-      '培训计划沟通',
-      '升级服务续期沟通',
-    ];
     const cadenceTypes = [
       'call',
       'meeting',
@@ -1199,12 +778,6 @@ export async function populateDemo(
       'task',
       'call',
       'meeting',
-    ];
-    const cadenceFeedback = [
-      '同步了本周进展，确认了下一步。',
-      '客户补充了两条需求，已记录。',
-      '确认了时间表与参与人。',
-      '演示材料已按反馈调整。',
     ];
     const weekdayOf = new Intl.DateTimeFormat('en-US', {
       timeZone,
@@ -1221,7 +794,7 @@ export async function populateDemo(
       const perDay = day % 3 === 0 ? 2 : 1;
       for (let k = 0; k < perDay; k++, n++) {
         const hour = [9, 10, 11, 14, 15, 16][n % 6];
-        const name = cadenceNames[n % cadenceNames.length];
+        const name = text.cadenceMatters[n % text.cadenceMatters.length];
         const type = cadenceTypes[n % cadenceTypes.length];
         const status =
           day < 0
@@ -1231,12 +804,12 @@ export async function populateDemo(
             : 'planned';
         const feedback =
           status === 'completed'
-            ? cadenceFeedback[n % cadenceFeedback.length]
+            ? text.cadenceFeedback[n % text.cadenceFeedback.length]
             : null;
         if (n % 3 === 2 && openLeads.length) {
           const { lead, index } = openLeads[n % openLeads.length];
           await activity(
-            `${toText(lead.company)} ${name}`,
+            text.activityName(toText(lead.company), name),
             leadLinks(index),
             day,
             hour,
@@ -1248,7 +821,7 @@ export async function populateDemo(
           const { deal, index } = activeDeals[n % activeDeals.length];
           const a = deals[index][0];
           await activity(
-            `${companies[a][0]} ${name}`,
+            text.activityName(text.companies[a].activitySubject, name),
             {
               accountId: accounts_[a].id,
               opportunityId: deal.id,
@@ -1266,9 +839,9 @@ export async function populateDemo(
     }
   });
 
-  // Approvals are raised by whoever owns the deal, submitted to 李明; one of
-  // them 李明 has already decided, and one 李明 raised himself goes to the
-  // other manager, 赵敏 (an administrator is not an approver).
+  // Approvals are raised by whoever owns the deal, submitted to the manager;
+  // one of them the manager has already decided, and one the manager raised
+  // goes to the second manager (an administrator is not an approver).
   const raise = (
     who: Actor,
     input: Row,
@@ -1297,11 +870,11 @@ export async function populateDemo(
   await raise(
     accountOwner(0),
     {
-      name: '华策精密 企业版折扣特批',
+      name: text.approvals.discount.name,
       opportunityId: opportunities[0].id,
       topic: 'discount',
       approverId: managerActor.id,
-      description: '申请 10% 折扣，客户承诺上线后作为制造业案例联合发布。',
+      description: text.approvals.discount.description,
     },
     -1,
     -1,
@@ -1309,11 +882,11 @@ export async function populateDemo(
   const paymentTerms = await raise(
     accountOwner(1),
     {
-      name: '星桥零售 付款节奏评审',
+      name: text.approvals.paymentTerms.name,
       opportunityId: opportunities[1].id,
       topic: 'paymentTerms',
       approverId: managerActor.id,
-      description: '客户要求升级款采用 60 天账期。',
+      description: text.approvals.paymentTerms.description,
     },
     -6,
     -6,
@@ -1323,7 +896,7 @@ export async function populateDemo(
       { ...prepared, quiet: true },
       toText(paymentTerms.id),
       'approve',
-      '同意 60 天账期，请在合同中注明首期发票金额。',
+      text.approvals.paymentTerms.comment,
       q,
     );
     await q
@@ -1336,11 +909,11 @@ export async function populateDemo(
   await raise(
     managerActor,
     {
-      name: '云帆信息 客户项目授权条款评审',
+      name: text.approvals.contractTerms.name,
       opportunityId: opportunities[3].id,
       topic: 'contractTerms',
       approverId: manager2.id,
-      description: '集成商希望在合同中写明为最终客户交付应用的授权范围。',
+      description: text.approvals.contractTerms.description,
     },
     -2,
     -2,

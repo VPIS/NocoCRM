@@ -6,6 +6,7 @@ import { notificationLocales } from '../../server/locales/crm-notifications/inde
 import { statistics } from '../../server/providers/crm/statistics.js';
 import { dashboard } from '../../server/providers/crm/dashboard.js';
 import {
+  definitions,
   fieldsFor,
   lostReasons,
   object,
@@ -139,6 +140,7 @@ import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/to
 import {
   DEMO_MARKER,
   demoAccounts,
+  demoAccountsIn,
   demoStatus,
 } from '../../server/providers/crm/demo.js';
 import type { Application } from '@nocobase/app-server/application';
@@ -364,6 +366,17 @@ beforeAll(async () => {
       if (password.length < 8)
         throw new Error('Password must be at least 8 characters');
       passwordResets.push(userId);
+    },
+    // A reused account gets its demo name back.
+    async update(userId: string, input: { name?: string }) {
+      if (input.name !== undefined)
+        await database
+          .query()
+          .updateTable('user')
+          .set({ name: input.name })
+          .where('id', '=', userId)
+          .execute();
+      return { id: userId };
     },
   } as unknown as ReturnType<
     typeof container.resolve<typeof userManagementServiceToken>
@@ -6072,6 +6085,7 @@ describe('lead signals', () => {
 });
 
 describe('demo dataset', () => {
+  let chineseRecords = 0;
   const count = async (entity: string): Promise<number> =>
     (await service.list(actor('admin'), entity as never, { pageSize: 1 }))
       .total;
@@ -6095,6 +6109,15 @@ describe('demo dataset', () => {
       present: false,
       records: 0,
     });
+    // The metadata tells whoever may import it that none is imported (the
+    // pages offer it in a banner), and tells no one else anything.
+    const meta = async (id: string) =>
+      (await (await request('/metadata', id)).json()).data as Record<
+        string,
+        unknown
+      >;
+    expect((await meta('admin')).demoPresent).toBe(false);
+    expect(await meta('rep')).not.toHaveProperty('demoPresent');
     // Its approvals, submitted and decided, start no AI run.
     const submitted = vi.fn();
     const decided = vi.fn();
@@ -6113,6 +6136,9 @@ describe('demo dataset', () => {
     expect(populated.status).toBe(200);
     const status = (await populated.json()).data;
     expect(status.present).toBe(true);
+    chineseRecords = status.records as number;
+    expect((await meta('admin')).demoPresent).toBe(true);
+    expect(status.language).toBe('zh-CN');
     expect(status.records).toBeGreaterThan(100);
     expect(await count('accounts')).toBe(before.accounts + 8);
     expect(await count('opportunities')).toBe(before.opportunities + 30);
@@ -6209,6 +6235,68 @@ describe('demo dataset', () => {
       demoAccounts.map((a) => `demo-${a.username}`).sort(),
     );
     // Leave the database as the earlier tests expect it: without the demo.
+    expect((await request('/demo/reset', 'admin', 'POST', {})).status).toBe(
+      200,
+    );
+  }, 120000);
+
+  it('imports the same story in English, with English demo accounts', async () => {
+    const refused = await request('/demo/populate', 'admin', 'POST', {
+      language: 'fr-FR',
+    });
+    expect(refused.status).toBe(400);
+    expect(await refused.json()).toMatchObject({
+      code: 'invalidInput',
+      field: 'language',
+    });
+    const populated = await request('/demo/populate', 'admin', 'POST', {
+      language: 'en-US',
+    });
+    expect(populated.status).toBe(200);
+    const status = (await populated.json()).data;
+    expect(status.language).toBe('en-US');
+    // The same records as the Chinese dataset, none of them in Chinese.
+    expect(status.records).toBe(chineseRecords);
+    const marker = await database
+      .query()
+      .selectFrom('crmSettings')
+      .select('value')
+      .where('id', '=', DEMO_MARKER)
+      .executeTakeFirstOrThrow();
+    const manifest = (
+      typeof marker.value === 'string' ? JSON.parse(marker.value) : marker.value
+    ) as { records: { entity: string; id: string }[] };
+    const ids = manifest.records.map((r) => r.id);
+    const tables = [
+      ...new Set(
+        manifest.records.map(
+          (r) => definitions[r.entity as keyof typeof definitions].table,
+        ),
+      ),
+      'crmHistory',
+    ];
+    for (const table of tables) {
+      const rows = await database
+        .query()
+        .selectFrom(table)
+        .selectAll()
+        .where(table === 'crmHistory' ? 'recordId' : 'id', 'in', ids)
+        .execute();
+      expect(rows.length).toBeGreaterThan(0);
+      expect(`${table}: ${JSON.stringify(rows)}`).not.toMatch(
+        /\p{Script=Han}/u,
+      );
+    }
+    // The English accounts are its own, created by the import, and the
+    // Chinese ones keep their names.
+    const users = await service.users(actor('admin'));
+    const daniel = users.find((u) => u.username === 'daniel');
+    expect(daniel?.name).toBe('Daniel Brooks');
+    expect(daniel?.roles).toEqual(['sales-manager']);
+    expect(users.find((u) => u.username === 'liming')?.name).toBe('李明');
+    expect(
+      status.accounts.map((a: { username: string }) => a.username),
+    ).toEqual(demoAccountsIn('en-US').map((a) => a.username));
     expect((await request('/demo/reset', 'admin', 'POST', {})).status).toBe(
       200,
     );

@@ -932,7 +932,7 @@ const wording = {
     noNotes: ['No additions yet.', '还没有补充说明。'],
     addNotes: ['Add', '添加补充说明'],
     placeholder: [
-      'For example: rate every government or state-owned lead A and assign it to Li Ming.',
+      'For example: rate every government or state-owned lead A and assign it to Daniel Brooks.',
       '例如：政府和国企客户一律评为 A 级，交给李明负责。',
     ],
     saved: [
@@ -960,9 +960,10 @@ const wording = {
   clearChoice: ['Clear', '清除选择'],
   demoData: ['Demo data', '演示数据'],
   demoDescription: [
-    'A Chinese dataset of NocoBase selling its own licences and services to fictional customers: leads, accounts, contacts, opportunities, activities and approvals, dated relative to the day it is imported. Importing creates the demo accounts below when they do not exist; the password is the username followed by 123, such as liming123.',
-    '一套以 NocoBase 自己的销售（商业授权与服务，客户均为虚构）为背景的中文演示数据，包含线索、客户、联系人、商机、活动和审批，日期以导入当天为基准。导入时会自动创建下列演示账号（已存在的直接使用），密码为用户名加 123，例如 liming123。',
+    'A dataset of NocoBase selling its own licences and services to fictional customers, in Chinese or in English: leads, accounts, contacts, opportunities, activities and approvals, dated relative to the day it is imported. Importing creates the demo accounts below when they do not exist; the password is the username followed by 123.',
+    '一套以 NocoBase 自己的销售（商业授权与服务，客户均为虚构）为背景的演示数据，有中文和英文两种，包含线索、客户、联系人、商机、活动和审批，日期以导入当天为基准。导入时会自动创建下列演示账号（已存在的直接使用），密码为用户名加 123。',
   ],
+  demoLanguage: ['Demo data language', '演示数据语言'],
   demoAbsent: ['No demo data has been imported.', '尚未导入演示数据。'],
   demoPresent: [
     'Demo data imported on {{date}}: {{count}} records.',
@@ -983,6 +984,12 @@ const wording = {
     '导入创建的全部记录（含之后对它们的修改）都会被删除；手工创建的记录和演示账号保留。',
   ],
   demoRemoved: ['Demo data removed', '演示数据已清除'],
+  demoBanner: [
+    'No demo data yet. Import a sample dataset to try leads, opportunities and the AI’s follow-ups with realistic records.',
+    '还没有演示数据。导入一套演示数据，用接近真实的记录体验线索、商机和 AI 跟进。',
+  ],
+  demoBannerAction: ['Import demo data', '导入演示数据'],
+  demoBannerDismiss: ['Dismiss', '不再显示'],
   enabled: ['Enabled', '启用'],
   disabled: ['Disabled', '停用'],
   role: ['Sales role', '销售角色'],

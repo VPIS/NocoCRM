@@ -37,12 +37,14 @@ Disabling a user ends their sign-in, and they stop being offered as an owner or 
 
 ### Demo data
 
-**Settings → System settings → Demo data** imports a Chinese dataset of NocoBase selling its own licences and services (editions and prices as published on nocobase.com/cn/commercial) to fictional customers: related leads, accounts, contacts, opportunities across six months, activities including some due today, and approvals raised by their applicants. Dates are relative to the day of the import, in the business time zone. The import creates the demo accounts when they do not exist and gives each its role; the password is the username followed by `123`, such as `liming123`. The administrator who runs the import owns nothing:
+**Settings → System settings → Demo data** imports, in Chinese or in English as chosen there (the same story told with people and companies of that language; the reader's interface language is offered first), a dataset of NocoBase selling its own licences and services (editions and prices as published on nocobase.com/cn/commercial) to fictional customers: related leads, accounts, contacts, opportunities across six months, activities including some due today, and approvals raised by their applicants. Dates are relative to the day of the import, in the business time zone. Each language has its own people, companies and demo accounts. The import creates the demo accounts of its language when they do not exist and gives each its role; the password is the username followed by `123`, such as `liming123` or `daniel123`. The administrator who runs the import owns nothing:
 
-| Username                      | Name           | Role          |
-| ----------------------------- | -------------- | ------------- |
-| `liming`, `zhaomin`           | 李明, 赵敏     | Sales manager |
-| `wangxiaofang`, `chenxiaohao` | 王小芳, 陈小浩 | Salesperson   |
+| Language | Username                      | Name                         | Role          |
+| -------- | ----------------------------- | ---------------------------- | ------------- |
+| Chinese  | `liming`, `zhaomin`           | 李明, 赵敏                   | Sales manager |
+| Chinese  | `wangxiaofang`, `chenxiaohao` | 王小芳, 陈小浩               | Salesperson   |
+| English  | `daniel`, `emily`             | Daniel Brooks, Emily Carter  | Sales manager |
+| English  | `sophie`, `oliver`            | Sophie Bennett, Oliver Hayes | Salesperson   |
 
 The import runs once; **Remove demo data** on the same page deletes exactly the records it created, using the manifest it keeps in the settings table, and leaves the accounts and anything created by hand. The server side lives in `server/providers/crm/demo.ts`.
 

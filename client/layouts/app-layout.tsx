@@ -21,6 +21,7 @@ import { SidebarFooter } from './components/sidebar-footer.js';
 // Application change: the header's bell and the notification centre page
 // share one notification runtime, so the centre's changes reach the bell.
 import { NotificationRuntime } from '../components/crm/notification-bell.js';
+import { DemoBanner } from '../components/crm/demo-banner.js';
 import {
   useRouteNavigation,
   selectedNavigationId,
@@ -164,6 +165,9 @@ export function AppLayout({
                 showDev={import.meta.env.DEV}
               />
             </LayoutHeader>
+            {/* Application change: the CRM's demo banner, under the header
+                and above every page, for whoever may import the dataset. */}
+            <DemoBanner />
             <main className='relative min-w-0 flex-1 overflow-hidden'>
               {/* main only positions; the page scrolls in here, so a child page layer laid over main is neither
             moved by the page's scrolling nor stretched by its height. */}

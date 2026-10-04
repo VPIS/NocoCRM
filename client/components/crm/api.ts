@@ -44,6 +44,9 @@ export interface Metadata {
   assign: boolean;
   approve: boolean;
   settingsAccess: boolean;
+  // Only for whoever may manage the settings: whether a demo dataset is
+  // imported (the banner offering one shows until it is).
+  demoPresent?: boolean;
   // Whether the CRM's AI employee is switched on (its Enabled switch on the
   // AI Employee plugin's settings page): every assistant entry follows it.
   assistant: boolean;

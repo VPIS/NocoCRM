@@ -2,6 +2,7 @@ import { PageContainer } from '../components/page-container.js';
 import { PageHeader } from '../components/page-header.js';
 import { toText } from '../components/crm/api.js';
 import { useState, type ReactElement } from 'react';
+import { useSearchParams } from 'react-router';
 import { Button } from '../components/ui/button.js';
 import { Input } from '../components/ui/input.js';
 import {
@@ -26,6 +27,10 @@ interface DemoStatus {
   createdAt: string | null;
   records: number;
   accounts: { username: string; name: string; role: string }[];
+  accountsByLanguage?: Record<
+    string,
+    { username: string; name: string; role: string }[]
+  >;
 }
 interface SettingsResponse {
   settings: CrmSettings;
@@ -56,19 +61,38 @@ function SettingsForm({
   const [error, setError] = useState<unknown>();
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [section, setSection] = useState('business');
+  // ?section=demoData opens a tab directly (the demo banner links there).
+  const [searchParams] = useSearchParams();
+  const [section, setSection] = useState(
+    ['business', 'reminders', 'demoData'].includes(
+      searchParams.get('section') ?? '',
+    )
+      ? (searchParams.get('section') as string)
+      : 'business',
+  );
   // The demo dataset: imported and removed from here, never saved with the
   // settings form, so it keeps its own state and confirmation.
   const [demo, setDemo] = useState(initial.demo);
   const [demoAction, setDemoAction] = useState<'populate' | 'reset'>();
   const [demoNotice, setDemoNotice] = useState<string>();
+  // The dataset comes in Chinese and in English (the same story, translated);
+  // the reader's interface language is the first choice.
+  const [demoLanguage, setDemoLanguage] = useState(
+    language.startsWith('zh') ? 'zh-CN' : 'en-US',
+  );
   const runDemo = async (action: 'populate' | 'reset'): Promise<void> => {
     setBusy(true);
     setError(undefined);
     setDemoNotice(undefined);
     try {
       setDemo(
-        (await api<{ data: DemoStatus }>(`demo/${action}`, 'POST', {})).data,
+        (
+          await api<{ data: DemoStatus }>(
+            `demo/${action}`,
+            'POST',
+            action === 'populate' ? { language: demoLanguage } : {},
+          )
+        ).data,
       );
       await refresh();
       setDemoNotice(
@@ -213,7 +237,12 @@ function SettingsForm({
                 {text('demoDescription')}
               </p>
               <ul className='grid gap-1 text-sm sm:grid-cols-2'>
-                {demo.accounts.map((account) => (
+                {/* The accounts the import will create in the language
+                    picked, or those of the import present. */}
+                {(
+                  (!demo.present && demo.accountsByLanguage?.[demoLanguage]) ||
+                  demo.accounts
+                ).map((account) => (
                   <li key={account.username} className='flex gap-2'>
                     <code className='rounded bg-muted px-1.5 py-0.5 text-xs'>
                       {account.username}
@@ -245,6 +274,22 @@ function SettingsForm({
                     })
                   : text('demoAbsent')}
               </p>
+              {!demo.present && (
+                <label className='flex items-center gap-3 text-sm'>
+                  <span className='shrink-0'>{text('demoLanguage')}</span>
+                  <span className='w-40'>
+                    <Choice
+                      label={text('demoLanguage')}
+                      value={demoLanguage}
+                      choices={['zh-CN', 'en-US'].map((v) => ({
+                        value: v,
+                        label: text(`aiLanguages.${v}`),
+                      }))}
+                      onChange={(v) => v && setDemoLanguage(v)}
+                    />
+                  </span>
+                </label>
+              )}
               <div className='flex flex-wrap gap-2'>
                 <Button
                   disabled={busy || demo.present}
