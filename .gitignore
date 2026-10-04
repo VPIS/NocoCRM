@@ -33,3 +33,6 @@ coverage/
 
 # Written by `pnpm nocobase db apply` and `pnpm dev` after migrating; derived, never read back.
 database/*/collections/
+
+# NocoSolution (private, optional): cloned here by the start-of-work command in AGENTS.md.
+/nocosolution/
