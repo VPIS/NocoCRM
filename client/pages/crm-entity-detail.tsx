@@ -423,7 +423,20 @@ export default function EntityDetail({
   const tabContent = (
     <>
       {activeTab === 'mail' ? (
-        <RecordMailPanel target={mailTarget} link={mailLink} />
+        <RecordMailPanel
+          target={mailTarget}
+          link={mailLink}
+          scope={
+            entity === 'accounts'
+              ? { kind: 'account', name: toText(record.name) }
+              : entity === 'opportunities'
+                ? {
+                    kind: 'opportunity',
+                    fromAccount: dealContactIds.size === 0,
+                  }
+                : undefined
+          }
+        />
       ) : activeTab === 'opportunityContacts' ? (
         <OpportunityContacts
           record={record}

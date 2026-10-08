@@ -131,6 +131,14 @@ function addressLine(message: MailMessageSummary, unknown: string): string {
   return message.from?.name || message.from?.address || unknown;
 }
 
+// How a record's Mail tab names whose mail it lists, when that is more than
+// one address: an account by its name, its contacts and its domain; a deal
+// by its contacts, or its account's while it names none. The addresses
+// themselves show on hover. A lead or a contact is named by its address.
+export type MailScope =
+  | { readonly kind: 'account'; readonly name: string }
+  | { readonly kind: 'opportunity'; readonly fromAccount: boolean };
+
 // A record's Mail tab: the reader's own conversations with the record, newest
 // first, each a row led by its latest message; one opens below its row as the
 // whole conversation, with reply. Shown only to whoever has the mail
@@ -138,9 +146,11 @@ function addressLine(message: MailMessageSummary, unknown: string): string {
 export function RecordMailPanel({
   target,
   link,
+  scope,
 }: {
   readonly target: MailTarget;
   readonly link: MailLink;
+  readonly scope?: MailScope;
 }): ReactElement {
   const { text } = useCrmText();
   const { t } = useTranslation('@nocobase/app-plugin-mail');
@@ -212,6 +222,31 @@ export function RecordMailPanel({
     }),
     [t, text],
   );
+
+  const count = target.addresses.length;
+  const scopeLine = (): string => {
+    if (scope?.kind === 'account' && scope.name) {
+      const parts = [
+        count ? toText(text('mail.scopeContacts', { count })) : '',
+        target.domain
+          ? toText(text('mail.scopeDomain', { domain: target.domain }))
+          : '',
+      ].filter(Boolean);
+      return [
+        toText(text('mail.scopeAccount', { name: scope.name })),
+        parts.join(toText(text('mail.scopeAnd'))),
+      ]
+        .filter(Boolean)
+        .join(' · ');
+    }
+    if (scope?.kind === 'opportunity')
+      return toText(
+        text(scope.fromAccount ? 'mail.scopeDealAccount' : 'mail.scopeDeal', {
+          count,
+        }),
+      );
+    return toText(text('mail.scope', { terms: terms.join(', ') }));
+  };
 
   let body: ReactNode;
   if (!connected && !setup.loading)
@@ -379,9 +414,11 @@ export function RecordMailPanel({
         <div className='flex items-center gap-2'>
           {/* Whose mail this is, only when the record has an address to
               name: the empty state below says when it has none. */}
-          <p className='min-w-0 flex-1 truncate text-xs text-muted-foreground'>
-            {terms.length > 0 &&
-              toText(text('mail.scope', { terms: terms.join(', ') }))}
+          <p
+            className='min-w-0 flex-1 truncate text-xs text-muted-foreground'
+            title={terms.length > 0 ? terms.join(', ') : undefined}
+          >
+            {terms.length > 0 && scopeLine()}
           </p>
           <Button
             variant='outline'

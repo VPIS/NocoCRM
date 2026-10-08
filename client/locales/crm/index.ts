@@ -124,6 +124,18 @@ const wording = {
     ],
     loadFailed: ['Mail could not be loaded.', '邮件加载失败。'],
     scope: ['Your mail with {{terms}}', '你与 {{terms}} 的往来邮件'],
+    scopeAccount: ['Your mail with {{name}}', '你与{{name}}的往来邮件'],
+    scopeContacts: ['{{count}} contacts', '{{count}} 位联系人'],
+    scopeDomain: ['everyone at @{{domain}}', '@{{domain}} 的所有人'],
+    scopeAnd: [' and ', '和'],
+    scopeDeal: [
+      "Your mail with the deal's {{count}} contacts",
+      '你与本商机 {{count}} 位联系人的往来邮件',
+    ],
+    scopeDealAccount: [
+      "Your mail with the account's {{count}} contacts",
+      '你与客户的 {{count}} 位联系人的往来邮件',
+    ],
   },
   notes: {
     label: ['Note', '备注'],
