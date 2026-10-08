@@ -377,8 +377,11 @@ export function RecordMailPanel({
     <div className='space-y-3'>
       {available && (
         <div className='flex items-center gap-2'>
+          {/* Whose mail this is, only when the record has an address to
+              name: the empty state below says when it has none. */}
           <p className='min-w-0 flex-1 truncate text-xs text-muted-foreground'>
-            {toText(text('mail.scope', { terms: terms.join(', ') }))}
+            {terms.length > 0 &&
+              toText(text('mail.scope', { terms: terms.join(', ') }))}
           </p>
           <Button
             variant='outline'
