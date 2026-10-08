@@ -51,6 +51,7 @@ import {
 import {
   crmPages,
   crmPermissionSet,
+  MAIL_WORKSPACE_PAGE,
   entityGrant,
   pageGrant,
   salesGrant,
@@ -1166,7 +1167,7 @@ describe('CRM API security and domain rules', () => {
         .filter((g) => g.resource.type === 'page')
         .map((g) => g.resource.id)
         .sort(),
-    ).toEqual(crmPages.map((p) => p.name).sort());
+    ).toEqual([...crmPages.map((p) => p.name), MAIL_WORKSPACE_PAGE].sort());
     const leads = rep!.grants.find((g) => g.resource.id === 'crm.leads');
     expect(leads?.actions.map((a) => a.action)).toEqual([
       'view',
@@ -2667,6 +2668,48 @@ describe('CRM skills', () => {
             g.resource.type === 'page' && g.resource.id === 'crm-decisions',
         ),
       ).toBe(true);
+  });
+
+  it('gives existing sales roles mail once, and drops the removed notification page', async () => {
+    for (const role of ['sales-representative', 'sales-manager']) {
+      const set = (await authorization.permissionSets.get(roleKey(role)))!;
+      await authorization.permissionSets.update(set.key, {
+        ...set,
+        grants: [
+          ...set.grants.filter(
+            (g) =>
+              !(
+                g.resource.type === 'page' && g.resource.id === 'mail.workspace'
+              ),
+          ),
+          {
+            resource: { type: 'page', id: 'crm-notifications' },
+            actions: [{ action: 'access' }],
+          },
+        ],
+      });
+    }
+    await database
+      .query()
+      .deleteFrom('crmSettings')
+      .where('id', '=', 'crm-mail-v1')
+      .execute();
+    await provisionCrm(authorization, database);
+    for (const role of ['sales-representative', 'sales-manager']) {
+      const ids = (await authorization.permissionSets.get(
+        roleKey(role),
+      ))!.grants.flatMap((g) =>
+        g.resource.type === 'page' ? [g.resource.id] : [],
+      );
+      expect(ids).toContain('mail.workspace');
+      expect(ids).not.toContain('crm-notifications');
+    }
+    // A new installation's sets carry it from the start.
+    expect(
+      crmPermissionSet('sales-representative').grants.some(
+        (g) => g.resource.type === 'page' && g.resource.id === 'mail.workspace',
+      ),
+    ).toBe(true);
   });
 
   it('gives existing sales roles the skills page, and managers its editing, once', async () => {

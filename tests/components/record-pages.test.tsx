@@ -24,6 +24,25 @@ const state = vi.hoisted(() => ({
   userId: 'rep',
 }));
 
+// No mail in these pages: the Mail plugin needs the application root, which
+// these tests do not mount (tests/components/record-mail.test.tsx covers mail).
+vi.mock('../../client/components/crm/mail.js', async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import('../../client/components/crm/mail.js')
+  >()),
+  useMailSetup: () => ({
+    can: false,
+    accounts: [],
+    providers: [],
+    senders: [],
+    loading: false,
+  }),
+  useMailComposer: () => ({
+    available: false,
+    compose: () => undefined,
+    composer: null,
+  }),
+}));
 vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('../../client/components/crm/api.js')>();

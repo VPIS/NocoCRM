@@ -145,6 +145,7 @@
     "@nocobase/app-plugin-database-explorer": "^1.0.0-beta.11",
     "@nocobase/app-plugin-file": "^1.0.0-beta.19",
     "@nocobase/app-plugin-i18n": "^1.0.0-beta.13",
+    "@nocobase/app-plugin-mail": "^1.0.0-beta.7",
     "@nocobase/app-plugin-notification": "^1.0.0-beta.23",
     "@nocobase/app-plugin-notification-in-app": "^1.0.0-beta.22",
     "@nocobase/app-plugin-notification-providers": "^0.2.0-beta.10",

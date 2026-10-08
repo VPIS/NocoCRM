@@ -14,13 +14,13 @@ importers:
     dependencies:
       '@nocobase/ai-employee':
         specifier: ^0.2.0-beta.8
-        version: 0.2.0-beta.8(@aws-sdk/client-s3@3.1127.0)(@aws-sdk/credential-provider-node@3.972.82)(@browserbasehq/sdk@2.19.1)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.63.0)(deepmerge@4.3.1)(dotenv@17.4.2)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(zod@4.6.5))(@cfworker/json-schema@4.1.1)(@ibm-cloud/watsonx-ai@1.7.16)(@nocobase/caching@0.1.0-beta.2)(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(@nocobase/service-provider@0.0.2-beta.1)(@opentelemetry/api@1.9.0)(@smithy/signature-v4@5.7.3)(better-sqlite3@13.0.3)(ibm-cloud-sdk-core@5.6.1)(ignore@7.0.9)(ioredis@5.11.1)(jsdom@30.0.1(@noble/hashes@2.4.0))(jsonwebtoken@9.0.3)(pg@8.23.0)(playwright@1.63.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(ws@8.21.3)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
+        version: 0.2.0-beta.8(@aws-sdk/client-s3@3.1127.0)(@aws-sdk/credential-provider-node@3.972.82)(@browserbasehq/sdk@2.19.1)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.63.0)(deepmerge@4.3.1)(dotenv@17.4.2)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(zod@4.6.5))(@cfworker/json-schema@4.1.1)(@ibm-cloud/watsonx-ai@1.7.16)(@nocobase/caching@0.1.0-beta.2)(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(@nocobase/service-provider@0.0.2-beta.1)(@opentelemetry/api@1.9.0)(@smithy/signature-v4@5.7.3)(better-sqlite3@13.0.3)(ibm-cloud-sdk-core@5.6.1)(ignore@7.0.9)(ioredis@5.11.1)(jsdom@30.0.1(@noble/hashes@2.4.0))(jsonwebtoken@9.0.3)(pg@8.23.0)(playwright@1.63.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@8.1.1)(ws@8.21.3)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
       '@nocobase/app-cli':
         specifier: ^1.0.0-beta.14
-        version: 1.0.0-beta.14(04b8984a451eea8ff2338182d51a03c0)
+        version: 1.0.0-beta.14(b6acbbdfe3e4919c6a510636eb821e8b)
       '@nocobase/app-plugin-ai-employee':
         specifier: ^3.0.0-beta.0
-        version: 3.0.0-beta.0(a9fa12a02ef24750f0ac295752233dfa)
+        version: 3.0.0-beta.0(f53c7c3fe50ee1b4817d841cc1406a0f)
       '@nocobase/app-plugin-api-keys':
         specifier: ^1.0.0-beta.13
         version: 1.0.0-beta.13(3ee3df09c95426af897857cd23e5c673)
@@ -48,6 +48,9 @@ importers:
       '@nocobase/app-plugin-i18n':
         specifier: ^1.0.0-beta.13
         version: 1.0.0-beta.13(@nocobase/app-client@2.0.0-beta.1(a3f54293baddef71cf9c4a5b23177cd8))(@nocobase/app-server@2.0.0-beta.1(@nocobase/caching@0.1.0-beta.2)(@nocobase/db-sqlite@0.1.0-beta.4(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(pg@8.23.0))(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(@nocobase/i18n@1.0.0-beta.5(hono@4.13.7)(react-i18next@17.0.13(i18next@26.4.2(typescript@6.0.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3))(react@19.2.8)(typescript@6.0.3))(@nocobase/jobs@0.1.0-beta.2(pg@8.23.0))(@nocobase/queue@0.1.0-beta.8(pg@8.23.0))(@nocobase/service-provider@0.0.2-beta.1)(idb-keyval@6.3.0)(zod-to-json-schema@3.25.2(zod@4.6.5)))(@nocobase/i18n@1.0.0-beta.5(hono@4.13.7)(react-i18next@17.0.13(i18next@26.4.2(typescript@6.0.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3))(react@19.2.8)(typescript@6.0.3))(hono@4.13.7)(react@19.2.8)
+      '@nocobase/app-plugin-mail':
+        specifier: ^1.0.0-beta.7
+        version: 1.0.0-beta.7(570fde870ebdb3e1096c222a2871c7ca)
       '@nocobase/app-plugin-notification':
         specifier: ^1.0.0-beta.23
         version: 1.0.0-beta.23(5531be39d0fd27fd7e6b3f97d1b81143)
@@ -59,13 +62,13 @@ importers:
         version: 0.2.0-beta.10(@nocobase/app-plugin-notification@1.0.0-beta.23(5531be39d0fd27fd7e6b3f97d1b81143))(@nocobase/app-server@2.0.0-beta.1(@nocobase/caching@0.1.0-beta.2)(@nocobase/db-sqlite@0.1.0-beta.4(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(pg@8.23.0))(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(@nocobase/i18n@1.0.0-beta.5(hono@4.13.7)(react-i18next@17.0.13(i18next@26.4.2(typescript@6.0.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3))(react@19.2.8)(typescript@6.0.3))(@nocobase/jobs@0.1.0-beta.2(pg@8.23.0))(@nocobase/queue@0.1.0-beta.8(pg@8.23.0))(@nocobase/service-provider@0.0.2-beta.1)(idb-keyval@6.3.0)(zod-to-json-schema@3.25.2(zod@4.6.5)))(@nocobase/i18n@1.0.0-beta.5(hono@4.13.7)(react-i18next@17.0.13(i18next@26.4.2(typescript@6.0.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3))(react@19.2.8)(typescript@6.0.3))(@nocobase/service-provider@0.0.2-beta.1)
       '@nocobase/app-plugin-scheduler':
         specifier: ^1.0.0-beta.14
-        version: 1.0.0-beta.14(ce4c141376dea2275666dbeccb2989d3)
+        version: 1.0.0-beta.14(d75102fc914fcf97d7d764170c21e8ce)
       '@nocobase/app-plugin-users':
         specifier: ^2.0.0-beta.1
         version: 2.0.0-beta.1(819d5bc7272f5ed1b2f8bc76036b350e)
       '@nocobase/app-plugin-workflow':
         specifier: ^2.0.0-beta.1
-        version: 2.0.0-beta.1(95f456d993117fb7170a5a351806a134)
+        version: 2.0.0-beta.1(214916e081eaaedf377504ac08fe3ac9)
       '@nocobase/app-server':
         specifier: ^2.0.0-beta.1
         version: 2.0.0-beta.1(@nocobase/caching@0.1.0-beta.2)(@nocobase/db-sqlite@0.1.0-beta.4(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(pg@8.23.0))(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(@nocobase/i18n@1.0.0-beta.5(hono@4.13.7)(react-i18next@17.0.13(i18next@26.4.2(typescript@6.0.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3))(react@19.2.8)(typescript@6.0.3))(@nocobase/jobs@0.1.0-beta.2(pg@8.23.0))(@nocobase/queue@0.1.0-beta.8(pg@8.23.0))(@nocobase/service-provider@0.0.2-beta.1)(idb-keyval@6.3.0)(zod-to-json-schema@3.25.2(zod@4.6.5))
@@ -156,19 +159,19 @@ importers:
         version: 0.1.0-beta.24(@playwright/test@1.63.0)(prettier@3.9.6)
       '@nocobase/app-testing':
         specifier: 0.1.0-beta.1
-        version: 0.1.0-beta.1(9caf2a4e03f61585539589b03e84071d)
+        version: 0.1.0-beta.1(91e00303d0dab67f696360503848a8d1)
       '@nocobase/app-websocket':
         specifier: ^0.0.1
         version: 0.0.1
       '@nocobase/dev-config':
         specifier: 0.1.0-beta.18
-        version: 0.1.0-beta.18(@tailwindcss/vite@4.3.3(vite@6.4.3(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.0)))(@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11))(@testing-library/react@16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@typescript-eslint/eslint-plugin@8.70.0(@typescript-eslint/parser@8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3))(@vitejs/plugin-react@4.7.0(vite@6.4.3(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.0)))(eslint@10.10.0(jiti@2.7.0))(jsdom@30.0.1(@noble/hashes@2.4.0))(prettier@3.9.6)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3)(vite@6.4.3(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.0))(vitest@4.1.11)
+        version: 0.1.0-beta.18(4c724e39fb06137bd1c2fdf2fc0a63cd)
       '@nocobase/drive':
         specifier: ^0.1.0-beta.4
         version: 0.1.0-beta.4
       '@nocobase/hub-cli':
         specifier: ^1.0.0-beta.1
-        version: 1.0.0-beta.1(@nocobase/app-cli@1.0.0-beta.14(04b8984a451eea8ff2338182d51a03c0))(@oclif/core@4.14.0)
+        version: 1.0.0-beta.1(@nocobase/app-cli@1.0.0-beta.14(b6acbbdfe3e4919c6a510636eb821e8b))(@oclif/core@4.14.0)
       '@nocobase/logging':
         specifier: ^0.1.0-beta.6
         version: 0.1.0-beta.6
@@ -180,7 +183,7 @@ importers:
         version: 1.63.0
       '@refinedev/cli':
         specifier: ^2.16.48
-        version: 2.16.52(@types/node@24.13.3)(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        version: 2.16.52(@types/node@24.13.3)(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@8.1.1)
       '@refinedev/core':
         specifier: ^5.0.8
         version: 5.0.12(@tanstack/react-query@5.102.8(react@19.2.8))(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -279,7 +282,7 @@ importers:
         version: 3.0.2(echarts@5.6.0)(react@19.2.8)
       eslint:
         specifier: ^10.0.0
-        version: 10.10.0(jiti@2.7.0)
+        version: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       eventsource-parser:
         specifier: 3.1.0
         version: 3.1.0
@@ -2335,6 +2338,29 @@ packages:
       hono: ^4.13.2
       react: ^19.0.0
 
+  '@nocobase/app-plugin-mail@1.0.0-beta.7':
+    resolution: {integrity: sha512-c5ONYPmqFO8cIeDnxGw1Pnk3Cl6l76XHaXGyuS7ZmqpUiW9UYp0RRDY/35OQvMS/oLaxBHI4nC13QLNCv1V6UQ==}
+    engines: {node: '>=24.0.0'}
+    peerDependencies:
+      '@base-ui/react': ^1.6.0
+      '@nocobase/app-client': ^2.0.0-beta.0
+      '@nocobase/app-plugin-authentication': ^2.0.0-beta.0
+      '@nocobase/app-plugin-authorization': ^1.0.0-beta.24
+      '@nocobase/app-server': ^2.0.0-beta.0
+      '@nocobase/db': 1.0.0-beta.18
+      '@nocobase/i18n': ^1.0.0-beta.5
+      '@nocobase/jobs': ^0.1.0-beta.2
+      '@nocobase/service-provider': ^0.0.2-beta.1
+      class-variance-authority: ^0.7.1
+      clsx: ^2.1.1
+      date-fns: ^4.4.0
+      lucide-react: ^0.487.0
+      react: ^19.0.0
+      react-day-picker: ^10.0.1
+      react-dom: ^19.0.0
+      react-router: ^7.0.2
+      tailwind-merge: ^3.2.0
+
   '@nocobase/app-plugin-notification-in-app@1.0.0-beta.22':
     resolution: {integrity: sha512-Coa7MgNQoXPckFou20FS5iTxr4KqzNfJgNKFu+qVpjNATfCP3Z1HvFoarogmEIdT7KDCuuuzlkHY4A2ITtjgPw==}
     engines: {node: '>=24.0.0'}
@@ -3007,6 +3033,11 @@ packages:
 
   '@sec-ant/readable-stream@0.4.1':
     resolution: {integrity: sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg==}
+
+  '@selderee/plugin-htmlparser2@0.12.0':
+    resolution: {integrity: sha512-oELmoyA6ML9jDRMV3kgcMQFKxUfBU0yFVn6yTctVaLT5ygXnxH52I3TZEgV9EhXJC68/uFvE5Daj1/25c0Xa/A==}
+    peerDependencies:
+      selderee: ~0.12.0
 
   '@silurus/ooxml@0.85.1':
     resolution: {integrity: sha512-7ovshP+AWYauvMokT2YWJDw8tspsRJiJPgdx8AYd9IIHo3X0uVUByIUlkwRPzNFjD6efiepQvva7+vQlt4c9gQ==}
@@ -3697,6 +3728,9 @@ packages:
 
   '@xyflow/system@0.0.82':
     resolution: {integrity: sha512-4DKnL3CGtCGLRSmgDqaajRVgeksMXq/Yw4wPfdMfm7JvdIiWHGzVYOfFUztiATwdBXZqUU6HhehwUdbV9G23PQ==}
+
+  '@zone-eu/mailsplit@5.4.20':
+    resolution: {integrity: sha512-6B2w0zRBWOwbO5h7SL5N/2z1AuNchTP3OT33MObUr4/cz9bWPrZ6KadLKxnSrOZG0AGu7Q03p4X7eQhZHc1u/A==}
 
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
@@ -4467,6 +4501,10 @@ packages:
   deep-is@0.1.4:
     resolution: {integrity: sha512-oIPzksmTg4/MriiaYGO+okXDT7ztn/w3Eptv/+gSIdMdKsJo0u4CfYNFJPy+4SKMuCqGw2wxnA+URMg3t8a/bQ==}
 
+  deepmerge-ts@8.0.2:
+    resolution: {integrity: sha512-uqbvqLUMrc6p0MO+WBRtTxY55hmyh94WRwI5a++PZe54X+bfVh59FSN7uWCBCW1CCVjzjnrwzfI8zidE2obMMw==}
+    engines: {node: '>=16.9.0'}
+
   deepmerge@4.3.1:
     resolution: {integrity: sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==}
     engines: {node: '>=0.10.0'}
@@ -4543,17 +4581,30 @@ packages:
   dom-accessibility-api@0.6.3:
     resolution: {integrity: sha512-7ZgogeTnjuHbo+ct10G9Ffp0mif17idi0IyWNVA/wcwcm7NPOD/WEHVP3n7n3MhXqxoIYm8d6MuZohYWIZ4T3w==}
 
+  dom-serializer@2.0.0:
+    resolution: {integrity: sha512-wIkAryiqt/nV5EQKqQpo3SToSOV9J0DnbJqwK7Wv/Trc92zIAYZ4FlMu+JPFW1DfGFt81ZTCGgDEabffXeLyJg==}
+
   dom-serializer@3.1.1:
     resolution: {integrity: sha512-4MEa38/QexBob6gFNwu+EGdWvhJ1OKuNwdYY3Y3NyeWDQfnGeDYQUDfIRzWu5B5gsv03so2Uxd28YC6zrsx3Lw==}
     engines: {node: '>=20.19.0'}
+
+  domelementtype@2.3.0:
+    resolution: {integrity: sha512-OLETBj6w0OsagBwdXnPdN0cnMfF9opN69co+7ZrbfPGrdpPVNBUj02spi6B1N7wChLQiPn4CSH/zJvXw56gmHw==}
 
   domelementtype@3.0.0:
     resolution: {integrity: sha512-umCQid3jKbDmVjx8jGaW7uUykm4DEUeyV21hPxNMo2nV955DhUThwqyOIDtreepP31hl84X7G5U9ZfsWvIB3Pg==}
     engines: {node: '>=20.19.0'}
 
+  domhandler@5.0.3:
+    resolution: {integrity: sha512-cgwlv/1iFQiFnU96XXgROh8xTeetsnJiDsTc7TYCLFd9+/WNkIqPTxiM/8pSd8VIrhXGTf1Ny1q1hquVqDJB5w==}
+    engines: {node: '>= 4'}
+
   domhandler@6.0.1:
     resolution: {integrity: sha512-gYzvtM72ZtxQO0T048kd6HWSbbGCNOUwcnfQ01cqIJ4X2IYKFFHZ5mKvrQETcFXxsRObZulDaKmy//R7TPtsBg==}
     engines: {node: '>=20.19.0'}
+
+  domutils@3.2.2:
+    resolution: {integrity: sha512-6kZKyUajlDuqlHKVX1w7gyslj9MPIXzIFiz/rGu35uC1wMi+kMhQwGhl4lt9unC9Vb9INnY9Z3/ZA3+FhASLaw==}
 
   domutils@4.0.2:
     resolution: {integrity: sha512-qI4JLRKnSzqFqr7hAlS5xQDusBCjKSEG4t4+7aNrIQMHBcsC2TGEhuyABJdYkgSewL57PNLYEiibY2iPKhKpaA==}
@@ -4627,6 +4678,10 @@ packages:
     resolution: {integrity: sha512-Q0n9HRi4m6JuGIV1eFlmvJB7ZEVxu93IrMyiMsGC0lrMJMWzRgx6WGquyfQgZVb31vhGgXnfmPNNXmxnOkRBrg==}
     engines: {node: '>= 0.8'}
 
+  encoding-japanese@2.4.0:
+    resolution: {integrity: sha512-PE0KjlsDy9JSsoU4C2Q8NXb1kC4c+bZRac9ZvHXUE4q1Ht63gScKMdEy9jst9+Fi3M4eDkqzkEhBZvix4blP2A==}
+    engines: {node: '>=18.0.0'}
+
   end-of-stream@1.4.5:
     resolution: {integrity: sha512-ooEGc6HP26xXq/N+GCGOT0JKCLDGrq2bQUZrQ7gyrJiZANJ/8YDTxTpQBXGMn+WbIQXNVpyWymm7KYVICQnyOg==}
 
@@ -4637,6 +4692,14 @@ packages:
   enquirer@2.4.1:
     resolution: {integrity: sha512-rRqJg/6gd538VHvR3PSrdRBb/1Vy2YfzHqzvbhGIQpDRKIa4FgV/54b5Q1xYSxOOwKvjXweS26E0Q+nAMwp2pQ==}
     engines: {node: '>=8.6'}
+
+  entities@4.5.0:
+    resolution: {integrity: sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw==}
+    engines: {node: '>=0.12'}
+
+  entities@7.0.1:
+    resolution: {integrity: sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA==}
+    engines: {node: '>=0.12'}
 
   entities@8.1.0:
     resolution: {integrity: sha512-kxL7msIffSuh9aaFAMD7rxAIuTRMAHMeBtgHW2yUdWw732ZNh4MehkF2gdjvtdmikkaIP9bFDDJOPlsvm7avrA==}
@@ -5204,6 +5267,10 @@ packages:
   hast-util-whitespace@3.0.0:
     resolution: {integrity: sha512-88JUN06ipLwsnv+dVn+OIYOvAuvBMy/Qoi6O7mQHxdPXpjy+Cd6xRkWwux7DKO+4sYILtLBRIKgsdpS2gQc7qw==}
 
+  he@1.2.0:
+    resolution: {integrity: sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw==}
+    hasBin: true
+
   help-me@5.0.0:
     resolution: {integrity: sha512-7xgomUX6ADmcYzFik0HzAxh/73YlKR9bmFzf51CZwR+b6YtzU2m0u49hQCqV6SvlqIqsaxovfwdvbnsw3b/zpg==}
 
@@ -5242,8 +5309,15 @@ packages:
   html-parse-stringify@4.0.1:
     resolution: {integrity: sha512-0zHsZJrK7S3K2aucXWL6ycoYJ/iNtIcFHC/nYQgFklPtrv5LpJctIiSCroWZWeuoXvuyFdzp6KzjJQ+OT5MfFw==}
 
+  html-to-text@10.0.1:
+    resolution: {integrity: sha512-GiVhRI1BatGARSCmlXWNCjDT0cWrwBWoeduLoV0WSKAgaV/wa+hUWy5LiQLUs4UwiUrE52ZCMfBGiKD87TDPrg==}
+    engines: {node: '>=20.19.0'}
+
   html-url-attributes@3.0.1:
     resolution: {integrity: sha512-ol6UPyBWqsrO6EJySPz2O7ZSr856WDrEzM5zMqp+FJJLGMW35cLYmmZnl0vztAZxRUoNZJFTCohfjuIJ8I4QBQ==}
+
+  htmlparser2@10.1.0:
+    resolution: {integrity: sha512-VTZkM9GWRAtEpveh7MSF6SjjrpNVNNVJfFup7xTY3UpFtm67foy9HDVXneLtFVt4pMz5kZtgNcvCniNFb1hlEQ==}
 
   htmlparser2@12.0.0:
     resolution: {integrity: sha512-Tz7u1i95/g2x2jz81+x0FBVhBhY5aRTvD3tXXdFaljuNdzDLJ8UGNRrTcj2cgQvAg3iW/h77Fz15nLW0L0CrZw==}
@@ -5309,6 +5383,10 @@ packages:
   ignore@7.0.9:
     resolution: {integrity: sha512-brTTsvFRt5C1gGHtPst/281UjPD5t9fBqbgoMPlVWy11ZLTPfu7HxK4ZYqO9H7o/yC9rSTCI85EaQ4OoY12qYw==}
     engines: {node: '>= 4'}
+
+  imapflow@2.2.6:
+    resolution: {integrity: sha512-8yMy5Pe9CfWGGrs8z+GzJ3q7DVCD6hNiiuUjxNTUJHM/QwwMHLYiVmTfcwWKSPaf8Aim/IPkcMK0I1thDdjgWg==}
+    engines: {node: '>=20.0.0'}
 
   immediate@3.0.6:
     resolution: {integrity: sha512-XXOFtyqDjNDAQxVfYxuF7g9Il/IbWmmlQg2MYKOH8ExIT1qg6xc4zyS3HaEEATgs1btfzxq15ciUiY7gjSXRGQ==}
@@ -5751,9 +5829,21 @@ packages:
   launder@1.7.1:
     resolution: {integrity: sha512-mU6WRz5EusL9ZZuiZ5SO4Y6C0P9PAUR9iwdb6bzj4KDihm28DiHFw+/yk9DBH4f+Pv1wuzQ4e2jV3oQ7mkIqvw==}
 
+  leac@0.7.0:
+    resolution: {integrity: sha512-qMrZeyEekgdRQ9o6a4NAB2EQZrv827GJdn1vnapwSJ90hWRB4TzUSunvacPkxQ2TnNqHNI1/zSt0hlo0crG8Jw==}
+
   levn@0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
     engines: {node: '>= 0.8.0'}
+
+  libbase64@1.3.2:
+    resolution: {integrity: sha512-fFCoI0ceXhTu/0QiJ6Uf6BV9k7X/8QW2/D4BR1vw3BPrHcIjLbGLH+U7inQ4SeWrfNCOmpGE09Qt4XjSFfus0g==}
+
+  libmime@5.4.7:
+    resolution: {integrity: sha512-r1ENu4wMVSB52AAORwaW4L/MeQJr9rryzHLRpcjud3zcUPWXh1Xkgn+tAqL8oTnRO/LW7y5xxPBE20ta5amtMA==}
+
+  libqp@2.1.2:
+    resolution: {integrity: sha512-rp+U80tl9Os4K7GnVbPzPRmghPu6eqB8rcF+ontvNAnoga0JhMFG/bkTD/reC8yoznKMgOc5/ttZHJasiWeFPw==}
 
   lie@3.3.0:
     resolution: {integrity: sha512-UaiMJzeWRlEujzAuw5LokY1L5ecNQYZKfmyZ9L7wDHb/p5etKaxXhohBcrw0EYby+G/NA52vRSN4N39dxHAIwQ==}
@@ -5838,6 +5928,9 @@ packages:
 
   lines-and-columns@1.2.4:
     resolution: {integrity: sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==}
+
+  linkify-it@5.0.2:
+    resolution: {integrity: sha512-ONTm2jCMAVZjgQa/Fy1kScXsuOoF5NPTsoFBdE1KVIZ2vAh/r9+Bqo+0jINCBYnavTPQZz38QzFTme79ENoN3Q==}
 
   linkifyjs@4.3.3:
     resolution: {integrity: sha512-P8aEP5U/D1/IlTY2OeYsErdwh9bGuLE30NcXtKEjgdHcahveQoQwM2yZNsioQHsWFz0P7KKudisbrzCgR0sDHg==}
@@ -5946,6 +6039,10 @@ packages:
 
   magicast@0.5.4:
     resolution: {integrity: sha512-llBEhWm1SacoRwgHUoQJYtwp4PBLF4faQi5TCpIGyGs9n4y5+juI0tDgyKIfpqxckRHaHzouUEph3THklWh03w==}
+
+  mailparser@3.9.36:
+    resolution: {integrity: sha512-Fng3OmPN7khG0oVHDwwBIOYxjGu7kFxEuN6NnVV1H2tQYCIWjqvjK6cKvhj2r3XQVToVabP0b4HF+N7YgNdXFQ==}
+    engines: {node: '>=20.0.0'}
 
   make-dir@2.1.0:
     resolution: {integrity: sha512-LS9X+dc8KLxXCb8dni79fLIIUA5VyZoyjSMCwTluaXA0o27cCK0bhXkpgw+sTXVpPy/lSO57ilRixqk0vDmtRA==}
@@ -6311,6 +6408,10 @@ packages:
     resolution: {integrity: sha512-YHs7BmmcsdAI5Ozuf8JZo6PT0mv2GIWC9vMfvUC3dp65M8hn7Ux8CPL+2oBI7juNuj9d0ndhTcznq2ODBps9cQ==}
     engines: {node: '>=18'}
 
+  nodemailer@10.0.14:
+    resolution: {integrity: sha512-eJoLFKg55fesSlzUekmfOv/SBXh4KUYT8oiQc2RLP0tfG0rbNMJBK7wgHJwXTJwqyKlSJMz9UzDZ4v+aHEvo8g==}
+    engines: {node: '>=20.0.0'}
+
   nodemailer@9.1.1:
     resolution: {integrity: sha512-izw9mVKFix6YSnC9eLgV6g1opl9DUlRio9ZNcq+Wu9Ujn2UwF+8Nl0B8nz22kEC+CTZCvinkxwJ0DeFbb6NwcQ==}
     engines: {node: '>=6.0.0'}
@@ -6534,6 +6635,9 @@ packages:
   parse5@8.0.1:
     resolution: {integrity: sha512-z1e/HMG90obSGeidlli3hj7cbocou0/wa5HacvI3ASx34PecNjNQeaHNo5WIZpWofN9kgkqV1q5YvXe3F0FoPw==}
 
+  parseley@0.13.1:
+    resolution: {integrity: sha512-uNBJZzmb60l6p6VWLTmevizNAGnE0xoSf1n0B4q3ntegDNzcS68NRCcBDZTcyXHxt2XhBChsCuqj4M+nChvE/A==}
+
   parseurl@1.3.3:
     resolution: {integrity: sha512-CiyeOxFT/JZyN5m0z9PfXw4SCBJ6Sygz1Dpl0wqjlhDEGGBP1GnsUVEL0p63hoG1fcj3fHynXi9NYO4nWOL+qQ==}
     engines: {node: '>= 0.8'}
@@ -6588,6 +6692,9 @@ packages:
   pdfjs-dist@5.6.205:
     resolution: {integrity: sha512-tlUj+2IDa7G1SbvBNN74UHRLJybZDWYom+k6p5KIZl7huBvsA4APi6mKL+zCxd3tLjN5hOOEE9Tv7VdzO88pfg==}
     engines: {node: '>=20.19.0 || >=22.13.0 || >=24'}
+
+  peberminta@0.10.0:
+    resolution: {integrity: sha512-80B2AsU+I4Qdb0ZAPSfe9UwvGzwkM37IKIFEvdS3D/3Ndgv2bsuJ0bfG1+iEYO+l7Gfd4EUJmuRyq7efLgRMzQ==}
 
   pend@1.2.0:
     resolution: {integrity: sha512-F3asv42UuXchdzt+xXqfW1OGlVBe+mxa2mqI0pg5yAHZPvFmY3Y6drSf/GQ1A86WgWEN9Kzh/WrgKa6iGcHXLg==}
@@ -6844,6 +6951,10 @@ packages:
 
   pump@3.0.4:
     resolution: {integrity: sha512-VS7sjc6KR7e1ukRFhQSY5LM2uBWAUPiOPa/A3mkKmiMwSmRFUITt0xuj+/lesgnCv+dPIEYlkzrcyXgquIHMcA==}
+
+  punycode.js@2.3.1:
+    resolution: {integrity: sha512-uxFIHU0YlHYhDQtV4R9J6a52SLx28BCjT+4ieh7IGbgwVJWO+km431c4yRlREUAsAmt/uMjQUyQHNEPf0M39CA==}
+    engines: {node: '>=6'}
 
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
@@ -7177,6 +7288,9 @@ packages:
   seedrandom@3.0.5:
     resolution: {integrity: sha512-8OwmbklUNzwezjGInmZ+2clQmExQPvomqjL7LFqOYqtmuxRgQYqOD3mHaU+MvZn5FLUeVxVfQjwLZW/n/JFuqg==}
 
+  selderee@0.12.0:
+    resolution: {integrity: sha512-b1YMh3+DHZp59DLna3qVwQ5iOla/nrI6mLBNW02XxU77M3046Df6VLkoaJyFz20VsGIG5kkp+FK0kg4K4HnUFw==}
+
   semver-diff@3.1.1:
     resolution: {integrity: sha512-GX0Ix/CJcHyB8c4ykpHGIAvLyOwOobtM/8d+TQkAd81/bEjgPHrfba41Vpesr7jX/t8Uh+R3EX9eAS5be+jQYg==}
     engines: {node: '>=8'}
@@ -7467,6 +7581,9 @@ packages:
     os: [darwin, linux, win32, freebsd, openbsd, netbsd, sunos, android]
     hasBin: true
 
+  tailwind-merge@3.7.0:
+    resolution: {integrity: sha512-XPPUyAc+cvspz3lHTcR/QgPfW2A0lv/xQNIjX3HGhLR+Nq2lHaLq5MtTesHn8GUr3W3DguT2KT5x3NVgRtYwmA==}
+
   tailwindcss@4.3.3:
     resolution: {integrity: sha512-gOhV3P7ufE62QDGg1zVaTgCR+EtPv92k2nIhVcVKcLmxT1sUBsQGhnZj175j+MqRt4zLF7ic+sCYjfhxMxj7YQ==}
 
@@ -7524,6 +7641,10 @@ packages:
   tinyrainbow@3.1.1:
     resolution: {integrity: sha512-yau8yJdTt989Mm0Bd/236QnzEiPf2xLLTqUZRUJOo/3CB078LSwzei343DgtJVmfJKJE3TMINY1u42SQsP6mXw==}
     engines: {node: '>=14.0.0'}
+
+  tlds@1.261.0:
+    resolution: {integrity: sha512-QXqwfEl9ddlGBaRFXIvNKK6OhipSiLXuRuLJX5DErz0o0Q0rYxulWLdFryTkV5PkdZct5iMInwYEGe/eR++1AA==}
+    hasBin: true
 
   tldts-core@7.4.12:
     resolution: {integrity: sha512-nYNzS2WRf4QJmjzFFgAxLOBjyBxAGRbCy9PVBPaglcYyYajh40VBn+v5Ngr96ZMc7oM0+aCJdtQnNejvdBnXMQ==}
@@ -7638,6 +7759,9 @@ packages:
     resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
     engines: {node: '>=14.17'}
     hasBin: true
+
+  uc.micro@2.1.0:
+    resolution: {integrity: sha512-ARDJmphmdvUk6Glw7y9DQ2bFkKBHwQHLi2lsaH6PPmz/Ka9sFOBsBluozhDltWmnv9u/cF6Rt87znRTPV+yp/A==}
 
   ufo@1.6.4:
     resolution: {integrity: sha512-JFNbkD1Svwe0KvGi8GOeLcP4kAWQ609twvCdcHxq1oSL8svv39ZuSvajcD8B+5D0eL4+s1Is2D/O6KN3qcTeRA==}
@@ -8991,100 +9115,100 @@ snapshots:
   '@esbuild/win32-x64@0.28.2':
     optional: true
 
-  '@eslint-community/eslint-utils@4.10.1(eslint@10.10.0(jiti@2.7.0))':
+  '@eslint-community/eslint-utils@4.10.1(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))':
     dependencies:
-      eslint: 10.10.0(jiti@2.7.0)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       eslint-visitor-keys: 3.4.3
 
   '@eslint-community/regexpp@4.12.2': {}
 
-  '@eslint-react/ast@5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)':
+  '@eslint-react/ast@5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)':
     dependencies:
       '@typescript-eslint/types': 8.70.0
       '@typescript-eslint/typescript-estree': 8.70.0(typescript@6.0.3)
-      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint: 10.10.0(jiti@2.7.0)
+      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       string-ts: 2.3.1
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
 
-  '@eslint-react/core@5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)':
+  '@eslint-react/core@5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)':
     dependencies:
-      '@eslint-react/ast': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/shared': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/var': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@eslint-react/ast': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/shared': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/var': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
       '@typescript-eslint/scope-manager': 8.70.0
       '@typescript-eslint/types': 8.70.0
-      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint: 10.10.0(jiti@2.7.0)
+      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       ts-pattern: 5.9.0
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
 
-  '@eslint-react/eslint-plugin@5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)':
+  '@eslint-react/eslint-plugin@5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)':
     dependencies:
-      '@eslint-react/shared': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint: 10.10.0(jiti@2.7.0)
-      eslint-plugin-react-dom: 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint-plugin-react-jsx: 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint-plugin-react-naming-convention: 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint-plugin-react-rsc: 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint-plugin-react-web-api: 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint-plugin-react-x: 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@eslint-react/shared': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
+      eslint-plugin-react-dom: 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      eslint-plugin-react-jsx: 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      eslint-plugin-react-naming-convention: 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      eslint-plugin-react-rsc: 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      eslint-plugin-react-web-api: 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      eslint-plugin-react-x: 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
 
-  '@eslint-react/eslint@5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)':
+  '@eslint-react/eslint@5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)':
     dependencies:
-      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint: 10.10.0(jiti@2.7.0)
+      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
 
-  '@eslint-react/jsx@5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)':
+  '@eslint-react/jsx@5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)':
     dependencies:
-      '@eslint-react/ast': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/shared': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/var': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@eslint-react/ast': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/shared': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/var': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
       '@typescript-eslint/types': 8.70.0
-      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint: 10.10.0(jiti@2.7.0)
+      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       ts-pattern: 5.9.0
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
 
-  '@eslint-react/shared@5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)':
+  '@eslint-react/shared@5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)':
     dependencies:
-      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint: 10.10.0(jiti@2.7.0)
+      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       ts-pattern: 5.9.0
       typescript: 6.0.3
       zod: 4.6.5
     transitivePeerDependencies:
       - supports-color
 
-  '@eslint-react/var@5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)':
+  '@eslint-react/var@5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)':
     dependencies:
-      '@eslint-react/ast': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@eslint-react/ast': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
       '@typescript-eslint/scope-manager': 8.70.0
       '@typescript-eslint/types': 8.70.0
-      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint: 10.10.0(jiti@2.7.0)
+      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       ts-pattern: 5.9.0
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
 
-  '@eslint/config-array@0.23.5':
+  '@eslint/config-array@0.23.5(supports-color@8.1.1)':
     dependencies:
       '@eslint/object-schema': 3.0.5
       debug: 4.4.3(supports-color@8.1.1)
@@ -9100,9 +9224,9 @@ snapshots:
     dependencies:
       '@types/json-schema': 7.0.15
 
-  '@eslint/js@10.0.1(eslint@10.10.0(jiti@2.7.0))':
+  '@eslint/js@10.0.1(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))':
     optionalDependencies:
-      eslint: 10.10.0(jiti@2.7.0)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
 
   '@eslint/object-schema@3.0.5': {}
 
@@ -9371,7 +9495,7 @@ snapshots:
       - svelte
       - vue
 
-  '@langchain/mcp-adapters@1.1.3(@cfworker/json-schema@4.1.1)(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(@langchain/langgraph@1.4.4(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))':
+  '@langchain/mcp-adapters@1.1.3(@cfworker/json-schema@4.1.1)(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(@langchain/langgraph@1.4.4(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))(supports-color@8.1.1)':
     dependencies:
       '@langchain/core': 1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
       '@langchain/langgraph': 1.4.4(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
@@ -9563,7 +9687,7 @@ snapshots:
     dependencies:
       '@dicebear/core': 9.4.3
 
-  '@nocobase/ai-employee@0.2.0-beta.8(@aws-sdk/client-s3@3.1127.0)(@aws-sdk/credential-provider-node@3.972.82)(@browserbasehq/sdk@2.19.1)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.63.0)(deepmerge@4.3.1)(dotenv@17.4.2)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(zod@4.6.5))(@cfworker/json-schema@4.1.1)(@ibm-cloud/watsonx-ai@1.7.16)(@nocobase/caching@0.1.0-beta.2)(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(@nocobase/service-provider@0.0.2-beta.1)(@opentelemetry/api@1.9.0)(@smithy/signature-v4@5.7.3)(better-sqlite3@13.0.3)(ibm-cloud-sdk-core@5.6.1)(ignore@7.0.9)(ioredis@5.11.1)(jsdom@30.0.1(@noble/hashes@2.4.0))(jsonwebtoken@9.0.3)(pg@8.23.0)(playwright@1.63.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(ws@8.21.3)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)':
+  '@nocobase/ai-employee@0.2.0-beta.8(@aws-sdk/client-s3@3.1127.0)(@aws-sdk/credential-provider-node@3.972.82)(@browserbasehq/sdk@2.19.1)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.63.0)(deepmerge@4.3.1)(dotenv@17.4.2)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(zod@4.6.5))(@cfworker/json-schema@4.1.1)(@ibm-cloud/watsonx-ai@1.7.16)(@nocobase/caching@0.1.0-beta.2)(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(@nocobase/service-provider@0.0.2-beta.1)(@opentelemetry/api@1.9.0)(@smithy/signature-v4@5.7.3)(better-sqlite3@13.0.3)(ibm-cloud-sdk-core@5.6.1)(ignore@7.0.9)(ioredis@5.11.1)(jsdom@30.0.1(@noble/hashes@2.4.0))(jsonwebtoken@9.0.3)(pg@8.23.0)(playwright@1.63.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@8.1.1)(ws@8.21.3)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)':
     dependencies:
       '@langchain/anthropic': 1.3.17(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))
       '@langchain/classic': 1.0.34(@aws-sdk/credential-provider-node@3.972.82)(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(@opentelemetry/api@1.9.0)(@smithy/signature-v4@5.7.3)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
@@ -9573,7 +9697,7 @@ snapshots:
       '@langchain/google-genai': 2.1.18(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))
       '@langchain/langgraph': 1.4.4(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
       '@langchain/langgraph-checkpoint': 1.1.2(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))
-      '@langchain/mcp-adapters': 1.1.3(@cfworker/json-schema@4.1.1)(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(@langchain/langgraph@1.4.4(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))
+      '@langchain/mcp-adapters': 1.1.3(@cfworker/json-schema@4.1.1)(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(@langchain/langgraph@1.4.4(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5))(supports-color@8.1.1)
       '@langchain/mistralai': 1.0.0(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))
       '@langchain/ollama': 1.2.7(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))
       '@langchain/openai': 1.4.7(@aws-sdk/credential-provider-node@3.972.82)(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(@smithy/signature-v4@5.7.3)(ws@8.21.3)
@@ -9582,7 +9706,7 @@ snapshots:
       '@nocobase/db': 1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0)
       '@nocobase/logging': 0.1.0-beta.6
       '@nocobase/service-provider': 0.0.2-beta.1
-      axios: 1.20.0
+      axios: 1.20.0(supports-color@8.1.1)
       d3-dsv: 2.0.0
       fast-glob: 3.3.3
       gray-matter: 4.0.3
@@ -9734,7 +9858,7 @@ snapshots:
     dependencies:
       '@nocobase/repository-input': 0.1.0-beta.2
 
-  '@nocobase/app-cli@1.0.0-beta.14(04b8984a451eea8ff2338182d51a03c0)':
+  '@nocobase/app-cli@1.0.0-beta.14(b6acbbdfe3e4919c6a510636eb821e8b)':
     dependencies:
       '@clack/prompts': 1.8.1
       '@nocobase/app-server': 2.0.0-beta.1(@nocobase/caching@0.1.0-beta.2)(@nocobase/db-sqlite@0.1.0-beta.4(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(pg@8.23.0))(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(@nocobase/i18n@1.0.0-beta.5(hono@4.13.7)(react-i18next@17.0.13(i18next@26.4.2(typescript@6.0.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3))(react@19.2.8)(typescript@6.0.3))(@nocobase/jobs@0.1.0-beta.2(pg@8.23.0))(@nocobase/queue@0.1.0-beta.8(pg@8.23.0))(@nocobase/service-provider@0.0.2-beta.1)(idb-keyval@6.3.0)(zod-to-json-schema@3.25.2(zod@4.6.5))
@@ -9747,8 +9871,8 @@ snapshots:
       execa: 10.0.1
       yaml: 2.9.0
     optionalDependencies:
-      '@nocobase/dev-config': 0.1.0-beta.18(@tailwindcss/vite@4.3.3(vite@6.4.3(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.0)))(@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11))(@testing-library/react@16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@typescript-eslint/eslint-plugin@8.70.0(@typescript-eslint/parser@8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3))(@vitejs/plugin-react@4.7.0(vite@6.4.3(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.0)))(eslint@10.10.0(jiti@2.7.0))(jsdom@30.0.1(@noble/hashes@2.4.0))(prettier@3.9.6)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3)(vite@6.4.3(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.0))(vitest@4.1.11)
-      '@refinedev/cli': 2.16.52(@types/node@24.13.3)(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@nocobase/dev-config': 0.1.0-beta.18(4c724e39fb06137bd1c2fdf2fc0a63cd)
+      '@refinedev/cli': 2.16.52(@types/node@24.13.3)(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@8.1.1)
       prettier: 3.9.6
       tar: 7.5.22
       tsc-alias: 1.9.4
@@ -9771,7 +9895,7 @@ snapshots:
     transitivePeerDependencies:
       - '@nocobase/repository-input'
 
-  '@nocobase/app-plugin-ai-employee@3.0.0-beta.0(a9fa12a02ef24750f0ac295752233dfa)':
+  '@nocobase/app-plugin-ai-employee@3.0.0-beta.0(f53c7c3fe50ee1b4817d841cc1406a0f)':
     dependencies:
       '@ai-sdk/react': 2.0.0(react@19.2.8)(zod@4.6.5)
       '@base-ui/react': 1.8.0(@date-fns/tz@1.5.0)(@types/react@19.2.18)(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -9779,9 +9903,9 @@ snapshots:
       '@langchain/core': 1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3)
       '@langchain/langgraph': 1.4.4(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
       '@langchain/langgraph-checkpoint': 1.1.2(@langchain/core@1.1.49(@opentelemetry/api@1.9.0)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(ws@8.21.3))
-      '@nocobase/ai-employee': 0.2.0-beta.8(@aws-sdk/client-s3@3.1127.0)(@aws-sdk/credential-provider-node@3.972.82)(@browserbasehq/sdk@2.19.1)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.63.0)(deepmerge@4.3.1)(dotenv@17.4.2)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(zod@4.6.5))(@cfworker/json-schema@4.1.1)(@ibm-cloud/watsonx-ai@1.7.16)(@nocobase/caching@0.1.0-beta.2)(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(@nocobase/service-provider@0.0.2-beta.1)(@opentelemetry/api@1.9.0)(@smithy/signature-v4@5.7.3)(better-sqlite3@13.0.3)(ibm-cloud-sdk-core@5.6.1)(ignore@7.0.9)(ioredis@5.11.1)(jsdom@30.0.1(@noble/hashes@2.4.0))(jsonwebtoken@9.0.3)(pg@8.23.0)(playwright@1.63.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(ws@8.21.3)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
+      '@nocobase/ai-employee': 0.2.0-beta.8(@aws-sdk/client-s3@3.1127.0)(@aws-sdk/credential-provider-node@3.972.82)(@browserbasehq/sdk@2.19.1)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.63.0)(deepmerge@4.3.1)(dotenv@17.4.2)(openai@6.49.0(@aws-sdk/credential-provider-node@3.972.82)(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.6.5))(zod@4.6.5))(@cfworker/json-schema@4.1.1)(@ibm-cloud/watsonx-ai@1.7.16)(@nocobase/caching@0.1.0-beta.2)(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(@nocobase/service-provider@0.0.2-beta.1)(@opentelemetry/api@1.9.0)(@smithy/signature-v4@5.7.3)(better-sqlite3@13.0.3)(ibm-cloud-sdk-core@5.6.1)(ignore@7.0.9)(ioredis@5.11.1)(jsdom@30.0.1(@noble/hashes@2.4.0))(jsonwebtoken@9.0.3)(pg@8.23.0)(playwright@1.63.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@8.1.1)(ws@8.21.3)(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
       '@nocobase/ai-employee-avatars': 1.0.2(@dicebear/core@9.4.3)
-      '@nocobase/app-cli': 1.0.0-beta.14(04b8984a451eea8ff2338182d51a03c0)
+      '@nocobase/app-cli': 1.0.0-beta.14(b6acbbdfe3e4919c6a510636eb821e8b)
       '@nocobase/app-client': 2.0.0-beta.1(a3f54293baddef71cf9c4a5b23177cd8)
       '@nocobase/app-plugin-authentication': 2.0.0-beta.1(7e206fb58f72992b31746b91b11761a0)
       '@nocobase/app-plugin-authorization': 1.0.0-beta.25(9bff99e2f87bbd5c736e8bc4c2816d4a)
@@ -10016,6 +10140,33 @@ snapshots:
       react: 19.2.8
       zod: 4.6.5
 
+  '@nocobase/app-plugin-mail@1.0.0-beta.7(570fde870ebdb3e1096c222a2871c7ca)':
+    dependencies:
+      '@base-ui/react': 1.8.0(@date-fns/tz@1.5.0)(@types/react@19.2.18)(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@nocobase/app-client': 2.0.0-beta.1(a3f54293baddef71cf9c4a5b23177cd8)
+      '@nocobase/app-plugin-authentication': 2.0.0-beta.1(7e206fb58f72992b31746b91b11761a0)
+      '@nocobase/app-plugin-authorization': 1.0.0-beta.25(9bff99e2f87bbd5c736e8bc4c2816d4a)
+      '@nocobase/app-server': 2.0.0-beta.1(@nocobase/caching@0.1.0-beta.2)(@nocobase/db-sqlite@0.1.0-beta.4(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(pg@8.23.0))(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(@nocobase/i18n@1.0.0-beta.5(hono@4.13.7)(react-i18next@17.0.13(i18next@26.4.2(typescript@6.0.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3))(react@19.2.8)(typescript@6.0.3))(@nocobase/jobs@0.1.0-beta.2(pg@8.23.0))(@nocobase/queue@0.1.0-beta.8(pg@8.23.0))(@nocobase/service-provider@0.0.2-beta.1)(idb-keyval@6.3.0)(zod-to-json-schema@3.25.2(zod@4.6.5))
+      '@nocobase/db': 1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0)
+      '@nocobase/i18n': 1.0.0-beta.5(hono@4.13.7)(react-i18next@17.0.13(i18next@26.4.2(typescript@6.0.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3))(react@19.2.8)(typescript@6.0.3)
+      '@nocobase/jobs': 0.1.0-beta.2(pg@8.23.0)
+      '@nocobase/service-provider': 0.0.2-beta.1
+      '@sinclair/typebox': 0.34.52
+      class-variance-authority: 0.7.1
+      clsx: 2.1.1
+      date-fns: 4.4.0
+      hono: 4.13.7
+      imapflow: 2.2.6
+      lucide-react: 0.487.0(react@19.2.8)
+      mailparser: 3.9.36
+      nodemailer: 9.1.1
+      react: 19.2.8
+      react-day-picker: 10.0.1(@types/react@19.2.18)(react@19.2.8)
+      react-dom: 19.2.8(react@19.2.8)
+      react-router: 7.18.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      tailwind-merge: 3.7.0
+      zod: 4.6.5
+
   '@nocobase/app-plugin-notification-in-app@1.0.0-beta.22(4097e248e49a6c8c22be34906b5e01ee)':
     dependencies:
       '@base-ui/react': 1.8.0(@date-fns/tz@1.5.0)(@types/react@19.2.18)(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -10085,10 +10236,10 @@ snapshots:
       react-dom: 19.2.8(react@19.2.8)
       zod: 4.6.5
 
-  '@nocobase/app-plugin-scheduler@1.0.0-beta.14(ce4c141376dea2275666dbeccb2989d3)':
+  '@nocobase/app-plugin-scheduler@1.0.0-beta.14(d75102fc914fcf97d7d764170c21e8ce)':
     dependencies:
       '@base-ui/react': 1.8.0(@date-fns/tz@1.5.0)(@types/react@19.2.18)(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@nocobase/app-cli': 1.0.0-beta.14(04b8984a451eea8ff2338182d51a03c0)
+      '@nocobase/app-cli': 1.0.0-beta.14(b6acbbdfe3e4919c6a510636eb821e8b)
       '@nocobase/app-client': 2.0.0-beta.1(a3f54293baddef71cf9c4a5b23177cd8)
       '@nocobase/app-plugin-authentication': 2.0.0-beta.1(7e206fb58f72992b31746b91b11761a0)
       '@nocobase/app-plugin-authorization': 1.0.0-beta.25(9bff99e2f87bbd5c736e8bc4c2816d4a)
@@ -10129,10 +10280,10 @@ snapshots:
       react-router: 7.18.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       zod: 4.6.5
 
-  '@nocobase/app-plugin-workflow@2.0.0-beta.1(95f456d993117fb7170a5a351806a134)':
+  '@nocobase/app-plugin-workflow@2.0.0-beta.1(214916e081eaaedf377504ac08fe3ac9)':
     dependencies:
       '@base-ui/react': 1.8.0(@date-fns/tz@1.5.0)(@types/react@19.2.18)(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@nocobase/app-cli': 1.0.0-beta.14(04b8984a451eea8ff2338182d51a03c0)
+      '@nocobase/app-cli': 1.0.0-beta.14(b6acbbdfe3e4919c6a510636eb821e8b)
       '@nocobase/app-client': 2.0.0-beta.1(a3f54293baddef71cf9c4a5b23177cd8)
       '@nocobase/app-plugin-authentication': 2.0.0-beta.1(7e206fb58f72992b31746b91b11761a0)
       '@nocobase/app-plugin-authorization': 1.0.0-beta.25(9bff99e2f87bbd5c736e8bc4c2816d4a)
@@ -10158,7 +10309,7 @@ snapshots:
       vite: 6.4.3(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.0)
       zod: 4.6.5
     optionalDependencies:
-      '@nocobase/app-plugin-scheduler': 1.0.0-beta.14(ce4c141376dea2275666dbeccb2989d3)
+      '@nocobase/app-plugin-scheduler': 1.0.0-beta.14(d75102fc914fcf97d7d764170c21e8ce)
     transitivePeerDependencies:
       - '@google-cloud/storage'
 
@@ -10224,13 +10375,13 @@ snapshots:
       '@playwright/test': 1.63.0
       prettier: 3.9.6
 
-  '@nocobase/app-testing@0.1.0-beta.1(9caf2a4e03f61585539589b03e84071d)':
+  '@nocobase/app-testing@0.1.0-beta.1(91e00303d0dab67f696360503848a8d1)':
     dependencies:
       '@nocobase/db': 1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0)
       '@nocobase/db-sqlite': 0.1.0-beta.4(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(pg@8.23.0)
       '@nocobase/db-testing': 0.1.0-beta.0(@nocobase/db-sqlite@0.1.0-beta.4(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(pg@8.23.0))(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(vitest@4.1.11)
     optionalDependencies:
-      '@nocobase/app-cli': 1.0.0-beta.14(04b8984a451eea8ff2338182d51a03c0)
+      '@nocobase/app-cli': 1.0.0-beta.14(b6acbbdfe3e4919c6a510636eb821e8b)
       '@nocobase/app-client': 2.0.0-beta.1(a3f54293baddef71cf9c4a5b23177cd8)
       '@nocobase/app-server': 2.0.0-beta.1(@nocobase/caching@0.1.0-beta.2)(@nocobase/db-sqlite@0.1.0-beta.4(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(pg@8.23.0))(@nocobase/db@1.0.0-beta.18(better-sqlite3@13.0.3)(pg@8.23.0))(@nocobase/i18n@1.0.0-beta.5(hono@4.13.7)(react-i18next@17.0.13(i18next@26.4.2(typescript@6.0.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3))(react@19.2.8)(typescript@6.0.3))(@nocobase/jobs@0.1.0-beta.2(pg@8.23.0))(@nocobase/queue@0.1.0-beta.8(pg@8.23.0))(@nocobase/service-provider@0.0.2-beta.1)(idb-keyval@6.3.0)(zod-to-json-schema@3.25.2(zod@4.6.5))
       '@nocobase/i18n': 1.0.0-beta.5(hono@4.13.7)(react-i18next@17.0.13(i18next@26.4.2(typescript@6.0.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3))(react@19.2.8)(typescript@6.0.3)
@@ -10310,20 +10461,20 @@ snapshots:
       - supports-color
       - tedious
 
-  '@nocobase/dev-config@0.1.0-beta.18(@tailwindcss/vite@4.3.3(vite@6.4.3(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.0)))(@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11))(@testing-library/react@16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@typescript-eslint/eslint-plugin@8.70.0(@typescript-eslint/parser@8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3))(@vitejs/plugin-react@4.7.0(vite@6.4.3(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.0)))(eslint@10.10.0(jiti@2.7.0))(jsdom@30.0.1(@noble/hashes@2.4.0))(prettier@3.9.6)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3)(vite@6.4.3(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.0))(vitest@4.1.11)':
+  '@nocobase/dev-config@0.1.0-beta.18(4c724e39fb06137bd1c2fdf2fc0a63cd)':
     dependencies:
-      '@eslint-react/eslint-plugin': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint/js': 10.0.1(eslint@10.10.0(jiti@2.7.0))
-      '@vitest/eslint-plugin': 1.6.27(@typescript-eslint/eslint-plugin@8.70.0(@typescript-eslint/parser@8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)(vitest@4.1.11)
-      eslint: 10.10.0(jiti@2.7.0)
-      eslint-config-prettier: 10.1.8(eslint@10.10.0(jiti@2.7.0))
-      eslint-plugin-react-hooks: 7.1.1(eslint@10.10.0(jiti@2.7.0))
-      eslint-plugin-react-refresh: 0.5.6(eslint@10.10.0(jiti@2.7.0))
+      '@eslint-react/eslint-plugin': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint/js': 10.0.1(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))
+      '@vitest/eslint-plugin': 1.6.27(@typescript-eslint/eslint-plugin@8.70.0(@typescript-eslint/parser@8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)(vitest@4.1.11)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
+      eslint-config-prettier: 10.1.8(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))
+      eslint-plugin-react-hooks: 7.1.1(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))
+      eslint-plugin-react-refresh: 0.5.6(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))
       globals: 17.12.0
       import-meta-resolve: 4.2.0
       prettier: 3.9.6
       typescript: 6.0.3
-      typescript-eslint: 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      typescript-eslint: 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3)
     optionalDependencies:
       '@tailwindcss/vite': 4.3.3(vite@6.4.3(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.0))
       '@testing-library/jest-dom': 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)
@@ -10346,9 +10497,9 @@ snapshots:
     transitivePeerDependencies:
       - '@google-cloud/storage'
 
-  '@nocobase/hub-cli@1.0.0-beta.1(@nocobase/app-cli@1.0.0-beta.14(04b8984a451eea8ff2338182d51a03c0))(@oclif/core@4.14.0)':
+  '@nocobase/hub-cli@1.0.0-beta.1(@nocobase/app-cli@1.0.0-beta.14(b6acbbdfe3e4919c6a510636eb821e8b))(@oclif/core@4.14.0)':
     dependencies:
-      '@nocobase/app-cli': 1.0.0-beta.14(04b8984a451eea8ff2338182d51a03c0)
+      '@nocobase/app-cli': 1.0.0-beta.14(b6acbbdfe3e4919c6a510636eb821e8b)
       '@oclif/core': 4.14.0
       tar: 7.5.22
 
@@ -10534,10 +10685,10 @@ snapshots:
       prompts: 2.4.2
       tinyexec: 1.3.1
 
-  '@refinedev/cli@2.16.52(@types/node@24.13.3)(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@refinedev/cli@2.16.52(@types/node@24.13.3)(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@8.1.1)':
     dependencies:
       '@npmcli/package-json': 5.2.1
-      '@refinedev/devtools-server': 2.0.2(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@refinedev/devtools-server': 2.0.2(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@8.1.1)
       boxen: 5.1.2
       camelcase: 6.3.0
       cardinal: 2.1.1
@@ -10611,7 +10762,7 @@ snapshots:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
 
-  '@refinedev/devtools-server@2.0.2(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@refinedev/devtools-server@2.0.2(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@8.1.1)':
     dependencies:
       '@refinedev/devtools-shared': 2.0.2(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@types/react': 19.2.18
@@ -10627,7 +10778,7 @@ snapshots:
       fs-extra: 10.1.0
       globby: 11.1.0
       gray-matter: 4.0.3
-      http-proxy-middleware: 3.0.7
+      http-proxy-middleware: 3.0.7(supports-color@8.1.1)
       jscodeshift: 17.4.0
       lodash: 4.18.1
       lodash-es: 4.18.1
@@ -10762,6 +10913,12 @@ snapshots:
     optional: true
 
   '@sec-ant/readable-stream@0.4.1': {}
+
+  '@selderee/plugin-htmlparser2@0.12.0(selderee@0.12.0)':
+    dependencies:
+      domelementtype: 2.3.0
+      domhandler: 5.0.3
+      selderee: 0.12.0
 
   '@silurus/ooxml@0.85.1': {}
 
@@ -11277,15 +11434,15 @@ snapshots:
 
   '@types/validate-npm-package-name@4.0.2': {}
 
-  '@typescript-eslint/eslint-plugin@8.70.0(@typescript-eslint/parser@8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)':
+  '@typescript-eslint/eslint-plugin@8.70.0(@typescript-eslint/parser@8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)':
     dependencies:
       '@eslint-community/regexpp': 4.12.2
-      '@typescript-eslint/parser': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/parser': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3)
       '@typescript-eslint/scope-manager': 8.70.0
-      '@typescript-eslint/type-utils': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/type-utils': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
       '@typescript-eslint/visitor-keys': 8.70.0
-      eslint: 10.10.0(jiti@2.7.0)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       ignore: 7.0.9
       natural-compare: 1.4.0
       ts-api-utils: 2.5.0(typescript@6.0.3)
@@ -11293,14 +11450,14 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/parser@8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)':
+  '@typescript-eslint/parser@8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3)':
     dependencies:
       '@typescript-eslint/scope-manager': 8.70.0
       '@typescript-eslint/types': 8.70.0
       '@typescript-eslint/typescript-estree': 8.70.0(typescript@6.0.3)
       '@typescript-eslint/visitor-keys': 8.70.0
       debug: 4.4.3(supports-color@8.1.1)
-      eslint: 10.10.0(jiti@2.7.0)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
@@ -11323,13 +11480,13 @@ snapshots:
     dependencies:
       typescript: 6.0.3
 
-  '@typescript-eslint/type-utils@8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)':
+  '@typescript-eslint/type-utils@8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)':
     dependencies:
       '@typescript-eslint/types': 8.70.0
       '@typescript-eslint/typescript-estree': 8.70.0(typescript@6.0.3)
-      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
       debug: 4.4.3(supports-color@8.1.1)
-      eslint: 10.10.0(jiti@2.7.0)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       ts-api-utils: 2.5.0(typescript@6.0.3)
       typescript: 6.0.3
     transitivePeerDependencies:
@@ -11352,13 +11509,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/utils@8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)':
+  '@typescript-eslint/utils@8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)':
     dependencies:
-      '@eslint-community/eslint-utils': 4.10.1(eslint@10.10.0(jiti@2.7.0))
+      '@eslint-community/eslint-utils': 4.10.1(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))
       '@typescript-eslint/scope-manager': 8.70.0
       '@typescript-eslint/types': 8.70.0
       '@typescript-eslint/typescript-estree': 8.70.0(typescript@6.0.3)
-      eslint: 10.10.0(jiti@2.7.0)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
@@ -11396,13 +11553,13 @@ snapshots:
       tinyrainbow: 3.1.1
       vitest: 4.1.11(@opentelemetry/api@1.9.0)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(jsdom@30.0.1(@noble/hashes@2.4.0))(vite@6.4.3(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.0))
 
-  '@vitest/eslint-plugin@1.6.27(@typescript-eslint/eslint-plugin@8.70.0(@typescript-eslint/parser@8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)(vitest@4.1.11)':
+  '@vitest/eslint-plugin@1.6.27(@typescript-eslint/eslint-plugin@8.70.0(@typescript-eslint/parser@8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)(vitest@4.1.11)':
     dependencies:
       '@typescript-eslint/scope-manager': 8.70.0
-      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint: 10.10.0(jiti@2.7.0)
+      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
     optionalDependencies:
-      '@typescript-eslint/eslint-plugin': 8.70.0(@typescript-eslint/parser@8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/eslint-plugin': 8.70.0(@typescript-eslint/parser@8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
       typescript: 6.0.3
       vitest: 4.1.11(@opentelemetry/api@1.9.0)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(jsdom@30.0.1(@noble/hashes@2.4.0))(vite@6.4.3(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.0))
     transitivePeerDependencies:
@@ -11478,6 +11635,12 @@ snapshots:
       d3-selection: 3.0.0
       d3-zoom: 3.0.0
 
+  '@zone-eu/mailsplit@5.4.20':
+    dependencies:
+      libbase64: 1.3.2
+      libmime: 5.4.7
+      libqp: 2.1.2
+
   abort-controller@3.0.0:
     dependencies:
       event-target-shim: 5.0.1
@@ -11500,7 +11663,7 @@ snapshots:
 
   adler-32@1.3.1: {}
 
-  agent-base@6.0.2:
+  agent-base@6.0.2(supports-color@8.1.1):
     dependencies:
       debug: 4.4.3(supports-color@8.1.1)
     transitivePeerDependencies:
@@ -11622,11 +11785,21 @@ snapshots:
 
   atomically@1.7.0: {}
 
-  axios@1.20.0:
+  axios@1.20.0(debug@4.3.4):
     dependencies:
-      follow-redirects: 1.16.0(debug@4.4.3)
+      follow-redirects: 1.16.0(debug@4.4.3(supports-color@8.1.1))
       form-data: 4.0.6
-      https-proxy-agent: 5.0.1
+      https-proxy-agent: 5.0.1(supports-color@8.1.1)
+      proxy-from-env: 2.1.0
+    transitivePeerDependencies:
+      - debug
+      - supports-color
+
+  axios@1.20.0(supports-color@8.1.1):
+    dependencies:
+      follow-redirects: 1.16.0(debug@4.4.3(supports-color@8.1.1))
+      form-data: 4.0.6
+      https-proxy-agent: 5.0.1(supports-color@8.1.1)
       proxy-from-env: 2.1.0
     transitivePeerDependencies:
       - debug
@@ -12156,6 +12329,8 @@ snapshots:
 
   deep-is@0.1.4: {}
 
+  deepmerge-ts@8.0.2: {}
+
   deepmerge@4.3.1: {}
 
   default-browser-id@5.0.1: {}
@@ -12209,17 +12384,35 @@ snapshots:
 
   dom-accessibility-api@0.6.3: {}
 
+  dom-serializer@2.0.0:
+    dependencies:
+      domelementtype: 2.3.0
+      domhandler: 5.0.3
+      entities: 4.5.0
+
   dom-serializer@3.1.1:
     dependencies:
       domelementtype: 3.0.0
       domhandler: 6.0.1
       entities: 8.1.0
 
+  domelementtype@2.3.0: {}
+
   domelementtype@3.0.0: {}
+
+  domhandler@5.0.3:
+    dependencies:
+      domelementtype: 2.3.0
 
   domhandler@6.0.1:
     dependencies:
       domelementtype: 3.0.0
+
+  domutils@3.2.2:
+    dependencies:
+      dom-serializer: 2.0.0
+      domelementtype: 2.3.0
+      domhandler: 5.0.3
 
   domutils@4.0.2:
     dependencies:
@@ -12283,6 +12476,8 @@ snapshots:
 
   encodeurl@2.0.0: {}
 
+  encoding-japanese@2.4.0: {}
+
   end-of-stream@1.4.5:
     dependencies:
       once: 1.4.0
@@ -12296,6 +12491,10 @@ snapshots:
     dependencies:
       ansi-colors: 4.1.3
       strip-ansi: 6.0.1
+
+  entities@4.5.0: {}
+
+  entities@7.0.1: {}
 
   entities@8.1.0: {}
 
@@ -12398,113 +12597,113 @@ snapshots:
 
   escape-string-regexp@5.0.0: {}
 
-  eslint-config-prettier@10.1.8(eslint@10.10.0(jiti@2.7.0)):
+  eslint-config-prettier@10.1.8(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1)):
     dependencies:
-      eslint: 10.10.0(jiti@2.7.0)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
 
-  eslint-plugin-react-dom@5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3):
+  eslint-plugin-react-dom@5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3):
     dependencies:
-      '@eslint-react/ast': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/jsx': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/shared': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@eslint-react/ast': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/jsx': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/shared': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
       '@typescript-eslint/types': 8.70.0
-      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
       compare-versions: 6.1.1
-      eslint: 10.10.0(jiti@2.7.0)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-react-hooks@7.1.1(eslint@10.10.0(jiti@2.7.0)):
+  eslint-plugin-react-hooks@7.1.1(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1)):
     dependencies:
       '@babel/core': 7.29.7
       '@babel/parser': 7.29.8
-      eslint: 10.10.0(jiti@2.7.0)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       hermes-parser: 0.25.1
       zod: 4.6.5
       zod-validation-error: 4.0.2(zod@4.6.5)
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-react-jsx@5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3):
+  eslint-plugin-react-jsx@5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3):
     dependencies:
-      '@eslint-react/ast': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/core': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/jsx': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/shared': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@eslint-react/ast': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/core': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/jsx': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/shared': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
       '@typescript-eslint/types': 8.70.0
-      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint: 10.10.0(jiti@2.7.0)
+      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-react-naming-convention@5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3):
+  eslint-plugin-react-naming-convention@5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3):
     dependencies:
-      '@eslint-react/ast': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/core': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/shared': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/var': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@eslint-react/ast': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/core': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/shared': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/var': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
       '@typescript-eslint/types': 8.70.0
-      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint: 10.10.0(jiti@2.7.0)
+      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       ts-pattern: 5.9.0
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-react-refresh@0.5.6(eslint@10.10.0(jiti@2.7.0)):
+  eslint-plugin-react-refresh@0.5.6(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1)):
     dependencies:
-      eslint: 10.10.0(jiti@2.7.0)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
 
-  eslint-plugin-react-rsc@5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3):
+  eslint-plugin-react-rsc@5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3):
     dependencies:
-      '@eslint-react/ast': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/core': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/shared': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/var': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@eslint-react/ast': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/core': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/shared': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/var': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
       '@typescript-eslint/types': 8.70.0
-      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint: 10.10.0(jiti@2.7.0)
+      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-react-web-api@5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3):
+  eslint-plugin-react-web-api@5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3):
     dependencies:
-      '@eslint-react/ast': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/core': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/shared': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/var': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@eslint-react/ast': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/core': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/shared': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/var': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
       '@typescript-eslint/types': 8.70.0
-      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
       birecord: 0.1.2
-      eslint: 10.10.0(jiti@2.7.0)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       ts-pattern: 5.9.0
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-react-x@5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3):
+  eslint-plugin-react-x@5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3):
     dependencies:
-      '@eslint-react/ast': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/core': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/jsx': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/shared': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@eslint-react/var': 5.19.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@eslint-react/ast': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/core': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/eslint': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/jsx': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/shared': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@eslint-react/var': 5.19.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
       '@typescript-eslint/scope-manager': 8.70.0
-      '@typescript-eslint/type-utils': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/type-utils': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
       '@typescript-eslint/types': 8.70.0
       '@typescript-eslint/typescript-estree': 8.70.0(typescript@6.0.3)
-      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
       compare-versions: 6.1.1
-      eslint: 10.10.0(jiti@2.7.0)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       string-ts: 2.3.1
       ts-api-utils: 2.5.0(typescript@6.0.3)
       ts-pattern: 5.9.0
@@ -12523,11 +12722,11 @@ snapshots:
 
   eslint-visitor-keys@5.0.1: {}
 
-  eslint@10.10.0(jiti@2.7.0):
+  eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1):
     dependencies:
-      '@eslint-community/eslint-utils': 4.10.1(eslint@10.10.0(jiti@2.7.0))
+      '@eslint-community/eslint-utils': 4.10.1(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))
       '@eslint-community/regexpp': 4.12.2
-      '@eslint/config-array': 0.23.5
+      '@eslint/config-array': 0.23.5(supports-color@8.1.1)
       '@eslint/config-helpers': 0.7.0
       '@eslint/core': 1.2.1
       '@eslint/plugin-kit': 0.7.3
@@ -12894,7 +13093,7 @@ snapshots:
       '@aws-sdk/client-s3': 3.1127.0
       '@aws-sdk/s3-request-presigner': 3.1127.0
 
-  follow-redirects@1.16.0(debug@4.4.3):
+  follow-redirects@1.16.0(debug@4.4.3(supports-color@8.1.1)):
     optionalDependencies:
       debug: 4.4.3(supports-color@8.1.1)
 
@@ -13095,6 +13294,8 @@ snapshots:
     dependencies:
       '@types/hast': 3.0.5
 
+  he@1.2.0: {}
+
   help-me@5.0.0: {}
 
   hermes-estree@0.25.1: {}
@@ -13143,7 +13344,22 @@ snapshots:
 
   html-parse-stringify@4.0.1: {}
 
+  html-to-text@10.0.1:
+    dependencies:
+      '@selderee/plugin-htmlparser2': 0.12.0(selderee@0.12.0)
+      deepmerge-ts: 8.0.2
+      dom-serializer: 2.0.0
+      htmlparser2: 10.1.0
+      selderee: 0.12.0
+
   html-url-attributes@3.0.1: {}
+
+  htmlparser2@10.1.0:
+    dependencies:
+      domelementtype: 2.3.0
+      domhandler: 5.0.3
+      domutils: 3.2.2
+      entities: 7.0.1
 
   htmlparser2@12.0.0:
     dependencies:
@@ -13160,28 +13376,28 @@ snapshots:
       statuses: 2.0.2
       toidentifier: 1.0.1
 
-  http-proxy-middleware@3.0.7:
+  http-proxy-middleware@3.0.7(supports-color@8.1.1):
     dependencies:
       '@types/http-proxy': 1.17.17
       debug: 4.4.3(supports-color@8.1.1)
-      http-proxy: 1.18.1(debug@4.4.3)
+      http-proxy: 1.18.1(debug@4.4.3(supports-color@8.1.1))
       is-glob: 4.0.3
       is-plain-object: 5.1.0
       micromatch: 4.0.8
     transitivePeerDependencies:
       - supports-color
 
-  http-proxy@1.18.1(debug@4.4.3):
+  http-proxy@1.18.1(debug@4.4.3(supports-color@8.1.1)):
     dependencies:
       eventemitter3: 4.0.7
-      follow-redirects: 1.16.0(debug@4.4.3)
+      follow-redirects: 1.16.0(debug@4.4.3(supports-color@8.1.1))
       requires-port: 1.0.0
     transitivePeerDependencies:
       - debug
 
-  https-proxy-agent@5.0.1:
+  https-proxy-agent@5.0.1(supports-color@8.1.1):
     dependencies:
-      agent-base: 6.0.2
+      agent-base: 6.0.2(supports-color@8.1.1)
       debug: 4.4.3(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
@@ -13203,7 +13419,7 @@ snapshots:
       '@types/debug': 4.1.12
       '@types/node': 18.19.80
       '@types/tough-cookie': 4.0.0
-      axios: 1.20.0
+      axios: 1.20.0(debug@4.3.4)
       camelcase: 6.3.0
       debug: 4.3.4
       dotenv: 16.4.5
@@ -13234,6 +13450,17 @@ snapshots:
   ignore@5.3.2: {}
 
   ignore@7.0.9: {}
+
+  imapflow@2.2.6:
+    dependencies:
+      '@zone-eu/mailsplit': 5.4.20
+      encoding-japanese: 2.4.0
+      iconv-lite: 0.7.3
+      libbase64: 1.3.2
+      libmime: 5.4.7
+      libqp: 2.1.2
+      pino: 10.3.1
+      socks: 2.8.10
 
   immediate@3.0.6: {}
 
@@ -13641,10 +13868,23 @@ snapshots:
     dependencies:
       dayjs: 1.11.23
 
+  leac@0.7.0: {}
+
   levn@0.4.1:
     dependencies:
       prelude-ls: 1.2.1
       type-check: 0.4.0
+
+  libbase64@1.3.2: {}
+
+  libmime@5.4.7:
+    dependencies:
+      encoding-japanese: 2.4.0
+      iconv-lite: 0.7.3
+      libbase64: 1.3.2
+      libqp: 2.1.2
+
+  libqp@2.1.2: {}
 
   lie@3.3.0:
     dependencies:
@@ -13702,6 +13942,10 @@ snapshots:
   lilconfig@3.1.3: {}
 
   lines-and-columns@1.2.4: {}
+
+  linkify-it@5.0.2:
+    dependencies:
+      uc.micro: 2.1.0
 
   linkifyjs@4.3.3: {}
 
@@ -13801,6 +14045,19 @@ snapshots:
       '@babel/parser': 7.29.8
       '@babel/types': 7.29.8
       source-map-js: 1.2.1
+
+  mailparser@3.9.36:
+    dependencies:
+      '@zone-eu/mailsplit': 5.4.20
+      encoding-japanese: 2.4.0
+      he: 1.2.0
+      html-to-text: 10.0.1
+      iconv-lite: 0.7.3
+      libmime: 5.4.7
+      linkify-it: 5.0.2
+      nodemailer: 10.0.14
+      punycode.js: 2.3.1
+      tlds: 1.261.0
 
   make-dir@2.1.0:
     dependencies:
@@ -14335,6 +14592,8 @@ snapshots:
 
   node-releases@2.0.54: {}
 
+  nodemailer@10.0.14: {}
+
   nodemailer@9.1.1: {}
 
   normalize-package-data@6.0.2:
@@ -14578,6 +14837,11 @@ snapshots:
     dependencies:
       entities: 8.1.0
 
+  parseley@0.13.1:
+    dependencies:
+      leac: 0.7.0
+      peberminta: 0.10.0
+
   parseurl@1.3.3: {}
 
   path-browserify@1.0.1: {}
@@ -14615,6 +14879,8 @@ snapshots:
     optionalDependencies:
       '@napi-rs/canvas': 0.1.100
       node-readable-to-web-readable-stream: 0.4.2
+
+  peberminta@0.10.0: {}
 
   pend@1.2.0: {}
 
@@ -14905,6 +15171,8 @@ snapshots:
       end-of-stream: 1.4.5
       once: 1.4.0
 
+  punycode.js@2.3.1: {}
+
   punycode@2.3.1: {}
 
   qified@0.10.1:
@@ -15153,7 +15421,7 @@ snapshots:
 
   retry-axios@2.6.0(axios@1.20.0(debug@4.3.4)):
     dependencies:
-      axios: 1.20.0
+      axios: 1.20.0(debug@4.3.4)
 
   retry@0.12.0: {}
 
@@ -15259,6 +15527,10 @@ snapshots:
   secure-json-parse@4.1.0: {}
 
   seedrandom@3.0.5: {}
+
+  selderee@0.12.0:
+    dependencies:
+      parseley: 0.13.1
 
   semver-diff@3.1.1:
     dependencies:
@@ -15597,6 +15869,8 @@ snapshots:
 
   systeminformation@5.33.9: {}
 
+  tailwind-merge@3.7.0: {}
+
   tailwindcss@4.3.3: {}
 
   tapable@2.3.3: {}
@@ -15654,6 +15928,8 @@ snapshots:
       picomatch: 4.0.7
 
   tinyrainbow@3.1.1: {}
+
+  tlds@1.261.0: {}
 
   tldts-core@7.4.12: {}
 
@@ -15756,18 +16032,20 @@ snapshots:
       media-typer: 1.1.1
       mime-types: 3.0.2
 
-  typescript-eslint@8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3):
+  typescript-eslint@8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3):
     dependencies:
-      '@typescript-eslint/eslint-plugin': 8.70.0(@typescript-eslint/parser@8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      '@typescript-eslint/parser': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
+      '@typescript-eslint/eslint-plugin': 8.70.0(@typescript-eslint/parser@8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      '@typescript-eslint/parser': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3)
       '@typescript-eslint/typescript-estree': 8.70.0(typescript@6.0.3)
-      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint: 10.10.0(jiti@2.7.0)
+      '@typescript-eslint/utils': 8.70.0(eslint@10.10.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      eslint: 10.10.0(jiti@2.7.0)(supports-color@8.1.1)
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
 
   typescript@6.0.3: {}
+
+  uc.micro@2.1.0: {}
 
   ufo@1.6.4: {}
 

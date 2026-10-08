@@ -21,6 +21,7 @@ import {
   Clock,
   ContactRound,
   History,
+  Mail,
   Paperclip,
   Plus,
   Star,
@@ -104,6 +105,16 @@ import {
 } from './crm-detail.js';
 import { UploadZone } from '../components/crm/attachments.js';
 import { RecordOutcomeDialog } from '../components/crm/outcome.js';
+import {
+  RecordMailPanel,
+  SendPlannedEmailButton,
+} from '../components/crm/record-mail.js';
+import {
+  domainOf,
+  emailsOf,
+  useMailSetup,
+  type MailTarget,
+} from '../components/crm/mail.js';
 
 // The account a contact or a deal belongs to, in the title line.
 function AccountCrumb({
@@ -134,6 +145,9 @@ export default function EntityDetail({
     isLoading,
   } = useCrmQuery<Detail>(`${toText(entity)}/${toText(id)}`);
   const { data: meta } = useMetadata();
+  const mailSetup = useMailSetup();
+  // The objects whose people mail is exchanged with.
+  const mailEntity = ['accounts', 'contacts', 'opportunities'].includes(entity);
   const api = useCrmApi();
   const refresh = useRefresh();
   const navigate = useNavigate();
@@ -343,6 +357,10 @@ export default function EntityDetail({
       : []),
     // The notes, last, which also show in the timeline among its entries.
     ['notes', 'notes.tab', detail.notesTotal ?? 0],
+    // The reader's own mail with the record, for whoever has mail.
+    ...(mailSetup.can && mailEntity
+      ? [['mail', 'mail.tab', 0] as [string, string, number]]
+      : []),
   ];
   const activeTab =
     resolveTab(
@@ -376,10 +394,38 @@ export default function EntityDetail({
         : entity === 'opportunities'
           ? { accountId: record.accountId, opportunityId: id }
           : {};
+  // Where the Mail tab looks: a contact's address; an account's domain and
+  // its contacts' addresses; a deal's contacts' addresses (or, while it
+  // names none, its account's people). What is sent from the tab is logged
+  // as an activity linked as one created here is.
+  const relatedContacts = rows(detail.related.contacts);
+  const dealContactIds = new Set(
+    rows(record.contacts).map((row) => toText(row.contactId)),
+  );
+  const mailTarget: MailTarget =
+    entity === 'accounts'
+      ? {
+          addresses: emailsOf(relatedContacts),
+          domain: domainOf(record.website),
+        }
+      : entity === 'opportunities'
+        ? {
+            addresses: emailsOf(
+              dealContactIds.size
+                ? relatedContacts.filter((c) =>
+                    dealContactIds.has(toText(c.id)),
+                  )
+                : relatedContacts,
+            ),
+          }
+        : { addresses: emailsOf([record]) };
+  const { contacts: _dealContacts, ...mailLink } = relatedInput;
   // What the active tab shows, in the right column.
   const tabContent = (
     <>
-      {activeTab === 'opportunityContacts' ? (
+      {activeTab === 'mail' ? (
+        <RecordMailPanel target={mailTarget} link={mailLink} />
+      ) : activeTab === 'opportunityContacts' ? (
         <OpportunityContacts
           record={record}
           editable={editable}
@@ -881,6 +927,7 @@ export default function EntityDetail({
     approvals: ClipboardCheck,
     attachments: Paperclip,
     notes: StickyNote,
+    mail: Mail,
   };
   // The timeline without a count, as on the lead page: its entries only grow.
   const tabBar = (
@@ -891,7 +938,7 @@ export default function EntityDetail({
         name,
         label,
         icon: tabIcons[name] ?? History,
-        count: name === 'historyTab' ? undefined : count,
+        count: name === 'historyTab' || name === 'mail' ? undefined : count,
       }))}
     />
   );
@@ -919,6 +966,13 @@ export default function EntityDetail({
       headingOf(),
       actionsOf(
         <>
+          {/* A planned email: written and sent from here, the draft a
+              follow-up left in it filled in; sending records it as done. */}
+          {currentStatus === 'planned' &&
+            editable &&
+            record.type === 'email' && (
+              <SendPlannedEmailButton activity={record} />
+            )}
           {/* A planned activity: what came of it, recorded (and its lead
               followed up anew), in one step. */}
           {currentStatus === 'planned' && editable && (

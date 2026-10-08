@@ -176,6 +176,10 @@ export const crmSalesResource = defineCompositeResource(
       ),
 );
 
+// The Mail plugin's page grant for its workspace and personal mail API,
+// which the CRM's Mailbox and Mail accounts pages declare.
+export const MAIL_WORKSPACE_PAGE = 'mail.workspace';
+
 // The application's pages, by the page id each route declares as its `authz`
 // (client/routes.ts, the route name): the client checks `page/<id> access`
 // before rendering a route, and the permission workspace lists the pages
@@ -237,6 +241,9 @@ export function crmPermissionSet(role: string) {
     ),
   );
   for (const page of crmPages) set = set.grant(pageGrant(page.name));
+  // The Mail plugin's workspace page, which also opens its API: everyone in
+  // sales reads and sends their own mail from the CRM.
+  set = set.grant(pageGrant(MAIL_WORKSPACE_PAGE));
   for (const entity of entities)
     set = set.grant(
       entityGrant(entity, {

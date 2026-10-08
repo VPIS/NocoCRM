@@ -27,6 +27,7 @@ import {
   CRM_CAPABILITIES_GROUP,
   CRM_GROUP,
   CRM_SALES_RESOURCE,
+  MAIL_WORKSPACE_PAGE,
   crmEntityResources,
   crmPages,
   capabilityActions,
@@ -299,6 +300,31 @@ export async function provisionCrm(
         });
     }
     await mark('crm-decisions-v1');
+  }
+  // Mail arrived after the sets were provisioned, and the CRM's own
+  // notification centre went with the move to the template's inbox: both
+  // sales roles get the Mail plugin's workspace once, and lose the grant of
+  // the removed page, which no longer names anything.
+  if (!(await marker('crm-mail-v1'))) {
+    for (const role of salesRoles) {
+      const set = await authz.permissionSets.get(roleKey(role));
+      if (!set) continue;
+      const grants = set.grants.filter(
+        (g) =>
+          !(
+            g.resource.type === 'page' && g.resource.id === 'crm-notifications'
+          ),
+      );
+      if (
+        !grants.some(
+          (g) =>
+            g.resource.type === 'page' && g.resource.id === MAIL_WORKSPACE_PAGE,
+        )
+      )
+        grants.push(pageGrant(MAIL_WORKSPACE_PAGE));
+      await authz.permissionSets.update(set.key, { ...set, grants });
+    }
+    await mark('crm-mail-v1');
   }
   const initialized = await database
     .query()

@@ -24,6 +24,7 @@ import {
   ArrowLeft,
   ArrowRightLeft,
   ArrowUpRight,
+  Mail,
   Merge,
   CalendarDays,
   ClipboardCheck,
@@ -114,6 +115,8 @@ import { InlineField } from '../components/crm/inline.js';
 import { AskAIButton } from '../components/crm/ask-ai.js';
 import { ConvertDialog } from '../components/crm/conversion.js';
 import { LeadDuplicates } from '../components/crm/lead-merge.js';
+import { RecordMailPanel } from '../components/crm/record-mail.js';
+import { emailsOf, useMailSetup } from '../components/crm/mail.js';
 import {
   ReviewFeedEntry,
   ReviewPanel,
@@ -255,10 +258,16 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   const navigate = useNavigate();
   const drawer = useRecordDrawer();
   const { text, language } = useCrmText();
+  const mailSetup = useMailSetup();
   const [tabSlug, setTab] = useDetailTab();
   const tab =
-    resolveTab(tabSlug, ['historyTab', 'activities', 'attachments', 'notes']) ??
-    'historyTab';
+    resolveTab(tabSlug, [
+      'historyTab',
+      'activities',
+      'attachments',
+      'notes',
+      ...(mailSetup.can ? ['mail'] : []),
+    ]) ?? 'historyTab';
   // The activities and the history arrive one page each with the lead;
   // these grow them from the list and history endpoints.
   const moreActivities = useMore(
@@ -398,6 +407,10 @@ function LeadDetail({ id }: { id: string }): ReactElement {
           icon: StickyNote,
           count: detail.notesTotal ?? 0,
         },
+        // The reader's own mail with the lead, for whoever has mail.
+        ...(mailSetup.can
+          ? [{ name: 'mail', label: 'mail.tab', icon: Mail }]
+          : []),
       ]}
     />
   );
@@ -663,6 +676,11 @@ function LeadDetail({ id }: { id: string }): ReactElement {
             </div>
           ) : tab === 'notes' ? (
             <NotesPanel entity='leads' id={id} focusId={noteFocus} />
+          ) : tab === 'mail' ? (
+            <RecordMailPanel
+              target={{ addresses: emailsOf([record]) }}
+              link={{ leadId: id }}
+            />
           ) : tab === 'attachments' ? (
             <RecordAttachments
               entity='leads'

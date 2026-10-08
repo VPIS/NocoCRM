@@ -78,6 +78,53 @@ const wording = {
   moreActions: ['More…', '更多…'],
   expand: ['Show details', '展开详情'],
   // Notes in a record's activity feed.
+  mail: {
+    tab: ['Mail', '邮件'],
+    write: ['Write email', '写邮件'],
+    send: ['Send email', '发送邮件'],
+    to: ['To', '收件人'],
+    noSubject: ['(No subject)', '（无主题）'],
+    sent: ['Email sent', '邮件已发出'],
+    logged: [
+      'It is recorded as a completed email activity on this record.',
+      '已作为一条已完成的邮件活动记录在这条记录上。',
+    ],
+    outcomeSent: [
+      'Email sent to {{to}}: {{subject}}',
+      '已发邮件给 {{to}}：{{subject}}',
+    ],
+    partial: [
+      'The provider rejected these recipients: {{recipients}}.',
+      '邮件服务拒收了这些收件人：{{recipients}}。',
+    ],
+    unknown: [
+      'Whether the email was sent could not be confirmed. Check your mailbox before sending again.',
+      '无法确认邮件是否已发出，请先到邮箱里确认，再决定是否重发。',
+    ],
+    failed: [
+      'The email could not be sent. Check the delivery result in your mailbox.',
+      '邮件没有发出，请到邮箱查看发送结果。',
+    ],
+    logFailed: [
+      'The email was sent, but it could not be recorded on this record.',
+      '邮件已发出，但没能记录到这条记录上。',
+    ],
+    noAccount: [
+      'Connect your mailbox to see your mail with this record here.',
+      '连接你的邮箱后，这里会显示你与这条记录的往来邮件。',
+    ],
+    connect: ['Connect a mailbox', '连接邮箱'],
+    noAddress: [
+      'This record has no email address to look for.',
+      '这条记录没有可查找的邮箱地址。',
+    ],
+    empty: [
+      'Your mailboxes have no mail with this record yet.',
+      '你的邮箱里还没有与这条记录的往来邮件。',
+    ],
+    loadFailed: ['Mail could not be loaded.', '邮件加载失败。'],
+    scope: ['Your mail with {{terms}}', '你与 {{terms}} 的往来邮件'],
+  },
   notes: {
     label: ['Note', '备注'],
     tab: ['Notes', '备注'],
@@ -1171,6 +1218,9 @@ const wording = {
     action: ['Action', '行动'],
     relations: ['Relationships', '关系'],
     ai: ['AI', 'AI'],
+    mail: ['Mail', '邮件'],
+    mailbox: ['Mailbox', '邮箱'],
+    mailAccounts: ['Mail accounts', '邮箱账户'],
   },
   entities: {
     leads: ['Leads', '线索'],

@@ -20,10 +20,12 @@ import {
   AppSidebarToggle,
 } from './components/app-sidebar.js';
 import { NavigationMenu } from './components/navigation-menu.js';
-// Application changes: the count beside "Waiting on me" (navigation-badges.ts,
-// waiting-count.ts) and the banner offering the demo dataset.
+// Application changes: the counts beside "Waiting on me" and "Mailbox"
+// (navigation-badges.ts, waiting-count.ts, mail-unread.ts) and the banner
+// offering the demo dataset.
 import { NavigationBadgesContext } from './components/navigation-badges.js';
 import { useWaitingCount } from '../components/crm/waiting-count.js';
+import { useMailUnreadCount } from '../components/crm/mail-unread.js';
 import { DemoBanner } from '../components/crm/demo-banner.js';
 import { AppBrand } from './components/app-brand.js';
 import { HeaderActions } from './components/header-actions.js';
@@ -68,6 +70,7 @@ export function AppLayout({
   // Application change: the count beside "Waiting on me" in the menu and in
   // the tab's title.
   const waiting = useWaitingCount();
+  const unreadMail = useMailUnreadCount();
 
   return (
     // The shell owns the business route tree used by its pages and navigation.
@@ -76,7 +79,9 @@ export function AppLayout({
         <AppSidebarProvider>
           <AppSidebar label={navigationLabel} footer={<AppSidebarFooter />}>
             {/* Application change: the CRM's menu-only groups are headed sections (navigation-menu.tsx). */}
-            <NavigationBadgesContext value={{ 'crm-decisions': waiting }}>
+            <NavigationBadgesContext
+              value={{ 'crm-decisions': waiting, 'crm-mail': unreadMail }}
+            >
               <NavigationMenu
                 items={menuItems}
                 label={navigationLabel}

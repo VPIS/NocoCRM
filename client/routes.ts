@@ -4,6 +4,7 @@ import {
   type AppClientRouteContribution,
 } from '@nocobase/app-client/plugins';
 import {
+  AtSign,
   BookOpenText,
   Building2,
   CalendarDays,
@@ -12,12 +13,13 @@ import {
   LayoutDashboard,
   ListChecks,
   ListTodo,
+  Mail,
   Radar,
   Settings2,
 } from 'lucide-react';
 
 // Navigation is read from these declarations, and the sidebar follows their
-// order: the workspace first, then the AI and the two object sections. A
+// order: the workspace first, then the AI, the two object sections and mail. A
 // group without a path is menu-only; the sidebar renders it as a headed
 // section. Detail pages carry no navigation entry and select the
 // nearest visible ancestor, which keeps an object highlighted on its records.
@@ -112,6 +114,32 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       },
       componentLoader: () => import('./pages/crm-list.js'),
     })),
+  },
+  // The user's own mailboxes, through the Mail plugin: the workspace and the
+  // page that connects them. Both check the plugin's own page grant,
+  // `mail.workspace`, which its API checks too, so the menu shows them to
+  // exactly those whose mail requests the server answers.
+  {
+    name: 'crm-mail-section',
+    navigation: { title: 'crm.navigation.mail' },
+    children: [
+      {
+        name: 'crm-mail',
+        path: '/crm/mail',
+        auth: 'required',
+        authz: page('mail.workspace'),
+        navigation: { title: 'crm.navigation.mailbox', icon: Mail },
+        componentLoader: () => import('./pages/crm-mail/index.js'),
+      },
+      {
+        name: 'crm-mail-accounts',
+        path: '/crm/mail/accounts',
+        auth: 'required',
+        authz: page('mail.workspace'),
+        navigation: { title: 'crm.navigation.mailAccounts', icon: AtSign },
+        componentLoader: () => import('./pages/crm-mail/accounts.js'),
+      },
+    ],
   },
   {
     name: 'crm-record',

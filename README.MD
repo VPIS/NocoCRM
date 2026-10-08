@@ -10,6 +10,7 @@ A CRM for B2B sales built on [NocoBase 3](https://www.nocobase.com), the open-so
 - **Roles and access.** Administrator, sales manager and salesperson, enforced per record and per field by the server.
 - **The AI assistant, Noco.** A chat panel on every page that answers from the records the user may read, builds reports, searches the web where the model supports it, reads attached files, and proposes changes as cards the user confirms; it writes as that user, never beyond their permissions.
 - **AI follow-ups.** New leads, new opportunities and completed activities get an AI follow-up card with the next step, the gaps, the fields to fill and the terms that need approval, decided under **Waiting on me**. Approvers get a review of each request, and a daily check picks up work that has gone quiet. Pasted text can be organised into new leads or an opportunity.
+- **Mail.** Each user connects their own mailbox (IMAP/SMTP, Gmail or Microsoft 365) and reads, writes and sends mail in the CRM. Lead, contact, account and opportunity pages show the user's mail with that customer; mail sent from a record is logged there as an email activity, and an email the AI drafted for a planned activity is sent from it by the user.
 - **Sales skills.** The method the AI follows is readable by everyone on **AI → Sales skills**, where a sales manager adds the company's own practice.
 - **Languages.** The interface is in English or Chinese. The chat answers in the language of the question; what the AI writes on its own follows the **AI working language** setting.
 
@@ -24,6 +25,7 @@ NocoBase 3 provides the NocoBase App Foundation, the application infrastructure 
 | Authentication, users and authorization      | Sign-in, user management, and the roles as permission sets with record and field permissions |
 | AI Employee plugin                           | The chat, LLM services, tool calling, confirmation cards, skills and reports                 |
 | Workflow, notification and scheduler plugins | The notification workflows, the in-app inbox and the daily checks                            |
+| Mail plugin                                  | Users' mailboxes: sync, reading, writing and sending                                         |
 | File and i18n plugins                        | Attachments and their previews, the interface languages                                      |
 
 ## Quick start
@@ -77,6 +79,8 @@ ai:
 The assistant is switched on and off with the **Enabled** switch of Noco on **Settings → AI → AI Employees**. Web search works with OpenAI and Qwen, not with DeepSeek. The business guidance in `server/ai/employees/crm-guidance.ts` and the skills in `ai/skills/` hold the sales practice the AI follows; edit them to make it yours.
 
 **Notifications.** In-app notifications need the channel `inbox` (`notification.channels.inbox: { provider: in-app }`, already in `config.example.yml`), and are sent by three workflows that must be enabled once per deployment on **Settings → Automation → Workflows**.
+
+**Mail.** Declare the mail servers users may connect under `mail.providers` (examples in `config.example.yml`); each user then connects their mailbox on **Mail → Mail accounts**. Gmail and Microsoft 365 also need an OAuth client, with `<origin><base path>/mail/oauth/callback` registered as its redirect URL.
 
 **Where it is served.** `APP_BASE_PATH` is the mount path (`/main` by default) and `APP_PUBLIC_ORIGIN` the public origin, without the path. Set both in the environment of a deployment.
 
