@@ -1,5 +1,6 @@
+import { useTranslation } from '@nocobase/i18n/client';
 import { Button } from '../../shared/ui/button.js';
-import { cn } from '../../shared/utils.js';
+import { cn } from 'cn';
 import { MousePointer2, X } from 'lucide-react';
 import {
   useCallback,
@@ -25,7 +26,6 @@ import {
   type PickerRequest,
   type RegisteredPageElement,
 } from './page-element-store.js';
-import { useAITranslate } from '../../locales/use-ai-translate.js';
 
 export type AIPageElementProviderProps = PropsWithChildren<{
   contextFailurePolicy?: AIPageContextFailurePolicy;
@@ -41,7 +41,7 @@ export function AIPageElementProvider({
   children,
   contextFailurePolicy = 'throw',
 }: AIPageElementProviderProps) {
-  const t = useAITranslate();
+  const { t } = useTranslation('@nocobase/app-plugin-ai-employee');
   const registryRef = useRef(new Map<string, RegisteredPageElement>());
   const [registeredCount, setRegisteredCount] = useState(0);
   const [request, setRequest] = useState<PickerRequest>();

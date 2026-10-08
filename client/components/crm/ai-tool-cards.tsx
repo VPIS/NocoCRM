@@ -2,7 +2,7 @@ import { useState, type ReactElement, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, CircleAlert, LoaderCircle, Sparkles } from 'lucide-react';
 import type { AIToolRendererProps } from '@/extensions/nocobase-ai';
-import { useAITranslate } from '@/extensions/nocobase-ai/locales/use-ai-translate.js';
+import { useTranslation } from '@nocobase/i18n/client';
 import { Button } from '../ui/button.js';
 import { Textarea } from '../ui/textarea.js';
 import { DISMISS_REASON } from './ai-decisions.js';
@@ -333,7 +333,8 @@ export function CrmWriteCard({
   onReject,
 }: AIToolRendererProps): ReactElement {
   const { text } = useCrmText();
-  const t = useAITranslate();
+  // The plugin's Registry strings, in the plugin's own namespace.
+  const { t } = useTranslation('@nocobase/app-plugin-ai-employee');
   const tool = toolName(part) as WriteTool;
   const proposed = object(part.input);
   const metadata = metadataOf(part);

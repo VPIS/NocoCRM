@@ -1,3 +1,4 @@
+import { useTranslation } from '@nocobase/i18n/client';
 import {
   useEffect,
   useRef,
@@ -5,13 +6,12 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { NocoBaseAIChatIcon } from '../../shared/icons/nocobase-ai-chat-icon.js';
-import { cn } from '../../shared/utils.js';
+import { cn } from 'cn';
 import {
   useAIChatControllerState,
   useGlobalAIChatController,
 } from '../../providers/index.js';
 import type { AIChatController } from '../../providers/index.js';
-import { useAITranslate } from '../../locales/use-ai-translate.js';
 
 export type AIChatFloatingTriggerProps = {
   aiEmployee?: string;
@@ -68,7 +68,7 @@ export function AIChatFloatingTrigger({
   hideWhenOpen = true,
   className,
 }: AIChatFloatingTriggerProps) {
-  const t = useAITranslate();
+  const { t } = useTranslation('@nocobase/app-plugin-ai-employee');
   const globalController = useGlobalAIChatController();
   const controller = providedController ?? globalController;
   const { open } = useAIChatControllerState(controller);

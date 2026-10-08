@@ -1,10 +1,11 @@
+import { useTranslation } from '@nocobase/i18n/client';
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from '../../shared/ui/hover-card.js';
 import { Button } from '../../shared/ui/button.js';
-import { cn } from '../../shared/utils.js';
+import { cn } from 'cn';
 import {
   useAI,
   useAIPageContextScope,
@@ -17,7 +18,6 @@ import {
 import { AIEmployeeAvatar } from '../chat/ai-employee-avatar.js';
 import { Send, TextCursorInput } from 'lucide-react';
 import { useState } from 'react';
-import { useAITranslate } from '../../locales/use-ai-translate.js';
 import { withStableKeys } from '../../shared/keys.js';
 
 export type AIEmployeeShortcutProps = {
@@ -45,7 +45,7 @@ export function AIEmployeeShortcut({
   className,
   onTrigger,
 }: AIEmployeeShortcutProps) {
-  const t = useAITranslate();
+  const { t } = useTranslation('@nocobase/app-plugin-ai-employee');
   const ai = useAI();
   const [focused, setFocused] = useState(false);
   const globalController = useGlobalAIChatController();

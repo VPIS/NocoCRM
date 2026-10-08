@@ -48,11 +48,10 @@ const namedKey =
 /** A key the code completes at runtime, such as ``t(`projects.status.${status}`)``: only its prefix is static. */
 const interpolatedKey = /\bt\(\s*\x60([^\x60]*?)\x24\{/gu;
 /**
- * `useTranslation('@nocobase/app-plugin-file')`: the file translates in a plugin's namespace, not the application's.
- * Application change: so does `useAITranslate()`, the AI Employee plugin's own hook, which the Registry copy in
- * `extensions/nocobase-ai` and the CRM's tool cards translate through.
+ * `useTranslation('@nocobase/app-plugin-file')`: the file translates in a plugin's namespace, not the application's,
+ * as the AI Employee plugin's Registry copy in `extensions/nocobase-ai` and the CRM's tool cards do.
  */
-const pluginNamespace = /\b(?:useTranslation\(\s*'|useAITranslate\()/u;
+const pluginNamespace = /\buseTranslation\(\s*'/u;
 
 interface References {
   readonly file: string;

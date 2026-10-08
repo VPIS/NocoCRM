@@ -1,3 +1,4 @@
+import { useTranslation } from '@nocobase/i18n/client';
 import {
   InputGroup,
   InputGroupAddon,
@@ -22,7 +23,7 @@ import {
   useAIChatStatus,
   type AIEmployee,
 } from '../../providers/index.js';
-import { cn } from '../../shared/utils.js';
+import { cn } from 'cn';
 import { ArrowUp, Globe2, Paperclip, Pencil, Square, X } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AIEmployeeAvatar } from './ai-employee-avatar.js';
@@ -34,7 +35,6 @@ import {
 } from '../../shared/ui/tooltip.js';
 import { AIModelSelectOptions } from './model-select-options.js';
 import { ChatAttachment } from './chat-attachment.js';
-import { useAITranslate } from '../../locales/use-ai-translate.js';
 
 export type AIChatComposerAction = {
   key: string;
@@ -69,7 +69,7 @@ export function ChatComposer({
   // or left to the chat's header.
   showWorkContext?: boolean;
 }) {
-  const t = useAITranslate();
+  const { t } = useTranslation('@nocobase/app-plugin-ai-employee');
   const {
     draft,
     setDraft,

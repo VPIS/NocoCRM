@@ -1,4 +1,5 @@
-import { cn } from '../../shared/utils.js';
+import { useTranslation } from '@nocobase/i18n/client';
+import { cn } from 'cn';
 import { Bot, ChevronDown, LoaderCircle } from 'lucide-react';
 import { useState } from 'react';
 import { useAI } from '../../providers/index.js';
@@ -6,10 +7,9 @@ import { AIEmployeeAvatar } from '../chat/ai-employee-avatar.js';
 import { getNocoBaseToolCallMetadata } from '../chat/tool-call-utils.js';
 import type { AIToolRendererProps } from './tool-renderer-provider.js';
 import { asRecord, asString } from './tool-renderer-utils.js';
-import { useAITranslate } from '../../locales/use-ai-translate.js';
 
 export function SubAgentRenderer({ part }: AIToolRendererProps) {
-  const t = useAITranslate();
+  const { t } = useTranslation('@nocobase/app-plugin-ai-employee');
   const { employees } = useAI();
   const input = asRecord(part.input);
   const username = asString(input.username);

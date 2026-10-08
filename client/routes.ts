@@ -130,11 +130,14 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     ],
   },
   {
-    name: 'crm-notifications',
-    path: '/crm/notifications',
+    // The header's inbox button is where a user looks for messages, so this page is reached from there. Declaring no
+    // navigation keeps a second menu entry from pointing at the one destination the button already owns. The plugin's
+    // API answers each person's own messages only, so the page needs no authorization of its own.
+    authz: 'skip',
     auth: 'required',
-    authz: page('crm-notifications'),
-    componentLoader: () => import('./pages/crm-notifications.js'),
+    componentLoader: () => import('./pages/inbox.js'),
+    name: 'inbox',
+    path: '/inbox',
   },
   {
     auth: 'guest',
@@ -156,6 +159,15 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     componentLoader: () => import('./pages/auth/reset-password.js'),
     name: 'reset-password',
     path: '/reset-password',
+  },
+  {
+    // Where a command line's sign-in sends the person to approve it (`pages/auth/device.tsx`). Optional rather than
+    // required so it renders outside the shell, like the sign-in pages; the page sends a guest to sign in and back.
+    auth: 'optional',
+    authz: 'skip',
+    componentLoader: () => import('./pages/auth/device.js'),
+    name: 'device',
+    path: '/device',
   },
 ]);
 

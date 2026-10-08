@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm';
 
 import { SafeImage } from '@/components/safe-image';
 
-import { cn } from '../../shared/utils.js';
+import { cn } from 'cn';
 
 type MarkdownMessageProps = {
   children: string;

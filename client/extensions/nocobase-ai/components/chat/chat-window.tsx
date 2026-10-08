@@ -1,4 +1,5 @@
-import { cn } from '../../shared/utils.js';
+import { useTranslation } from '@nocobase/i18n/client';
+import { cn } from 'cn';
 import {
   useAIChatBase,
   type AIToolCallDecision,
@@ -8,7 +9,6 @@ import { ChatComposer, type AIChatComposerAction } from './chat-composer.js';
 import { ChatHeader } from './chat-header.js';
 import { ChatMessages } from './chat-messages.js';
 import { ConversationList } from './conversation-list.js';
-import { useAITranslate } from '../../locales/use-ai-translate.js';
 
 export function AIChatWindow({
   className,
@@ -28,7 +28,7 @@ export function AIChatWindow({
   showWorkContext = true,
   onToolCallDecision,
 }: AIChatWindowProps) {
-  const t = useAITranslate();
+  const { t } = useTranslation('@nocobase/app-plugin-ai-employee');
   const { conversationListOpen, setConversationListOpen, uploadFiles } =
     useAIChatBase();
   const [draggingFiles, setDraggingFiles] = useState(false);

@@ -19,7 +19,7 @@ const routes = [
   page('home', '/', 'navigation.home'),
   page('crm-leads', '/crm/leads', 'leads'),
   page('crm-record', '/crm/:entity/:id'),
-  page('crm-notifications', '/crm/notifications'),
+  page('inbox', '/inbox'),
 ];
 const key = (route: AppClientRegisteredRoute): string =>
   `app:${route.path}:${route.id}`;
@@ -29,6 +29,6 @@ it('selects the object a record page belongs to, never the home entry', () => {
   // The record page has no entry of its own: its object's entry is selected.
   expect(selectedNavigationId(routes, '/crm/leads/42')).toBe(key(routes[1]!));
   // A page without an entry under no menu path selects nothing, not home.
-  expect(selectedNavigationId(routes, '/crm/notifications')).toBeUndefined();
+  expect(selectedNavigationId(routes, '/inbox')).toBeUndefined();
   expect(selectedNavigationId(routes, '/')).toBe(key(routes[0]!));
 });

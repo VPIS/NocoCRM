@@ -9,8 +9,8 @@ vi.mock('../../client/theme/index.js', () => ({
 vi.mock('../../client/layouts/components/user-menu.js', () => ({
   UserMenu: () => null,
 }));
-vi.mock('../../client/components/crm/notification-bell.js', () => ({
-  NotificationBell: () => <button aria-label='Notifications' />,
+vi.mock('../../client/components/inbox-header-button.js', () => ({
+  InboxHeaderButton: () => <button aria-label='Inbox' />,
 }));
 vi.mock('../../client/components/crm/ai-chat.js', () => ({
   AssistantButton: () => <button aria-label='AI 助手' />,
@@ -18,7 +18,7 @@ vi.mock('../../client/components/crm/ai-chat.js', () => ({
 it('hides Settings when navigation has no accessible pages', () => {
   render(
     <MemoryRouter>
-      <HeaderActions showSettings={false} showDev={false} />
+      <HeaderActions showSettings={false} />
     </MemoryRouter>,
   );
   expect(
@@ -29,28 +29,23 @@ it('hides Settings when navigation has no accessible pages', () => {
 it('keeps Settings visible and current on an accessible settings page', () => {
   render(
     <MemoryRouter initialEntries={['/settings/users']}>
-      <HeaderActions showSettings showDev={false} />
+      <HeaderActions showSettings />
     </MemoryRouter>,
   );
   expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute(
     'aria-current',
     'page',
   );
-  expect(
-    screen.queryByRole('button', { name: 'Notifications' }),
-  ).not.toBeInTheDocument();
   // The assistant opens from the header on every surface.
   expect(screen.getByRole('button', { name: 'AI 助手' })).toBeInTheDocument();
 });
 
-it('keeps CRM notifications on application pages, the assistant beside the account menu', () => {
+it('keeps the inbox on every surface, the assistant beside the account menu', () => {
   render(
     <MemoryRouter initialEntries={['/leads']}>
-      <HeaderActions showSettings showDev={false} />
+      <HeaderActions showSettings />
     </MemoryRouter>,
   );
-  expect(
-    screen.getByRole('button', { name: 'Notifications' }),
-  ).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Inbox' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'AI 助手' })).toBeInTheDocument();
 });

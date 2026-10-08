@@ -1,44 +1,51 @@
-import { NavigationBadgesContext } from './components/navigation-badges.js';
-import { useWaitingCount } from '../components/crm/waiting-count.js';
-import { useSidebarPreference } from './use-sidebar-preference.js';
 import { useSyncServerLocale } from '@nocobase/app-plugin-i18n/client';
-import { useState, type ReactElement } from 'react';
+import { useMemo, type ReactElement } from 'react';
 import type { AppClientRegisteredRoute } from '@nocobase/app-client/plugins';
 import { Outlet, useLocation } from 'react-router';
 
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import { EMPTY_ARRAY } from '@/lib/constants';
+
 import { RouteTreeProvider } from '../routing/route-context.js';
 
-import { useClientApplication } from '@nocobase/app-client';
+import {
+  PageBreadcrumbProvider,
+  useClientApplication,
+} from '@nocobase/app-client';
 import { useTranslation } from '@nocobase/i18n/client';
-import { PanelLeft, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { LayoutHeader } from './components/layout-header.js';
-import { LayoutSidebar } from './components/layout-sidebar.js';
-import { NavigationTree } from './components/navigation-tree.js';
+import {
+  AppSidebar,
+  AppSidebarProvider,
+  AppSidebarToggle,
+} from './components/app-sidebar.js';
+import { NavigationMenu } from './components/navigation-menu.js';
+// Application changes: the count beside "Waiting on me" (navigation-badges.ts,
+// waiting-count.ts) and the banner offering the demo dataset.
+import { NavigationBadgesContext } from './components/navigation-badges.js';
+import { useWaitingCount } from '../components/crm/waiting-count.js';
+import { DemoBanner } from '../components/crm/demo-banner.js';
 import { AppBrand } from './components/app-brand.js';
 import { HeaderActions } from './components/header-actions.js';
-import { SidebarFooter } from './components/sidebar-footer.js';
-// Application change: the header's bell and the notification centre page
-// share one notification runtime, so the centre's changes reach the bell.
-import { NotificationRuntime } from '../components/crm/notification-bell.js';
-import { DemoBanner } from '../components/crm/demo-banner.js';
+import { AppSidebarFooter } from './components/sidebar-footer.js';
 import {
   useRouteNavigation,
   selectedNavigationId,
-  routeKey,
   navigationPages,
 } from '../routing/route-navigation.js';
 
+export interface AppLayoutProps {
+  readonly routes: readonly AppClientRegisteredRoute[];
+  /** Pages plugins declare with `defineDevRoutes()`: rendered in this shell at `/dev/...`, never in its navigation. */
+  readonly devRoutes?: readonly AppClientRegisteredRoute[];
+}
+
 export function AppLayout({
   routes,
-}: {
-  readonly routes: readonly AppClientRegisteredRoute[];
-}): ReactElement {
+  devRoutes = EMPTY_ARRAY,
+}: AppLayoutProps): ReactElement {
   // The browser decides what it renders; this tells the server the same language so its messages match.
   useSyncServerLocale();
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] =
-    useSidebarPreference();
 
   const { t } = useTranslation();
   const { items: menuItems, denied } = useRouteNavigation(routes);
@@ -50,119 +57,50 @@ export function AppLayout({
   const settingsNavigation = useRouteNavigation(
     useClientApplication().runtime.settingsRouteTree,
   );
+  // Pages read their trail from this tree, so it keeps its identity between renders.
+  const routeTree = useMemo(
+    () => (devRoutes.length ? [...routes, ...devRoutes] : routes),
+    [routes, devRoutes],
+  );
+  const navigationLabel = t('navigation.label', {
+    defaultValue: 'Application navigation',
+  });
   // Application change: the count beside "Waiting on me" in the menu and in
-  // the tab's title (navigation-badges.ts, waiting-count.ts).
+  // the tab's title.
   const waiting = useWaitingCount();
 
   return (
     // The shell owns the business route tree used by its pages and navigation.
-    <RouteTreeProvider routes={routes}>
-      <div className='flex h-svh bg-background'>
-        <LayoutSidebar
-          aria-label={t('navigation.label', {
-            defaultValue: 'Application navigation',
-          })}
-          desktopState={desktopSidebarCollapsed ? 'collapsed' : 'expanded'}
-          mobileOpen={mobileSidebarOpen}
-          onMobileOpenChange={setMobileSidebarOpen}
-        >
-          <div
-            className={`flex h-16 shrink-0 items-center justify-between overflow-hidden border-b border-sidebar-border/70 px-5 ${desktopSidebarCollapsed ? 'md:justify-center md:px-0' : ''}`}
-          >
-            <div className='md:hidden'>
-              <AppBrand />
-            </div>
-            <div className='hidden md:block'>
-              <AppBrand compact={desktopSidebarCollapsed} />
-            </div>
-            <Button
-              aria-label={t('navigation.close', {
-                defaultValue: 'Close navigation',
-              })}
-              className='md:hidden hover:bg-sidebar-accent dark:hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:border-sidebar-ring focus-visible:ring-sidebar-ring'
-              onClick={() => setMobileSidebarOpen(false)}
-              size='icon'
-              variant='ghost'
-            >
-              <X />
-            </Button>
-          </div>
-          <nav
-            aria-label={t('navigation.label', {
-              defaultValue: 'Application navigation',
-            })}
-            className={`flex-1 min-h-0 space-y-1 overflow-x-hidden overflow-y-auto py-3 ${desktopSidebarCollapsed ? 'px-3 md:px-2' : 'px-3'}`}
-          >
+    <RouteTreeProvider routes={routeTree}>
+      <PageBreadcrumbProvider>
+        <AppSidebarProvider>
+          <AppSidebar label={navigationLabel} footer={<AppSidebarFooter />}>
+            {/* Application change: the CRM's menu-only groups are headed sections (navigation-menu.tsx). */}
             <NavigationBadgesContext value={{ 'crm-decisions': waiting }}>
-              {menuItems.map((item) => (
-                <NavigationTree
-                  collapsed={desktopSidebarCollapsed}
-                  item={item}
-                  key={routeKey(item.route)}
-                  onNavigate={() => setMobileSidebarOpen(false)}
-                  sections
-                  selectedKey={selectedKey}
-                />
-              ))}
+              <NavigationMenu
+                items={menuItems}
+                label={navigationLabel}
+                selectedKey={selectedKey}
+                sections
+              />
             </NavigationBadgesContext>
-          </nav>
-          <SidebarFooter collapsed={desktopSidebarCollapsed} />
-        </LayoutSidebar>
-        {/* Application change: the whole column, header included, moves aside
-            for the assistant panel, so the header's actions stay reachable. */}
-        <NotificationRuntime>
+          </AppSidebar>
+          {/* Application change: crm-page-main lets the assistant panel push header and page aside (styles.css). */}
           <div className='crm-page-main flex min-w-0 flex-1 flex-col'>
             <LayoutHeader className='sticky top-0 z-40 justify-between'>
               <div className='flex min-w-0 items-center gap-3'>
-                <Button
-                  aria-label={t('navigation.open', {
-                    defaultValue: 'Open navigation',
-                  })}
-                  className='size-9 rounded-xl text-muted-foreground md:hidden'
-                  onClick={() => setMobileSidebarOpen(true)}
-                  size='icon'
-                  variant='ghost'
-                >
-                  <PanelLeft />
-                </Button>
-                {/* Application change: a phone's header has room for the mark only;
-                    the wordmark was cut to "Noco…" beside the header actions. */}
-                <div className='sm:hidden'>
-                  <AppBrand compact />
-                </div>
-                <div className='hidden sm:block md:hidden'>
+                <AppSidebarToggle />
+                <div className='md:hidden'>
                   <AppBrand />
                 </div>
-                <Button
-                  aria-label={
-                    desktopSidebarCollapsed
-                      ? t('navigation.expand', {
-                          defaultValue: 'Expand navigation',
-                        })
-                      : t('navigation.collapse', {
-                          defaultValue: 'Collapse navigation',
-                        })
-                  }
-                  aria-pressed={desktopSidebarCollapsed}
-                  className='hidden size-9 rounded-xl text-muted-foreground hover:text-foreground md:inline-flex'
-                  onClick={() => setDesktopSidebarCollapsed((value) => !value)}
-                  size='icon'
-                  variant='ghost'
-                >
-                  <PanelLeft />
-                </Button>
-                <div className='hidden h-5 w-px bg-border md:block' />
-                <p className='hidden truncate text-sm font-medium text-muted-foreground md:block'>
-                  {t('shell.workspace', {
-                    defaultValue: 'AI application workspace',
-                  })}
-                </p>
+                <div className='h-5 w-px shrink-0 bg-border' />
+                {/* The current page's trail: the route tree's, or the one the page declares (`usePageBreadcrumb`). */}
+                <Breadcrumbs denied={denied} />
               </div>
               <HeaderActions
                 showSettings={
                   navigationPages(settingsNavigation.items).length > 0
                 }
-                showDev={import.meta.env.DEV}
               />
             </LayoutHeader>
             {/* Application change: the CRM's demo banner, under the header
@@ -176,8 +114,8 @@ export function AppLayout({
               </div>
             </main>
           </div>
-        </NotificationRuntime>
-      </div>
+        </AppSidebarProvider>
+      </PageBreadcrumbProvider>
     </RouteTreeProvider>
   );
 }

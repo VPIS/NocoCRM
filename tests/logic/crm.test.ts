@@ -6774,6 +6774,8 @@ it('reverses the CRM migration on a real SQLite database', async () => {
       '202610020001_crm_activities_no_show_cancelled',
       '202610020002_crm_activities_end_optional',
       '202610030001_crm_phone_numbers',
+      // The template's device authorization table (template 1.0.0-beta.56).
+      '202610060001_create_device_code',
     ]);
     // An activity may now have no end.
     await isolated
@@ -6814,6 +6816,7 @@ it('reverses the CRM migration on a real SQLite database', async () => {
     // Each run is a batch: the last one first, then the thirty before it.
     // Rolled back, an activity without an end takes its start.
     expect((await migrator.rollback()).rolledBack).toEqual([
+      '202610060001_create_device_code',
       '202610030001_crm_phone_numbers',
       '202610020002_crm_activities_end_optional',
       '202610020001_crm_activities_no_show_cancelled',

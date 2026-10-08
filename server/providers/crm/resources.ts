@@ -189,7 +189,6 @@ export const crmPages: readonly { name: string; title: AuthorizationTitle }[] =
       title: crm(`entities.${entity}`),
     })),
     { name: 'crm-record', title: crm('authz.pages.record') },
-    { name: 'crm-notifications', title: crm('authz.pages.notifications') },
     { name: 'crm-skills', title: crm('authz.pages.skills') },
     { name: 'crm-decisions', title: crm('authz.pages.decisions') },
   ];

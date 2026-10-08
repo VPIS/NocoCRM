@@ -36,7 +36,7 @@ pnpm nocobase config init
 pnpm dev
 ```
 
-`config init` writes `config.yml` from `config.example.yml` with fresh secrets; `pnpm dev` prints the URL to open, `http://127.0.0.1:13000/main/` by default. Sign in with the initial administrator set under `users.initialAdmin` in `config.yml` (`nocobase` / `admin123` unless changed; change it before the first start of a real deployment).
+`config init` writes `config.yml` from `config.example.yml` with a freshly generated key under `secrets.keys` (keep it: what the application stores encrypted cannot be read without it); `pnpm dev` prints the URL to open, `http://127.0.0.1:13000/main/` by default. Sign in with the initial administrator set under `users.initialAdmin` in `config.yml` (`nocobase` / `admin123` unless changed; change it before the first start of a real deployment).
 
 A banner then offers the **demo data**, a sample dataset in English or Chinese imported from **Settings → System settings → Demo data** and removable there. It comes with its own sales accounts, whose password is the username followed by `123`:
 
@@ -99,7 +99,7 @@ pnpm build --target linux-x64 --tar   # writes storage/exports/dist.tar.gz
 
 - **By hand.** Unpack the archive, run `pnpm nocobase config init` and `pnpm nocobase config check` inside `dist/`, and run `node ./dist/server/standalone.js` under a service manager, with `config.yml` and `storage/` kept beside `dist/` across updates.
 - **Docker.** Build with `docker build -t nococrm .`, or use `ghcr.io/nocobase/nococrm`, which CI publishes from `main` and `v*` tags. Mount `config.yml` read-only at `/app/config.yml` and a volume at `/app/storage`, and choose the path with `-e APP_BASE_PATH=/crm`; `playground/` runs it with Docker Compose.
-- **NocoBase Hub.** Upload the archive to the application on a Hub, or run `pnpm nocobase hub deploy` with `HUB_URL`, `HUB_APP_ID` and `HUB_API_KEY`.
+- **NocoBase Hub.** Upload the archive to the application on a Hub, or deploy from the source checkout: add the Hub's App as a remote with `pnpm nocobase hub remote add origin <Hub URL>/apps/<App ID>`, save a Hub publishing key with `pnpm nocobase hub auth login`, then run `pnpm nocobase hub deploy`, which builds for the Hub's platform itself.
 
 Behind a reverse proxy, keep the public host and protocol and pass WebSocket upgrades. After deploying, set the AI keys, enable the three notification workflows, and check `/<base path>/api/healthz`. Back up the database and `storage/` before upgrading.
 

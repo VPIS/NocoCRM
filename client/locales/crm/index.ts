@@ -739,24 +739,6 @@ const wording = {
   sources: ['Source performance', '来源表现'],
   sellers: ['Team performance', '团队业绩'],
   noRate: ['No closed opportunities', '暂无已关闭商机'],
-  notifications: ['Notifications', '通知中心'],
-  unreadOnly: ['Unread', '未读'],
-  markAllRead: ['Mark all as read', '全部标为已读'],
-  markRead: ['Mark as read', '标为已读'],
-  markUnread: ['Mark as unread', '标为未读'],
-  noNotifications: ['No notifications yet', '暂无通知'],
-  deleteNotificationTitle: [
-    'Delete notification "{{title}}"?',
-    '删除通知「{{title}}」？',
-  ],
-  deleteNotificationHint: [
-    'Only this message is removed; the record it points at is untouched. This cannot be undone.',
-    '只删除这条通知，它指向的记录不受影响。此操作无法撤销。',
-  ],
-  notificationDescription: [
-    'Assignments, activity reminders, and approval updates.',
-    '查看分配通知、活动提醒及审批进度',
-  ],
   askHint: [
     'Ask about customers, prepare a follow-up, or review your pipeline…',
     '分析客户、准备跟进计划，或复盘商机…',
@@ -808,7 +790,6 @@ const wording = {
     pages: {
       home: ['Overview', '工作台'],
       record: ['Record pages', '记录详情页'],
-      notifications: ['Notifications', '通知中心'],
       skills: ['Sales skills', '销售技能'],
       decisions: ['Waiting on me', '待我处理'],
     },
