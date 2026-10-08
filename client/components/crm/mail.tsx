@@ -20,6 +20,10 @@ import {
   LONG_TEXT_LIMIT,
   TEXT_LIMIT,
 } from '../../../server/providers/crm/limits.js';
+import {
+  searchTerms,
+  type MailTarget,
+} from '../../../server/providers/crm/mail-target.js';
 import { planPartsOf } from '../../../server/providers/crm/plan.js';
 import { toText, useCrmApi, useCrmText, useRefresh, type Data } from './api.js';
 
@@ -35,66 +39,12 @@ const MAIL_WORKSPACE = {
   action: 'access',
 } as const;
 
-// Domains shared by everyone who uses them: an account's website on one of
-// these says nothing about whose mail is whose, so they are never searched.
-const SHARED_DOMAINS = new Set([
-  '126.com',
-  '163.com',
-  'aliyun.com',
-  'foxmail.com',
-  'gmail.com',
-  'googlemail.com',
-  'hotmail.com',
-  'icloud.com',
-  'live.com',
-  'me.com',
-  'outlook.com',
-  'proton.me',
-  'protonmail.com',
-  'qq.com',
-  'sina.com',
-  'sohu.com',
-  'yahoo.com',
-  'yeah.net',
-]);
-
-// Where a record's mail is looked for: its own addresses, and an account's
-// domain (from its website) for anyone at the company.
-export interface MailTarget {
-  readonly addresses: readonly string[];
-  readonly domain?: string;
-}
-
 // How a record is linked from the email activity logged when mail is sent
 // from it: the same fields an activity created on its page takes.
 export type MailLink = Data;
 
 export function emailsOf(records: readonly Data[]): string[] {
   return records.map((record) => toText(record.email).trim()).filter(Boolean);
-}
-
-// The company's own domain from an account's website, unless it is a mail
-// service everyone shares.
-export function domainOf(website: unknown): string | undefined {
-  const raw = toText(website).trim();
-  if (!raw) return undefined;
-  try {
-    const host = new URL(raw.includes('://') ? raw : `https://${raw}`).hostname
-      .toLowerCase()
-      .replace(/^www\./u, '');
-    return host.includes('.') && !SHARED_DOMAINS.has(host) ? host : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-export function searchTerms(target: MailTarget): string[] {
-  const terms = new Set(
-    target.addresses.map((address) => address.trim().toLowerCase()),
-  );
-  if (target.domain) terms.add(`@${target.domain}`);
-  terms.delete('');
-  return [...terms];
 }
 
 // Mail's own sendable accounts: connected, active and on a provider that sends.

@@ -1,11 +1,13 @@
 import { expect, it } from 'vitest';
 import {
-  domainOf,
   emailDraftOf,
   emailsOf,
-  searchTerms,
   threadsOf,
 } from '../../client/components/crm/mail.js';
+import {
+  domainOf,
+  searchTerms,
+} from '../../server/providers/crm/mail-target.js';
 import type { MailMessageSummary } from '@nocobase/app-plugin-mail/client';
 import { planDescription } from '../../server/providers/crm/plan.js';
 

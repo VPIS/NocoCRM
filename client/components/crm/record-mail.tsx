@@ -25,15 +25,17 @@ import {
 import {
   emailDraftOf,
   emailsOf,
-  searchTerms,
   uniqueMessages,
   useLogSentMail,
   useMailComposer,
   useMailSetup,
   useRecordMessages,
   type MailLink,
-  type MailTarget,
 } from './mail.js';
+import {
+  searchTerms,
+  type MailTarget,
+} from '../../../server/providers/crm/mail-target.js';
 
 // A record's mail on its page and a planned email sent from its activity,
 // built on the CRM's mail helpers (mail.tsx) and the Mail plugin's components.

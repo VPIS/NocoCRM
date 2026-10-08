@@ -109,12 +109,11 @@ import {
   RecordMailPanel,
   SendPlannedEmailButton,
 } from '../components/crm/record-mail.js';
+import { emailsOf, useMailSetup } from '../components/crm/mail.js';
 import {
   domainOf,
-  emailsOf,
-  useMailSetup,
   type MailTarget,
-} from '../components/crm/mail.js';
+} from '../../server/providers/crm/mail-target.js';
 
 // The account a contact or a deal belongs to, in the title line.
 function AccountCrumb({
