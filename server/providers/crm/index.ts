@@ -38,7 +38,6 @@ import {
 } from './authorization.js';
 import { CrmService, array } from './service.js';
 import { CrmError, type CrmSettings } from './schema.js';
-import { CrmSkillNotes, crmSkillNotesToken } from './skills.js';
 import {
   aiStates,
   LeadEvaluator,
@@ -92,17 +91,6 @@ export default class CrmProvider extends ServiceProvider<Application> {
             this.app.container.has(workflowServiceToken)
               ? this.app.container.resolve(workflowServiceToken)
               : undefined,
-        ),
-    );
-    // The CRM's AI skills with the company's notes (skills.ts).
-    this.app.container.singleton(
-      crmSkillNotesToken,
-      () =>
-        new CrmSkillNotes(
-          this.app.container.resolve(databaseManagerToken),
-          this.app.container.has(aiManagerToken)
-            ? this.app.container.resolve(aiManagerToken).skillsManager
-            : undefined,
         ),
     );
     // New leads evaluated by the AI (lead-evaluation.ts).
@@ -274,8 +262,6 @@ export default class CrmProvider extends ServiceProvider<Application> {
         );
   }
   public override async start(): Promise<void> {
-    // Every provider has booted, so the AI plugin has loaded the skill files.
-    await this.app.container.resolve(crmSkillNotesToken).start();
     const evaluator = this.app.container.resolve(leadEvaluatorToken);
     this.app.container.resolve(crmToken).leadCreated = (by, leadId) =>
       void evaluator.request(by, leadId).catch(() => undefined);

@@ -1,4 +1,5 @@
 import { recordTitle } from '../components/crm/lookups.js';
+import { TaskCards } from '../components/crm/task-list.js';
 import { AutoLoadMore } from '../components/crm/auto-load.js';
 import { toText, useMore } from '../components/crm/api.js';
 import {
@@ -91,7 +92,6 @@ import { Choice, RecordForm } from '../components/crm/form.js';
 import { StageField } from '../components/crm/reasons.js';
 import { ApprovalActions } from '../components/crm/approval-actions.js';
 import {
-  TaskItem,
   AfterSlash,
   ConfirmDialog,
   DetailColumns,
@@ -176,7 +176,7 @@ export default function EntityDetail({
         }
       : undefined;
   const moreTasks = useMore(
-    `tasks?${linkParam}&sort=-dueAt`,
+    `tasks?${linkParam}&sort=dueAt`,
     firstPage('tasks'),
   );
   const moreApprovals = useMore(
@@ -184,7 +184,12 @@ export default function EntityDetail({
     firstPage('approvals'),
   );
   const [uploading, setUploading] = useState(false);
-  const [form, setForm] = useState<{ entity: Entity; initial: Data }>();
+  // The form to open, with the names of the records it starts linked to.
+  const [form, setForm] = useState<{
+    entity: Entity;
+    initial: Data;
+    titles?: Record<string, string>;
+  }>();
   const [confirmDelete, setConfirmDelete] = useState(false);
   // A planned task's outcome being recorded.
   const [recording, setRecording] = useState(false);
@@ -339,8 +344,13 @@ export default function EntityDetail({
           detail.relatedTotals?.[name] ?? rows(detail.related[name]).length,
         ] as [string, string, number],
     ),
-    // A contact keeps no files of its own; the ones it appears in are read
-    // from the task or opportunity that holds them.
+    // The reader's own mail with the record, for whoever has mail.
+    ...(mailSetup.can && mailEntity
+      ? [['mail', 'mail.tab', 0] as [string, string, number]]
+      : []),
+    // Attachments last, on every record that has them. A contact keeps no
+    // files of its own; the ones it appears in are read from the task or
+    // opportunity that holds them.
     ...(hasOwnFiles
       ? [
           ['attachments', 'fields.attachments', attachmentCount] as [
@@ -349,10 +359,6 @@ export default function EntityDetail({
             number,
           ],
         ]
-      : []),
-    // The reader's own mail with the record, for whoever has mail.
-    ...(mailSetup.can && mailEntity
-      ? [['mail', 'mail.tab', 0] as [string, string, number]]
       : []),
   ];
   const activeTab =
@@ -491,6 +497,9 @@ export default function EntityDetail({
                 setForm({
                   entity: 'tasks',
                   initial: relatedInput,
+                  // The record's name and its account's, so the record
+                  // chip names what the task starts linked to.
+                  titles: { ...names, [id]: contextName ?? '' },
                 })
               }
             >
@@ -498,22 +507,16 @@ export default function EntityDetail({
               {text('newTask')}
             </Button>
           )}
-          {!tasks.length ? (
-            <p className='text-sm text-muted-foreground'>{text('noTasks')}</p>
-          ) : (
-            <>
-              <ol className='relative ml-1.5 border-l border-border'>
-                {tasks.map((task) => (
-                  <TaskItem key={toText(task.id)} task={task} />
-                ))}
-              </ol>
-              <AutoLoadMore
-                hasMore={moreTasks.hasMore}
-                loading={moreTasks.loading}
-                onLoad={() => void moreTasks.loadMore()}
-              />
-            </>
-          )}
+          {/* Drawn as the task list draws them. */}
+          <TaskCards
+            rows={tasks}
+            titles={{ ...names, ...moreTasks.titles }}
+            hasMore={moreTasks.hasMore}
+            loading={moreTasks.loading}
+            onLoad={() => void moreTasks.loadMore()}
+            emptyText={text('noTasks')}
+            recordId={id}
+          />
         </div>
       ) : activeTab === 'attachments' ? (
         <RecordAttachments
@@ -785,17 +788,6 @@ export default function EntityDetail({
       {inline(key)}
     </InfoRow>
   );
-  // A long text (an approval's description, its decision comment) takes the
-  // whole column, its label above it: beside a label it would have a third
-  // of the narrow column.
-  const longRow = (key: string, value: ReactNode): ReactElement => (
-    <div key={key} className='py-0.5'>
-      <dt className='px-2 pt-1.5 text-sm text-muted-foreground'>
-        {text(fieldLabelKey(entity, key))}
-      </dt>
-      <dd className='min-w-0 text-sm'>{value}</dd>
-    </div>
-  );
   // Country / state / city on one row, each edited by itself.
   const regionRow = (
     <InfoRow key='region' label={text('region')}>
@@ -960,13 +952,10 @@ export default function EntityDetail({
       ),
       <>
         {/* What it is first, across the column with neither heading nor
-            label, then what came of it once done. An open task has no result yet: it is
-            written on completing it, which also has the AI follow up, not
-            typed into the field, where it would do neither. */}
+            label. What came of it is told in the timeline, under the entry
+            that completed it. */}
         <InfoGroup>
           <div className='min-w-0 py-0.5 text-sm'>{inline('description')}</div>
-          {(currentStatus !== 'open' || toText(record.result ?? '')) &&
-            longRow('result', inline('result'))}
         </InfoGroup>
         {/* Who has it and who takes part, where it stands, and when. */}
         <InfoGroup title={text('taskGroups.general')}>
@@ -1029,6 +1018,11 @@ export default function EntityDetail({
         />,
       ),
       <>
+        {/* What the deal is, across the column with neither heading nor
+            label, as a task's description leads its page. */}
+        <InfoGroup>
+          <div className='min-w-0 py-0.5 text-sm'>{inline('description')}</div>
+        </InfoGroup>
         {/* Who has it, where it stands and what it is worth. */}
         <InfoGroup title={text('opportunityGroups.general')}>
           {row('ownerId')}
@@ -1076,7 +1070,6 @@ export default function EntityDetail({
         <InfoGroup title={text('opportunityGroups.details')}>
           {['accountId', 'businessType', 'source'].map(row)}
           {convertedRow}
-          {row('description')}
         </InfoGroup>
       </>,
     );
@@ -1180,6 +1173,11 @@ export default function EntityDetail({
       />,
     ),
     <>
+      {/* What is asked, across the column with neither heading nor label,
+          as a task's description leads its page. */}
+      <InfoGroup>
+        <div className='min-w-0 py-0.5 text-sm'>{inline('description')}</div>
+      </InfoGroup>
       <InfoGroup title={text('approvalGroups.general')}>
         {row('ownerId')}
         {statusKey && (
@@ -1202,23 +1200,6 @@ export default function EntityDetail({
           </InfoRow>
         )}
         {['topic', 'approverId', 'opportunityId'].map(row)}
-      </InfoGroup>
-      <InfoGroup title={text('approvalGroups.content')}>
-        {longRow('description', inline('description'))}
-        {/* Written by the decision, so read only, and only once there is
-            one. */}
-        {record.decisionComment
-          ? longRow(
-              'decisionComment',
-              <span className='block px-2 py-1.5 whitespace-pre-wrap'>
-                <Value
-                  record={record}
-                  field={{ key: 'decisionComment', type: 'textarea' }}
-                  lookup={names}
-                />
-              </span>,
-            )
-          : null}
       </InfoGroup>
     </>,
   );

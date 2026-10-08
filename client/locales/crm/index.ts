@@ -206,10 +206,10 @@ const wording = {
   },
   approvalGroups: {
     general: ['General', '概况'],
-    content: ['Content', '内容'],
   },
   region: ['Region', '地区'],
   loadMore: ['Load more', '加载更多'],
+  justNow: ['just now', '刚刚'],
   requiredField: ['This field is required', '此字段必填'],
   openWebsite: ['Open website in a new tab', '在新窗口打开网站'],
   noTasks: ['No tasks yet', '暂无任务'],
@@ -268,7 +268,7 @@ const wording = {
     // What a person did, read after their name on the timeline.
     did: {
       created: ['created the record', '创建了记录'],
-      updated: ['updated', '更新了'],
+      updated: ['updated', '更新'],
       deleted: ['deleted the record', '删除了记录'],
       converted: ['converted the lead', '转化了线索'],
       note: ['note:', '备注：'],
@@ -879,13 +879,11 @@ const wording = {
       assign: ['Assign records to others', '分配记录给他人'],
       approve: ['Decide approvals', '审批'],
       export: ['Export records', '导出记录'],
-      manageSkills: ['Edit sales skills', '编辑销售技能'],
       manage: ['Manage', '管理'],
     },
     pages: {
       home: ['Overview', '工作台'],
       record: ['Record pages', '记录详情页'],
-      skills: ['Sales skills', '销售技能'],
       decisions: ['Waiting on me', '待我处理'],
     },
   },
@@ -990,39 +988,6 @@ const wording = {
       '原文改过了，重新整理会替换上面的商机。',
     ],
     create: ['Create opportunity', '创建商机'],
-  },
-  skillsPage: {
-    title: ['Sales skills', '销售技能'],
-    description: [
-      'How the AI works on leads, opportunities and approvals. The built-in method ships with NocoCRM and changes with it; open a skill to add your company’s own practice, and the AI follows both.',
-      'AI 跟进线索、跟进商机和辅助审批时遵循的做法。内置做法随 NocoCRM 升级；打开技能可补充本公司的做法，AI 会一并遵守。',
-    ],
-    builtIn: ['Built in', '内置'],
-    method: ['Built-in method', '内置做法'],
-    hasNotes: ['Has our additions', '已有本公司补充'],
-    notes: ['Our additions', '本公司的补充说明'],
-    notesHint: [
-      'Additions only add to the built-in method; where they conflict with its boundaries, the built-in method applies.',
-      '补充说明只能补充内置做法；和内置做法的边界冲突时，以内置做法为准。',
-    ],
-    noNotes: ['No additions yet.', '还没有补充说明。'],
-    addNotes: ['Add', '添加补充说明'],
-    placeholder: [
-      'For example: rate every government or state-owned lead A and assign it to Daniel Brooks.',
-      '例如：政府和国企客户一律评为 A 级，交给李明负责。',
-    ],
-    saved: [
-      'Saved. The AI uses it from its next task.',
-      '已保存，AI 从下一次处理开始使用。',
-    ],
-    updated: [
-      'Last changed by {{name}} on {{date}}',
-      '{{name}} 最后修改于 {{date}}',
-    ],
-    empty: [
-      'No skills are loaded. Check that the AI Employee plugin is enabled.',
-      '没有加载到技能，请检查 AI 员工插件是否已启用。',
-    ],
   },
   settingsDescription: [
     'Business defaults, reminders, and the demo dataset.',
@@ -1263,8 +1228,7 @@ const wording = {
   },
   navigation: {
     action: ['Action', '行动'],
-    relations: ['Relationships', '关系'],
-    ai: ['AI', 'AI'],
+    records: ['Records', '记录'],
     mail: ['Mail', '邮件'],
     mailbox: ['Mailbox', '邮箱'],
     mailAccounts: ['Mail accounts', '邮箱账户'],

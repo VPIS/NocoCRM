@@ -211,15 +211,6 @@ describe('the task page', () => {
   // The outcome of a planned task goes through "Record outcome", which
   // completes it and has the AI follow up; typed into the field it would
   // do neither, so the field waits until there is one.
-  it('keeps the outcome field out of a planned task until it has one', () => {
-    renderPage();
-    expect(screen.queryByText('结果')).toBeNull();
-    cleanup();
-    state.record = { ...planned, result: '客户确认了报价' };
-    renderPage();
-    expect(screen.getByText('结果')).toBeTruthy();
-  });
-
   // Marking it done from the status menu records its outcome, as the
   // button does, rather than completing it with nothing for the AI to read.
   it('records the outcome when the status menu marks a planned task completed', async () => {
@@ -236,15 +227,31 @@ describe('the task page', () => {
     );
   });
 
-  it('shows the result and no complete button once completed', () => {
+  it('tells the result in the timeline, under the entry that completed it', () => {
     state.record = {
       ...planned,
       status: 'completed',
       completedAt: '2026-10-23T04:30:00.000Z',
+      result: '客户确认了报价',
     };
+    state.history = [
+      {
+        id: 'done',
+        entity: 'tasks',
+        recordId: 'act-1',
+        actorId: 'rep',
+        action: 'status',
+        fromValue: 'open',
+        toValue: 'completed',
+        changes: { status: 'completed', result: '客户确认了报价' },
+        createdAt: '2026-10-23T04:30:00.000Z',
+      },
+    ];
     renderPage();
     expect(screen.queryByRole('button', { name: '完成' })).toBeNull();
-    expect(screen.getByText('结果')).toBeTruthy();
+    // Not a row of the page: told once, under its entry.
+    expect(screen.queryByText('结果')).toBeNull();
+    expect(screen.getAllByText('客户确认了报价')).toHaveLength(1);
   });
 
   it('shows a note of several lines whole under its line, and edits it in place', async () => {
@@ -278,7 +285,7 @@ describe('the task page', () => {
         .getAllByText(/需要准备报价单/)
         .filter((node) => !node.closest('[aria-hidden="true"]')),
     ).toHaveLength(1);
-    expect(screen.getByText('已编辑')).toBeTruthy();
+    expect(screen.getByText(/已编辑/)).toBeTruthy();
     expect(screen.queryByText('编辑了备注')).toBeNull();
     // Its author changes it in place, from the line's edit button.
     await userEvent.click(screen.getByRole('button', { name: '编辑' }));

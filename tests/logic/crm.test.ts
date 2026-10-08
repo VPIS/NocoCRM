@@ -59,6 +59,7 @@ import {
   provisionCrm,
   roleKey,
   taskGrants,
+  withoutSkillGrants,
   translateLegacyGrants,
   type Actor,
 } from '../../server/providers/crm/authorization.js';
@@ -71,11 +72,6 @@ import {
   salesGrant,
 } from '../../server/providers/crm/resources.js';
 import { CrmService } from '../../server/providers/crm/service.js';
-import {
-  CrmSkillNotes,
-  composeSkill,
-} from '../../server/providers/crm/skills.js';
-import type { SkillsEntity, SkillsManager } from '@nocobase/ai-employee';
 import { run as notify } from '../../workflows/approval-notification/server/notify.js';
 import { run as notifyRecord } from '../../workflows/record-notification/server/notify.js';
 import { run as remind } from '../../workflows/task-reminder/server/remind.js';
@@ -1039,6 +1035,12 @@ describe('CRM API security and domain rules', () => {
         )
       ).status,
     ).toBe('approved');
+    // The decision's comment is told on its entry in the approval's
+    // timeline.
+    const decision = (
+      await service.historyOf(actor('manager'), 'approvals', approval.id)
+    ).data.find((entry) => entry.toValue === 'approved');
+    expect(decision?.changes).toEqual({ decisionComment: 'Approved' });
     await expect(
       service.approvalAction(actor('manager'), approval.id, 'reject'),
     ).rejects.toMatchObject({ code: 'forbidden' });
@@ -1227,7 +1229,7 @@ describe('CRM API security and domain rules', () => {
     }
     expect(
       defined.find((d) => d.name === 'crm.sales')?.actions.map((a) => a.name),
-    ).toEqual(['assign', 'approve', 'export', 'manageSkills']);
+    ).toEqual(['assign', 'approve', 'export']);
     // The provisioned sets grant the operations and the pages, nothing raw.
     const rep = await authorization.permissionSets.get(
       roleKey('sales-representative'),
@@ -1260,7 +1262,7 @@ describe('CRM API security and domain rules', () => {
       manager!.grants
         .find((g) => g.resource.id === 'crm.sales')
         ?.actions.map((a) => a.action),
-    ).toEqual(['assign', 'approve', 'export', 'manageSkills']);
+    ).toEqual(['assign', 'approve', 'export']);
     // The administrator is the plugin's root set: unrestricted by
     // declaration, so it carries no CRM grants and is offered as the role.
     expect((await authorization.permissionSets.get('root'))?.grants).toEqual(
@@ -1327,7 +1329,7 @@ describe('CRM API security and domain rules', () => {
       (await authorization.permissionSets.get(roleKey('sales-manager')))!.grants
         .find((g) => g.resource.id === 'crm.sales')
         ?.actions.map((a) => a.action),
-    ).toEqual(['assign', 'approve', 'export', 'manageSkills']);
+    ).toEqual(['assign', 'approve', 'export']);
     // A set provisioned before the operations existed is translated into
     // them once, keeping its scopes; grants the CRM does not own stay.
     const legacy = translateLegacyGrants([
@@ -1427,7 +1429,7 @@ describe('CRM API security and domain rules', () => {
       roleKey('sales-representative'),
     ))!;
     const edited = rep.grants.filter(
-      (g) => !(g.resource.type === 'page' && g.resource.id === 'crm-skills'),
+      (g) => !(g.resource.type === 'page' && g.resource.id === 'crm-decisions'),
     );
     await authorization.permissionSets.update(rep.key, {
       ...rep,
@@ -2639,108 +2641,6 @@ describe('CRM API security and domain rules', () => {
 });
 
 describe('CRM skills', () => {
-  it('appends the company notes to the skill the AI loads, and only there', async () => {
-    const shipped: SkillsEntity = {
-      name: 'lead-follow-up',
-      scope: 'SPECIFIED',
-      description: 'Follow a lead up.',
-      content: '# 跟进线索\n\n内置做法。',
-      introduction: { title: '跟进线索' },
-    };
-    const registered = new Map<string, SkillsEntity>([[shipped.name, shipped]]);
-    const skills = {
-      getSkills: async (name: string) => registered.get(name),
-      registerSkills: async (skill: SkillsEntity) => {
-        registered.set(skill.name, skill);
-      },
-      listSkills: async () => [...registered.values()],
-      deleteSkills: async () => undefined,
-    } as unknown as SkillsManager;
-    const notes = new CrmSkillNotes(database, skills);
-    await notes.start();
-    // Without notes the AI loads the file as it is.
-    expect(registered.get('lead-follow-up')?.content).toBe(shipped.content);
-    // Everyone in the CRM reads the skills; a salesperson may not edit
-    // the notes, a sales manager and an administrator may.
-    expect(await notes.list(actor('rep'))).toMatchObject({
-      canEdit: false,
-      skills: [{ name: 'lead-follow-up', title: '跟进线索' }],
-    });
-    expect((await notes.list(actor('manager'))).canEdit).toBe(true);
-    await expect(notes.list(actor('outsider'))).rejects.toMatchObject({
-      code: 'forbidden',
-    });
-    await expect(
-      notes.save(actor('rep'), 'lead-follow-up', { notes: 'x' }),
-    ).rejects.toMatchObject({ code: 'forbidden' });
-    expect(
-      (
-        await notes.save(actor('manager'), 'lead-follow-up', {
-          notes: '经理补充',
-        })
-      ).updatedById,
-    ).toBe('manager');
-    const saved = await notes.save(actor('admin'), 'lead-follow-up', {
-      notes: '政府和国企客户一律评为 A 级。',
-    });
-    // The page shows the shipped method apart from the notes …
-    expect(saved).toMatchObject({
-      content: shipped.content,
-      notes: '政府和国企客户一律评为 A 级。',
-      updatedById: 'admin',
-    });
-    // … and the AI loads both, the notes after the method.
-    const composed = registered.get('lead-follow-up')!.content;
-    expect(composed.startsWith(shipped.content)).toBe(true);
-    expect(composed).toContain("## The company's additions");
-    expect(composed).toContain('政府和国企客户一律评为 A 级。');
-    expect(composed).toBe(
-      composeSkill(shipped.content, '政府和国企客户一律评为 A 级。'),
-    );
-    // A restart loads the file again and puts the stored notes back.
-    registered.set(shipped.name, shipped);
-    await new CrmSkillNotes(database, skills).start();
-    expect(registered.get('lead-follow-up')!.content).toBe(composed);
-    // Only the CRM's own skills take notes.
-    await expect(
-      notes.save(actor('admin'), 'data-query', { notes: 'x' }),
-    ).rejects.toMatchObject({ code: 'notFound' });
-    // Clearing the notes gives the AI the file alone again.
-    await notes.save(actor('admin'), 'lead-follow-up', { notes: '  ' });
-    expect(registered.get('lead-follow-up')!.content).toBe(shipped.content);
-    expect((await notes.list(actor('admin'))).skills[0]).toMatchObject({
-      name: 'lead-follow-up',
-      notes: '',
-    });
-    // Notes kept for the former lead evaluation skill join those of the
-    // follow-up skill it was merged into, after them.
-    await notes.save(actor('admin'), 'lead-follow-up', { notes: '跟进说明' });
-    const row = await database
-      .query()
-      .selectFrom('crmSettings')
-      .select('value')
-      .where('id', '=', 'skill-notes')
-      .executeTakeFirstOrThrow();
-    const stored = (
-      typeof row.value === 'string' ? JSON.parse(row.value) : row.value
-    ) as Record<string, unknown>;
-    await database
-      .query()
-      .updateTable('crmSettings')
-      .set({
-        value: JSON.stringify({
-          ...stored,
-          'lead-evaluation': { notes: '评估说明', updatedById: 'manager' },
-        }),
-      })
-      .where('id', '=', 'skill-notes')
-      .execute();
-    expect((await notes.list(actor('admin'))).skills[0]).toMatchObject({
-      name: 'lead-follow-up',
-      notes: '跟进说明\n\n评估说明',
-    });
-  });
-
   it('gives existing sales roles the waiting-on-me page once', async () => {
     for (const role of ['sales-representative', 'sales-manager']) {
       const set = (await authorization.permissionSets.get(roleKey(role)))!;
@@ -2809,49 +2709,26 @@ describe('CRM skills', () => {
     ).toBe(true);
   });
 
-  it('gives existing sales roles the skills page, and managers its editing, once', async () => {
-    const strip = async (role: string): Promise<void> => {
-      const set = (await authorization.permissionSets.get(roleKey(role)))!;
-      await authorization.permissionSets.update(set.key, {
-        ...set,
-        grants: set.grants
-          .filter(
-            (g) =>
-              !(g.resource.type === 'page' && g.resource.id === 'crm-skills'),
-          )
-          .map((g) =>
-            g.resource.id === 'crm.sales'
-              ? {
-                  ...g,
-                  actions: g.actions.filter((a) => a.action !== 'manageSkills'),
-                }
-              : g,
-          ),
-      });
-    };
-    await strip('sales-representative');
-    await strip('sales-manager');
-    await database
-      .query()
-      .deleteFrom('crmSettings')
-      .where('id', '=', 'crm-skills-v1')
-      .execute();
-    await provisionCrm(authorization, database);
-    for (const role of ['sales-representative', 'sales-manager']) {
-      const set = (await authorization.permissionSets.get(roleKey(role)))!;
-      expect(
-        set.grants.some(
-          (g) => g.resource.type === 'page' && g.resource.id === 'crm-skills',
-        ),
-      ).toBe(true);
-      expect(
-        set.grants
-          .find((g) => g.resource.id === 'crm.sales')
-          ?.actions.some((a) => a.action === 'manageSkills') ?? false,
-      ).toBe(role === 'sales-manager');
-    }
-    expect(await capability(actor('manager'), 'manageSkills')).toBe(true);
-    expect(await capability(actor('rep'), 'manageSkills')).toBe(false);
+  it('takes the removed sales skills page and its editing out of every set', () => {
+    const page = pageGrant('crm-skills');
+    const kept = pageGrant('crm-decisions');
+    const sales = salesGrant('assign', 'export');
+    expect(
+      withoutSkillGrants([
+        page,
+        kept,
+        {
+          ...sales,
+          actions: [...sales.actions, { action: 'manageSkills' }],
+        },
+        {
+          resource: { type: 'composite', id: 'crm.sales' },
+          actions: [{ action: 'manageSkills' }],
+        },
+      ]),
+    ).toEqual([kept, sales]);
+    // A set with neither is left as it is.
+    expect(withoutSkillGrants([kept, sales])).toBeUndefined();
   });
 });
 

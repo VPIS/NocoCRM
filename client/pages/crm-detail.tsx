@@ -1,4 +1,5 @@
 import { fieldLabelKey, linkOf, toText } from '../components/crm/api.js';
+import { TaskCards } from '../components/crm/task-list.js';
 import { AutoLoadMore } from '../components/crm/auto-load.js';
 import { markdownLine } from '../components/crm/line-breaks.js';
 import {
@@ -31,15 +32,12 @@ import {
 import {
   ArrowLeft,
   ArrowRightLeft,
-  ArrowUpRight,
   Mail,
   Merge,
   ClipboardCheck,
   ContactRound,
   CirclePlus,
   ChevronDown,
-  Clock,
-  User,
   Ellipsis,
   History,
   Paperclip,
@@ -75,8 +73,8 @@ import {
   useMetadata,
   useRefresh,
   sentence,
-  dueText,
   localDate,
+  relativeTime,
   rows,
   arrayValues,
   errorCode,
@@ -220,13 +218,14 @@ export function RecordDrawer({
   );
 }
 
-// The lead's particulars in groups, each under its heading: how the lead
-// stands (after owner and status), the person, their company. Name and
+// The lead's particulars in groups, each under its heading, below its
+// original message: how the lead stands (after owner and status), the
+// person, their company. Name and
 // company head the page as well and lead their groups here too, so the
 // column reads whole on its own. When it came and last changed close the
 // column as a group of their own.
 const leadGroups = [
-  ['general', ['source', 'message']],
+  ['general', ['source']],
   ['contact', ['name', 'jobTitle', 'phone', 'email']],
   [
     'company',
@@ -268,13 +267,13 @@ function LeadDetail({ id }: { id: string }): ReactElement {
     resolveTab(tabSlug, [
       'historyTab',
       'tasks',
-      'attachments',
       ...(mailSetup.can ? ['mail'] : []),
+      'attachments',
     ]) ?? 'historyTab';
   // The tasks and the history arrive one page each with the lead;
   // these grow them from the list and history endpoints.
   const moreTasks = useMore(
-    `tasks?leadId=${toText(id)}&sort=-dueAt`,
+    `tasks?leadId=${toText(id)}&sort=dueAt`,
     detail?.related.tasks
       ? {
           data: rows(detail.related.tasks) as CrmRecord[],
@@ -284,7 +283,12 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       : undefined,
   );
   const [uploading, setUploading] = useState(false);
-  const [form, setForm] = useState<{ entity: Entity; initial: Data }>();
+  // The form to open, with the names of the records it starts linked to.
+  const [form, setForm] = useState<{
+    entity: Entity;
+    initial: Data;
+    titles?: Record<string, string>;
+  }>();
   // The timeline entry the page was asked to show (a waiting evaluation).
   // `at` tells a repeated click from the last one, so it scrolls again.
   const [focus, setFocus] = useState<{ id: string; at: number }>();
@@ -397,16 +401,17 @@ function LeadDetail({ id }: { id: string }): ReactElement {
           icon: SquareCheckBig,
           count: moreTasks.total,
         },
+        // The reader's own mail with the lead, for whoever has mail.
+        ...(mailSetup.can
+          ? [{ name: 'mail', label: 'mail.tab', icon: Mail }]
+          : []),
+        // Attachments last, as on every record.
         {
           name: 'attachments',
           label: 'fields.attachments',
           icon: Paperclip,
           count: attachmentCount,
         },
-        // The reader's own mail with the lead, for whoever has mail.
-        ...(mailSetup.can
-          ? [{ name: 'mail', label: 'mail.tab', icon: Mail }]
-          : []),
       ]}
     />
   );
@@ -510,7 +515,12 @@ function LeadDetail({ id }: { id: string }): ReactElement {
             }}
           />
           <div>
-            {/* Who has the lead and where it stands head the first group. */}
+            {/* What the lead wrote first, across the column with neither
+                heading nor label, as a task's description leads its page. */}
+            <InfoGroup>
+              <div className='min-w-0 py-0.5 text-sm'>{inline('message')}</div>
+            </InfoGroup>
+            {/* Who has the lead and where it stands head the next group. */}
             <InfoGroup title={text('leadGroups.general')}>
               <InfoRow label={text('fields.ownerId')}>
                 {inline('ownerId')}
@@ -601,6 +611,8 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                     setForm({
                       entity: 'tasks',
                       initial: { leadId: id },
+                      // The lead's name, so its chip names it.
+                      titles: { ...names, [id]: contextName ?? '' },
                     })
                   }
                 >
@@ -608,25 +620,16 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                   {text('newTask')}
                 </Button>
               )}
-              {!tasks.length ? (
-                <p className='text-sm text-muted-foreground'>
-                  {text('noTasks')}
-                </p>
-              ) : (
-                <>
-                  {/* One continuous rule down the list; each item hangs a node on it. */}
-                  <ol className='relative ml-1.5 border-l border-border'>
-                    {tasks.map((task) => (
-                      <TaskItem key={toText(task.id)} task={task} />
-                    ))}
-                  </ol>
-                  <AutoLoadMore
-                    hasMore={moreTasks.hasMore}
-                    loading={moreTasks.loading}
-                    onLoad={() => void moreTasks.loadMore()}
-                  />
-                </>
-              )}
+              {/* Drawn as the task list draws them. */}
+              <TaskCards
+                rows={tasks}
+                titles={{ ...names, ...moreTasks.titles }}
+                hasMore={moreTasks.hasMore}
+                loading={moreTasks.loading}
+                onLoad={() => void moreTasks.loadMore()}
+                emptyText={text('noTasks')}
+                recordId={id}
+              />
             </div>
           ) : tab === 'mail' ? (
             <RecordMailPanel
@@ -1147,58 +1150,6 @@ export function WebsiteField({
   );
 }
 
-export function TaskItem({ task }: { task: Data }): ReactElement {
-  const taskLink = useRecordLink('tasks', toText(task.id));
-  const { data: meta } = useMetadata();
-  const zone = meta?.settings.timeZone ?? 'Asia/Shanghai';
-  const status = toText(task.status);
-  return (
-    <li className='relative pl-5'>
-      <span
-        aria-hidden
-        className={`absolute top-4 left-0 size-2.5 -translate-x-1/2 rounded-full border-2 border-card ${toText(
-          status === 'completed'
-            ? 'bg-primary'
-            : status === 'cancelled'
-              ? 'bg-muted-foreground/40'
-              : 'bg-background ring-2 ring-primary/40',
-        )}`}
-      />
-      {/* The task opens in the page's drawer (its full page on a phone
-          or in a new tab); its fields are edited there. The name is the link,
-          stretched over the whole entry. */}
-      <div className='relative rounded-md px-2 py-2 transition-colors hover:bg-muted'>
-        <div className='flex flex-wrap items-center gap-2'>
-          <Link
-            className='flex min-w-0 flex-1 items-center gap-1 outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring'
-            {...taskLink}
-          >
-            <span className='truncate text-sm font-medium'>
-              {toText(task.name)}
-            </span>
-            <ArrowUpRight className='size-3 shrink-0 text-muted-foreground' />
-          </Link>
-          <Status value={task.status} />
-        </div>
-        <div className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-1'>
-          {/* Whose it is, then when. */}
-          <p className='inline-flex items-center gap-1 text-xs text-muted-foreground'>
-            <User className='size-3 shrink-0' />
-            {meta?.users.find((u) => u.id === task.ownerId)?.name ?? '—'}
-          </p>
-          {/* When it is, if it is: a date, or a date and a time. */}
-          {task.dueAt ? (
-            <p className='inline-flex items-center gap-1 text-xs text-muted-foreground tabular-nums'>
-              <Clock className='size-3 shrink-0' />
-              {dueText(task, zone)}
-            </p>
-          ) : null}
-        </div>
-      </div>
-    </li>
-  );
-}
-
 export function Attachments({
   entity,
   record,
@@ -1705,8 +1656,17 @@ export function HistoryChanges({
       <span
         key={key}
         // A lone field takes the rest of the entry's line (basis 0, so it
-        // never wraps below the verb), its values cut where it ends.
-        className={`flex min-w-0 items-baseline gap-1.5 ${folds ? '' : 'flex-1 basis-0'}`}
+        // never wraps below the verb), its values cut where it ends. In
+        // Chinese the first field's name follows the verb with no space
+        // ("更新状态"), so the line's gap is taken back before it.
+        className={`flex min-w-0 items-baseline gap-1.5 ${folds ? '' : 'flex-1 basis-0'} ${
+          part === 'line' &&
+          index === 0 &&
+          !movedField &&
+          language.startsWith('zh')
+            ? '-ml-1.5'
+            : ''
+        }`}
         title={titleOf(key)}
       >
         {label}
@@ -2096,6 +2056,13 @@ export function HistoryFeed({
     });
   };
   const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
+  // The moment the entries' "how long ago" is counted from, moved on each
+  // minute.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, []);
   const optionText = (value: unknown): string =>
     text(`options.${toText(value)}`, { defaultValue: toText(value) });
   const base = `${toText(entity)}/${toText(id)}/history`;
@@ -2153,6 +2120,31 @@ export function HistoryFeed({
       return next;
     });
   const [editingNote, setEditingNote] = useState<string>();
+  // What a record's closing says, told under that entry: an approval's
+  // decision comment, a task's result.
+  const closed =
+    entity === 'approvals'
+      ? { field: 'decisionComment', statuses: ['approved', 'rejected'] }
+      : entity === 'tasks'
+        ? { field: 'result', statuses: ['completed', 'cancelled'] }
+        : undefined;
+  // The entry the record's own comment or result is read for when entries
+  // did not keep theirs: its latest closing, else (a task created done) its
+  // creation, once every entry has loaded.
+  const closedOn = closed
+    ? toText(
+        (
+          more.records.find(
+            (event) =>
+              event.action === 'status' &&
+              closed.statuses.includes(toText(event.toValue)),
+          ) ??
+          (closed.statuses.includes(toText(record.status)) && !more.hasMore
+            ? more.records.find((event) => event.action === 'created')
+            : undefined)
+        )?.id ?? '',
+      )
+    : '';
   // A note's edits show on the note itself, marked edited, not as entries.
   const shown = more.records.filter((event) => event.action !== 'noteEdited');
   return (
@@ -2186,6 +2178,34 @@ export function HistoryFeed({
                   // here; its removal says that it happened, without the
                   // text.
                   const note = event.action === 'note';
+                  // What closed it, read under its line as a note's text
+                  // is and not among the changed fields: an approval's
+                  // decision comment, a task's result. An entry from before
+                  // the comment was kept on it takes the record's own for
+                  // the latest closing; a task created already done shows
+                  // its result on its creation.
+                  const closing =
+                    (closed &&
+                      event.action === 'status' &&
+                      closed.statuses.includes(toText(event.toValue))) ||
+                    key === closedOn;
+                  const comment =
+                    closed && closing
+                      ? toText(
+                          (event.changes as Data | undefined)?.[closed.field] ??
+                            (key === closedOn
+                              ? (record[closed.field] ?? '')
+                              : ''),
+                        ).trim()
+                      : '';
+                  const shownChanges =
+                    closed && closing
+                      ? Object.fromEntries(
+                          Object.entries(
+                            (event.changes as Data | undefined) ?? {},
+                          ).filter(([field]) => field !== closed.field),
+                        )
+                      : event.changes;
                   const pending =
                     ai && followed && event.aiStatus === 'pending';
                   // An approval's AI review for its approver
@@ -2318,7 +2338,13 @@ export function HistoryFeed({
                             statusKey &&
                             !taskEvent &&
                             !approvalEvent ? (
-                              <span className='inline-flex items-baseline gap-1.5'>
+                              // In Chinese the field's name follows the verb
+                              // with no space ("更新状态").
+                              <span
+                                className={`inline-flex items-baseline gap-1.5 ${
+                                  language.startsWith('zh') ? '-ml-1.5' : ''
+                                }`}
+                              >
                                 <span className='text-muted-foreground'>
                                   {text(fieldLabelKey(entity, statusKey))}
                                 </span>
@@ -2351,7 +2377,7 @@ export function HistoryFeed({
                                 <HistoryChanges
                                   entity={entity}
                                   record={record}
-                                  changes={event.changes}
+                                  changes={shownChanges}
                                   previous={event.previous}
                                   movedField={
                                     event.fromValue ? statusKey : undefined
@@ -2398,20 +2424,6 @@ export function HistoryFeed({
                                 {text('feed.aiCaptured')}
                               </Badge>
                             )}
-                            {/* An edited note says so, its edit time on
-                                hover. */}
-                            {note && event.editedAt ? (
-                              <span
-                                className='shrink-0 text-xs text-muted-foreground'
-                                title={localDate(
-                                  event.editedAt,
-                                  language,
-                                  timeZone,
-                                )}
-                              >
-                                {text('notes.edited')}
-                              </span>
-                            ) : null}
                             {/* An evaluation opens into its record (not
                                 while it runs: there is nothing to open). */}
                             {ai &&
@@ -2443,13 +2455,42 @@ export function HistoryFeed({
                           ) : null}
                           <time
                             dateTime={toText(event.createdAt)}
+                            // How long ago, the full time on hover.
+                            title={localDate(
+                              event.createdAt,
+                              language,
+                              timeZone,
+                            )}
                             // On the entry's first line, however far the
                             // line unfolds below it.
                             className='shrink-0 self-start text-xs leading-[26px] text-muted-foreground/80 tabular-nums'
                           >
-                            {localDate(event.createdAt, language, timeZone)}
+                            {/* An edited note says so right before its
+                                time, the edit's time on hover. */}
+                            {note && event.editedAt ? (
+                              <span
+                                title={localDate(
+                                  event.editedAt,
+                                  language,
+                                  timeZone,
+                                )}
+                              >
+                                {text('notes.edited')} ·{' '}
+                              </span>
+                            ) : null}
+                            {relativeTime(
+                              event.createdAt,
+                              language,
+                              now,
+                              text('justNow'),
+                            )}
                           </time>
                         </div>
+                        {comment ? (
+                          <div className='mt-0.5 text-sm'>
+                            <LongText value={comment} />
+                          </div>
+                        ) : null}
                         {note && editingNote === key ? (
                           <NoteEditor
                             note={event}
@@ -2547,7 +2588,7 @@ export function HistoryFeed({
                               open={open}
                               entity={entity}
                               record={record}
-                              changes={event.changes}
+                              changes={shownChanges}
                               previous={event.previous}
                               movedField={
                                 event.fromValue ? statusKey : undefined
@@ -2712,7 +2753,8 @@ function NoteExcerpt({
 }
 
 // A note's author's edit and delete, on the entry's line while it is
-// hovered or focused; delete asks once more.
+// hovered or focused, centred on its first line (26px, as the time is);
+// delete asks once more.
 function NoteActions({
   id,
   onEdit,
@@ -2728,7 +2770,7 @@ function NoteActions({
   const [error, setError] = useState<unknown>();
   return (
     <span
-      className={`flex shrink-0 items-center gap-0.5 self-start transition-opacity group-hover/entry:opacity-100 focus-within:opacity-100 ${
+      className={`flex h-[26px] shrink-0 items-center gap-0.5 self-start transition-opacity group-hover/entry:opacity-100 focus-within:opacity-100 ${
         confirming ? 'opacity-100' : 'opacity-0'
       }`}
     >

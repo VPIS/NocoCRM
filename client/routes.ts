@@ -5,7 +5,6 @@ import {
 } from '@nocobase/app-client/plugins';
 import {
   AtSign,
-  BookOpenText,
   Building2,
   ContactRound,
   Handshake,
@@ -19,7 +18,7 @@ import {
 } from 'lucide-react';
 
 // Navigation is read from these declarations, and the sidebar follows their
-// order: the workspace first, then the AI, the two object sections and mail. A
+// order: the workspace first, then what to do, the records and mail. A
 // group without a path is menu-only; the sidebar renders it as a headed
 // section. Detail pages carry no navigation entry and select the
 // nearest visible ancestor, which keeps an object highlighted on its records.
@@ -43,12 +42,11 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     navigation: { title: 'navigation.home', icon: LayoutDashboard },
     path: '/',
   },
-  // The AI, right under the overview: its suggestions waiting on the
-  // reader, then its skills, read by everyone and edited by whoever holds
-  // manageSkills.
+  // What to do: the AI's suggestions waiting on the reader, the tasks and
+  // the approvals.
   {
-    name: 'crm-ai',
-    navigation: { title: 'crm.navigation.ai' },
+    name: 'crm-action',
+    navigation: { title: 'crm.navigation.action' },
     children: [
       {
         name: 'crm-decisions',
@@ -58,49 +56,29 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         navigation: { title: 'crm.decisions.title', icon: ListTodo },
         componentLoader: () => import('./pages/crm-decisions.js'),
       },
-      {
-        name: 'crm-skills',
-        path: '/crm/skills',
-        auth: 'required',
-        authz: page('crm-skills'),
-        navigation: { title: 'crm.skillsPage.title', icon: BookOpenText },
-        componentLoader: () => import('./pages/crm-skills/index.js'),
-        // A skill's full text and the company's additions open in a drawer
-        // over the list, at an address of its own (/crm/skills/<name>).
-        children: [
-          {
-            name: 'crm-skill',
-            path: ':skillName',
-            componentLoader: () => import('./pages/crm-skills/skill.js'),
-          },
-        ],
-      },
+      ...[
+        ['tasks', SquareCheckBig],
+        ['approvals', ListChecks],
+      ].map(([entity, icon]) => ({
+        name: `crm-${String(entity)}`,
+        path: `/crm/${String(entity)}`,
+        auth: 'required' as const,
+        authz: page(`crm-${String(entity)}`),
+        navigation: {
+          title: `crm.entities.${String(entity)}`,
+          icon: icon as typeof Radar,
+        },
+        componentLoader: () => import('./pages/crm-list.js'),
+      })),
     ],
   },
+  // The records: leads and deals, then the accounts and their people.
   {
-    name: 'crm-action',
-    navigation: { title: 'crm.navigation.action' },
+    name: 'crm-records',
+    navigation: { title: 'crm.navigation.records' },
     children: [
       ['leads', Radar],
       ['opportunities', Handshake],
-      ['tasks', SquareCheckBig],
-      ['approvals', ListChecks],
-    ].map(([entity, icon]) => ({
-      name: `crm-${String(entity)}`,
-      path: `/crm/${String(entity)}`,
-      auth: 'required' as const,
-      authz: page(`crm-${String(entity)}`),
-      navigation: {
-        title: `crm.entities.${String(entity)}`,
-        icon: icon as typeof Radar,
-      },
-      componentLoader: () => import('./pages/crm-list.js'),
-    })),
-  },
-  {
-    name: 'crm-relations',
-    navigation: { title: 'crm.navigation.relations' },
-    children: [
       ['accounts', Building2],
       ['contacts', ContactRound],
     ].map(([entity, icon]) => ({

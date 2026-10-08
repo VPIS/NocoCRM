@@ -249,39 +249,6 @@ export async function provisionCrm(
     }
     await mark('authz-export-v1');
   }
-  // The sales skills page and the capability to edit its notes arrived
-  // after the sets were provisioned: both sales roles get the page once and
-  // the manager the capability, as a new installation provisions them;
-  // anything an administrator changed stays.
-  if (!(await marker('crm-skills-v1'))) {
-    for (const role of salesRoles) {
-      const set = await authz.permissionSets.get(roleKey(role));
-      if (!set) continue;
-      let grants = [...set.grants];
-      if (
-        !grants.some(
-          (g) => g.resource.type === 'page' && g.resource.id === 'crm-skills',
-        )
-      )
-        grants.push(pageGrant('crm-skills'));
-      if (role === 'sales-manager') {
-        const sales = grants.find(
-          (g) =>
-            g.resource.type === 'composite' &&
-            g.resource.id === CRM_SALES_RESOURCE,
-        );
-        if (!sales) grants.push(salesGrant('manageSkills'));
-        else if (!sales.actions.some((a) => a.action === 'manageSkills'))
-          grants = grants.map((g) =>
-            g === sales
-              ? { ...g, actions: [...g.actions, { action: 'manageSkills' }] }
-              : g,
-          );
-      }
-      await authz.permissionSets.update(set.key, { ...set, grants });
-    }
-    await mark('crm-skills-v1');
-  }
   // The "Waiting on me" page (the AI's suggestions to decide), added after
   // the sets were provisioned: both sales roles get it once.
   if (!(await marker('crm-decisions-v1'))) {
@@ -339,6 +306,19 @@ export async function provisionCrm(
     }
     await mark('crm-tasks-v1');
   }
+  // The sales skills page and the capability to add the company's notes to
+  // the skills were removed: the skills are their SKILL.md files alone.
+  // Every set loses its grant of the page and the capability once, in boot,
+  // before the plugin scans the stored grants and refuses an action the
+  // resource no longer declares.
+  if (!(await marker('crm-skills-removed-v1'))) {
+    for (const set of await authz.permissionSets.list()) {
+      const grants = withoutSkillGrants(set.grants);
+      if (grants)
+        await authz.permissionSets.update(set.key, { ...set, grants });
+    }
+    await mark('crm-skills-removed-v1');
+  }
   const initialized = await database
     .query()
     .selectFrom('crmSettings')
@@ -390,6 +370,30 @@ export function taskGrants(
     changed = true;
     return { ...grant, resource: { ...grant.resource, id } };
   });
+  return changed ? result : undefined;
+}
+
+// Drops the grants of the removed sales skills page and of the capability
+// to edit the skills' notes (`manageSkills` on the sales operation and on
+// the CRM's own capability type). Returns undefined when nothing needed it.
+export function withoutSkillGrants(
+  grants: readonly PermissionGrant[],
+): PermissionGrant[] | undefined {
+  let changed = false;
+  const result: PermissionGrant[] = [];
+  for (const grant of grants) {
+    if (grant.resource.type === 'page' && grant.resource.id === 'crm-skills') {
+      changed = true;
+      continue;
+    }
+    if (!grant.actions.some((a) => a.action === 'manageSkills')) {
+      result.push(grant);
+      continue;
+    }
+    changed = true;
+    const actions = grant.actions.filter((a) => a.action !== 'manageSkills');
+    if (actions.length) result.push({ ...grant, actions });
+  }
   return changed ? result : undefined;
 }
 

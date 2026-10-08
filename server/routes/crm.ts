@@ -18,7 +18,6 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { crmToken } from '../providers/crm/index.js';
-import { crmSkillNotesToken } from '../providers/crm/skills.js';
 import { mailTimelineToken } from '../providers/crm/mail-timeline.js';
 import { captureLeads } from '../providers/crm/lead-capture.js';
 import {
@@ -363,21 +362,6 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
     });
     routes.post('/demo/reset', async (c) =>
       c.json({ data: await resetDemo(service, c.get('actor'), demoAccounts) }),
-    );
-    // The CRM's AI skills and the company's notes on them (settings page).
-    routes.get('/skills', async (c) =>
-      c.json({
-        data: await app.container
-          .resolve(crmSkillNotesToken)
-          .list(c.get('actor')),
-      }),
-    );
-    routes.put('/skills/:name', async (c) =>
-      c.json({
-        data: await app.container
-          .resolve(crmSkillNotesToken)
-          .save(c.get('actor'), c.req.param('name'), await c.req.json()),
-      }),
     );
     routes.put('/settings', async (c) =>
       c.json({

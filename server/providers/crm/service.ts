@@ -245,7 +245,7 @@ export class CrmService {
           prepared.decisions![`${toText(entity)}.${toText(action)}`] = null;
         }
       }
-    for (const action of ['assign', 'approve', 'export', 'manageSkills'])
+    for (const action of ['assign', 'approve', 'export'])
       prepared.capabilities![`sales.${toText(action)}`] = await capability(
         actor,
         action,
@@ -1032,7 +1032,7 @@ export class CrmService {
               ? { contactId: id }
               : {};
     if (['leads', 'accounts', 'contacts', 'opportunities'].includes(entity))
-      await firstPage('tasks', { ...link, sort: '-dueAt' });
+      await firstPage('tasks', { ...link, sort: 'dueAt' });
     if (entity === 'accounts') {
       await firstPage('contacts', { accountId: id });
       await firstPage('opportunities', { accountId: id });
@@ -1999,6 +1999,11 @@ export class CrmService {
       .where('updatedAt', '=', record.updatedAt)
       .execute();
     if (!result.updatedCount) throw new CrmError('conflict', 409);
+    // A decision's comment is told on its entry in the timeline, where the
+    // approval page shows it.
+    const decisionComment = ['approve', 'reject'].includes(action)
+      ? comment.slice(0, 10000).trim()
+      : '';
     await this.history(
       tx,
       actor,
@@ -2007,6 +2012,7 @@ export class CrmService {
       'status',
       record.status,
       status,
+      decisionComment ? { decisionComment } : undefined,
     );
     // Decided or withdrawn, a review still waiting has nothing left to
     // decide (approval-review.ts); a review's own decision marks it after.

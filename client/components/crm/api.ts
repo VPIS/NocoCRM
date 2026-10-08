@@ -327,6 +327,35 @@ function dateParts(
       .map((part) => [part.type, part.value]),
   );
 }
+// How long ago a moment was, in the interface language: "just now" within
+// a minute, then minutes, hours, days ("yesterday"), weeks, months and
+// years, by the browser's own wording. The timeline shows it, the full time
+// on hover.
+export function relativeTime(
+  value: unknown,
+  language: string,
+  now: number,
+  justNow: string,
+): string {
+  const at = new Date(toText(value));
+  if (!Number.isFinite(+at)) return '';
+  const seconds = Math.round((+at - now) / 1000);
+  if (Math.abs(seconds) < 60) return justNow;
+  const format = new Intl.RelativeTimeFormat(language, { numeric: 'auto' });
+  const steps: [Intl.RelativeTimeFormatUnit, number][] = [
+    ['minute', 60],
+    ['hour', 3600],
+    ['day', 86400],
+    ['week', 7 * 86400],
+    ['month', 30 * 86400],
+    ['year', 365 * 86400],
+  ];
+  const limits = [3600, 86400, 7 * 86400, 30 * 86400, 365 * 86400, Infinity];
+  const index = limits.findIndex((limit) => Math.abs(seconds) < limit);
+  const [unit, size] = steps[index];
+  return format.format(Math.round(seconds / size), unit);
+}
+
 export function localDate(
   value: unknown,
   _language: string,
@@ -401,6 +430,9 @@ export function fieldLabelKey(entity: Entity, field: string): string {
   if (entity === 'approvals' && field === 'ownerId') return 'fields.applicant';
   if (entity === 'approvals' && field === 'name')
     return 'fields.approvalSubject';
+  // An approval's deal is the one it was asked about.
+  if (entity === 'approvals' && field === 'opportunityId')
+    return 'fields.related.opportunityId';
   // The specification calls an account's description its introduction.
   if (entity === 'accounts' && field === 'description')
     return 'fields.accountDescription';

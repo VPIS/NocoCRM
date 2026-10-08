@@ -141,17 +141,13 @@ export function TaskList({
   if (open.loading || (!status && done.loading)) return <></>;
   if (!open.total && (status || !done.total)) return <>{empty}</>;
   const shown = status || tab === 'open' ? open : done;
-  // Rows lay their particulars beside the title once the list is wide
-  // enough, whatever the page beside it takes.
   return (
-    <div className='@container'>
-      <TaskRows
-        pages={shown}
-        emptyText={text(
-          shown === open ? 'taskList.nothingOpen' : 'taskList.nothingDone',
-        )}
-      />
-    </div>
+    <TaskRows
+      pages={shown}
+      emptyText={text(
+        shown === open ? 'taskList.nothingOpen' : 'taskList.nothingDone',
+      )}
+    />
   );
 }
 
@@ -162,19 +158,55 @@ function TaskRows({
   pages: TaskPages;
   emptyText?: string;
 }): ReactElement {
-  return pages.rows.length ? (
-    <>
+  return (
+    <TaskCards
+      rows={pages.rows}
+      titles={pages.titles}
+      hasMore={Boolean(pages.more)}
+      loading={pages.fetchingMore}
+      onLoad={() => pages.more?.()}
+      emptyText={emptyText}
+    />
+  );
+}
+
+// Tasks as the task list draws them, for the list and a record's Tasks tab:
+// a card of rows, the next page loading as its end scrolls into view. On a
+// record's tab, the record itself is not named on each row.
+export function TaskCards({
+  rows,
+  titles,
+  hasMore,
+  loading,
+  onLoad,
+  emptyText,
+  recordId,
+}: {
+  rows: CrmRecord[];
+  titles: Record<string, string>;
+  hasMore: boolean;
+  loading: boolean;
+  onLoad: () => void;
+  emptyText?: ReactNode;
+  // The record whose tab this is.
+  recordId?: string;
+}): ReactElement {
+  return rows.length ? (
+    // Rows lay their particulars beside the title once the card is wide
+    // enough, whatever the page beside it takes.
+    <div className='@container'>
       <div className='divide-y overflow-hidden rounded-xl border bg-card'>
-        {pages.rows.map((task) => (
-          <TaskRow key={task.id} task={task} titles={pages.titles} />
+        {rows.map((task) => (
+          <TaskRow
+            key={task.id}
+            task={task}
+            titles={titles}
+            recordId={recordId}
+          />
         ))}
       </div>
-      <AutoLoadMore
-        hasMore={Boolean(pages.more)}
-        loading={pages.fetchingMore}
-        onLoad={() => pages.more?.()}
-      />
-    </>
+      <AutoLoadMore hasMore={hasMore} loading={loading} onLoad={onLoad} />
+    </div>
   ) : (
     <p className='rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground'>
       {emptyText}
@@ -185,9 +217,11 @@ function TaskRows({
 function TaskRow({
   task,
   titles,
+  recordId,
 }: {
   task: CrmRecord;
   titles: Record<string, string>;
+  recordId?: string;
 }): ReactElement {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
@@ -278,7 +312,7 @@ function TaskRow({
             />
           </span>
           <span className='flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground'>
-            {linkedId && titles[linkedId] && (
+            {linkedId && linkedId !== recordId && titles[linkedId] && (
               <span className='inline-flex max-w-56 min-w-0 items-center gap-1'>
                 <LinkedIcon className='size-3 shrink-0' />
                 <RecordLink

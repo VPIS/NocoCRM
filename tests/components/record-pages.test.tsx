@@ -22,6 +22,7 @@ const state = vi.hoisted(() => ({
   canDelete: true,
   canApprove: true,
   userId: 'rep',
+  history: [] as Record<string, unknown>[],
 }));
 
 // No mail in these pages: the Mail plugin needs the application root, which
@@ -103,8 +104,8 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
               names: {},
               related: state.related,
               relatedTotals: {},
-              history: [],
-              historyTotal: 0,
+              history: state.history,
+              historyTotal: state.history.length,
               permissions: {
                 edit: true,
                 delete: state.canDelete,
@@ -184,6 +185,7 @@ beforeEach(() => {
   state.userId = 'rep';
   state.canApprove = true;
   state.related = {};
+  state.history = [];
 });
 
 describe('the account page', () => {
@@ -361,19 +363,33 @@ describe('the approval page', () => {
     expect(screen.queryByText('待你审批')).toBeNull();
   });
 
-  it('shows the comment, read only, once decided', () => {
+  it('tells the decision and its comment in the timeline', () => {
     state.record = {
       ...state.record,
       status: 'approved',
       decidedAt: '2026-10-02T03:00:00.000Z',
       decisionComment: '同意 60 天账期',
     };
+    // A decision from before the comment was kept on its entry: the
+    // approval's own comment is read for it.
+    state.history = [
+      {
+        id: 'decided',
+        entity: 'approvals',
+        recordId: 'rec-1',
+        actorId: 'rep',
+        action: 'status',
+        fromValue: 'pending',
+        toValue: 'approved',
+        changes: {},
+        createdAt: '2026-10-02T03:00:00.000Z',
+      },
+    ];
     renderPage();
     expect(screen.queryByText('审批时间')).toBeNull();
-    expect(screen.getByText('审批意见')).toBeTruthy();
+    // Not a field of the page any more.
+    expect(screen.queryByText('审批意见')).toBeNull();
     expect(screen.getByText('同意 60 天账期')).toBeTruthy();
-    // Shown, not edited: no editor button carries its label.
-    expect(screen.queryByRole('button', { name: '审批意见' })).toBeNull();
     expect(screen.getByText('你是审批人')).toBeTruthy();
   });
 });
