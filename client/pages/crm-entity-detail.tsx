@@ -1,4 +1,5 @@
 import { recordTitle } from '../components/crm/lookups.js';
+import { AutoLoadMore } from '../components/crm/auto-load.js';
 import { toText, useMore } from '../components/crm/api.js';
 import {
   useState,
@@ -478,17 +479,11 @@ export default function EntityDetail({
                   <ApprovalItem key={toText(approval.id)} approval={approval} />
                 ))}
               </ol>
-              {moreApprovals.hasMore && (
-                <Button
-                  className='mt-3'
-                  variant='ghost'
-                  size='sm'
-                  disabled={moreApprovals.loading}
-                  onClick={() => void moreApprovals.loadMore()}
-                >
-                  {text('loadMore')} · {moreApprovals.total - approvals.length}
-                </Button>
-              )}
+              <AutoLoadMore
+                hasMore={moreApprovals.hasMore}
+                loading={moreApprovals.loading}
+                onLoad={() => void moreApprovals.loadMore()}
+              />
             </>
           )}
         </div>
@@ -518,17 +513,11 @@ export default function EntityDetail({
                   <TaskItem key={toText(task.id)} task={task} />
                 ))}
               </ol>
-              {moreTasks.hasMore && (
-                <Button
-                  className='mt-3'
-                  variant='ghost'
-                  size='sm'
-                  disabled={moreTasks.loading}
-                  onClick={() => void moreTasks.loadMore()}
-                >
-                  {text('loadMore')} · {moreTasks.total - tasks.length}
-                </Button>
-              )}
+              <AutoLoadMore
+                hasMore={moreTasks.hasMore}
+                loading={moreTasks.loading}
+                onLoad={() => void moreTasks.loadMore()}
+              />
             </>
           )}
         </div>
@@ -1332,16 +1321,11 @@ function RelatedList({
       ) : (
         <>
           {entity === 'contacts' ? contactList(ordered) : table(ordered)}
-          {more.hasMore && (
-            <Button
-              variant='ghost'
-              size='sm'
-              disabled={more.loading}
-              onClick={() => void more.loadMore()}
-            >
-              {text('loadMore')} · {more.total - records.length}
-            </Button>
-          )}
+          <AutoLoadMore
+            hasMore={more.hasMore}
+            loading={more.loading}
+            onLoad={() => void more.loadMore()}
+          />
           {departed.length > 0 && (
             <div className='space-y-2 pt-2'>
               <h4 className='text-xs font-medium text-muted-foreground'>
@@ -1680,16 +1664,11 @@ function OpportunityContacts({
             ))}
           </ul>
         )}
-        {more.hasMore && (
-          <Button
-            variant='ghost'
-            size='sm'
-            disabled={more.loading}
-            onClick={() => void more.loadMore()}
-          >
-            {text('loadMore')} · {more.total - contacts.length}
-          </Button>
-        )}
+        <AutoLoadMore
+          hasMore={more.hasMore}
+          loading={more.loading}
+          onLoad={() => void more.loadMore()}
+        />
       </div>
       {joining && (
         <Dialog

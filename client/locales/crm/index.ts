@@ -164,6 +164,15 @@ const wording = {
     noTime: ['No time', '不定时刻'],
     clear: ['Clear the time', '清除时间'],
   },
+  // The task list: what is to do, then what is done or cancelled.
+  taskList: {
+    open: ['Not done', '未完成'],
+    done: ['Closed', '已结束'],
+    nothingOpen: ['Nothing left to do', '没有未完成的任务'],
+    nothingDone: ['Nothing closed', '没有已结束的任务'],
+    complete: ['Mark as completed', '标记为已完成'],
+    reopen: ['Open again', '重新打开'],
+  },
   // A new task's quick form: a title, a description and chips.
   taskQuick: {
     titlePlaceholder: ['Task title', '任务标题'],
@@ -528,7 +537,6 @@ const wording = {
   mine: ['Mine', '我负责的'],
   participating: ['Participating', '我参与的'],
   taskScope: ['Whose tasks', '谁的任务'],
-  taskScopeAll: ["Everyone's tasks", '所有人的任务'],
   team: ['Team', '团队'],
   search: ['Search records…', '搜索记录…'],
   list: ['List', '列表'],
@@ -1085,10 +1093,6 @@ const wording = {
   newTask: ['New task', '新建任务'],
   completeTask: ['Complete', '完成'],
   completeTaskOf: ['Complete: {{name}}', '完成：{{name}}'],
-  completeTaskHint: [
-    'Write what came of it, if anything: the AI reads it when it follows up.',
-    '可以写一句结果，AI 跟进时会读到。',
-  ],
   newApproval: ['Request approval', '申请审批'],
   linkExisting: ['Link existing', '关联已有'],
   opportunitySuffix: [' opportunity', '商机'],
@@ -1167,8 +1171,8 @@ const wording = {
       'Decided as rejected this month; approval rate {{rate}}',
       '本月拒绝的审批；本月通过率 {{rate}}',
     ],
-    overdueTasks: ['Open, and its time has passed', '待办，且时间已过'],
-    upcoming: ['Open, coming up', '待办，时间在后'],
+    overdueTasks: ['Open, and its time has passed', '未完成，且时间已过'],
+    upcoming: ['Open, coming up', '未完成，时间在后'],
     completedThisMonth: ['Tasks completed this month', '本月完成的任务'],
   },
   allOf: ['All: {{what}}', '{{what}}：全部'],
@@ -1295,10 +1299,6 @@ const wording = {
     opportunities: [
       'Move every deal forward with a clear next step.',
       '以清晰的下一步行动推动每个商机',
-    ],
-    tasks: [
-      'Plan, track, and follow through on customer conversations.',
-      '安排沟通、记录反馈、持续跟进',
     ],
     approvals: [
       'Keep commercial decisions clear and accountable.',
@@ -1504,7 +1504,7 @@ const wording = {
     user: ['End user', '使用'],
     blocker: ['Blocker', '阻碍'],
     email: ['Email', '邮件'],
-    open: ['To do', '待办'],
+    open: ['Not done', '未完成'],
     completed: ['Completed', '已完成'],
     cancelled: ['Cancelled', '已取消'],
     discount: ['Discount', '折扣'],

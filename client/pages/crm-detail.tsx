@@ -1,4 +1,5 @@
 import { fieldLabelKey, linkOf, toText } from '../components/crm/api.js';
+import { AutoLoadMore } from '../components/crm/auto-load.js';
 import { markdownLine } from '../components/crm/line-breaks.js';
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from '@nocobase/i18n/client';
@@ -624,17 +625,11 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                       <TaskItem key={toText(task.id)} task={task} />
                     ))}
                   </ol>
-                  {moreTasks.hasMore && (
-                    <Button
-                      className='mt-3'
-                      variant='ghost'
-                      size='sm'
-                      disabled={moreTasks.loading}
-                      onClick={() => void moreTasks.loadMore()}
-                    >
-                      {text('loadMore')} · {moreTasks.total - tasks.length}
-                    </Button>
-                  )}
+                  <AutoLoadMore
+                    hasMore={moreTasks.hasMore}
+                    loading={moreTasks.loading}
+                    onLoad={() => void moreTasks.loadMore()}
+                  />
                 </>
               )}
             </div>
@@ -2586,17 +2581,11 @@ export function HistoryFeed({
           ))}
         </div>
       )}
-      {more.hasMore && (
-        <Button
-          className='mt-3'
-          variant='ghost'
-          size='sm'
-          disabled={more.loading}
-          onClick={() => void more.loadMore()}
-        >
-          {text('loadMore')} · {more.total - more.records.length}
-        </Button>
-      )}
+      <AutoLoadMore
+        hasMore={more.hasMore}
+        loading={more.loading}
+        onLoad={() => void more.loadMore()}
+      />
     </>
   );
 }
@@ -2683,17 +2672,11 @@ export function NotesPanel({
           ))}
         </ol>
       )}
-      {more.hasMore && (
-        <Button
-          className='mt-3'
-          variant='ghost'
-          size='sm'
-          disabled={more.loading}
-          onClick={() => void more.loadMore()}
-        >
-          {text('loadMore')} · {more.total - more.records.length}
-        </Button>
-      )}
+      <AutoLoadMore
+        hasMore={more.hasMore}
+        loading={more.loading}
+        onLoad={() => void more.loadMore()}
+      />
     </div>
   );
 }

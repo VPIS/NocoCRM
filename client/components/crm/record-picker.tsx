@@ -1,4 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { AutoLoadMore } from './auto-load.js';
 import { Check, ChevronsUpDown, Search, X } from 'lucide-react';
 import { useEffect, useState, type ReactElement } from 'react';
 import { Button } from '../ui/button.js';
@@ -98,7 +99,6 @@ function ResultList({
         isPicked(toText(record.id)) || !exclude.includes(toText(record.id)),
     ),
   }));
-  const total = pages[0]?.total ?? 0;
   const shownCount = pages.reduce((n, p) => n + p.data.length, 0);
   return (
     <div className='flex max-h-80 w-72 flex-col'>
@@ -148,26 +148,15 @@ function ResultList({
             {text('noMatches')}
           </li>
         ) : null}
+        {/* The next matches load as the end of the list scrolls into
+            view. */}
         {query.hasNextPage && (
-          <li className='p-1'>
-            <Button
-              type='button'
-              variant='ghost'
-              size='sm'
-              className='w-full'
-              disabled={query.isFetchingNextPage}
-              onClick={() => void query.fetchNextPage()}
-            >
-              {text('loadMore')} ·{' '}
-              {Math.max(
-                0,
-                total -
-                  (query.data?.pages ?? []).reduce(
-                    (n, p) => n + p.data.length,
-                    0,
-                  ),
-              )}
-            </Button>
+          <li>
+            <AutoLoadMore
+              hasMore
+              loading={query.isFetchingNextPage}
+              onLoad={() => void query.fetchNextPage()}
+            />
           </li>
         )}
       </ul>

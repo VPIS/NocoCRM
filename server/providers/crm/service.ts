@@ -482,20 +482,31 @@ export class CrmService {
       fieldsFor(entity).includes('employed')
     )
       select = select.where('employed', '=', options.employed === 'true');
-    // Participants are a JSON array of ids; the quoted id is what marks
-    // membership, so a prefix of another id cannot match.
-    if (options.participantId && entity === 'tasks')
-      select = select.where(
-        'internalParticipants',
-        'like',
-        `%"${options.participantId.replace(/[%_"]/g, '')}"%`,
+    // Participants are a JSON array of ids, which the column keeps as JSON
+    // text in a JSON string (`"[\"id\"]"`, as every JSON column here), so an
+    // id reads `\"id\"`; plain JSON (`["id"]`) is matched too. The quote
+    // before the id and the one after it mark membership; past the
+    // backslash, which `_` stands for, since a LIKE pattern has no escape
+    // every database reads alike. So no shorter id that begins another
+    // matches; in plain JSON one a character longer could, but the users'
+    // ids are of one length.
+    const participantLikes = (id: string): string[] => {
+      const bare = id.replace(/[%_"\\]/g, '');
+      return [`%"${bare}"%`, `%"${bare}_"%`];
+    };
+    if (options.participantId && entity === 'tasks') {
+      const likes = participantLikes(options.participantId);
+      select = select.where((eb) =>
+        eb.or(likes.map((like) => eb('internalParticipants', 'like', like))),
       );
+    }
     if (options.involvedId && entity === 'tasks') {
       const id = options.involvedId;
+      const likes = participantLikes(id);
       select = select.where((eb) =>
         eb.or([
           eb('ownerId', '=', id),
-          eb('internalParticipants', 'like', `%"${id.replace(/[%_"]/g, '')}"%`),
+          ...likes.map((like) => eb('internalParticipants', 'like', like)),
         ]),
       );
     }

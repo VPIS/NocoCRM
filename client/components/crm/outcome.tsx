@@ -5,7 +5,6 @@ import { Checkbox } from '../ui/checkbox.js';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -142,7 +141,6 @@ export function RecordOutcomeDialog({
           <DialogTitle>
             {text('completeTaskOf', { name: toText(task.name) })}
           </DialogTitle>
-          <DialogDescription>{text('completeTaskHint')}</DialogDescription>
         </DialogHeader>
         <ErrorNotice error={error} />
         <OutcomeBox

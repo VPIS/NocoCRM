@@ -1,4 +1,5 @@
 import { TrendChart } from '../components/crm/trend-chart.js';
+import { AutoLoadMore } from '../components/crm/auto-load.js';
 import { SortableTable } from '../components/crm/sortable-table.js';
 import { dueText, toText } from '../components/crm/api.js';
 import {
@@ -691,20 +692,11 @@ function AgendaCard({
         ) : (
           <p className='py-2 text-sm text-muted-foreground'>{empty}</p>
         )}
-        {records.length < total && (
-          <Button
-            variant='ghost'
-            size='sm'
-            className='w-full'
-            disabled={loading}
-            onClick={() => void loadMore()}
-          >
-            {text('loadMore')}
-            <span className='ml-1 tabular-nums text-muted-foreground'>
-              {total - records.length}
-            </span>
-          </Button>
-        )}
+        <AutoLoadMore
+          hasMore={records.length < total}
+          loading={loading}
+          onLoad={() => void loadMore()}
+        />
       </CardContent>
     </Card>
   );

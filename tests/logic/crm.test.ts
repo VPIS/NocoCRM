@@ -1700,6 +1700,25 @@ describe('CRM API security and domain rules', () => {
       dueAt: new Date(Date.now() + 86400000).toISOString(),
       internalParticipants: ['rep'],
     });
+    // "The ones I take part in" finds it as the column stores it; a
+    // colleague who does not take part does not.
+    const taking = async (participantId: string) =>
+      (
+        await service.list(actor('manager'), 'tasks', {
+          participantId,
+          pageSize: 500,
+        })
+      ).data.map((r) => r.id);
+    expect(await taking('rep')).toContain(planned.id);
+    expect(await taking('manager')).not.toContain(planned.id);
+    expect(
+      (
+        await service.list(actor('rep'), 'tasks', {
+          involvedId: 'rep',
+          pageSize: 500,
+        })
+      ).data.map((r) => r.id),
+    ).toContain(planned.id);
     expect(
       (
         await service.list(actor('rep'), 'opportunities', {

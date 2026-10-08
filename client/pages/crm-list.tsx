@@ -39,8 +39,11 @@ import {
   CalendarClock,
   Clock,
   History,
+  Ban,
+  CircleCheck,
 } from 'lucide-react';
 import { Button } from '../components/ui/button.js';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs.js';
 import { KindTag } from '../components/crm/kind-tag.js';
 import { Badge } from '../components/ui/badge.js';
 import { Spinner } from '../components/ui/spinner.js';
@@ -85,6 +88,12 @@ import {
 } from '../components/crm/lead-capture.js';
 import { downloadCsv } from '../components/crm/csv.js';
 import { SortableHead } from '../components/crm/sortable-table.js';
+import { AutoLoadMore } from '../components/crm/auto-load.js';
+import {
+  TaskList,
+  TaskTabs,
+  type TaskTab,
+} from '../components/crm/task-list.js';
 
 // A calendar cell lists this many before asking to show the rest.
 const CALENDAR_DAY_LIMIT = 5;
@@ -131,10 +140,9 @@ function EntityList({
   const api = useCrmApi();
   const scopeKey = useCrmScopeKey();
   const [search, setSearch] = useState('');
-  // Tasks open on what is still to do, unless a workspace card opened the
-  // list on a set of its own.
-  const defaultStatus =
-    initialStatus ?? (entity === 'tasks' && !initialMetric ? 'open' : '');
+  // Every list opens on every status (tasks list what is still to do above
+  // what is done), unless a workspace card opened it on a set of its own.
+  const defaultStatus = initialStatus ?? '';
   const [status, setStatus] = useState(defaultStatus);
   const [ownerId, setOwnerId] = useState('');
   const [source, setSource] = useState('');
@@ -143,6 +151,8 @@ function EntityList({
   // Tasks only: everyone's, the ones I own, the ones I take part in.
   const [scope, setScope] = useState<'all' | 'mine' | 'participating'>('all');
   const [approverId, setApproverId] = useState('');
+  // The task list's tab: what is to do, or what is done or cancelled.
+  const [taskTab, setTaskTab] = useState<TaskTab>('open');
   // Leads and opportunities are worked as funnels, so they open on the
   // board; the rest, tasks included, open on the list (tasks by when they
   // are due, the calendar beside it).
@@ -167,6 +177,7 @@ function EntityList({
   const totals = useQuery({
     queryKey: [...scopeKey, `${toText(entity)}?pageSize=1`],
     queryFn: () => api<ListData>(`${toText(entity)}?pageSize=1`),
+    enabled: entity !== 'tasks',
   });
   // A workspace card opens the list already filtered to its members: the
   // statistics endpoint names them, once, when the page opens with a metric.
@@ -192,8 +203,7 @@ function EntityList({
     source ||
     employed ||
     topic ||
-    approverId ||
-    scope !== 'all',
+    approverId,
   );
   const [month, setMonth] = useState(() =>
     new Date().toISOString().slice(0, 7),
@@ -343,7 +353,8 @@ function EntityList({
   const query = useQuery({
     queryKey: [...scopeKey, path],
     queryFn: () => api<ListData>(path),
-    enabled: Boolean(definition),
+    // The task list reads its own sections (TaskList).
+    enabled: Boolean(definition) && !(entity === 'tasks' && view === 'list'),
     // While the AI works on a row here, look again every few seconds.
     refetchInterval: (q) =>
       Object.values(q.state.data?.ai ?? {}).includes('running') ? 5000 : false,
@@ -458,9 +469,25 @@ function EntityList({
         large
           ? 'border bg-card p-3 text-sm'
           : `p-2 text-xs ${toText(onToday ? 'bg-card' : 'bg-muted')}`,
-      )}`}
+      )} ${
+        // Done or cancelled: struck through and faded, marked by its kind,
+        // so what is still to do stands out on the day.
+        r.status && r.status !== 'open' ? 'opacity-60' : ''
+      }`}
     >
-      <RecordLink entity={entity} record={r} />
+      <span
+        className={`flex min-w-0 items-center gap-1 ${toText(
+          r.status && r.status !== 'open'
+            ? 'text-muted-foreground line-through'
+            : '',
+        )}`}
+      >
+        {r.status === 'completed' && (
+          <CircleCheck className='size-3 shrink-0 text-success' />
+        )}
+        {r.status === 'cancelled' && <Ban className='size-3 shrink-0' />}
+        <RecordLink entity={entity} record={r} />
+      </span>
       <p className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground'>
         {/* A task due on a date alone has no time to show. */}
         {!isEndOfDay(new Date(toText(r.dueAt)), calendarTimeZone) && (
@@ -570,21 +597,84 @@ function EntityList({
   ];
   const toolbar = (
     <>
+      {/* The calendar's month, left of the view switch: its own stepper
+          rather than <input type="month">, whose native control speaks the
+          browser's language, not the app's. On a phone the calendar card
+          carries its own. */}
+      {entity === 'tasks' && view === 'calendar' && (
+        <div className='hidden items-center gap-1 lg:flex'>
+          <Button
+            variant='outline'
+            size='sm'
+            className='mr-1'
+            onClick={() => setMonth(today.slice(0, 7))}
+          >
+            {text('thisMonth')}
+          </Button>
+          <Button
+            variant='ghost'
+            size='icon-sm'
+            aria-label={text('previousMonth')}
+            onClick={() => setMonth(shiftMonth(month, -1))}
+          >
+            <ChevronLeft />
+          </Button>
+          <span className='min-w-24 text-center text-sm font-medium tabular-nums'>
+            {monthTitle}
+          </span>
+          <Button
+            variant='ghost'
+            size='icon-sm'
+            aria-label={text('nextMonth')}
+            onClick={() => setMonth(shiftMonth(month, 1))}
+          >
+            <ChevronRight />
+          </Button>
+        </div>
+      )}
+      {/* Whose tasks: everyone's, the ones I own, the ones I take part in,
+          for the list and the calendar alike. */}
+      {entity === 'tasks' && (
+        <Tabs
+          value={scope}
+          onValueChange={(next) => {
+            setScope(next as 'all' | 'mine' | 'participating');
+            setPage(1);
+          }}
+        >
+          <TabsList aria-label={text('taskScope')}>
+            {(['all', 'mine', 'participating'] as const).map((value) => (
+              <TabsTrigger key={value} value={value}>
+                {text(value)}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      )}
+      {/* The task list's tabs, left of the view switch. */}
+      {entity === 'tasks' && view === 'list' && !status && (
+        <TaskTabs value={taskTab} onChange={setTaskTab} />
+      )}
       {/* A switch with one position says nothing: an object with only the
           list (contacts, approvals) shows none. */}
       {views.length > 1 && (
-        <div className='flex gap-1 rounded-lg border p-1'>
-          {views.map(([name, Icon]) => (
-            <Button
-              key={name}
-              variant={view === name ? 'secondary' : 'ghost'}
-              onClick={() => setView(name)}
-            >
-              <Icon />
-              {text(name)}
-            </Button>
-          ))}
-        </div>
+        // The same segmented control as the task list's tabs, icons alone,
+        // each named for screen readers and on hover.
+        <Tabs value={view} onValueChange={(next) => setView(String(next))}>
+          <TabsList>
+            {views.map(([name, Icon]) => (
+              <TabsTrigger
+                key={name}
+                value={name}
+                className='px-2'
+                aria-label={text(name)}
+                title={text(name)}
+              >
+                <Icon />
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       )}
       <Button
         variant={filtersOpen || filtering ? 'secondary' : 'ghost'}
@@ -595,52 +685,55 @@ function EntityList({
       >
         <Search />
       </Button>
-      <div className='flex gap-2'>
-        {writable && (
-          <Button
-            variant='ghost'
-            size='icon'
-            aria-label={text('import')}
-            title={text('import')}
-            onClick={() => setImporting(true)}
-          >
-            <Upload />
-          </Button>
-        )}
-        {/* Export is a manager's action; the server refuses it otherwise. */}
-        {meta?.export && (
-          <Button
-            variant='ghost'
-            size='icon'
-            aria-label={text('export')}
-            title={text('export')}
-            onClick={() => {
-              void (async () => {
-                try {
-                  const response = await api<{ data: CrmRecord[] }>(
-                    `${toText(entity)}/export?${params.toString()}`,
-                  );
-                  downloadCsv(
-                    `${toText(entity)}.csv`,
-                    definition?.fields
-                      .map((f) => f.key)
-                      .filter(
-                        (key) =>
-                          read &&
-                          (read.fields === '*' || read.fields.includes(key)),
-                      ) ?? [],
-                    response.data,
-                  );
-                } catch (e) {
-                  setError(e);
-                }
-              })();
-            }}
-          >
-            <Download />
-          </Button>
-        )}
-      </div>
+      {/* Tasks are not imported or exported. */}
+      {entity !== 'tasks' && (
+        <div className='flex gap-2'>
+          {writable && (
+            <Button
+              variant='ghost'
+              size='icon'
+              aria-label={text('import')}
+              title={text('import')}
+              onClick={() => setImporting(true)}
+            >
+              <Upload />
+            </Button>
+          )}
+          {/* Export is a manager's action; the server refuses it otherwise. */}
+          {meta?.export && (
+            <Button
+              variant='ghost'
+              size='icon'
+              aria-label={text('export')}
+              title={text('export')}
+              onClick={() => {
+                void (async () => {
+                  try {
+                    const response = await api<{ data: CrmRecord[] }>(
+                      `${toText(entity)}/export?${params.toString()}`,
+                    );
+                    downloadCsv(
+                      `${toText(entity)}.csv`,
+                      definition?.fields
+                        .map((f) => f.key)
+                        .filter(
+                          (key) =>
+                            read &&
+                            (read.fields === '*' || read.fields.includes(key)),
+                        ) ?? [],
+                      response.data,
+                    );
+                  } catch (e) {
+                    setError(e);
+                  }
+                })();
+              }}
+            >
+              <Download />
+            </Button>
+          )}
+        </div>
+      )}
     </>
   );
   return (
@@ -651,8 +744,9 @@ function EntityList({
       fill={view === 'board'}
       // The lead total sits beside the title rather than as a metric card:
       // it is context, not something to act on.
+      // Tasks count each tab instead.
       title={
-        totals.data?.total !== undefined ? (
+        entity !== 'tasks' && totals.data?.total !== undefined ? (
           <>
             {text(`entities.${toText(entity)}`)}
             <span className='ml-2 align-middle text-base font-normal text-muted-foreground tabular-nums'>
@@ -663,7 +757,10 @@ function EntityList({
           text(`entities.${toText(entity)}`)
         )
       }
-      description={text(`descriptions.${toText(entity)}`)}
+      // Tasks need no line under the heading.
+      description={
+        entity === 'tasks' ? undefined : text(`descriptions.${toText(entity)}`)
+      }
       actions={
         <>
           {toolbar}
@@ -697,25 +794,6 @@ function EntityList({
               onChange={(e) => change(setSearch)(e.target.value)}
             />
           </div>
-          {/* Whose tasks: everyone's, the ones I own, the ones I take part in. */}
-          {entity === 'tasks' && (
-            <div className='w-44'>
-              <Choice
-                label={text('taskScope')}
-                value={scope}
-                onChange={(v) => {
-                  setScope((v || 'all') as 'all' | 'mine' | 'participating');
-                  setPage(1);
-                }}
-                choices={(['all', 'mine', 'participating'] as const).map(
-                  (value) => ({
-                    value,
-                    label: text(value === 'all' ? 'taskScopeAll' : value),
-                  }),
-                )}
-              />
-            </div>
-          )}
           {definition?.statuses.length ? (
             <div className='w-44'>
               <Choice
@@ -811,7 +889,15 @@ function EntityList({
           )}
         </div>
       )}
-      {query.isLoading ? (
+      {entity === 'tasks' && view === 'list' ? (
+        // Tasks read as a to-do list, not a table.
+        <TaskList
+          params={params}
+          status={status}
+          tab={taskTab}
+          empty={<Empty action={newButton} />}
+        />
+      ) : query.isLoading ? (
         <Loading />
       ) : view === 'list' ? (
         !query.data?.data.length ? (
@@ -1103,50 +1189,6 @@ function EntityList({
         </div>
       ) : (
         <section className='space-y-4'>
-          {/* Own month stepper rather than <input type="month">: the native
-              control speaks the browser's language, not the app's. On a
-              phone the calendar card carries its own. */}
-          <div className='hidden items-center gap-1 lg:flex'>
-            <Button
-              variant='ghost'
-              size='icon-sm'
-              aria-label={text('previousMonth')}
-              onClick={() => setMonth(shiftMonth(month, -1))}
-            >
-              <ChevronLeft />
-            </Button>
-            <span className='min-w-32 text-center text-sm font-medium tabular-nums'>
-              {new Intl.DateTimeFormat(language, {
-                year: 'numeric',
-                month: 'long',
-                timeZone: 'UTC',
-              }).format(
-                new Date(
-                  Date.UTC(
-                    Number(month.slice(0, 4)),
-                    Number(month.slice(5)) - 1,
-                    1,
-                  ),
-                ),
-              )}
-            </span>
-            <Button
-              variant='ghost'
-              size='icon-sm'
-              aria-label={text('nextMonth')}
-              onClick={() => setMonth(shiftMonth(month, 1))}
-            >
-              <ChevronRight />
-            </Button>
-            <Button
-              variant='outline'
-              size='sm'
-              className='ml-2'
-              onClick={() => setMonth(today.slice(0, 7))}
-            >
-              {text('thisMonth')}
-            </Button>
-          </div>
           {/* The month grid needs about 110px a day, which a phone or a tablet
               beside the sidebar does not have: below 1024px the month is a
               grid of dates, and the tasks of the date picked show under
@@ -1504,7 +1546,6 @@ function BoardColumn({
     ai: 'running' | 'pending' | undefined,
   ) => ReactElement;
 }): ReactElement {
-  const { text } = useCrmText();
   const api = useCrmApi();
   const scopeKey = useCrmScopeKey();
   const base = new URLSearchParams(params);
@@ -1591,20 +1632,11 @@ function BoardColumn({
         {items.map((record) =>
           renderCard(record, titles, ai[toText(record.id)]),
         )}
-        {query.hasNextPage && (
-          <Button
-            variant='ghost'
-            size='sm'
-            className='w-full'
-            disabled={query.isFetchingNextPage}
-            onClick={() => void query.fetchNextPage()}
-          >
-            {text('loadMore')}
-            <span className='ml-1 tabular-nums text-muted-foreground'>
-              {total - items.length}
-            </span>
-          </Button>
-        )}
+        <AutoLoadMore
+          hasMore={Boolean(query.hasNextPage)}
+          loading={query.isFetchingNextPage}
+          onLoad={() => void query.fetchNextPage()}
+        />
       </div>
     </section>
   );
