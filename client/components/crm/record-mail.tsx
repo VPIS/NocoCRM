@@ -288,7 +288,7 @@ export function RecordMailPanel({
               <button
                 type='button'
                 aria-expanded={open}
-                className='flex w-full min-w-0 items-start gap-3 px-3 py-2.5 text-left hover:bg-muted/50'
+                className={`flex w-full min-w-0 items-start gap-3 px-3 py-2.5 text-left ${open ? 'bg-muted' : 'hover:bg-muted/50'}`}
                 onClick={() => setSelected(open ? undefined : key)}
               >
                 <span
@@ -328,78 +328,85 @@ export function RecordMailPanel({
                   )}
                 </span>
               </button>
+              {/* The open conversation on a tinted tray that carries on
+                  from its row, the plugin's white conversation set on it as
+                  a card, so it reads apart from the rows around it. */}
               {open && (
-                <div className='border-t border-border bg-muted/20'>
-                  <MailConversationView
-                    labels={labels}
-                    loading={conversation.isLoading}
-                    messages={conversation.data ?? []}
-                    onLoadMore={() => undefined}
-                    subject={message.subject}
-                    actions={
-                      available
-                        ? {
-                            reply: (source) =>
-                              compose(
-                                {
-                                  mode: 'reply',
-                                  relatedMessageId: source.id,
-                                  to: source.replyTo.length
-                                    ? source.replyTo
-                                        .map((address) => address.address)
-                                        .join(', ')
-                                    : (source.from?.address ?? ''),
-                                  subject: /^re:/iu.test(source.subject)
-                                    ? source.subject
-                                    : `Re: ${source.subject}`,
-                                },
-                                log,
-                              ),
-                            delete: () => undefined,
-                            canDelete: () => false,
-                            toggleRead: (source) =>
-                              void mail
-                                .updateMessage({
-                                  accountId: source.accountId,
-                                  messageId: source.id,
-                                  read: !source.read,
-                                })
-                                .then(() => conversation.refetch()),
-                            toggleStarred: (source) =>
-                              void mail
-                                .updateMessage({
-                                  accountId: source.accountId,
-                                  messageId: source.id,
-                                  starred: !source.starred,
-                                })
-                                .then(() => conversation.refetch()),
-                          }
-                        : undefined
-                    }
-                    actionLabels={{
-                      archive: t('workspace.archive', {
-                        defaultValue: 'Archive',
-                      }),
-                      delete: t('workspace.delete', { defaultValue: 'Delete' }),
-                      download: t('workspace.download', {
-                        defaultValue: 'Download',
-                      }),
-                      reply: t('workspace.reply', { defaultValue: 'Reply' }),
-                      forward: t('workspace.forward', {
-                        defaultValue: 'Forward',
-                      }),
-                      markRead: t('workspace.markRead', {
-                        defaultValue: 'Mark as read',
-                      }),
-                      markUnread: t('workspace.markUnread', {
-                        defaultValue: 'Mark as unread',
-                      }),
-                      star: t('workspace.star', { defaultValue: 'Star' }),
-                      unstar: t('workspace.unstar', {
-                        defaultValue: 'Remove star',
-                      }),
-                    }}
-                  />
+                <div className='bg-muted px-2 pb-2'>
+                  <div className='overflow-hidden rounded-md border border-border shadow-sm'>
+                    <MailConversationView
+                      labels={labels}
+                      loading={conversation.isLoading}
+                      messages={conversation.data ?? []}
+                      onLoadMore={() => undefined}
+                      subject={message.subject}
+                      actions={
+                        available
+                          ? {
+                              reply: (source) =>
+                                compose(
+                                  {
+                                    mode: 'reply',
+                                    relatedMessageId: source.id,
+                                    to: source.replyTo.length
+                                      ? source.replyTo
+                                          .map((address) => address.address)
+                                          .join(', ')
+                                      : (source.from?.address ?? ''),
+                                    subject: /^re:/iu.test(source.subject)
+                                      ? source.subject
+                                      : `Re: ${source.subject}`,
+                                  },
+                                  log,
+                                ),
+                              delete: () => undefined,
+                              canDelete: () => false,
+                              toggleRead: (source) =>
+                                void mail
+                                  .updateMessage({
+                                    accountId: source.accountId,
+                                    messageId: source.id,
+                                    read: !source.read,
+                                  })
+                                  .then(() => conversation.refetch()),
+                              toggleStarred: (source) =>
+                                void mail
+                                  .updateMessage({
+                                    accountId: source.accountId,
+                                    messageId: source.id,
+                                    starred: !source.starred,
+                                  })
+                                  .then(() => conversation.refetch()),
+                            }
+                          : undefined
+                      }
+                      actionLabels={{
+                        archive: t('workspace.archive', {
+                          defaultValue: 'Archive',
+                        }),
+                        delete: t('workspace.delete', {
+                          defaultValue: 'Delete',
+                        }),
+                        download: t('workspace.download', {
+                          defaultValue: 'Download',
+                        }),
+                        reply: t('workspace.reply', { defaultValue: 'Reply' }),
+                        forward: t('workspace.forward', {
+                          defaultValue: 'Forward',
+                        }),
+                        markRead: t('workspace.markRead', {
+                          defaultValue: 'Mark as read',
+                        }),
+                        markUnread: t('workspace.markUnread', {
+                          defaultValue: 'Mark as unread',
+                        }),
+                        star: t('workspace.star', { defaultValue: 'Star' }),
+                        unstar: t('workspace.unstar', {
+                          defaultValue: 'Remove star',
+                        }),
+                      }}
+                    />
+                  </div>
                 </div>
               )}
             </li>
