@@ -9,14 +9,14 @@ const wording = {
   churnedThisMonth: ['Churned this month', '本月流失客户'],
   inactiveContacts: ['Former employees', '已离职人数'],
   missingContact: ['Missing phone and email', '缺少联系方式'],
-  todayActivities: ['Today’s activities', '今日活动'],
+  todayTasks: ['Today’s tasks', '今日任务'],
   myDecisions: ['Waiting for me', '待我审批'],
   awaitingApproval: ['Awaiting approval', '等待审批'],
   toSubmit: ['To submit', '待提交'],
   approvedThisMonth: ['Approved this month', '本月通过'],
   rejectedThisMonth: ['Rejected this month', '本月拒绝'],
   planned: ['Upcoming', '待进行'],
-  overdueActivities: ['Overdue activities', '逾期活动'],
+  overdueTasks: ['Overdue tasks', '逾期任务'],
   cancelled: ['Cancelled', '已取消'],
 
   opportunityName: ['{{name}} opportunity', '{{name}}商机'],
@@ -86,8 +86,8 @@ const wording = {
     noSubject: ['(No subject)', '（无主题）'],
     sent: ['Email sent', '邮件已发出'],
     logged: [
-      'It is recorded as a completed email activity on this record.',
-      '已作为一条已完成的邮件活动记录在这条记录上。',
+      'It shows in the timeline of the records it concerns.',
+      '它会出现在相关记录的动态里。',
     ],
     outcomeSent: [
       'Email sent to {{to}}: {{subject}}',
@@ -106,8 +106,8 @@ const wording = {
       '邮件没有发出，请到邮箱查看发送结果。',
     ],
     logFailed: [
-      'The email was sent, but it could not be recorded on this record.',
-      '邮件已发出，但没能记录到这条记录上。',
+      'The email was sent, but what was to follow it could not be done. Refresh and try again.',
+      '邮件已发出，但后续操作没有完成，请刷新后重试。',
     ],
     noAccount: [
       'Connect your mailbox to see your mail with this record here.',
@@ -155,44 +155,61 @@ const wording = {
     general: ['General', '概况'],
     contact: ['Contact', '联系人'],
     company: ['Company', '公司'],
-    system: ['System', '系统'],
   },
-  // The activity page's particulars, grouped as the lead's.
-  activityGroups: {
+  // The task page's particulars, grouped as the lead's.
+  // A task's time in its whole form.
+  taskTime: {
+    pickDate: ['Pick a date', '选择日期'],
+    timeOfDay: ['Time of day', '时刻'],
+    noTime: ['No time', '不定时刻'],
+    clear: ['Clear the time', '清除时间'],
+  },
+  // A new task's quick form: a title, a description and chips.
+  taskQuick: {
+    titlePlaceholder: ['Task title', '任务标题'],
+    descriptionPlaceholder: [
+      'Add a description or attach files…',
+      '添加描述或上传附件…',
+    ],
+    attach: ['Attach files', '上传附件'],
+    record: ['Record', '关联记录'],
+    clear: ['Clear', '清除'],
+    searchRecords: [
+      'Search leads, accounts, opportunities…',
+      '搜索线索、客户、商机…',
+    ],
+    searchPeople: ['Search colleagues…', '搜索同事…'],
+    searchContacts: ['Search contacts…', '搜索联系人…'],
+    add: ['Add', '添加'],
+  },
+  taskGroups: {
     general: ['General', '概况'],
-    participants: ['Participants', '参与人'],
     related: ['Related to', '关联'],
-    content: ['Content', '内容'],
-    system: ['System', '系统'],
   },
   // The opportunity page's particulars, grouped as the lead's.
   opportunityGroups: {
     general: ['General', '概况'],
     details: ['Details', '详情'],
-    system: ['System', '系统'],
   },
   // The account, contact and approval pages' particulars, likewise.
   accountGroups: {
     general: ['General', '概况'],
     company: ['Company', '公司'],
-    system: ['System', '系统'],
   },
   contactGroups: {
     general: ['General', '概况'],
     reach: ['Contact details', '联系方式'],
-    system: ['System', '系统'],
   },
   approvalGroups: {
     general: ['General', '概况'],
     content: ['Content', '内容'],
-    system: ['System', '系统'],
   },
   region: ['Region', '地区'],
   loadMore: ['Load more', '加载更多'],
   requiredField: ['This field is required', '此字段必填'],
   openWebsite: ['Open website in a new tab', '在新窗口打开网站'],
-  noActivities: ['No activities yet', '暂无活动'],
-  noActivitiesOnDay: ['No activities on this day', '这一天没有活动'],
+  noTasks: ['No tasks yet', '暂无任务'],
+  noTasksOnDay: ['No tasks on this day', '这一天没有任务'],
   dayTotal: ['Total {{count}}', '共 {{count}} 项'],
   todayButton: ['Today', '今天'],
   noAttachments: ['No attachments yet', '暂无附件'],
@@ -216,19 +233,27 @@ const wording = {
     evaluating: ['is preparing a follow-up…', '正在准备跟进建议…'],
     evaluationFailed: ['could not finish a follow-up', '没能给出跟进建议'],
     fieldCount: ['{{count}} fields', '{{count}} 个字段'],
-    // One of the record's activities, after who did it.
-    activity: {
+    // One of the record's tasks, after who did it.
+    task: {
       planned: ['planned', '安排了'],
       completed: ['completed', '完成了'],
       cancelled: ['cancelled', '取消了'],
       moved: ['moved', '改期了'],
       edited: ['edited', '修改了'],
-      noun: ['activity', '活动'],
+      noun: ['task', '任务'],
       deleted: ['deleted', '删除了'],
       to: ['to {{time}}', '改到 {{time}}'],
     },
     // A deal's contact with their role, in a change of the deal's contacts.
     contactRole: ['{{name}} ({{role}})', '{{name}}（{{role}}）'],
+    // A mail conversation with the record's people, after the mailbox
+    // owner's name.
+    mail: {
+      exchanged: ['exchanged mail', '往来邮件'],
+      noSubject: ['(No subject)', '（无主题）'],
+      count: ['{{count}} messages', '{{count}} 封'],
+      lastFrom: ['last from {{name}}', '最后由 {{name}} 回复'],
+    },
     // One of a deal's approvals, read after the person's name.
     approval: {
       pending: ['submitted', '提交了'],
@@ -251,8 +276,8 @@ const wording = {
     },
     // What a merge moved over, after the lead merged in.
     mergedMoved: [
-      '{{activities}} activities and {{notes}} notes moved over',
-      '移入活动 {{activities}} 条、备注 {{notes}} 条',
+      '{{tasks}} tasks and {{notes}} notes moved over',
+      '移入任务 {{tasks}} 条、备注 {{notes}} 条',
     ],
     empty: ['Nothing here yet.', '还没有记录。'],
   },
@@ -306,6 +331,9 @@ const wording = {
     ],
     written: ['Written', '已写入'],
     nextStep: ['Next step', '下一步'],
+    stepTask: ['Task', '任务'],
+    stepEmail: ['Email', '邮件'],
+    writeEmail: ['Write the email', '写邮件'],
     today: ['today', '今天'],
     inDays: ['in {{count}} days', '{{count}} 天后'],
     questions: ['To ask', '要问的问题'],
@@ -334,15 +362,15 @@ const wording = {
     // A value the AI left empty, in its own words of what changed.
     none: ['none', '无'],
     // What started a follow-up the system ran on its own (lead-signals.ts,
-    // an activity marked done, a company changed).
+    // a task marked done, a company changed).
     trigger: {
       uncontacted: [
         'New lead not contacted in 2 days: the AI followed it up.',
         '新线索 2 天还没联系，AI 自动跟进。',
       ],
       silent: [
-        'No activity in 14 days: the AI followed it up.',
-        '14 天没有活动，AI 自动跟进。',
+        'No contact in 14 days: the AI followed it up.',
+        '14 天没有联系，AI 自动跟进。',
       ],
       nurtureDue: [
         'Nurture review due: the AI looked the company up again and followed it up.',
@@ -352,9 +380,13 @@ const wording = {
         'The company changed: the AI looked it up again and followed it up.',
         '公司信息有变化，AI 重新调研并跟进。',
       ],
-      activityDone: [
-        'An activity was done: the AI followed up again.',
-        '活动已完成，AI 继续跟进。',
+      taskDone: [
+        'A task was done: the AI followed up again.',
+        '任务已完成，AI 继续跟进。',
+      ],
+      customerReplied: [
+        'The customer wrote: the AI followed up again.',
+        '客户来信，AI 继续跟进。',
       ],
       approvalDecided: [
         'An approval was decided: the AI followed up again.',
@@ -429,7 +461,7 @@ const wording = {
     acceptFollow: ['Accept and plan the contact', '采纳并安排联系'],
     acceptNurture: ['Accept and nurture', '采纳并放入培育'],
     acceptConvert: ['Accept and convert', '采纳并转化'],
-    acceptUpdate: ['Accept and update the activity', '采纳并更新活动'],
+    acceptUpdate: ['Accept and update the task', '采纳并更新任务'],
     acceptOnly: ['Accept', '采纳'],
     acceptReschedule: ['Accept and move it', '采纳并改期'],
     acceptReport: ['Record the outcome', '记录结果'],
@@ -442,19 +474,19 @@ const wording = {
     revising: ['The AI is revising the suggestion…', 'AI 正在修改建议…'],
     instructionBy: ['{{name}} asked: {{text}}', '{{name}} 的意见：{{text}}'],
     email: ['Email draft', '邮件草稿'],
-    plannedActivity: ['Activity to create', '将创建的活动'],
-    existingActivity: ['Planned activity to follow up', '跟进的活动（已安排）'],
+    plannedTask: ['Task to create', '将创建的任务'],
+    existingTask: ['Planned task to follow up', '跟进的任务（已安排）'],
     afterAccept: ['On accepting', '采纳后'],
     noChange: [
-      'The activity is ready as it is: accepting changes nothing on it.',
-      '活动内容已经准备好，无需改动。',
+      'The task is ready as it is: accepting changes nothing on it.',
+      '任务内容已经准备好，无需改动。',
     ],
     change: {
       added: ['added', '新增'],
       changed: ['updated', '更新'],
       kept: ['unchanged', '不变'],
     },
-    overdueActivity: ['Overdue activity', '逾期的活动'],
+    overdueTask: ['Overdue task', '逾期的任务'],
     doneOrNot: ['Done or not', '是否已完成'],
     done: ['Done', '已完成'],
     notDone: ['Not done, move it', '未完成，改期'],
@@ -468,8 +500,8 @@ const wording = {
     recordOutcome: ['Record the outcome', '记录结果'],
     recordOutcomeOf: ['Record the outcome: {{name}}', '记录结果：{{name}}'],
     recordOutcomeHint: [
-      'Recording it marks the activity done.',
-      '记录后活动标为已完成。',
+      'Recording it marks the task done.',
+      '记录后任务标为已完成。',
     ],
     outcomePlaceholder: [
       'What came of it: what they said, what was agreed',
@@ -495,6 +527,8 @@ const wording = {
   all: ['All', '全部'],
   mine: ['Mine', '我负责的'],
   participating: ['Participating', '我参与的'],
+  taskScope: ['Whose tasks', '谁的任务'],
+  taskScopeAll: ["Everyone's tasks", '所有人的任务'],
   team: ['Team', '团队'],
   search: ['Search records…', '搜索记录…'],
   list: ['List', '列表'],
@@ -550,19 +584,19 @@ const wording = {
     '将从{{entity}}「{{name}}」移除此附件。',
   ],
   attachmentsOwn: ['Uploaded to this {{entity}}', '本{{entity}}的附件'],
-  attachmentsFromActivities: ['From linked activities', '来自关联活动的附件'],
+  attachmentsFromTasks: ['From linked tasks', '来自关联任务的附件'],
   attachmentsFromOpportunities: [
     'From linked opportunities',
     '来自关联商机的附件',
   ],
   attachmentsFromApprovals: ['From linked approvals', '来自关联审批的附件'],
-  deleteAccountActivities: [
-    'This also deletes {{count}} activity record(s) linked only to this {{entity}}.',
-    '将同时删除 {{count}} 条仅关联此{{entity}}的活动。',
+  deleteAccountTasks: [
+    'This also deletes {{count}} task record(s) linked only to this {{entity}}.',
+    '将同时删除 {{count}} 条仅关联此{{entity}}的任务。',
   ],
-  deleteAccountKeptActivities: [
-    '{{count}} activity record(s) also linked to another record are kept; only the {{entity}} link is cleared.',
-    '{{count}} 条同时关联其他记录的活动将保留，只清空{{entity}}关联。',
+  deleteAccountKeptTasks: [
+    '{{count}} task record(s) also linked to another record are kept; only the {{entity}} link is cleared.',
+    '{{count}} 条同时关联其他记录的任务将保留，只清空{{entity}}关联。',
   ],
   deleteOpportunityBlocked: [
     'Cannot delete: approvals are an audit trail and stay with the opportunity. Mark it as lost instead.',
@@ -576,9 +610,9 @@ const wording = {
     'This request has been submitted or decided. Deleting it removes the decision and its history for the applicant and the approver too; the opportunity is untouched. This cannot be undone.',
     '这条申请已提交或已有审批结果。删除后申请人和审批人都不再看到它及其审批记录，所属商机不受影响。此操作无法撤销。',
   ],
-  deleteActivityHint: [
-    'This activity and its attachments and history are deleted; the lead, account or opportunity it was linked to is untouched. This cannot be undone.',
-    '这条活动及其附件、变更记录将被删除，关联的线索、客户或商机不受影响。此操作无法撤销。',
+  deleteTaskHint: [
+    'This task and its attachments and history are deleted; the lead, account or opportunity it was linked to is untouched. This cannot be undone.',
+    '这条任务及其附件、变更记录将被删除，关联的线索、客户或商机不受影响。此操作无法撤销。',
   ],
   deleteContactHint: [
     'This permanently deletes the contact and cannot be undone.',
@@ -592,13 +626,13 @@ const wording = {
     'This permanently deletes the lead and cannot be undone.',
     '将永久删除此线索，操作不可撤销。',
   ],
-  deleteLeadActivities: [
-    'This also deletes {{count}} activity record(s) that belong only to this lead.',
-    '将同时删除 {{count}} 条仅属于此线索的活动记录。',
+  deleteLeadTasks: [
+    'This also deletes {{count}} task record(s) that belong only to this lead.',
+    '将同时删除 {{count}} 条仅属于此线索的任务记录。',
   ],
-  deleteLeadKeptActivities: [
-    '{{count}} activity record(s) are kept and unlinked from this lead, because they are also linked to an account or opportunity.',
-    '另有 {{count}} 条活动因同时关联客户或商机而保留，仅解除与此线索的关联。',
+  deleteLeadKeptTasks: [
+    '{{count}} task record(s) are kept and unlinked from this lead, because they are also linked to an account or opportunity.',
+    '另有 {{count}} 条任务因同时关联客户或商机而保留，仅解除与此线索的关联。',
   ],
   timeline: ['History', '变更记录'],
   related: ['Related records', '关联记录'],
@@ -632,8 +666,8 @@ const wording = {
     action: ['Merge…', '合并…'],
     title: ['Merge duplicate leads', '合并重复线索'],
     hint: [
-      'Keep one lead and pick the value to keep for each field. The other lead’s activities, notes and attachments move to the lead kept, and the other lead is deleted; what it held is recorded on the kept lead’s timeline.',
-      '保留一条线索，逐项选择要保留的值。另一条线索的活动、备注和附件会移到保留的线索，然后删除它；它原来的信息记在保留线索的动态里。',
+      'Keep one lead and pick the value to keep for each field. The other lead’s tasks, notes and attachments move to the lead kept, and the other lead is deleted; what it held is recorded on the kept lead’s timeline.',
+      '保留一条线索，逐项选择要保留的值。另一条线索的任务、备注和附件会移到保留的线索，然后删除它；它原来的信息记在保留线索的动态里。',
     ],
     // From the capture review: what the AI organised, into a lead held.
     hintUnsaved: [
@@ -646,8 +680,8 @@ const wording = {
     newLabel: ['new', '新整理'],
     unsaved: ['Not saved yet, organised by the AI', '尚未保存，由 AI 整理'],
     history: [
-      'Created {{date}} · {{activities}} activities · {{notes}} notes',
-      '创建于 {{date}} · 活动 {{activities}} · 备注 {{notes}}',
+      'Created {{date}} · {{tasks}} tasks · {{notes}} notes',
+      '创建于 {{date}} · 任务 {{tasks}} · 备注 {{notes}}',
     ],
     both: ['Keep both', '两段都保留'],
     rest: [
@@ -788,7 +822,7 @@ const wording = {
   amount: ['Amount', '金额'],
   count: ['Count', '数量'],
   overdueApprovalHint: ['Nothing waiting for you', '没有待你审批的申请'],
-  noOverdue: ['Nothing overdue', '没有逾期的活动'],
+  noOverdue: ['Nothing overdue', '没有逾期的任务'],
   noToday: ['Nothing scheduled today', '今天没有安排'],
   pendingApprovals: ['Waiting for your approval', '待你审批'],
   pendingApprovalsTeam: ['Pending approvals', '待审批'],
@@ -1000,8 +1034,8 @@ const wording = {
   clearChoice: ['Clear', '清除选择'],
   demoData: ['Demo data', '演示数据'],
   demoDescription: [
-    'A dataset of NocoBase selling its own licences and services to fictional customers, in Chinese or in English: leads, accounts, contacts, opportunities, activities and approvals, dated relative to the day it is imported. Importing creates the demo accounts below when they do not exist; the password is the username followed by 123.',
-    '一套以 NocoBase 自己的销售（商业授权与服务，客户均为虚构）为背景的演示数据，有中文和英文两种，包含线索、客户、联系人、商机、活动和审批，日期以导入当天为基准。导入时会自动创建下列演示账号（已存在的直接使用），密码为用户名加 123。',
+    'A dataset of NocoBase selling its own licences and services to fictional customers, in Chinese or in English: leads, accounts, contacts, opportunities, tasks and approvals, dated relative to the day it is imported. Importing creates the demo accounts below when they do not exist; the password is the username followed by 123.',
+    '一套以 NocoBase 自己的销售（商业授权与服务，客户均为虚构）为背景的演示数据，有中文和英文两种，包含线索、客户、联系人、商机、任务和审批，日期以导入当天为基准。导入时会自动创建下列演示账号（已存在的直接使用），密码为用户名加 123。',
   ],
   demoLanguage: ['Demo data language', '演示数据语言'],
   demoAbsent: ['No demo data has been imported.', '尚未导入演示数据。'],
@@ -1020,8 +1054,8 @@ const wording = {
   demoReset: ['Remove demo data', '清除演示数据'],
   demoResetTitle: ['Remove the demo data?', '清除演示数据？'],
   demoResetHint: [
-    'Every record the import created is deleted, including changes made to them since. Records created by hand and the demo accounts stay.',
-    '导入创建的全部记录（含之后对它们的修改）都会被删除；手工创建的记录和演示账号保留。',
+    'Every record the import created is deleted, including changes made to them since, and the demo accounts it created are disabled: they no longer sign in or appear as owners, and importing again enables them. Records created by hand stay.',
+    '导入创建的全部记录（含之后对它们的修改）都会被删除，导入时新建的演示账号会被停用：不能再登录，也不会出现在负责人等选项里，再次导入时会重新启用。手工创建的记录保留。',
   ],
   demoRemoved: ['Demo data removed', '演示数据已清除'],
   demoBanner: [
@@ -1048,20 +1082,26 @@ const wording = {
   thisMonth: ['This month', '本月'],
   changed: ['Changed fields', '变更字段'],
   owner: ['Owner', '负责人'],
-  newActivity: ['Schedule activity', '安排活动'],
+  newTask: ['New task', '新建任务'],
+  completeTask: ['Complete', '完成'],
+  completeTaskOf: ['Complete: {{name}}', '完成：{{name}}'],
+  completeTaskHint: [
+    'Write what came of it, if anything: the AI reads it when it follows up.',
+    '可以写一句结果，AI 跟进时会读到。',
+  ],
   newApproval: ['Request approval', '申请审批'],
   linkExisting: ['Link existing', '关联已有'],
   opportunitySuffix: [' opportunity', '商机'],
   conversionImpact: [
-    'On conversion the lead becomes read-only, {{activities}} linked activities move to the account, and the contact and opportunity are attached to it.',
-    '转化后线索永久只读；{{activities}} 条关联活动将挂到客户下；联系人和商机归属该客户。',
+    'On conversion the lead becomes read-only, {{tasks}} linked tasks move to the account, and the contact and opportunity are attached to it.',
+    '转化后线索永久只读；{{tasks}} 条关联任务将挂到客户下；联系人和商机归属该客户。',
   ],
   noRecords: ['None yet', '暂无'],
   showing: ['Showing', '当前显示'],
   metricNotes: {
     uncontacted: [
-      'New leads with no completed activity',
-      '新线索，还没有已完成的活动',
+      'New leads with no contact yet (no task done, note or mail)',
+      '新线索，还没有任何联系（无已完成任务、备注或邮件）',
     ],
     conversionRate: [
       'All time: converted ÷ all leads except invalid',
@@ -1082,12 +1122,12 @@ const wording = {
       '状态为已确认意向或成交客户，但没有进行中的商机',
     ],
     staleLeads: [
-      'Working or nurturing, {{days}}+ days since the last activity, nothing scheduled',
-      '跟进中或培育中，{{days}} 天以上无活动，也没安排下一次',
+      'Working or nurturing, {{days}}+ days since the last contact, nothing scheduled',
+      '跟进中或培育中，{{days}} 天以上无联系，也没安排下一步',
     ],
     staleAccounts: [
-      'Not churned, {{days}}+ days since the last completed activity',
-      '非流失，{{days}} 天以上无已完成活动',
+      'Not churned, {{days}}+ days since the last contact',
+      '非流失，{{days}} 天以上无联系',
     ],
     newLeads: ['Leads created this month', '本月创建的线索'],
     convertedLeads: ['Leads converted this month', '本月转化的线索'],
@@ -1112,7 +1152,7 @@ const wording = {
       'All time: won ÷ (won + lost)',
       '全部时间：赢单 ÷（赢单 + 输单）',
     ],
-    todayActivities: ['Activities starting today', '今天开始的活动'],
+    todayTasks: ['Tasks for today', '今天的任务'],
     myDecisions: [
       'Pending, with me as approver; {{waiting}} waiting over 3 days',
       '审批中且审批人是我；其中 {{waiting}} 条已等待超过 3 天',
@@ -1127,12 +1167,9 @@ const wording = {
       'Decided as rejected this month; approval rate {{rate}}',
       '本月拒绝的审批；本月通过率 {{rate}}',
     ],
-    overdueActivities: [
-      'Not started, and the start time has passed',
-      '未开始，且开始时间已过',
-    ],
-    upcoming: ['Not started, start time ahead', '未开始，开始时间在后'],
-    completedThisMonth: ['Activities completed this month', '本月完成的活动'],
+    overdueTasks: ['Open, and its time has passed', '待办，且时间已过'],
+    upcoming: ['Open, coming up', '待办，时间在后'],
+    completedThisMonth: ['Tasks completed this month', '本月完成的任务'],
   },
   allOf: ['All: {{what}}', '{{what}}：全部'],
   leadTitle: ['Name / Company', '姓名 / 公司'],
@@ -1205,12 +1242,12 @@ const wording = {
       '根据此联系人的客户和商机记录，准备一份沟通简报。',
     ],
     opportunities: [
-      'Review this opportunity, its contacts, activities and approvals. Suggest the next actions to move it forward.',
-      '分析此商机及联系人、活动和审批记录，建议下一步推进动作。',
+      'Review this opportunity, its contacts, tasks and approvals. Suggest the next actions to move it forward.',
+      '分析此商机及联系人、任务和审批记录，建议下一步推进动作。',
     ],
-    activities: [
-      'Summarize this activity and suggest a concrete follow-up activity.',
-      '总结此次活动，并建议具体的后续活动。',
+    tasks: [
+      'Summarize this task and suggest a concrete next step.',
+      '总结这个任务，并建议具体的下一步。',
     ],
     approvals: [
       'Review this approval request. Summarize the risks and missing information without making the decision.',
@@ -1223,7 +1260,7 @@ const wording = {
     accounts: ['account', '客户'],
     contacts: ['contact', '联系人'],
     opportunities: ['opportunity', '商机'],
-    activities: ['activity', '活动'],
+    tasks: ['task', '任务'],
     approvals: ['approval', '审批'],
   },
   navigation: {
@@ -1239,7 +1276,7 @@ const wording = {
     accounts: ['Accounts', '客户'],
     contacts: ['Contacts', '联系人'],
     opportunities: ['Opportunities', '商机'],
-    activities: ['Activities', '活动'],
+    tasks: ['Tasks', '任务'],
     approvals: ['Approvals', '审批'],
   },
   descriptions: {
@@ -1259,7 +1296,7 @@ const wording = {
       'Move every deal forward with a clear next step.',
       '以清晰的下一步行动推动每个商机',
     ],
-    activities: [
+    tasks: [
       'Plan, track, and follow through on customer conversations.',
       '安排沟通、记录反馈、持续跟进',
     ],
@@ -1274,7 +1311,7 @@ const wording = {
     leadName: ['Name', '姓名'],
     accountDescription: ['Introduction', '介绍'],
     companyDescription: ['Introduction', '公司介绍'],
-    activityName: ['Subject', '活动主题'],
+    taskName: ['Title', '标题'],
     approvalSubject: ['Subject', '审批主题'],
     contactName: ['Name', '姓名'],
     company: ['Company', '公司'],
@@ -1325,13 +1362,12 @@ const wording = {
     pauseReason: ['Pause reason', '暂停原因'],
     resumeAt: ['Expected resume date', '预计恢复日期'],
     time: ['Time', '时间'],
-    startAt: ['Start time', '开始时间'],
+    dueAt: ['Time', '时间'],
     endAt: ['End time', '结束时间'],
     leadId: ['Lead', '线索'],
     opportunityId: ['Opportunity', '商机'],
-    internalParticipants: ['Internal participants', '内部参与人'],
-    externalParticipants: ['External contacts', '外部联系人'],
-    feedback: ['Feedback / outcome', '反馈 / 结果'],
+    internalParticipants: ['Participants', '参与人'],
+    result: ['Result', '结果'],
     topic: ['Approval topic', '审批事项'],
     approverId: ['Approver', '审批人'],
     applicant: ['Applicant', '申请人'],
@@ -1357,9 +1393,9 @@ const wording = {
     aiLanguage: ['AI working language', 'AI 工作语言'],
     decision: ['Decision', '处理'],
     comment: ['Comment', '意见'],
-    activityReminderMinutes: [
-      'Activity reminder (minutes before)',
-      '活动提前提醒（分钟）',
+    taskReminderMinutes: [
+      'Task reminder (minutes before)',
+      '任务提前提醒（分钟）',
     ],
     closeReminderDays: [
       'Opportunity close reminder (days before)',
@@ -1467,17 +1503,10 @@ const wording = {
     influencer: ['Influencer', '影响'],
     user: ['End user', '使用'],
     blocker: ['Blocker', '阻碍'],
-    call: ['Call', '电话'],
-    meeting: ['Meeting', '会议'],
     email: ['Email', '邮件'],
-    task: ['Task', '任务'],
-    meal: ['Meal', '餐叙'],
-    visit: ['Visit', '拜访'],
-    demo: ['Demo', '演示'],
-    planned: ['Planned', '未开始'],
+    open: ['To do', '待办'],
     completed: ['Completed', '已完成'],
     cancelled: ['Cancelled', '已取消'],
-    noShow: ['No-show', '未出席'],
     discount: ['Discount', '折扣'],
     paymentTerms: ['Payment terms', '付款条款'],
     contractTerms: ['Contract terms', '合同条款'],
@@ -1515,9 +1544,9 @@ const wording = {
       'This recommendation has already been decided.',
       '这条建议已经处理过了。',
     ],
-    activityChanged: [
-      'The activity has changed since this suggestion. Follow up again.',
-      '这个活动在建议给出后已经有了变化，请重新跟进。',
+    taskChanged: [
+      'The task has changed since this suggestion. Follow up again.',
+      '这个任务在建议给出后已经有了变化，请重新跟进。',
     ],
     convertFirst: [
       'Convert the lead first; accepting records it.',
@@ -1574,17 +1603,17 @@ const wording = {
       'The related contacts and opportunities must belong to the same account.',
       '关联联系人和商机必须属于同一客户。',
     ],
-    opportunityHasActivities: [
-      'This deal has activities with its current account, so it cannot move to another account.',
-      '此商机已有与当前客户的活动，不能更换到其他客户。',
+    leadOrAccount: [
+      'A task concerns a lead, or an account and its opportunity, not both.',
+      '任务关联线索，或关联客户及其商机，二者不能同时关联。',
     ],
-    activityRelation: [
-      'Link the activity to a lead, account, or opportunity.',
-      '活动须关联线索、客户或商机。',
+    opportunityHasTasks: [
+      'This deal has tasks with its current account, so it cannot move to another account.',
+      '此商机已有与当前客户的任务，不能更换到其他客户。',
     ],
     endBeforeStart: [
-      'End time must be after start time.',
-      '结束时间不能早于开始时间。',
+      "The end time must come after the task's time.",
+      '结束时间不能早于任务时间。',
     ],
     selfApproval: [
       'You cannot approve your own request.',

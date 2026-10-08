@@ -7,7 +7,6 @@ import {
   AtSign,
   BookOpenText,
   Building2,
-  CalendarDays,
   ContactRound,
   Handshake,
   LayoutDashboard,
@@ -16,6 +15,7 @@ import {
   Mail,
   Radar,
   Settings2,
+  SquareCheckBig,
 } from 'lucide-react';
 
 // Navigation is read from these declarations, and the sidebar follows their
@@ -83,7 +83,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     children: [
       ['leads', Radar],
       ['opportunities', Handshake],
-      ['activities', CalendarDays],
+      ['tasks', SquareCheckBig],
       ['approvals', ListChecks],
     ].map(([entity, icon]) => ({
       name: `crm-${String(entity)}`,

@@ -20,15 +20,13 @@ it('starts a new conversation about the record it is on', async () => {
   const listen = (event: Event) => events.push((event as CustomEvent).detail);
   window.addEventListener('crm-assistant', listen);
   try {
-    render(
-      <AskAIButton entity='activities' recordId='a-1' name='需求确认电话' />,
-    );
+    render(<AskAIButton entity='tasks' recordId='a-1' name='需求确认电话' />);
     await userEvent.click(screen.getByRole('button', { name: '问 AI' }));
     // The record as the starting point, nothing typed or sent for the user.
     expect(events).toEqual([
       {
         prompt: '',
-        entity: 'activities',
+        entity: 'tasks',
         recordId: 'a-1',
         name: '需求确认电话',
         send: false,

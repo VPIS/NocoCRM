@@ -37,13 +37,13 @@ const chineseGuidance = (days: GuidanceDays): string => `# 公司定位
 - 典型决策角色：IT/信息化负责人、技术负责人（评估插件开发、部署和源码）、业务负责人、采购/法务。
 
 # 跟进和审批
-- 商机各阶段的推进条件见「跟进商机」技能；证据不足时不推进阶段，下一步是去拿证据的活动。
-- 新线索超过 ${days.uncontacted} 天未首次联系，建议创建首次联系活动。
-- 线索或商机超过 ${days.stale} 天没有活动，建议安排下一步沟通。
+- 商机各阶段的推进条件见「跟进商机」技能；证据不足时不推进阶段，下一步是去拿证据的任务。
+- 新线索超过 ${days.uncontacted} 天未首次联系，建议创建首次联系的任务。
+- 线索或商机超过 ${days.stale} 天没有联系（没有完成的任务、备注或邮件往来），建议安排下一步沟通。
 - 预计成交日期 ${days.closing} 天内到达但仍未关闭，建议确认进展或调整日期。
 - 客户要的条件超出审批标准（见「跟进商机」和「审批辅助」技能）时，建议发起审批，审批通过前不答应客户。
-- 活动名称：客户简称 + 事项，例如"华策精密 方案演示"。
-- 活动反馈写客户的原话要点和已确认的事实，推测单独标出，并写下一步和负责人。
+- 任务标题：客户简称 + 要做的事，例如"华策精密 方案演示"。
+- 沟通过的内容写成备注，任务完成时写结果：记客户的原话要点和已确认的事实，推测单独标出，并写下一步和负责人。
 
 # 记录边界
 - 不猜预算、决策人、竞争对手和项目进度；推测必须标成"推测"，并说明依据。
@@ -67,13 +67,13 @@ const englishGuidance = (days: GuidanceDays): string => `# Company profile
 - Typical decision roles: the head of IT, the technical lead (who evaluates plugin development, deployment and the source code), the business owner, procurement and legal.
 
 # Follow-up and approvals
-- The conditions for moving an opportunity to each stage are in the opportunity follow-up skill; without enough evidence the stage does not move, and the next step is an activity that gets the evidence.
-- A new lead not contacted for more than ${days.uncontacted} days: suggest creating a first-contact activity.
-- A lead or opportunity with no activity for more than ${days.stale} days: suggest scheduling the next conversation.
+- The conditions for moving an opportunity to each stage are in the opportunity follow-up skill; without enough evidence the stage does not move, and the next step is a task that gets the evidence.
+- A new lead not contacted for more than ${days.uncontacted} days: suggest creating a first-contact task.
+- A lead or opportunity with no contact (no task done, note or mail) for more than ${days.stale} days: suggest scheduling the next conversation.
 - An expected close date within ${days.closing} days while the opportunity is still open: suggest confirming progress or moving the date.
 - When a customer asks for conditions beyond the approval standards (see the opportunity follow-up and approval review skills), suggest submitting an approval, and promise the customer nothing until it is approved.
-- Activity names: the account's short name + the matter, e.g. "Huace Precision solution demo".
-- Activity feedback records the key points in the customer's own words and the facts confirmed; inferences are marked separately; it ends with the next step and who owns it.
+- Task titles: the account's short name + what to do, e.g. "Huace Precision solution demo".
+- What was discussed is written as a note, and a task's result when it is done: the key points in the customer's own words and the facts confirmed; inferences are marked separately; it ends with the next step and who owns it.
 
 # Record boundaries
 - Do not guess the budget, the decision maker, competitors or the project's progress; an inference must be marked "Assumption", with its basis stated.

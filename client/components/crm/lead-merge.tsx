@@ -46,7 +46,7 @@ interface Duplicate {
   matched: ('email' | 'phone' | 'person')[];
   mergeable: boolean;
 }
-type Side = CrmRecord & { activities: number; notes: number };
+type Side = CrmRecord & { tasks: number; notes: number };
 // The id a lead not yet saved has in a merge (the server's UNSAVED).
 const UNSAVED = 'new';
 interface Proposal {
@@ -311,7 +311,7 @@ export function MergeDialog({
                             zone,
                             false,
                           ),
-                          activities: side.activities,
+                          tasks: side.tasks,
                           notes: side.notes,
                         })}
                   </span>

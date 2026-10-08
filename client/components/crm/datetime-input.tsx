@@ -47,29 +47,38 @@ const toDate = (value: string | null | undefined): Date | null => {
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTES = Array.from({ length: 60 }, (_, i) => i);
 
-function TimeColumn({
+export function TimeColumn({
   label,
   values,
   selected,
   open,
   onPick,
+  initial,
 }: {
   label: string;
   values: number[];
   selected: number | undefined;
   open: boolean;
   onPick: (value: number) => void;
+  // Where the column opens while nothing is picked (9 for the working day).
+  initial?: number;
 }): ReactElement {
   const listRef = useRef<HTMLDivElement>(null);
   // Opening scrolls the picked hour or minute to the middle of its column;
   // scrollIntoView would also scroll the dialog or page behind the popup.
   useEffect(() => {
     const list = listRef.current;
-    const picked = list?.querySelector<HTMLElement>('[aria-selected="true"]');
+    const picked =
+      list?.querySelector<HTMLElement>('[aria-selected="true"]') ??
+      (initial === undefined
+        ? null
+        : list?.querySelector<HTMLElement>(
+            `[data-value="${String(initial)}"]`,
+          ));
     if (open && list && picked)
       list.scrollTop =
         picked.offsetTop - (list.clientHeight - picked.offsetHeight) / 2;
-  }, [open, selected]);
+  }, [open, selected, initial]);
   // The column is as tall as the calendar beside it and scrolls within that.
   return (
     <div className='relative w-12 border-l'>
@@ -85,6 +94,7 @@ function TimeColumn({
             type='button'
             role='option'
             aria-selected={value === selected}
+            data-value={value}
             className={`shrink-0 rounded-md py-1 text-center text-sm tabular-nums transition-colors ${value === selected ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
             onClick={() => {
               onPick(value);

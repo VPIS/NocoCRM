@@ -26,7 +26,6 @@ import {
   ArrowUpRight,
   Mail,
   Merge,
-  CalendarDays,
   ClipboardCheck,
   ContactRound,
   CirclePlus,
@@ -45,12 +44,12 @@ import {
   Sparkles,
   Trash2,
   type LucideIcon,
+  SquareCheckBig,
 } from 'lucide-react';
 import { Button, buttonVariants } from '../components/ui/button.js';
 import { Spinner } from '../components/ui/spinner.js';
 import { Textarea } from '../components/ui/textarea.js';
 import { LONG_TEXT_LIMIT } from '../../server/providers/crm/limits.js';
-import { KindTag } from '../components/crm/kind-tag.js';
 import { Badge } from '../components/ui/badge.js';
 import {
   Dialog,
@@ -70,8 +69,8 @@ import {
   useMetadata,
   useRefresh,
   sentence,
+  dueText,
   localDate,
-  localTime,
   rows,
   arrayValues,
   errorCode,
@@ -128,7 +127,7 @@ const drawerEntities: Entity[] = [
   'accounts',
   'contacts',
   'opportunities',
-  'activities',
+  'tasks',
   'approvals',
 ];
 
@@ -257,27 +256,26 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   const refresh = useRefresh();
   const navigate = useNavigate();
   const drawer = useRecordDrawer();
-  const { text, language } = useCrmText();
+  const { text } = useCrmText();
   const mailSetup = useMailSetup();
   const [tabSlug, setTab] = useDetailTab();
   const tab =
     resolveTab(tabSlug, [
       'historyTab',
-      'activities',
+      'tasks',
       'attachments',
       'notes',
       ...(mailSetup.can ? ['mail'] : []),
     ]) ?? 'historyTab';
-  // The activities and the history arrive one page each with the lead;
+  // The tasks and the history arrive one page each with the lead;
   // these grow them from the list and history endpoints.
-  const moreActivities = useMore(
-    `activities?leadId=${toText(id)}&sort=-startAt`,
-    detail?.related.activities
+  const moreTasks = useMore(
+    `tasks?leadId=${toText(id)}&sort=-dueAt`,
+    detail?.related.tasks
       ? {
-          data: rows(detail.related.activities) as CrmRecord[],
+          data: rows(detail.related.tasks) as CrmRecord[],
           total:
-            detail.relatedTotals?.activities ??
-            rows(detail.related.activities).length,
+            detail.relatedTotals?.tasks ?? rows(detail.related.tasks).length,
         }
       : undefined,
   );
@@ -288,6 +286,8 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   const [focus, setFocus] = useState<{ id: string; at: number }>();
   // The note the timeline opened in the Notes tab.
   const [noteFocus, setNoteFocus] = useState<string>();
+  // The conversation a timeline mail entry opens on the Mail tab.
+  const [mailFocus, setMailFocus] = useState<string>();
   const [convert, setConvert] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<unknown>();
@@ -311,35 +311,35 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   // the record itself.
   const names = {
     ...detail.titles,
-    ...moreActivities.titles,
+    ...moreTasks.titles,
   };
   const field = (key: string): Field =>
     definition.fields.find((f) => f.key === key) ?? { key, type: 'text' };
-  // Newest first by when the activity happens, not when the row was written:
+  // Newest first by when the task happens, not when the row was written:
   // a call logged today for last week belongs below tomorrow's meeting.
   // slice() first — sorting in place would mutate the cached query data.
   // Same de-duplication the attachments tab uses, so the count matches the list.
   const attachmentCount = new Set([
     ...arrayValues(record.attachments).map(toText),
-    ...rows(detail.related.activities).flatMap((activity) =>
-      arrayValues(activity.attachments).map(toText),
+    ...rows(detail.related.tasks).flatMap((task) =>
+      arrayValues(task.attachments).map(toText),
     ),
   ]).size;
   // Newest first by when they happen, in the server's order so pages join.
-  const activities = moreActivities.records;
+  const tasks = moreTasks.records;
   const converted = record.status === 'converted';
   const patch = async (values: Data): Promise<void> => {
     await api(`leads/${toText(id)}`, 'PATCH', values);
     await refresh();
   };
-  // Deleting the lead takes its lead-only activities with it; ones that also
+  // Deleting the lead takes its lead-only tasks with it; ones that also
   // hang off an account or opportunity survive, so the confirmation can state
   // both outcomes without asking the server first.
-  const cascadedActivities = activities.filter(
-    (activity) => !activity.accountId && !activity.opportunityId,
+  const cascadedTasks = tasks.filter(
+    (task) => !task.accountId && !task.opportunityId,
   );
-  const keptActivities = activities.filter(
-    (activity) => activity.accountId ?? activity.opportunityId,
+  const keptTasks = tasks.filter(
+    (task) => task.accountId ?? task.opportunityId,
   );
   const inline = (key: string): ReactElement => (
     <InlineField
@@ -381,7 +381,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
     </InfoRow>
   );
   // The timeline first, where the lead opens, without a count: its entries
-  // only grow and the number says nothing. The activities' icon is their
+  // only grow and the number says nothing. The tasks' icon is their
   // menu entry's. The notes also show in the timeline among its entries.
   const tabBar = (
     <DetailTabBar
@@ -390,10 +390,10 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       tabs={[
         { name: 'historyTab', label: 'historyTab', icon: History },
         {
-          name: 'activities',
-          label: 'entities.activities',
-          icon: CalendarDays,
-          count: moreActivities.total,
+          name: 'tasks',
+          label: 'entities.tasks',
+          icon: SquareCheckBig,
+          count: moreTasks.total,
         },
         {
           name: 'attachments',
@@ -588,87 +588,51 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                 {keys.map(fieldRow)}
               </InfoGroup>
             ))}
-            <InfoGroup title={text('leadGroups.system')}>
-              <InfoRow label={text('fields.createdAt')}>
-                <div className='px-2 py-1.5'>
-                  {localDate(
-                    record.createdAt,
-                    language,
-                    meta.settings.timeZone,
-                  )}
-                </div>
-              </InfoRow>
-              <InfoRow label={text('fields.updatedAt')}>
-                <div className='px-2 py-1.5'>
-                  {localDate(
-                    record.updatedAt,
-                    language,
-                    meta.settings.timeZone,
-                  )}
-                </div>
-              </InfoRow>
-              {/* When it was converted, under its last update. */}
-              {converted && (
-                <InfoRow label={text('fields.convertedAt')}>
-                  <div className='px-2 py-1.5'>
-                    {localDate(
-                      record.convertedAt,
-                      language,
-                      meta.settings.timeZone,
-                    )}
-                  </div>
-                </InfoRow>
-              )}
-            </InfoGroup>
           </div>
         </>
       }
       right={
         <div>
-          {tab === 'activities' ? (
+          {tab === 'tasks' ? (
             <div className='space-y-3'>
               {/* Scheduling lives inside its tab, the way upload lives in
                     attachments. A converted lead rejects it server-side. */}
-              {!converted && Boolean(meta.permissions.activities.create) && (
+              {!converted && Boolean(meta.permissions.tasks.create) && (
                 <Button
                   size='sm'
                   variant='outline'
                   onClick={() =>
                     setForm({
-                      entity: 'activities',
+                      entity: 'tasks',
                       initial: { leadId: id },
                     })
                   }
                 >
                   <Plus />
-                  {text('newActivity')}
+                  {text('newTask')}
                 </Button>
               )}
-              {!activities.length ? (
+              {!tasks.length ? (
                 <p className='text-sm text-muted-foreground'>
-                  {text('noActivities')}
+                  {text('noTasks')}
                 </p>
               ) : (
                 <>
                   {/* One continuous rule down the list; each item hangs a node on it. */}
                   <ol className='relative ml-1.5 border-l border-border'>
-                    {activities.map((activity) => (
-                      <ActivityItem
-                        key={toText(activity.id)}
-                        activity={activity}
-                      />
+                    {tasks.map((task) => (
+                      <TaskItem key={toText(task.id)} task={task} />
                     ))}
                   </ol>
-                  {moreActivities.hasMore && (
+                  {moreTasks.hasMore && (
                     <Button
                       className='mt-3'
                       variant='ghost'
                       size='sm'
-                      disabled={moreActivities.loading}
-                      onClick={() => void moreActivities.loadMore()}
+                      disabled={moreTasks.loading}
+                      onClick={() => void moreTasks.loadMore()}
                     >
-                      {text('loadMore')} ·{' '}
-                      {moreActivities.total - activities.length}
+                      {text('loadMore')} · {moreTasks.total - tasks.length}
                     </Button>
                   )}
                 </>
@@ -679,13 +643,13 @@ function LeadDetail({ id }: { id: string }): ReactElement {
           ) : tab === 'mail' ? (
             <RecordMailPanel
               target={{ addresses: emailsOf([record]) }}
-              link={{ leadId: id }}
+              focus={mailFocus}
             />
           ) : tab === 'attachments' ? (
             <RecordAttachments
               entity='leads'
               record={record}
-              activities={activities}
+              tasks={tasks}
               editable={editable}
               onError={setError}
               uploader={
@@ -719,6 +683,14 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                 setNoteFocus(noteId);
                 setTab('notes');
               }}
+              onOpenMail={
+                mailSetup.can
+                  ? (sourceKey) => {
+                      setMailFocus(sourceKey);
+                      setTab('mail');
+                    }
+                  : undefined
+              }
             />
           )}
         </div>
@@ -746,17 +718,17 @@ function LeadDetail({ id }: { id: string }): ReactElement {
               {/* Not the shared hint: it tells the reader to unlink related
                   records first, which is no longer how leads behave. */}
               <DialogDescription>{text('deleteLeadHint')}</DialogDescription>
-              {cascadedActivities.length > 0 && (
+              {cascadedTasks.length > 0 && (
                 <p className='text-sm text-destructive'>
-                  {text('deleteLeadActivities', {
-                    count: cascadedActivities.length,
+                  {text('deleteLeadTasks', {
+                    count: cascadedTasks.length,
                   })}
                 </p>
               )}
-              {keptActivities.length > 0 && (
+              {keptTasks.length > 0 && (
                 <p className='text-sm text-muted-foreground'>
-                  {text('deleteLeadKeptActivities', {
-                    count: keptActivities.length,
+                  {text('deleteLeadKeptTasks', {
+                    count: keptTasks.length,
                   })}
                 </p>
               )}
@@ -804,7 +776,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
 
 // A record page laid out as the lead's: no header, the record's heading in a
 // band over its particulars on the left and the tabs in the same band over
-// the rest. The lead and the activity pages share it.
+// the rest. The lead and the task pages share it.
 export function DetailColumns({
   entity,
   heading,
@@ -892,8 +864,11 @@ export function DetailColumns({
                   and the other tabs taking the rest, the way record pages
                   commonly lay them out. Stacked, the particulars come first
                   (a phone number before the history). */}
+              {/* Its rows keep 8px of their own on each side for an inline
+                  editor's hover fill, so the column starts that much further
+                  out: the text lines up with the heading's. */}
               <section
-                className='min-w-0 @3xl:overflow-y-auto @3xl:pt-4 @3xl:pr-6 @3xl:pb-8 @3xl:pl-4 md:@3xl:pl-6 scroll-quiet'
+                className='-mx-2 min-w-0 @3xl:mx-0 @3xl:overflow-y-auto @3xl:pt-4 @3xl:pr-6 @3xl:pb-8 @3xl:pl-2 md:@3xl:pl-4 scroll-quiet'
                 onScroll={revealScrollbar}
               >
                 {left}
@@ -1188,12 +1163,11 @@ export function WebsiteField({
   );
 }
 
-export function ActivityItem({ activity }: { activity: Data }): ReactElement {
-  const { language } = useCrmText();
-  const activityLink = useRecordLink('activities', toText(activity.id));
+export function TaskItem({ task }: { task: Data }): ReactElement {
+  const taskLink = useRecordLink('tasks', toText(task.id));
   const { data: meta } = useMetadata();
   const zone = meta?.settings.timeZone ?? 'Asia/Shanghai';
-  const status = toText(activity.status);
+  const status = toText(task.status);
   return (
     <li className='relative pl-5'>
       <span
@@ -1206,42 +1180,35 @@ export function ActivityItem({ activity }: { activity: Data }): ReactElement {
               : 'bg-background ring-2 ring-primary/40',
         )}`}
       />
-      {/* The activity opens in the page's drawer (its full page on a phone
+      {/* The task opens in the page's drawer (its full page on a phone
           or in a new tab); its fields are edited there. The name is the link,
           stretched over the whole entry. */}
       <div className='relative rounded-md px-2 py-2 transition-colors hover:bg-muted'>
         <div className='flex flex-wrap items-center gap-2'>
-          <KindTag value={activity.type} />
           <Link
             className='flex min-w-0 flex-1 items-center gap-1 outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring'
-            {...activityLink}
+            {...taskLink}
           >
             <span className='truncate text-sm font-medium'>
-              {toText(activity.name)}
+              {toText(task.name)}
             </span>
             <ArrowUpRight className='size-3 shrink-0 text-muted-foreground' />
           </Link>
-          <Status value={activity.status} />
+          <Status value={task.status} />
         </div>
         <div className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-1'>
           {/* Whose it is, then when. */}
           <p className='inline-flex items-center gap-1 text-xs text-muted-foreground'>
             <User className='size-3 shrink-0' />
-            {meta?.users.find((u) => u.id === activity.ownerId)?.name ?? '—'}
+            {meta?.users.find((u) => u.id === task.ownerId)?.name ?? '—'}
           </p>
-          <p className='inline-flex items-center gap-1 text-xs text-muted-foreground tabular-nums'>
-            <Clock className='size-3 shrink-0' />
-            {localDate(activity.startAt, language, zone)}
-            {/* Its end when it has one: the time alone on the same day. */}
-            {activity.endAt
-              ? ` – ${
-                  localDate(activity.endAt, language, zone, false) ===
-                  localDate(activity.startAt, language, zone, false)
-                    ? localTime(activity.endAt, zone)
-                    : localDate(activity.endAt, language, zone)
-                }`
-              : null}
-          </p>
+          {/* When it is, if it is: a date, or a date and a time. */}
+          {task.dueAt ? (
+            <p className='inline-flex items-center gap-1 text-xs text-muted-foreground tabular-nums'>
+              <Clock className='size-3 shrink-0' />
+              {dueText(task, zone)}
+            </p>
+          ) : null}
         </div>
       </div>
     </li>
@@ -1338,14 +1305,14 @@ function SourceLink({
   );
 }
 
-// The lead's own uploads plus everything attached to its activities, so the tab
+// The lead's own uploads plus everything attached to its tasks, so the tab
 // answers "what documents exist for this lead" rather than "what is on this row".
 // Each file remembers which record holds it, because removing one has to unlink
 // it from that record, not from the lead.
 export function RecordAttachments({
   entity,
   record,
-  activities,
+  tasks,
   opportunities = [],
   approvals = [],
   editable,
@@ -1354,7 +1321,7 @@ export function RecordAttachments({
 }: {
   entity: Entity;
   record: CrmRecord;
-  activities: Data[];
+  tasks: Data[];
   // An account's or contact's opportunities: their proposals and contracts
   // are the files most often wanted from the customer's side.
   opportunities?: Data[];
@@ -1374,9 +1341,9 @@ export function RecordAttachments({
   const sources = new Map<string, { entity: Entity; record: Data }>();
   for (const id of arrayValues(record.attachments))
     sources.set(toText(id), { entity, record });
-  for (const activity of activities)
-    for (const id of arrayValues(activity.attachments))
-      sources.set(toText(id), { entity: 'activities', record: activity });
+  for (const task of tasks)
+    for (const id of arrayValues(task.attachments))
+      sources.set(toText(id), { entity: 'tasks', record: task });
   for (const opportunity of opportunities)
     for (const id of arrayValues(opportunity.attachments))
       sources.set(toText(id), { entity: 'opportunities', record: opportunity });
@@ -1421,9 +1388,9 @@ export function RecordAttachments({
     records: Data[];
   }[] = [
     {
-      entity: 'activities',
-      label: 'attachmentsFromActivities',
-      records: activities,
+      entity: 'tasks',
+      label: 'attachmentsFromTasks',
+      records: tasks,
     },
     {
       entity: 'opportunities',
@@ -1794,15 +1761,15 @@ export function HistoryChanges({
   );
 }
 
-// What an activity's entry says became of it: planned, moved (only its
+// What a task's entry says became of it: planned, moved (only its
 // time changed), edited, its status changed, or deleted.
-const activityState = (event: Data): string => {
+const taskState = (event: Data): string => {
   if (event.action === 'created') return 'planned';
-  if (event.action === 'activityDeleted') return 'deleted';
+  if (event.action === 'taskDeleted') return 'deleted';
   if (event.action === 'updated') {
     const keys = Object.keys(event.changes ?? {});
-    return keys.includes('startAt') &&
-      keys.every((key) => key === 'startAt' || key === 'endAt')
+    return keys.includes('dueAt') &&
+      keys.every((key) => key === 'dueAt' || key === 'endAt')
       ? 'moved'
       : 'edited';
   }
@@ -1813,7 +1780,7 @@ const activityState = (event: Data): string => {
     : toText(event.toValue);
 };
 
-// One of the record's activities on its timeline, after who did it: what
+// One of the record's tasks on its timeline, after who did it: what
 // became of it ("planned", "completed", "cancelled", "moved", "edited",
 // "deleted"), its type and name (opening it, unless it is gone), and when
 // it is, what changed, or, done, what came of it.
@@ -1854,7 +1821,66 @@ function ApprovalEvent({ event }: { event: Data }): ReactElement {
   );
 }
 
-function ActivityEvent({
+// A mail conversation with the record's people (mail-timeline.ts), after
+// the mailbox owner's name: its subject, how many messages, and, when the
+// customer wrote last, who. The messages stay in the owner's mailbox: the
+// owner opens the conversation on the Mail tab, everyone else reads this line.
+function MailEvent({
+  event,
+  onOpen,
+}: {
+  event: Data;
+  onOpen?: (sourceKey: string) => void;
+}): ReactElement {
+  const { text } = useCrmText();
+  const { data: meta } = useMetadata();
+  const mail = (event.changes ?? {}) as Data;
+  const subject = toText(mail.subject) || toText(text('feed.mail.noSubject'));
+  const own = onOpen && meta?.userId === toText(mail.ownerId);
+  const writer = toText(mail.lastFromName) || toText(mail.lastFrom);
+  const count = toText(
+    text('feed.mail.count', { count: Number(mail.count) || 1 }),
+  );
+  const last =
+    mail.fromCustomer && writer
+      ? toText(text('feed.mail.lastFrom', { name: writer }))
+      : '';
+  // On a narrow column the subject keeps the line: the count and who wrote
+  // last give way first, and the whole line is in the hover title.
+  return (
+    <>
+      <span className='shrink-0 text-muted-foreground'>
+        {text('feed.mail.exchanged')}
+      </span>
+      <span
+        className='min-w-[5rem] truncate'
+        title={[subject, count, last].filter(Boolean).join(' · ')}
+      >
+        {own ? (
+          <button
+            type='button'
+            className='underline-offset-2 hover:underline'
+            onClick={() => onOpen(toText(event.sourceKey))}
+          >
+            {subject}
+          </button>
+        ) : (
+          subject
+        )}
+      </span>
+      <span className='min-w-0 shrink-[4] truncate text-muted-foreground'>
+        {count}
+      </span>
+      {last ? (
+        <span className='min-w-0 shrink-[8] truncate text-muted-foreground'>
+          {last}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+function TaskEvent({
   event,
   open,
   onToggle,
@@ -1871,13 +1897,13 @@ function ActivityEvent({
   const { data: meta } = useMetadata();
   const changes = (event.changes ?? {}) as Data;
   // A deleted one is known by what its record kept of it.
-  const activity = (
-    event.action === 'activityDeleted'
-      ? { ...changes, id: changes.activityId }
-      : (event.activity ?? {})
+  const task = (
+    event.action === 'taskDeleted'
+      ? { ...changes, id: changes.taskId }
+      : (event.task ?? {})
   ) as Data;
   const zone = meta?.settings.timeZone ?? 'Asia/Shanghai';
-  const verb = activityState(event);
+  const verb = taskState(event);
   // Short (no year), beside the entry's own time on the right.
   const when = (at: unknown): string => {
     const date = new Date(toText(at));
@@ -1895,11 +1921,11 @@ function ActivityEvent({
   return (
     <>
       <span className='shrink-0 text-muted-foreground'>
-        {text(`feed.activity.${verb}`, { defaultValue: verb })}
+        {text(`feed.task.${verb}`, { defaultValue: verb })}
       </span>
-      {/* "Activity", whatever its type: the name says what it is. */}
+      {/* "Task", whatever its type: the name says what it is. */}
       <span className='shrink-0 text-muted-foreground'>
-        {text('feed.activity.noun')}
+        {text('feed.task.noun')}
       </span>
       {/* A long name is cut short, whole on hover; one deleted is no
           longer a link. On an edit the change comes first, the name taking
@@ -1910,22 +1936,22 @@ function ActivityEvent({
         {verb === 'deleted' ? (
           <span
             className='block truncate font-medium'
-            title={toText(activity.name)}
+            title={toText(task.name)}
           >
-            {toText(activity.name)}
+            {toText(task.name)}
           </span>
         ) : (
           <RecordLink
-            entity='activities'
-            record={{ id: toText(activity.id), name: toText(activity.name) }}
+            entity='tasks'
+            record={{ id: toText(task.id), name: toText(task.name) }}
           />
         )}
       </span>
       {/* What an edit changed, as a record's own edits read. */}
       {verb === 'edited' ? (
         <HistoryChanges
-          entity='activities'
-          record={activity as CrmRecord}
+          entity='tasks'
+          record={task as CrmRecord}
           changes={event.changes}
           previous={event.previous}
           names={names}
@@ -1936,19 +1962,19 @@ function ActivityEvent({
       ) : null}
       {/* When it is, as planned or moved; for one done, its outcome. */}
       {event.action === 'created' || verb === 'moved' ? (
-        changes.startAt ? (
+        changes.dueAt ? (
           // Always whole, the tags right after it; the name gives way.
           <span className='shrink-0 text-muted-foreground tabular-nums'>
             {verb === 'moved'
-              ? text('feed.activity.to', { time: when(changes.startAt) })
-              : `· ${when(changes.startAt)}`}
+              ? text('feed.task.to', { time: when(changes.dueAt) })
+              : `· ${when(changes.dueAt)}`}
           </span>
         ) : null
-      ) : toText(event.toValue) === 'completed' && activity.feedback ? (
+      ) : toText(event.toValue) === 'completed' && task.result ? (
         // Only the room the name leaves (no basis of its own), so a long
         // outcome is what gets cut, never the name.
         <span className='min-w-0 flex-1 basis-0 truncate text-muted-foreground'>
-          · {markdownLine(toText(activity.feedback))}
+          · {markdownLine(toText(task.result))}
         </span>
       ) : null}
     </>
@@ -1965,16 +1991,16 @@ function MergedLead({ changes }: { changes?: unknown }): ReactElement {
   const { text } = useCrmText();
   const values = (changes ?? {}) as Data;
   const lead = (values.lead ?? {}) as Data;
-  const activities = Number(values.activities ?? 0);
+  const tasks = Number(values.tasks ?? 0);
   const notes = Number(values.notes ?? 0);
   return (
     <>
       <span className='min-w-0 truncate'>
         {[lead.name, lead.company].filter(Boolean).map(toText).join(' / ')}
       </span>
-      {activities || notes ? (
+      {tasks || notes ? (
         <span className='shrink-0 text-xs text-muted-foreground'>
-          {text('feed.mergedMoved', { activities, notes })}
+          {text('feed.mergedMoved', { tasks, notes })}
         </span>
       ) : null}
     </>
@@ -1996,6 +2022,7 @@ const eventIcons: Record<string, LucideIcon> = {
   // A person asking the AI to redo its card, in their words.
   aiRevise: MessageCircle,
   merged: Merge,
+  mail: Mail,
 };
 
 // An update that changed a deal's contacts alone (who, or their roles):
@@ -2026,26 +2053,6 @@ const filesOnly = (event: Data): boolean => {
 // Status and stage moves, which the timeline draws as field updates.
 const moves = new Set(['status', 'stage']);
 
-// The timeline's entries by month, newest first as they come, each month
-// named in the reader's language and the business time zone.
-function months(
-  events: Data[],
-  language: string,
-  timeZone: string,
-): [string, Data[]][] {
-  const format = new Intl.DateTimeFormat(language, {
-    year: 'numeric',
-    month: 'long',
-    timeZone,
-  });
-  const groups = new Map<string, Data[]>();
-  for (const event of events) {
-    const month = format.format(new Date(toText(event.createdAt)));
-    groups.set(month, [...(groups.get(month) ?? []), event]);
-  }
-  return [...groups];
-}
-
 // A record's activity feed, the tab once called its change history: what
 // people changed, what the AI proposed and someone confirmed (marked so), and
 // the AI's own work such as a lead's evaluation, newest first, all of it or
@@ -2063,6 +2070,7 @@ export function HistoryFeed({
   focusId,
   focusAt,
   onOpenNote,
+  onOpenMail,
 }: {
   entity: Entity;
   id: string;
@@ -2081,6 +2089,8 @@ export function HistoryFeed({
   // Opens a note in the Notes tab, where it is read whole and changed: the
   // timeline only points to it.
   onOpenNote?: (noteId: string) => void;
+  // Opens a mail conversation on the Mail tab, for the mailbox's owner.
+  onOpenMail?: (sourceKey: string) => void;
 }): ReactElement {
   const { text, language } = useCrmText();
   const refresh = useRefresh();
@@ -2173,19 +2183,15 @@ export function HistoryFeed({
       {!more.records.length ? (
         <p className='text-sm text-muted-foreground'>{text('feed.empty')}</p>
       ) : (
-        // As record timelines commonly are: entries grouped by month under a
-        // light rule, each on a rail of icons, read as a sentence — who,
-        // what they did (muted), what changed — with when on the right.
+        // One list, newest first, each entry on a rail of icons, read as a
+        // sentence — who, what they did (muted), what changed — with its
+        // full date and time on the right; no month headings.
         <div className='grid grid-cols-[minmax(0,1fr)] gap-6'>
-          {months(more.records, language, timeZone).map(([month, events]) => (
+          {[more.records].map((events) => (
             <section
-              key={month}
+              key='timeline'
               className='grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4'
             >
-              <div className='flex items-center gap-4 text-xs font-semibold text-muted-foreground/70'>
-                {month}
-                <span className='h-px flex-1 bg-border' />
-              </div>
               <ol className='relative'>
                 {/* The rail behind the icons, slim and borderless. */}
                 <span
@@ -2209,21 +2215,20 @@ export function HistoryFeed({
                   const reviewWaiting = review && event.aiStatus === 'pending';
                   const open = pending || reviewWaiting || isOpen(key);
                   // Files added or removed show the attachments' clip.
-                  // An entry of one of the record's activities: planned,
+                  // An entry of one of the record's tasks: planned,
                   // done or called off, or moved.
-                  // (On an activity's own timeline, its entries are its own.)
-                  const activityEvent =
-                    (event.entity === 'activities' &&
-                      entity !== 'activities') ||
-                    event.action === 'activityDeleted';
+                  // (On a task's own timeline, its entries are its own.)
+                  const taskEvent =
+                    (event.entity === 'tasks' && entity !== 'tasks') ||
+                    event.action === 'taskDeleted';
                   // One of a deal's approvals submitted, decided or
                   // withdrawn.
                   const approvalEvent =
                     event.entity === 'approvals' && entity !== 'approvals';
-                  // Every activity entry carries the Activities tab's icon,
+                  // Every task entry carries the Tasks tab's icon,
                   // every approval entry the Approvals tab's.
-                  const Icon = activityEvent
-                    ? CalendarDays
+                  const Icon = taskEvent
+                    ? SquareCheckBig
                     : approvalEvent
                       ? ClipboardCheck
                       : contactsOnly(event)
@@ -2272,8 +2277,8 @@ export function HistoryFeed({
                             </span>
                             {/* "Edited a note" leads to the note it changed,
                                 whose entry shows the text. */}
-                            {activityEvent ? (
-                              <ActivityEvent
+                            {taskEvent ? (
+                              <TaskEvent
                                 event={event}
                                 open={open}
                                 onToggle={() => toggle(key)}
@@ -2282,6 +2287,8 @@ export function HistoryFeed({
                               />
                             ) : approvalEvent ? (
                               <ApprovalEvent event={event} />
+                            ) : event.action === 'mail' ? (
+                              <MailEvent event={event} onOpen={onOpenMail} />
                             ) : event.action === 'noteEdited' &&
                               onOpenNote &&
                               noteOf(event) ? (
@@ -2340,7 +2347,7 @@ export function HistoryFeed({
                                 field changes below it are. */}
                             {event.fromValue &&
                             statusKey &&
-                            !activityEvent &&
+                            !taskEvent &&
                             !approvalEvent ? (
                               <span className='inline-flex items-baseline gap-1.5'>
                                 <span className='text-muted-foreground'>
@@ -2369,7 +2376,8 @@ export function HistoryFeed({
                               !toText(event.action).startsWith('note') &&
                               event.action !== 'aiRevise' &&
                               event.action !== 'merged' &&
-                              !activityEvent &&
+                              event.action !== 'mail' &&
+                              !taskEvent &&
                               !approvalEvent && (
                                 <HistoryChanges
                                   entity={entity}
@@ -2534,13 +2542,13 @@ export function HistoryFeed({
                             />
                           </div>
                         ) : null}
-                        {/* An activity's edit, unfolded likewise. */}
-                        {activityEvent && activityState(event) === 'edited' && (
+                        {/* A task's edit, unfolded likewise. */}
+                        {taskEvent && taskState(event) === 'edited' && (
                           <HistoryChanges
                             part='rows'
                             open={open}
-                            entity='activities'
-                            record={(event.activity ?? {}) as CrmRecord}
+                            entity='tasks'
+                            record={(event.task ?? {}) as CrmRecord}
                             changes={event.changes}
                             previous={event.previous}
                             names={allNames}
@@ -2553,7 +2561,7 @@ export function HistoryFeed({
                           event.action !== 'created' &&
                           !toText(event.action).startsWith('note') &&
                           event.action !== 'aiRevise' &&
-                          !activityEvent &&
+                          !taskEvent &&
                           !approvalEvent && (
                             <HistoryChanges
                               part='rows'
@@ -2844,18 +2852,19 @@ function NoteBody({ note, mine }: { note: Data; mine: boolean }): ReactElement {
   );
 }
 
-// A group of a record's particulars (the lead's, the activity's): a heading,
+// A group of a record's particulars (the lead's, the task's): a heading,
 // then its rows, set off from the group before by space alone.
 export function InfoGroup({
   title,
   children,
 }: {
-  title: string;
+  // None for what leads the page by itself (a task's description).
+  title?: string;
   children: ReactNode;
 }): ReactElement {
   return (
     <section className='py-3 first:pt-0 last:pb-0'>
-      <h3 className='px-2 pb-1.5 text-sm font-medium'>{title}</h3>
+      {title && <h3 className='px-2 pb-1.5 text-sm font-medium'>{title}</h3>}
       <dl>{children}</dl>
     </section>
   );

@@ -40,7 +40,7 @@ vi.mock('../../client/components/crm/mail.js', async (importOriginal) => ({
     composer: null,
   }),
   useRecordMessages: () => ({ data: [], isLoading: false, error: null }),
-  useLogSentMail: () => () => undefined,
+  useMailSent: () => () => undefined,
 }));
 vi.mock('../../client/components/crm/api.js', async (importOriginal) => ({
   ...(await importOriginal<
@@ -62,7 +62,6 @@ function show(
       <MemoryRouter>
         <RecordMailPanel
           target={{ addresses, domain: more.domain }}
-          link={{ leadId: 'l1' }}
           scope={more.scope}
         />
       </MemoryRouter>

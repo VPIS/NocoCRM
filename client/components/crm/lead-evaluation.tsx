@@ -13,6 +13,7 @@ import {
   Copy,
   ExternalLink,
   Globe,
+  Mail,
   PencilLine,
   Sparkles,
   TriangleAlert,
@@ -35,6 +36,8 @@ import {
   DialogTitle,
 } from '../ui/dialog.js';
 import { OutcomeBox } from './outcome.js';
+import { useMailComposer } from './mail.js';
+import { plainTextToMailHtml } from '@nocobase/app-plugin-mail/client';
 import { Choice } from './form.js';
 import { Input } from '../ui/input.js';
 import { DateTimeInput } from './datetime-input.js';
@@ -58,6 +61,7 @@ import {
   useRecord,
   useRefresh,
   type CrmRecord,
+  type Data,
 } from './api.js';
 
 // The AI's follow-up recommendation for a lead, as the server keeps it in the lead's
@@ -69,13 +73,13 @@ export interface Verdict {
   reasons: string[];
   edition: string | null;
   invalidReason: string | null;
-  // `activityId`: an activity already planned that the step carries on;
+  // `taskId`: a task already planned that the step carries on;
   // `ownerId`: whom the AI gave it to, when it named someone.
   nextStep: {
     type: string;
     subject: string;
     inDays: number;
-    activityId?: string | null;
+    taskId?: string | null;
     ownerId?: string | null;
   } | null;
   questions: string[];
@@ -452,6 +456,11 @@ export function VerdictPanel({
     (field) => !(entry.ai.enrichedAt && found.has(field)),
   );
   const base = `${entity}/${recordId}/evaluation`;
+  // An email as the next step is written from the card, in the Mail
+  // plugin's composer filled with the draft; once it is sent the card is
+  // accepted. Without a mailbox to send from, the draft is copied instead
+  // and the card accepted as any other.
+  const mailer = useMailComposer();
   // The proposed approvals kept, all to start with, each with its approver
   // (a sales manager by default), submitted with the accept.
   const [approvalPicks, setApprovalPicks] = useState<
@@ -461,20 +470,20 @@ export function VerdictPanel({
   const [contactsOff, setContactsOff] = useState<ReadonlySet<number>>(
     () => new Set(),
   );
-  // The activity accepting creates, as the person changes it here: only
+  // The task accepting creates, as the person changes it here: only
   // what they changed, over what the verdict proposes.
   const [plan, setPlan] = useState<Partial<Plan>>({});
-  // When the card was drawn, to tell an activity overdue.
+  // When the card was drawn, to tell a task overdue.
   const [now] = useState(() => Date.now());
   // The deal itself, for the currency its amounts are in.
   const { data: followedRecord } = useRecord(
     entity === 'opportunities' ? 'opportunities' : undefined,
     recordId,
   );
-  // The planned activity the step carries on, if any, as it is now.
+  // The planned task the step carries on, if any, as it is now.
   const { data: carriedOn } = useRecord(
-    'activities',
-    entry.ai.result?.nextStep?.activityId || undefined,
+    'tasks',
+    entry.ai.result?.nextStep?.taskId || undefined,
   );
   if (!meta) return null;
   const act = async (
@@ -492,6 +501,44 @@ export function VerdictPanel({
       setBusy(undefined);
     }
   };
+  // The email the next step proposes, opened in the composer to the
+  // record's people (a lead's address, a deal's contacts'), its draft
+  // filled in; sending it accepts the card.
+  const writeEmail = (): Promise<void> =>
+    act('accept', async () => {
+      const record = (
+        await api<{ data: { record: Data } }>(`${entity}/${recordId}`)
+      ).data.record;
+      const contactIds =
+        entity === 'opportunities'
+          ? (Array.isArray(record.contacts) ? record.contacts : []).map((c) =>
+              toText((c as Data).contactId),
+            )
+          : [];
+      const people = await Promise.allSettled(
+        contactIds.map((id) =>
+          api<{ data: { record: Data } }>(`contacts/${id}`),
+        ),
+      );
+      const to = [
+        ...(entity === 'leads' ? [toText(record.email)] : []),
+        ...people.flatMap((p) =>
+          p.status === 'fulfilled' ? [toText(p.value.data.record.email)] : [],
+        ),
+      ].filter(Boolean);
+      const draft = verdict?.email;
+      mailer.compose(
+        {
+          to: [...new Set(to)].join(', '),
+          subject: draft?.subject ?? toText(verdict?.nextStep?.subject),
+          text: draft?.body ?? '',
+          html: draft?.body ? plainTextToMailHtml(draft.body) : '',
+        },
+        async (sent) => {
+          if (sent) await decide('accept');
+        },
+      );
+    });
   // Accepting writes the findings still ticked with it.
   const decide = (decision: 'accept' | 'dismiss'): Promise<void> =>
     act(decision, () =>
@@ -500,7 +547,7 @@ export function VerdictPanel({
         ...(decision === 'accept'
           ? {
               fields: unwritten,
-              activity: existing
+              task: existing
                 ? { mode: overdue ? 'report' : 'reschedule', ...plan }
                 : plan,
               // Only a deal's card proposes contacts and approvals.
@@ -552,24 +599,22 @@ export function VerdictPanel({
       onRevised?.(result.data);
     });
   const verdict = entry.ai.result;
-  // A waiting card the reader decides, whose accept plans an activity.
+  // A waiting card the reader decides, whose accept plans a task.
   const planning =
     entry.status === 'pending' &&
     editable &&
-    Boolean(verdict && plansActivity(verdict));
-  const existing = verdict?.nextStep?.activityId
-    ? carriedOn?.record
-    : undefined;
+    Boolean(verdict && plansTask(verdict));
+  const existing = verdict?.nextStep?.taskId ? carriedOn?.record : undefined;
   const overdue = existing
-    ? new Date(toText(existing.startAt)).getTime() < now
+    ? new Date(toText(existing.dueAt)).getTime() < now
     : false;
   // Done but its outcome not written yet: nothing to accept.
-  // Telling what came of the activity: by default when it is overdue, and
+  // Telling what came of the task: by default when it is overdue, and
   // whenever the person says it was done.
   const reporting = Boolean(
     existing && (plan.mode ?? (overdue ? 'report' : 'reschedule')) === 'report',
   );
-  // Carrying on an activity that is ready as it is: accepting changes
+  // Carrying on a task that is ready as it is: accepting changes
   // nothing on it.
   const unchanged =
     existing && verdict && !reporting
@@ -694,22 +739,27 @@ export function VerdictPanel({
                       ? void convert()
                       : submitting.length
                         ? setConfirmingApprovals(true)
-                        : void decide('accept')
+                        : emailsNext(verdict) && mailer.available
+                          ? void writeEmail()
+                          : void decide('accept')
                   }
                 >
                   {busy === 'accept' && <Spinner />}
+                  {emailsNext(verdict) && mailer.available && !busy && <Mail />}
                   {text(
-                    existing
-                      ? reporting
-                        ? 'evaluation.acceptReport'
-                        : overdue
-                          ? 'evaluation.acceptReschedule'
-                          : unchanged && !movesStage(verdict)
-                            ? 'evaluation.acceptOnly'
-                            : verdict.recommendation === 'advance'
-                              ? 'evaluation.deal.acceptAdvance'
-                              : 'evaluation.acceptUpdate'
-                      : acceptLabel(verdict),
+                    emailsNext(verdict) && mailer.available
+                      ? 'evaluation.writeEmail'
+                      : existing
+                        ? reporting
+                          ? 'evaluation.acceptReport'
+                          : overdue
+                            ? 'evaluation.acceptReschedule'
+                            : unchanged && !movesStage(verdict)
+                              ? 'evaluation.acceptOnly'
+                              : verdict.recommendation === 'advance'
+                                ? 'evaluation.deal.acceptAdvance'
+                                : 'evaluation.acceptUpdate'
+                        : acceptLabel(verdict),
                   )}
                 </Button>
                 <Button
@@ -821,7 +871,7 @@ export function VerdictPanel({
       )}
       {/* What accepting will create, laid out and changeable. */}
       {planning && verdict && (
-        <PlannedActivity
+        <PlannedTask
           verdict={verdict}
           entity={entity}
           recordId={recordId}
@@ -905,6 +955,7 @@ export function VerdictPanel({
           )}
         </div>
       )}
+      {mailer.composer}
       {converting && verdict && !isDeal(verdict) && (
         <ConvertFromVerdict
           leadId={recordId}
@@ -981,10 +1032,21 @@ export function VerdictPanel({
   );
 }
 
-// Whether accepting a verdict plans an activity: a lead's next contact or
+// Whether the next step is an email to write now (from the card), which
+// plans no task.
+function emailsNext(verdict: AnyVerdict): boolean {
+  return Boolean(
+    stepsNext(verdict) &&
+    verdict.nextStep?.type === 'email' &&
+    !verdict.nextStep.taskId,
+  );
+}
+
+// Whether accepting a verdict plans a task: a lead's next contact or
 // nurture review, a deal's next step (advancing or keeping at it), its
-// resumption when paused, or a visit after it is lost.
-function plansActivity(verdict: AnyVerdict): boolean {
+// resumption when paused, or a visit after it is lost. An email is no task.
+function plansTask(verdict: AnyVerdict): boolean {
+  if (emailsNext(verdict)) return false;
   if (isDeal(verdict))
     return Boolean(
       ((verdict.recommendation === 'advance' ||
@@ -1015,7 +1077,7 @@ function movesStage(verdict: AnyVerdict): boolean {
   return isDeal(verdict) && verdict.recommendation === 'advance';
 }
 
-// The accept button's words for a verdict that plans a new activity or
+// The accept button's words for a verdict that plans a new task or
 // none.
 function acceptLabel(verdict: AnyVerdict): string {
   switch (verdict.recommendation) {
@@ -1040,17 +1102,16 @@ function acceptLabel(verdict: AnyVerdict): string {
   }
 }
 
-// The activity a waiting card's accept creates: what the verdict proposes,
+// The task a waiting card's accept creates: what the verdict proposes,
 // or what the person set here.
 interface Plan {
-  type: string;
   name: string;
   // An instant (ISO).
-  startAt: string;
+  dueAt: string;
   ownerId: string;
-  // Markdown, as the activity will hold it.
+  // Markdown, as the task will hold it.
   description: string;
-  // An overdue activity the step carries on: done, with what came of it,
+  // An overdue task the step carries on: done, with what came of it,
   // or not yet, and moved.
   mode?: 'report' | 'reschedule';
   outcome?: string;
@@ -1058,9 +1119,9 @@ interface Plan {
   followUp?: boolean;
 }
 
-// What accepting does to the planned activity a step carries on: each part
+// What accepting does to the planned task a step carries on: each part
 // of its description added, changed or kept, and which of its fields the
-// card changes; nothing at all when the activity is ready as it is.
+// card changes; nothing at all when the task is ready as it is.
 function carriedChanges(
   existing: CrmRecord,
   verdict: AnyVerdict,
@@ -1079,18 +1140,17 @@ function carriedChanges(
     plan.description.trim() !== description.trim();
   const parts = edited ? {} : planPartChanges(description, verdict);
   // The owner as the person set it, else as the AI gave it.
-  const wanted = (key: 'type' | 'name' | 'ownerId'): string | undefined =>
+  const wanted = (key: 'name' | 'ownerId'): string | undefined =>
     key === 'ownerId'
       ? (plan.ownerId ?? verdict.nextStep?.ownerId ?? undefined)
       : plan[key];
-  const fields = (['type', 'name', 'ownerId', 'startAt'] as const).filter(
-    (key) =>
-      key === 'startAt'
-        ? overdue ||
-          (plan.startAt !== undefined &&
-            new Date(plan.startAt).getTime() !==
-              new Date(toText(existing.startAt)).getTime())
-        : wanted(key) !== undefined && wanted(key) !== toText(existing[key]),
+  const fields = (['name', 'ownerId', 'dueAt'] as const).filter((key) =>
+    key === 'dueAt'
+      ? overdue ||
+        (plan.dueAt !== undefined &&
+          new Date(plan.dueAt).getTime() !==
+            new Date(toText(existing.dueAt)).getTime())
+      : wanted(key) !== undefined && wanted(key) !== toText(existing[key]),
   );
   return {
     parts,
@@ -1103,12 +1163,12 @@ function carriedChanges(
   };
 }
 
-// The activity accepting creates, laid out as the activity it will be:
-// type, name, when and whose, each changeable before accepting; the
+// The task accepting creates, laid out as the task it will be:
+// its title, when and whose, each changeable before accepting; the
 // preparation, questions and email draft go into its description. A lead
 // to follow up gets the next step, one to nurture its review task; a deal
 // its next step, or the task to resume it (paused) or look in again (lost).
-function PlannedActivity({
+function PlannedTask({
   verdict,
   entity,
   recordId,
@@ -1124,7 +1184,7 @@ function PlannedActivity({
   plan: Partial<Plan>;
   onPlan: (plan: Partial<Plan>) => void;
   disabled: boolean;
-  // The planned activity the step carries on, and whether its time has gone.
+  // The planned task the step carries on, and whether its time has gone.
   existing?: CrmRecord;
   overdue?: boolean;
 }): ReactElement | null {
@@ -1149,21 +1209,20 @@ function PlannedActivity({
       : { inDays: verdict.revisitInDays, name: 'evaluation.deal.revisitName' }
     : { inDays: verdict.reviewInDays, name: 'evaluation.reviewName' };
   // What the server plans when nothing here is changed.
-  // Carrying on an activity: its own values, its time moved only when it is
+  // Carrying on a task: its own values, its time moved only when it is
   // overdue, what to prepare added to what it says.
   const added = follow
     ? planDescription(verdict, language.startsWith('zh'))
     : '';
   const proposed: Plan = existing
     ? {
-        type: toText(existing.type),
         name: toText(existing.name),
-        startAt: overdue
+        dueAt: overdue
           ? contactTime(
               verdict.nextStep?.inDays ?? 0,
               meta.settings.timeZone,
             ).toISOString()
-          : toText(existing.startAt),
+          : toText(existing.dueAt),
         ownerId: toText(verdict.nextStep?.ownerId || existing.ownerId),
         // This follow-up's parts in place of an earlier one's.
         description: mergePlanDescription(
@@ -1173,7 +1232,6 @@ function PlannedActivity({
         ),
       }
     : {
-        type: follow ? (verdict.nextStep?.type ?? 'call') : 'task',
         name: follow
           ? (verdict.nextStep?.subject ?? '')
           : `${toText(
@@ -1181,7 +1239,7 @@ function PlannedActivity({
                 ? record?.company || record?.name
                 : record?.name,
             )} ${toText(text(later.name))}`,
-        startAt: contactTime(
+        dueAt: contactTime(
           (follow ? verdict.nextStep?.inDays : later.inDays) ?? 0,
           meta.settings.timeZone,
         ).toISOString(),
@@ -1198,20 +1256,11 @@ function PlannedActivity({
   const value = { ...proposed, ...plan };
   // Done or not yet: done by default once its time has gone.
   const mode = plan.mode ?? (overdue ? 'report' : 'reschedule');
-  // Telling what came of the activity: it is shown as it was.
+  // Telling what came of the task: it is shown as it was.
   const reporting = Boolean(existing) && mode === 'report';
   const set = (key: keyof Plan, next: string): void =>
     onPlan({ ...plan, [key]: next });
-  const typeField = meta.definitions.activities.fields.find(
-    (f) => f.key === 'type',
-  );
-  const types = (meta.settings.options.type ?? typeField?.options ?? []).map(
-    (v) => ({
-      value: v,
-      label: toText(text(`options.${toText(v)}`, { defaultValue: v })),
-    }),
-  );
-  // Sellers own activities, as the activity form offers them.
+  // Sellers own tasks, as the task form offers them.
   const owners = meta.users
     .filter(
       (u) =>
@@ -1297,13 +1346,13 @@ function PlannedActivity({
         <CalendarPlus className='size-4 text-muted-foreground' />
         {text(
           !existing
-            ? 'evaluation.plannedActivity'
+            ? 'evaluation.plannedTask'
             : overdue
-              ? 'evaluation.overdueActivity'
-              : 'evaluation.existingActivity',
+              ? 'evaluation.overdueTask'
+              : 'evaluation.existingTask',
         )}
       </p>
-      {/* What accepting changes on the activity, or that it changes
+      {/* What accepting changes on the task, or that it changes
           nothing. */}
       {existing && !reporting
         ? (() => {
@@ -1343,7 +1392,7 @@ function PlannedActivity({
             );
           })()
         : null}
-      {/* An activity already planned: done (and what came of it), or not
+      {/* A task already planned: done (and what came of it), or not
           yet (prepared for, or, overdue, moved). */}
       {existing ? (
         // A segmented choice, as the timeline's filter: the one chosen
@@ -1382,25 +1431,9 @@ function PlannedActivity({
           ))}
         </div>
       ) : null}
-      {/* The activity as it stands, always: changeable when it is to be
+      {/* The task as it stands, always: changeable when it is to be
           planned or moved, only read when its outcome is being told. */}
       <dl className='grid grid-cols-[max-content_minmax(0,1fr)] items-center gap-x-3 gap-y-0.5'>
-        {row(
-          'type',
-          toText(text('fields.type')),
-          types.find((t) => t.value === value.type)?.label ?? value.type,
-          <Choice
-            label={toText(text('fields.type'))}
-            value={value.type}
-            choices={types}
-            defaultOpen
-            onOpenChange={(isOpen) => !isOpen && close()}
-            onChange={(v) => {
-              if (v) set('type', v);
-              close();
-            }}
-          />,
-        )}
         {row(
           'name',
           toText(text('fields.name')),
@@ -1416,10 +1449,10 @@ function PlannedActivity({
           />,
         )}
         {row(
-          'startAt',
-          toText(text('fields.startAt')),
+          'dueAt',
+          toText(text('fields.dueAt')),
           localDate(
-            reporting && existing ? toText(existing.startAt) : value.startAt,
+            reporting && existing ? toText(existing.dueAt) : value.dueAt,
             language,
             meta.settings.timeZone,
           ),
@@ -1434,10 +1467,10 @@ function PlannedActivity({
           >
             <DateTimeInput
               autoFocus
-              label={toText(text('fields.startAt'))}
-              value={value.startAt}
+              label={toText(text('fields.dueAt'))}
+              value={value.dueAt}
               onChange={(at) => {
-                if (at) set('startAt', at);
+                if (at) set('dueAt', at);
               }}
               onOpenChange={(isOpen) => {
                 timePopupRef.current = isOpen;
@@ -1467,7 +1500,7 @@ function PlannedActivity({
           />,
           meta.assign,
         )}
-        {/* What the activity will hold, Markdown, as it will be saved. */}
+        {/* What the task will hold, Markdown, as it will be saved. */}
         {row(
           'description',
           toText(text('fields.description')),
@@ -1490,7 +1523,7 @@ function PlannedActivity({
       </dl>
       {reporting && existing ? (
         <OutcomeBox
-          activityId={toText(existing.id)}
+          taskId={toText(existing.id)}
           value={toText(plan.outcome)}
           onChange={(outcome) => onPlan({ ...plan, outcome })}
           disabled={disabled}
@@ -1989,9 +2022,11 @@ function VerdictList({
           )}
           {planned ? null : stepsNext(verdict) && verdict.nextStep ? (
             <Row label={text('evaluation.nextStep')}>
-              {text(`options.${verdict.nextStep.type}`, {
-                defaultValue: verdict.nextStep.type,
-              })}{' '}
+              {text(
+                verdict.nextStep.type === 'email'
+                  ? 'evaluation.stepEmail'
+                  : 'evaluation.stepTask',
+              )}{' '}
               · {verdict.nextStep.subject} · {inDays(verdict.nextStep.inDays)}
             </Row>
           ) : lead?.recommendation === 'invalid' && lead.invalidReason ? (
@@ -2058,7 +2093,7 @@ function VerdictList({
           {lead?.edition && (
             <Row label={text('evaluation.edition')}>{lead.edition}</Row>
           )}
-          {/* What goes into the planned activity's description is shown
+          {/* What goes into the planned task's description is shown
               there, to be changed, while the card waits. */}
           {!planned && verdict.prep && verdict.prep.length > 0 && (
             <Row label={text('evaluation.prep')}>{list(verdict.prep)}</Row>

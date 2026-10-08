@@ -10,7 +10,7 @@ import {
 } from '../../server/providers/crm/schema.js';
 import { crmZh } from '../../client/locales/crm/index.js';
 
-// The activity page is laid out as the lead's: no header, the particulars
+// The task page is laid out as the lead's: no header, the particulars
 // in groups on the left, the timeline and its other tabs on the right.
 
 const state = vi.hoisted(() => ({
@@ -82,7 +82,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
       loadMore: () => Promise.resolve(),
     }),
     useCrmQuery: (path: string) =>
-      path.startsWith('activities/')
+      path.startsWith('tasks/')
         ? {
             isLoading: false,
             data: {
@@ -137,7 +137,7 @@ function Where(): ReactElement {
   return <output data-testid='where'>{useLocation().pathname}</output>;
 }
 
-function renderPage(path = '/crm/activities/act-1'): void {
+function renderPage(path = '/crm/tasks/act-1'): void {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -149,7 +149,7 @@ function renderPage(path = '/crm/activities/act-1'): void {
             path='/crm/:entity/:id/*'
             element={
               <>
-                <EntityDetail entity='activities' id='act-1' />
+                <EntityDetail entity='tasks' id='act-1' />
                 <Where />
               </>
             }
@@ -163,10 +163,9 @@ function renderPage(path = '/crm/activities/act-1'): void {
 const planned = {
   id: 'act-1',
   name: '新域零售 培训计划沟通',
-  type: 'email',
-  status: 'planned',
+  status: 'open',
   ownerId: 'rep',
-  startAt: '2026-10-23T03:00:00.000Z',
+  dueAt: '2026-10-23T03:00:00.000Z',
   endAt: '2026-10-23T04:00:00.000Z',
   leadId: 'lead-1',
   description: '回顾最新进展',
@@ -182,7 +181,7 @@ beforeEach(() => {
   state.canDelete = true;
 });
 
-describe('the activity page', () => {
+describe('the task page', () => {
   it('heads the page with the name and groups the particulars', () => {
     renderPage();
     expect(screen.getByRole('heading', { level: 1 }).textContent).toContain(
@@ -190,7 +189,7 @@ describe('the activity page', () => {
     );
     // No generic header line with the record's id.
     expect(screen.queryByText(/ID: act-1/)).toBeNull();
-    for (const group of ['概况', '参与人', '关联', '内容', '系统'])
+    for (const group of ['概况', '关联'])
       expect(screen.getByRole('heading', { name: group })).toBeTruthy();
     const related = screen
       .getByRole('heading', { name: '关联' })
@@ -199,30 +198,30 @@ describe('the activity page', () => {
     expect(
       within(related).getByRole('link', { name: '罗雨萱 / 新域零售' }),
     ).toBeTruthy();
-    // A planned activity has no completion time yet.
+    // A planned task has no completion time yet.
     expect(screen.queryByText('完成时间')).toBeNull();
   });
 
-  it('offers recording the outcome only while the activity is planned', () => {
+  it('offers completing it only while the task is open', () => {
     renderPage();
-    expect(screen.getByRole('button', { name: /记录结果/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '完成' })).toBeTruthy();
   });
 
-  // The outcome of a planned activity goes through "Record outcome", which
+  // The outcome of a planned task goes through "Record outcome", which
   // completes it and has the AI follow up; typed into the field it would
   // do neither, so the field waits until there is one.
-  it('keeps the outcome field out of a planned activity until it has one', () => {
+  it('keeps the outcome field out of a planned task until it has one', () => {
     renderPage();
-    expect(screen.queryByText('反馈 / 结果')).toBeNull();
+    expect(screen.queryByText('结果')).toBeNull();
     cleanup();
-    state.record = { ...planned, feedback: '客户确认了报价' };
+    state.record = { ...planned, result: '客户确认了报价' };
     renderPage();
-    expect(screen.getByText('反馈 / 结果')).toBeTruthy();
+    expect(screen.getByText('结果')).toBeTruthy();
   });
 
   // Marking it done from the status menu records its outcome, as the
   // button does, rather than completing it with nothing for the AI to read.
-  it('records the outcome when the status menu marks a planned activity completed', async () => {
+  it('records the outcome when the status menu marks a planned task completed', async () => {
     renderPage();
     await userEvent.click(screen.getByRole('button', { name: '状态' }));
     await userEvent.click(
@@ -230,22 +229,21 @@ describe('the activity page', () => {
     );
     expect(await screen.findByRole('dialog')).toBeTruthy();
     expect(state.api).not.toHaveBeenCalledWith(
-      expect.stringContaining('activities/'),
+      expect.stringContaining('tasks/'),
       'PATCH',
       expect.objectContaining({ status: 'completed' }),
     );
   });
 
-  it('shows the completion time and no outcome button once completed', () => {
+  it('shows the result and no complete button once completed', () => {
     state.record = {
       ...planned,
       status: 'completed',
       completedAt: '2026-10-23T04:30:00.000Z',
     };
     renderPage();
-    expect(screen.queryByRole('button', { name: /记录结果/ })).toBeNull();
-    expect(screen.getByText('完成时间')).toBeTruthy();
-    expect(screen.getByText('反馈 / 结果')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '完成' })).toBeNull();
+    expect(screen.getByText('结果')).toBeTruthy();
   });
 
   it('counts attachments and notes but not the timeline, and keeps the tab in the address', async () => {
@@ -254,7 +252,7 @@ describe('the activity page', () => {
     expect(screen.getByRole('tab', { name: /备注/ }).textContent).toBe('备注2');
     await userEvent.click(screen.getByRole('tab', { name: /附件/ }));
     expect(screen.getByTestId('where').textContent).toBe(
-      '/crm/activities/act-1/attachments',
+      '/crm/tasks/act-1/attachments',
     );
   });
 
@@ -262,7 +260,7 @@ describe('the activity page', () => {
     renderPage();
     await userEvent.click(screen.getByRole('button', { name: '更多…' }));
     expect(
-      await screen.findByRole('menuitem', { name: '删除活动' }),
+      await screen.findByRole('menuitem', { name: '删除任务' }),
     ).toBeTruthy();
   });
 

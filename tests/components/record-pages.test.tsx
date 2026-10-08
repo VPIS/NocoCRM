@@ -69,7 +69,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
     ],
     permissions: {
       contacts: { create: false },
-      activities: { create: false },
+      tasks: { create: false },
       approvals: { create: false, delete: false },
       opportunities: { create: false },
     },
@@ -213,7 +213,7 @@ describe('the account page', () => {
     for (const heading of screen.getAllByRole('heading', { level: 1 }))
       expect(heading.textContent).toContain('杭州海康威视');
     expect(screen.queryByText(/ID: rec-1/)).toBeNull();
-    for (const group of ['概况', '公司', '系统'])
+    for (const group of ['概况', '公司'])
       expect(screen.getByRole('heading', { name: group })).toBeTruthy();
     expect(screen.getByText('地区')).toBeTruthy();
   });
@@ -236,7 +236,7 @@ describe('the account page', () => {
       expect(
         screen.queryByRole('button', { name: new RegExp(name) }),
       ).toBeNull();
-    for (const name of ['动态', '活动', '联系人', '商机', '附件', '备注'])
+    for (const name of ['动态', '任务', '联系人', '商机', '附件', '备注'])
       expect(
         screen.getAllByRole('tab', { name: new RegExp(name) }),
       ).toHaveLength(1);
@@ -302,7 +302,7 @@ describe('the contact page', () => {
       expect(heading.textContent).toContain('周晓');
       expect(heading.textContent).toContain('沃格光电');
     }
-    for (const group of ['概况', '联系方式', '系统'])
+    for (const group of ['概况', '联系方式'])
       expect(screen.getByRole('heading', { name: group })).toBeTruthy();
     expect(screen.queryByRole('tab', { name: /附件/ })).toBeNull();
     expect(screen.getAllByRole('tab', { name: /商机/ })).toHaveLength(1);
@@ -327,14 +327,13 @@ describe('the approval page', () => {
     };
   });
 
-  it('gives the approver the decision, the marker, and no creation time', () => {
+  it('gives the approver the decision and the marker, its times left to the timeline', () => {
     renderPage();
     expect(screen.getByRole('button', { name: /通过/ })).toBeTruthy();
     expect(screen.getByText('待你审批')).toBeTruthy();
-    expect(screen.queryByText('创建时间')).toBeNull();
-    expect(screen.getByText('提交时间')).toBeTruthy();
-    // Not decided yet: the last time is its update, and no comment.
-    expect(screen.getByText('更新时间')).toBeTruthy();
+    for (const time of ['创建时间', '提交时间', '更新时间'])
+      expect(screen.queryByText(time)).toBeNull();
+    // Not decided yet: no comment.
     expect(screen.queryByText('审批意见')).toBeNull();
   });
 
@@ -357,14 +356,13 @@ describe('the approval page', () => {
     }
   });
 
-  it('shows the applicant no marker and the creation time', () => {
+  it('shows the applicant no marker', () => {
     state.userId = 'applicant';
     renderPage();
     expect(screen.queryByText('待你审批')).toBeNull();
-    expect(screen.getByText('创建时间')).toBeTruthy();
   });
 
-  it('shows the decision time and the comment, read only, once decided', () => {
+  it('shows the comment, read only, once decided', () => {
     state.record = {
       ...state.record,
       status: 'approved',
@@ -372,8 +370,7 @@ describe('the approval page', () => {
       decisionComment: '同意 60 天账期',
     };
     renderPage();
-    expect(screen.getByText('审批时间')).toBeTruthy();
-    expect(screen.queryByText('更新时间')).toBeNull();
+    expect(screen.queryByText('审批时间')).toBeNull();
     expect(screen.getByText('审批意见')).toBeTruthy();
     expect(screen.getByText('同意 60 天账期')).toBeTruthy();
     // Shown, not edited: no editor button carries its label.

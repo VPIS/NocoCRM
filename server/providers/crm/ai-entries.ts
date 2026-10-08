@@ -25,13 +25,13 @@ export interface Verdict {
   edition: string | null;
   invalidReason: string | null;
   // Following up: the next thing to do, when, what to prepare and ask.
-  // `activityId`: an activity already planned that the step carries on
+  // `taskId`: a task already planned that the step carries on
   // (prepared for, moved, or asked about when overdue) instead of a new one.
   nextStep: {
     type: string;
     subject: string;
     inDays: number;
-    activityId?: string | null;
+    taskId?: string | null;
     // Its owner, when the AI named one (else the record's owner).
     ownerId?: string | null;
   } | null;
@@ -149,7 +149,7 @@ export interface Enrichment {
   value: string;
   // The page it was found on, for the web.
   source: string | null;
-  // The CRM's own material it came from (an activity's name, a note, the
+  // The CRM's own material it came from (a task's name, a note, the
   // original message), when not the web.
   basis?: string;
   current: string | null;
@@ -169,7 +169,7 @@ export interface EvaluationEntry<V = Verdict> {
     sessionId?: string;
     decidedById?: string;
     decidedAt?: string;
-    activityId?: string;
+    taskId?: string;
     // When this run looked the company up on the web; a run that did not
     // (recently checked, see lead-evaluation.ts) leaves it out.
     researchedAt?: string;
@@ -196,7 +196,7 @@ export interface EvaluationEntry<V = Verdict> {
     // list, each with the contact it set on the deal.
     keptContacts?: { index: number; contactId: string }[];
     // What started a follow-up the system ran on its own (a signal, a
-    // changed company, an activity marked done); absent when asked for.
+    // changed company, a task marked done); absent when asked for.
     trigger?: string;
     // When a running card's run began; absent while it waits its turn.
     startedAt?: string;

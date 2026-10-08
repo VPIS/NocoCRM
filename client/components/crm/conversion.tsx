@@ -77,7 +77,7 @@ function Section({
 // out as they will be saved and each changeable, every section of the
 // dialog alike, the labels in one column of one width: read as a value, opened for editing by a
 // double-click, or Enter or F2 with focus (as the follow-up card's planned
-// activity is); Enter or leaving keeps a text, Escape takes it back. An
+// task is); Enter or leaving keeps a text, Escape takes it back. An
 // empty field shows a dash, so it can be filled too. The owner changes only
 // for whoever may assign records. What is changed (`onChange`) is sent with
 // the conversion over what the lead supplies, and the server checks it as
@@ -369,10 +369,10 @@ export function ConvertDialog({
   }>(`leads/${toText(lead.id)}/conversion`);
   // The list endpoint puts total beside data, not inside it, so this reads
   // the raw response rather than going through useCrmQuery's unwrapping.
-  const activities = useQuery({
-    queryKey: [...scopeKey, `activities?leadId=${toText(lead.id)}&count`],
+  const tasks = useQuery({
+    queryKey: [...scopeKey, `tasks?leadId=${toText(lead.id)}&count`],
     queryFn: () =>
-      api<{ total: number }>(`activities?leadId=${toText(lead.id)}&pageSize=1`),
+      api<{ total: number }>(`tasks?leadId=${toText(lead.id)}&pageSize=1`),
   });
   const [input, setInput] = useState<Data>(() => ({
     accountName: lead.company ?? '',
@@ -483,7 +483,7 @@ export function ConvertDialog({
         (o) => !['won', 'lost'].includes(toText(o.stage)),
       )
     : [];
-  const linkedActivities = activities.data?.total ?? 0;
+  const linkedTasks = tasks.data?.total ?? 0;
 
   // Conflicts: fields where the lead and the chosen record both have a value
   // and disagree; the user opts into each overwrite.
@@ -790,7 +790,7 @@ export function ConvertDialog({
           </Section>
 
           <p className='text-xs text-muted-foreground'>
-            {text('conversionImpact', { activities: linkedActivities })}
+            {text('conversionImpact', { tasks: linkedTasks })}
           </p>
           <DialogFooter>
             {/* The deal it opens, followed up by the AI at once unless

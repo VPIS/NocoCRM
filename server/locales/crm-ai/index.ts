@@ -14,7 +14,7 @@ export const pick = (pairs: Pairs, zh: boolean): Record<string, string> =>
     Object.entries(pairs).map(([key, pair]) => [key, pair[lang(zh)]]),
   );
 
-// The headings of a planned activity's description, by part.
+// The headings of a planned task's description, by part.
 export const planHeadings = {
   prep: ['准备要点', 'To prepare'],
   questions: ['要问的问题', 'To ask'],

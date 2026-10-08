@@ -1,6 +1,6 @@
 import { TrendChart } from '../components/crm/trend-chart.js';
 import { SortableTable } from '../components/crm/sortable-table.js';
-import { toText } from '../components/crm/api.js';
+import { dueText, toText } from '../components/crm/api.js';
 import {
   Suspense,
   lazy,
@@ -126,7 +126,7 @@ const attentionCards: {
   { key: 'toSubmit', entity: 'approvals', metric: 'toSubmit', icon: FilePen },
 ];
 
-// The activity and approval cards open their record in the detail page's
+// The task and approval cards open their record in the detail page's
 // drawer; its code loads only when a record is first opened.
 const RecordDrawer = lazy(() =>
   import('./crm-detail.js').then((module) => ({
@@ -161,7 +161,7 @@ export default function DashboardPage(): ReactElement {
   const openList = (entity: Entity, metric: string): void =>
     void navigate(`/crm/${toText(entity)}?metric=${metric}`);
 
-  // One of the three "today" lists: activities carry their type and a start
+  // One of the three "today" lists: tasks carry their type and a start
   // time; approvals carry their topic and when they were submitted. The
   // workspace brings the first page of each; the card asks for the rest.
   const agenda = (
@@ -290,12 +290,12 @@ export default function DashboardPage(): ReactElement {
                 {agenda(
                   'today',
                   text('noToday'),
-                  '/crm/activities?metric=todayActivities',
+                  '/crm/tasks?metric=todayTasks',
                 )}
                 {agenda(
                   'overdue',
                   text('noOverdue'),
-                  '/crm/activities?metric=overdueActivities',
+                  '/crm/tasks?metric=overdueTasks',
                 )}
                 {agenda(
                   'approvals',
@@ -460,7 +460,7 @@ export default function DashboardPage(): ReactElement {
                     icon={CheckCircle2}
                     value={Number(business.completedThisMonth ?? 0)}
                     note={text('metricNotes.completedThisMonth')}
-                    onClick={() => openList('activities', 'completedThisMonth')}
+                    onClick={() => openList('tasks', 'completedThisMonth')}
                   />
                   <Metric
                     title={text('churnedThisMonth')}
@@ -512,7 +512,7 @@ export default function DashboardPage(): ReactElement {
                       ['uncontacted', 'uncontacted'],
                       ['staleLeads', 'staleLeads'],
                       ['staleAccounts', 'staleAccounts'],
-                      ['overdueActivities', 'overdueActivities'],
+                      ['overdueTasks', 'overdueTasks'],
                     ],
                     (row) => toText(row.id),
                   )}
@@ -605,7 +605,7 @@ function AgendaCard({
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
   const api = useCrmApi();
-  const entity: Entity = name === 'approvals' ? 'approvals' : 'activities';
+  const entity: Entity = name === 'approvals' ? 'approvals' : 'tasks';
   // Pages fetched past the first, which came with the workspace itself.
   const [more, setMore] = useState<CrmRecord[]>([]);
   const [page, setPage] = useState(1);
@@ -649,7 +649,7 @@ function AgendaCard({
               className='border-b pb-3 text-sm last:border-0 last:pb-0'
             >
               <div className='flex items-center gap-2'>
-                <KindTag value={r.type ?? r.topic} />
+                {name === 'approvals' && <KindTag value={r.topic} />}
                 <span className='min-w-0 flex-1 truncate'>
                   <RecordLink entity={entity} record={r} />
                 </span>
@@ -657,11 +657,13 @@ function AgendaCard({
               <p className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground'>
                 <span className='inline-flex items-center gap-1'>
                   <Clock className='size-3 shrink-0' />
-                  {localDate(r.startAt ?? r.submittedAt, language, timeZone)}
+                  {name === 'approvals'
+                    ? localDate(r.submittedAt, language, timeZone)
+                    : dueText(r, timeZone) || '—'}
                 </span>
                 {/* Whose it is — the same line in both scopes, so the
                       cards read alike: an approval names its applicant and
-                      approver, an activity its owner. */}
+                      approver, a task its owner. */}
                 {name === 'approvals' ? (
                   <>
                     <span className='inline-flex items-center gap-1'>

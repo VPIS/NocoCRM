@@ -16,14 +16,17 @@ import { notificationServiceToken } from '@nocobase/app-plugin-notification/serv
 import { workflowServiceToken } from '@nocobase/app-plugin-workflow/server';
 import { schedulerServiceToken } from '@nocobase/app-plugin-scheduler/server/tokens';
 import { scanLeadSignals } from './lead-signals.js';
+import { isEndOfDay } from './zone-time.js';
 import { scanDealSignals } from './deal-signals.js';
 import { pick } from '../../locales/crm-ai/index.js';
 import { scheduleTexts } from '../../locales/crm-ai/schedules.js';
 import { jobExecutorServiceToken } from '@nocobase/app-server/jobs';
 import type { JobExecutor } from '@nocobase/jobs';
 import { createFollowUpJob, FOLLOW_UP_JOBS } from './follow-up-jobs.js';
+import { MailTimeline, mailTimelineToken } from './mail-timeline.js';
 import {
-  followUpAfterActivity,
+  followUpAfterTask,
+  followUpLead,
   followUpOpportunity,
   approvalsSettled,
 } from './feedback.js';
@@ -36,7 +39,11 @@ import {
 import { CrmService, array } from './service.js';
 import { CrmError, type CrmSettings } from './schema.js';
 import { CrmSkillNotes, crmSkillNotesToken } from './skills.js';
-import { LeadEvaluator, leadEvaluatorToken } from './lead-evaluation.js';
+import {
+  aiStates,
+  LeadEvaluator,
+  leadEvaluatorToken,
+} from './lead-evaluation.js';
 import {
   OpportunityEvaluator,
   opportunityEvaluatorToken,
@@ -112,6 +119,16 @@ export default class CrmProvider extends ServiceProvider<Application> {
       opportunityEvaluatorToken,
       () =>
         new OpportunityEvaluator(
+          this.app.container.resolve(crmToken),
+          this.app.container,
+        ),
+    );
+    // The mail each record's people exchanged with the team, brought into
+    // its timeline (mail-timeline.ts).
+    this.app.container.singleton(
+      mailTimelineToken,
+      () =>
+        new MailTimeline(
           this.app.container.resolve(crmToken),
           this.app.container,
         ),
@@ -292,14 +309,14 @@ export default class CrmProvider extends ServiceProvider<Application> {
     }
     service.opportunityOpened = (by, id) =>
       void deals.request(by, id).catch(() => undefined);
-    // An activity marked done its deal's, or else its lead's, follow-up;
+    // A task marked done its deal's, or else its lead's, follow-up;
     // a lead's company changed by a person, a follow-up that looks it up.
-    service.activityCompleted = (by, activity) =>
-      void followUpAfterActivity(
+    service.taskCompleted = (by, task) =>
+      void followUpAfterTask(
         service,
         { leads: evaluator, opportunities: deals },
         by,
-        activity,
+        task,
       ).catch(() => undefined);
     // An approval submitted, reviewed by the AI for its approver.
     service.approvalSubmitted = (by, approval) =>
@@ -337,8 +354,50 @@ export default class CrmProvider extends ServiceProvider<Application> {
       void evaluator
         .request(by, leadId, undefined, 'companyChanged')
         .catch(() => undefined);
+    // A customer wrote: the lead or the deal is followed up as its owner,
+    // unless a card on it is waiting or being worked on.
+    const timeline = this.app.container.resolve(mailTimelineToken);
+    timeline.customerReplied = (_mailboxOwnerId, target) =>
+      void (async () => {
+        const entity = target.entity === 'leads' ? 'leads' : 'opportunities';
+        if ((await aiStates(service, [target.id], entity))[target.id]) return;
+        const record = await service.database
+          .query()
+          .selectFrom(entity === 'leads' ? 'crmLeads' : 'crmOpportunities')
+          .select('ownerId')
+          .where('id', '=', target.id)
+          .executeTakeFirst();
+        if (!record?.ownerId) return;
+        const ownerId = toText(record.ownerId);
+        const owner = crmActor(service.authz, {
+          id: ownerId,
+          locale: await service.localeOf(ownerId),
+        });
+        if (entity === 'leads')
+          await followUpLead(
+            service,
+            evaluator,
+            owner,
+            target.id,
+            'customerReplied',
+          );
+        else
+          await followUpOpportunity(
+            service,
+            deals,
+            owner,
+            target.id,
+            'customerReplied',
+          );
+      })().catch(() => undefined);
     this.cron = createCronJobManager();
     this.cron.addJob({ cronTime: '*/30 * * * * *', onTick: () => this.scan() });
+    // @temporary(nocobase-official): every mailbox read once a minute until
+    // the Mail plugin publishes a server-side change event (mail-timeline.ts).
+    this.cron.addJob({
+      cronTime: '15 * * * * *',
+      onTick: () => void timeline.syncAll().catch(() => undefined),
+    });
     this.cron.start();
   }
   public override async shutdown(): Promise<void> {
@@ -350,12 +409,13 @@ export default class CrmProvider extends ServiceProvider<Application> {
   }
   // Both recurring passes, every half minute.
   private async scan(): Promise<void> {
-    await this.remindActivities();
+    await this.remindTasks();
     await this.deliverNotifications();
   }
-  // Finds the activities about to start and starts one activity-reminder
+  // Finds the tasks due at a time (not a date alone) about to come and
+  // starts one task-reminder
   // workflow run per recipient; returns how many were started this pass.
-  async remindActivities(): Promise<number> {
+  async remindTasks(): Promise<number> {
     if (this.reminding) return 0;
     this.reminding = true;
     let reminded = 0;
@@ -364,28 +424,31 @@ export default class CrmProvider extends ServiceProvider<Application> {
       const query = service.database.query();
       const settings = await service.settings();
       const now = new Date();
-      const activities = await query
-        .selectFrom('crmActivities')
+      const tasks = await query
+        .selectFrom('crmTasks')
         .selectAll()
-        .where('status', '=', 'planned')
-        .where('startAt', '>=', now.toISOString())
+        .where('status', '=', 'open')
+        .where('dueAt', '>=', now.toISOString())
         .where(
-          'startAt',
+          'dueAt',
           '<=',
           new Date(
-            now.getTime() + settings.activityReminderMinutes * 60000,
+            now.getTime() + settings.taskReminderMinutes * 60000,
           ).toISOString(),
         )
         .execute();
-      // Each reminder is an activity-reminder workflow run, keyed by the
-      // activity, its start and the recipient, so repeated scans of the
+      // Each reminder is a task-reminder workflow run, keyed by the
+      // task, its start and the recipient, so repeated scans of the
       // same row start nothing new.
-      for (const activity of activities)
+      // A date alone has no hour to be reminded of.
+      for (const task of tasks.filter(
+        (t) => !isEndOfDay(new Date(toText(t.dueAt)), settings.timeZone),
+      ))
         for (const user of new Set([
-          activity.ownerId,
-          ...array(activity.internalParticipants),
+          task.ownerId,
+          ...array(task.internalParticipants),
         ])) {
-          await service.remindActivity(activity, toText(user));
+          await service.remindTask(task, toText(user));
           reminded += 1;
         }
       return reminded;

@@ -18,7 +18,7 @@ export const agendaNames: AgendaName[] = ['today', 'overdue', 'approvals'];
 
 // One of the workspace's three lists, a page at a time, straight from the
 // list query: today's agenda is what is still ahead today, anything not
-// started whose time has passed is overdue (the rule the activity list's
+// started whose time has passed is overdue (the rule the task list's
 // card uses), and the approvals are the ones waiting for the reader — or,
 // in the team scope, for anyone. The reader's own agenda is what they run
 // or take part in.
@@ -53,20 +53,20 @@ export async function agenda(
   );
   const involvedId = team ? undefined : actor.id;
   return name === 'today'
-    ? service.list(actor, 'activities', {
-        status: 'planned',
-        startFrom: now.toISOString(),
-        startTo: endOfToday.toISOString(),
+    ? service.list(actor, 'tasks', {
+        status: 'open',
+        dueFrom: now.toISOString(),
+        dueTo: endOfToday.toISOString(),
         involvedId,
-        sort: 'startAt',
+        sort: 'dueAt',
         page,
         pageSize,
       })
-    : service.list(actor, 'activities', {
-        status: 'planned',
-        startTo: new Date(now.getTime() - 1).toISOString(),
+    : service.list(actor, 'tasks', {
+        status: 'open',
+        dueTo: new Date(now.getTime() - 1).toISOString(),
         involvedId,
-        sort: '-startAt',
+        sort: '-dueAt',
         page,
         pageSize,
       });
@@ -99,7 +99,7 @@ export async function dashboard(
 
   // Every object's numbers, with the list pages' rules, so the workspace is
   // the one place that reads them.
-  const [leads, accounts, contacts, opportunities, activities, approvals] =
+  const [leads, accounts, contacts, opportunities, tasks, approvals] =
     await Promise.all(
       (
         [
@@ -107,7 +107,7 @@ export async function dashboard(
           'accounts',
           'contacts',
           'opportunities',
-          'activities',
+          'tasks',
           'approvals',
         ] as const
       ).map((entity) => statistics(service, actor, entity, { ownerId })),
@@ -116,7 +116,7 @@ export async function dashboard(
   const accountMetrics = accounts.metrics as Row;
   const contactMetrics = contacts.metrics as Row;
   const dealMetrics = opportunities.metrics as Row;
-  const activityMetrics = activities.metrics as Row;
+  const taskMetrics = tasks.metrics as Row;
   const approvalMetrics = approvals.metrics as Row;
 
   // The three lists come one page each; the cards ask for the rest.
@@ -155,7 +155,7 @@ export async function dashboard(
   const sellers = await Promise.all(
     users.map(async (u) => {
       const [l, a, o, act] = await Promise.all(
-        (['leads', 'accounts', 'opportunities', 'activities'] as const).map(
+        (['leads', 'accounts', 'opportunities', 'tasks'] as const).map(
           (entity) =>
             statistics(service, actor, entity, { ownerId: toText(u.id) }),
         ),
@@ -168,7 +168,7 @@ export async function dashboard(
         uncontacted: (l.metrics as Row).uncontacted,
         staleLeads: (l.metrics as Row).stale,
         staleAccounts: (a.metrics as Row).stale,
-        overdueActivities: (act.metrics as Row).overdueActivities,
+        overdueTasks: (act.metrics as Row).overdueTasks,
       };
     }),
   );
@@ -237,7 +237,7 @@ export async function dashboard(
       wonThisMonth: dealMetrics.wonThisMonth,
       churnedThisMonth: accountMetrics.churnedThisMonth,
       newAccounts: accountMetrics.newThisMonth,
-      completedThisMonth: activityMetrics.completedThisMonth,
+      completedThisMonth: taskMetrics.completedThisMonth,
       approvedThisMonth: approvalMetrics.approvedThisMonth,
       rejectedThisMonth: approvalMetrics.rejectedThisMonth,
       approvalRate: approvalMetrics.approvalRate,

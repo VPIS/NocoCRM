@@ -1,5 +1,5 @@
 import { useId, useState, type ReactElement } from 'react';
-import { CalendarCheck, Sparkles } from 'lucide-react';
+import { Check, Sparkles } from 'lucide-react';
 import { Button } from '../ui/button.js';
 import { Checkbox } from '../ui/checkbox.js';
 import {
@@ -23,21 +23,21 @@ import {
   type CrmRecord,
 } from './api.js';
 
-// What came of an activity, as the person tells it, with the AI writing up
+// What came of a task, as the person tells it, with the AI writing up
 // what they jotted down (headed points: what the other side said, the facts
 // settled, what was agreed, the next step), which they read and change
-// before recording it; and, where the activity belongs to a lead, whether
+// before recording it; and, where the task belongs to a lead, whether
 // the AI then follows the lead up anew (`onFollowUp`). The follow-up card's
-// "done" and the activity's own "record outcome" both use it.
+// "done" and the task's own "record outcome" both use it.
 export function OutcomeBox({
-  activityId,
+  taskId,
   value,
   onChange,
   disabled,
   followUp,
   onFollowUp,
 }: {
-  activityId: string;
+  taskId: string;
   value: string;
   onChange: (value: string) => void;
   disabled: boolean;
@@ -57,7 +57,7 @@ export function OutcomeBox({
         maxLength={LONG_TEXT_LIMIT}
         disabled={disabled || organising}
         placeholder={toText(text('evaluation.outcomePlaceholder'))}
-        aria-label={toText(text('fields.feedback'))}
+        aria-label={toText(text('fields.result'))}
         onChange={(event) => onChange(event.target.value)}
         className='max-h-72 min-h-16 bg-background'
       />
@@ -90,7 +90,7 @@ export function OutcomeBox({
               setOrganising(true);
               setError(undefined);
               api<{ data: { text: string } }>(
-                `activities/${activityId}/feedback/organise`,
+                `tasks/${taskId}/feedback/organise`,
                 'POST',
                 { text: value },
               )
@@ -112,14 +112,14 @@ export function OutcomeBox({
   );
 }
 
-// A planned activity's outcome, recorded from its own page: written (or
-// written up by the AI), the activity completed with it, and its deal, or
+// An open task completed from its own page, with what came of it if the
+// person writes anything (or has the AI write it up), and its deal, or
 // else its lead, followed up anew when that is ticked.
 export function RecordOutcomeDialog({
-  activity,
+  task,
   onClose,
 }: {
-  activity: CrmRecord;
+  task: CrmRecord;
   onClose: () => void;
 }): ReactElement {
   const { text } = useCrmText();
@@ -129,7 +129,7 @@ export function RecordOutcomeDialog({
   const [followUp, setFollowUp] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
-  const followable = Boolean(activity.opportunityId || activity.leadId);
+  const followable = Boolean(task.opportunityId || task.leadId);
   return (
     <Dialog
       open
@@ -140,22 +140,18 @@ export function RecordOutcomeDialog({
       <DialogContent className='sm:max-w-xl'>
         <DialogHeader>
           <DialogTitle>
-            {text('evaluation.recordOutcomeOf', {
-              name: toText(activity.name),
-            })}
+            {text('completeTaskOf', { name: toText(task.name) })}
           </DialogTitle>
-          <DialogDescription>
-            {text('evaluation.recordOutcomeHint')}
-          </DialogDescription>
+          <DialogDescription>{text('completeTaskHint')}</DialogDescription>
         </DialogHeader>
         <ErrorNotice error={error} />
         <OutcomeBox
-          activityId={toText(activity.id)}
+          taskId={toText(task.id)}
           value={outcome}
           onChange={setOutcome}
           disabled={busy}
           // A follow-up is a deal's or a lead's: offered only for an
-          // activity of one.
+          // task of one.
           {...(followable ? { followUp, onFollowUp: setFollowUp } : {})}
         />
         <DialogFooter>
@@ -163,11 +159,11 @@ export function RecordOutcomeDialog({
             {text('cancel')}
           </Button>
           <Button
-            disabled={busy || !outcome.trim()}
+            disabled={busy}
             onClick={() => {
               setBusy(true);
               setError(undefined);
-              api(`activities/${toText(activity.id)}/outcome`, 'POST', {
+              api(`tasks/${toText(task.id)}/outcome`, 'POST', {
                 outcome,
                 followUp: followable && followUp,
               })
@@ -177,8 +173,8 @@ export function RecordOutcomeDialog({
                 .finally(() => setBusy(false));
             }}
           >
-            {busy ? <Spinner /> : <CalendarCheck />}
-            {text('evaluation.acceptReport')}
+            {busy ? <Spinner /> : <Check />}
+            {text('completeTask')}
           </Button>
         </DialogFooter>
       </DialogContent>

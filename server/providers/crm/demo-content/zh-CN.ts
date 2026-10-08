@@ -21,53 +21,53 @@ export const zhCN: DemoContent = {
   companies: [
     {
       name: '华策精密制造',
-      activitySubject: '华策精密制造',
+      taskSubject: '华策精密制造',
       domain: 'huace-precision',
       description:
         '三家工厂用 Excel 和旧 OA 管报工与设备巡检，计划用 NocoBase 搭统一的生产管理系统，要求私有化部署。',
     },
     {
       name: '星桥连锁零售',
-      activitySubject: '星桥连锁零售',
+      taskSubject: '星桥连锁零售',
       domain: 'xingqiao-retail',
       description:
         '已用社区版搭了门店巡检应用，准备扩展到会员与供应商协同，需要 SSO 和审批流。',
     },
     {
       name: '安和医疗集团',
-      activitySubject: '安和医疗集团',
+      taskSubject: '安和医疗集团',
       domain: 'anhe-health',
       description:
         '信息科在选院内流程平台，关注权限、审计日志和人大金仓数据库适配。',
     },
     {
       name: '云帆信息科技',
-      activitySubject: '云帆信息科技',
+      taskSubject: '云帆信息科技',
       domain: 'yunfan-tech',
       description:
         '系统集成商，用 NocoBase 为最终客户交付定制应用，按项目采购专业版授权。',
     },
     {
       name: '知行教育集团',
-      activitySubject: '知行教育集团',
+      taskSubject: '知行教育集团',
       domain: 'zhixing-edu',
       description: '教育集团想把招生、排课和家校沟通从多个 SaaS 迁到自建平台。',
     },
     {
       name: '视界数据服务',
-      activitySubject: '视界数据服务',
+      taskSubject: '视界数据服务',
       domain: 'shijie-data',
       description: '数据咨询团队用 NocoBase 搭交付工作台，从标准版起步。',
     },
     {
       name: '昊阳能源',
-      activitySubject: '昊阳能源',
+      taskSubject: '昊阳能源',
       domain: 'haoyang-energy',
       description: '能源企业的巡检与项目协同平台已完成评估，预算审批延后。',
     },
     {
       name: '丰味食品',
-      activitySubject: '丰味食品',
+      taskSubject: '丰味食品',
       domain: 'fengwei-foods',
       description: '经销商管理系统选型，集团最终统一采用了另一家低代码平台。',
     },
@@ -242,8 +242,8 @@ export const zhCN: DemoContent = {
     },
   ],
   leadJobTitles: ['信息化主管', 'IT 负责人'],
-  activityName: (subject, matter) => `${subject} ${matter}`,
-  activityDescription: '回顾最新进展，确认需求，并约定下一步行动。',
+  taskName: (subject, matter) => `${subject} ${matter}`,
+  taskDescription: '回顾最新进展，确认需求，并约定下一步行动。',
   discoveryCall: {
     name: '华策精密 需求摸底电话',
     feedback:
@@ -278,12 +278,12 @@ export const zhCN: DemoContent = {
   ],
   eveningCall: '华策精密 晚间电话回访',
   ssoConfirmation: '星桥零售 SSO 方案确认',
-  leadActivityMatters: {
+  leadTaskMatters: {
     completed: '需求记录',
     cancelled: '改期的初次沟通',
     planned: '下一次跟进',
   },
-  leadActivityFeedback: '联系人已确认意向。发送简要纪要并约定下一步。',
+  leadTaskFeedback: '联系人已确认意向。发送简要纪要并约定下一步。',
   cadenceMatters: [
     '周度进展沟通',
     '方案细节确认',

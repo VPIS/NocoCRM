@@ -12,13 +12,25 @@ import {
   Fragment,
   useEffect,
   useEffectEvent,
+  useLayoutEffect,
   useRef,
   useState,
+  type FormEvent,
   type ReactElement,
   type ReactNode,
 } from 'react';
 import { Badge } from '../ui/badge.js';
-import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  Paperclip,
+  Plus,
+  Trash2,
+  User,
+} from 'lucide-react';
+import { TaskSearchChip } from './task-quick.js';
+import { TaskLinkChips } from './task-links.js';
+import { TaskTimeField } from './task-time-field.js';
 import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
 import { Textarea } from '../ui/textarea.js';
@@ -52,33 +64,6 @@ import {
 } from './api.js';
 import { ErrorNotice, Loading } from './common.js';
 import { FollowUpOption } from './follow-up-option.js';
-
-// The next full hour, as an ISO string; the end is optional and starts
-// empty.
-function activityTimeDefaults(): { startAt: string } {
-  const start = new Date();
-  start.setMinutes(0, 0, 0);
-  start.setHours(start.getHours() + 1);
-  return { startAt: start.toISOString() };
-}
-
-function shiftedEnd(
-  previousStart: unknown,
-  previousEnd: unknown,
-  nextStart: string,
-): string {
-  const next = new Date(nextStart).getTime();
-  const prev = new Date(toText(previousStart)).getTime();
-  const end = new Date(toText(previousEnd)).getTime();
-  // No end stays no end.
-  if (!toText(previousEnd)) return '';
-  if (Number.isNaN(next)) return toText(previousEnd);
-  const length =
-    !Number.isNaN(prev) && !Number.isNaN(end) && end > prev
-      ? end - prev
-      : 3600000;
-  return new Date(next + length).toISOString();
-}
 
 // A multi-select in the same dress as Choice: the trigger lists what is
 // chosen, the popup ticks items on and off and stays open between picks.
@@ -188,7 +173,7 @@ export function Choice({
           variant === 'inline'
             ? 'h-7 w-full min-w-0 border-transparent bg-transparent text-xs hover:border-border hover:bg-muted data-[size=default]:h-7'
             : variant === 'tag'
-              ? 'h-5 w-auto min-w-0 gap-0.5 rounded-md border-transparent bg-foreground/7 px-1.5 py-0 text-xs font-medium text-muted-foreground hover:bg-foreground/12 data-[size=default]:h-5 [&_svg]:size-3'
+              ? 'h-5.5 w-auto min-w-0 gap-0.5 rounded-md border-transparent bg-foreground/7 px-1.5 py-0 text-xs font-medium text-muted-foreground hover:bg-foreground/12 data-[size=default]:h-5.5 [&_svg]:size-3'
               : compact
                 ? 'w-auto min-w-0'
                 : 'w-full min-w-32'
@@ -313,14 +298,10 @@ export function RecordForm({
                 stage: 'contact',
                 currency: meta?.settings.currency ?? 'USD',
               }
-            : entity === 'activities'
-              ? {
-                  status: 'planned',
-                  type: 'call',
-                  // Scheduling usually means "soon": the next full hour, for
-                  // an hour. Both are one edit away if not.
-                  ...activityTimeDefaults(),
-                }
+            : entity === 'tasks'
+              ? // A task needs only what to do; when it is due, who takes
+                // part and what it concerns are added when they matter.
+                { status: 'open' }
               : {}),
     ...initial,
   }));
@@ -328,15 +309,9 @@ export function RecordForm({
     setInput((current) => ({
       ...current,
       [key]: value,
-      // Moving the start keeps the activity's length; an end that would now
-      // sit before the start is pulled along too; an empty end stays empty.
-      ...(entity === 'activities' && key === 'startAt' && value
-        ? { endAt: shiftedEnd(current.startAt, current.endAt, toText(value)) }
-        : {}),
       ...(key === 'accountId'
         ? {
             contacts: [],
-            externalParticipants: [],
             opportunityId: null,
             ...(entity === 'opportunities' && !id && !current.name && value
               ? {
@@ -356,23 +331,23 @@ export function RecordForm({
   }, [input]);
   const definitions = meta?.definitions[entity];
   const writable = meta?.permissions[entity][id ? 'update' : 'create'];
-  const fields =
+  const listed =
     definitions?.fields.filter(
       (f) =>
         !f.readOnly &&
         // An approval's applicant is whoever raises it; the server sets it.
         !(entity === 'approvals' && f.key === 'ownerId') &&
         // A new lead is always new: its status moves with the work (its first
-        // activity makes it working), so creating one does not ask for it.
+        // task makes it working), so creating one does not ask for it.
         !(entity === 'leads' && !id && f.key === 'status') &&
         !(
-          entity === 'activities' &&
+          entity === 'tasks' &&
           !id &&
           initial.leadId &&
-          ['accountId', 'opportunityId', 'externalParticipants'].includes(f.key)
+          ['accountId', 'opportunityId'].includes(f.key)
         ) &&
         !(
-          entity === 'activities' &&
+          entity === 'tasks' &&
           !id &&
           initial.accountId &&
           f.key === 'leadId'
@@ -386,21 +361,83 @@ export function RecordForm({
           ['pauseReason', 'resumeAt'].includes(f.key) &&
           input.stage !== 'paused'
         ) &&
-        // Feedback is what happened; a planned activity has nothing to say yet.
+        // A result is what came of it; an open task has none yet, and a
+        // new task is open.
         !(
-          entity === 'activities' &&
-          f.key === 'feedback' &&
-          input.status === 'planned'
+          entity === 'tasks' &&
+          f.key === 'result' &&
+          input.status === 'open'
         ) &&
+        !(entity === 'tasks' && !id && f.key === 'status') &&
         writable &&
         (writable.fields === '*' || writable.fields.includes(f.key)),
     ) ?? [];
+  // A task's description says what its title means, so it comes right under
+  // the title.
+  const fields =
+    entity === 'tasks'
+      ? [
+          ...listed.filter((f) => f.key === 'name'),
+          ...listed.filter((f) => f.key === 'description'),
+          ...listed.filter((f) => f.key !== 'name' && f.key !== 'description'),
+        ]
+      : listed;
   // A form the AI filled (review given) highlights the required fields it
   // could not fill, until they are filled.
   // A new lead opens with the fields a salesperson fills first; the rest
   // wait behind "More" unless they already hold a value (the AI filled
   // them, or the user did), or the AI marked or changed them.
   const [showMore, setShowMore] = useState(false);
+  // A new task opens quick, laid out like Clarify's task dialog: a title and
+  // a description over chips (task-quick.tsx). Editing keeps the whole form.
+  const quick = entity === 'tasks' && !id && !embedded && !onSubmit;
+  // The quick form's description grows with what is written, and the dialog
+  // with it, up to half the screen; past that it scrolls.
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const descriptionText = toText(input.description ?? '');
+  useLayoutEffect(() => {
+    const box = descriptionRef.current;
+    if (!box) return;
+    const limit = Math.round(window.innerHeight / 2);
+    box.style.height = 'auto';
+    box.style.height = `${String(Math.min(box.scrollHeight, limit))}px`;
+    // A scrollbar only once it has stopped growing.
+    box.style.overflowY = box.scrollHeight > limit ? 'auto' : 'hidden';
+  }, [descriptionText]);
+  // The names of records picked here, for the chips' labels.
+  const [pickedNames, setPickedNames] = useState<Record<string, string>>({});
+  // Files dropped or pasted into a new task's description, or picked with
+  // its paperclip, go up as the task's attachments.
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadFiles = (picked: File[]): void => {
+    if (!picked.length || busy) return;
+    void (async () => {
+      setBusy(true);
+      setError(undefined);
+      const body = new FormData();
+      picked.forEach((file) => body.append('file', file));
+      try {
+        const result = await api<{ data: { id: string }[] }>(
+          `files?entity=${toText(entity)}`,
+          'POST',
+          body,
+        );
+        const ids = result.data.map((uploaded) => toText(uploaded.id));
+        setInput((current) => ({
+          ...current,
+          attachments: [
+            ...arrayValues(current.attachments).map(toText),
+            ...ids,
+          ],
+        }));
+      } catch (cause) {
+        setError(cause);
+      } finally {
+        setBusy(false);
+      }
+    })();
+  };
+
   const [filledAtOpen] = useState(
     () =>
       new Set(
@@ -413,11 +450,11 @@ export function RecordForm({
         ),
       ),
   );
+  const moreFields = entity === 'leads' ? LEAD_MORE_FIELDS : [];
   const tucked = (f: Field): boolean =>
-    entity === 'leads' &&
     !id &&
     !showMore &&
-    LEAD_MORE_FIELDS.includes(f.key) &&
+    moreFields.includes(f.key) &&
     !f.required &&
     !filledAtOpen.has(f.key) &&
     !review?.includes(f.key) &&
@@ -427,9 +464,7 @@ export function RecordForm({
       input[f.key] === '' ||
       (Array.isArray(input[f.key]) && !(input[f.key] as unknown[]).length));
   const tuckable =
-    entity === 'leads' &&
-    !id &&
-    fields.some((f) => LEAD_MORE_FIELDS.includes(f.key) && !f.required);
+    !id && fields.some((f) => moreFields.includes(f.key) && !f.required);
   const unfilled = review
     ? fields
         .filter(
@@ -468,7 +503,7 @@ export function RecordForm({
   };
   const fieldInput = (field: Field): ReactElement => {
     const value = input[field.key];
-    const label = text(`fields.${toText(field.key)}`);
+    const label = text(fieldLabelKey(entity, toText(field.key)));
     const common = {
       id: `crm-field-${toText(field.key)}`,
       'aria-label': label,
@@ -534,7 +569,13 @@ export function RecordForm({
           }}
           excludeStatus={field.relation === 'leads' ? 'converted' : undefined}
           onChange={(v, picked) => {
-            if (picked) pickedNamesRef.current[v] = toText(picked.name);
+            if (picked) {
+              pickedNamesRef.current[v] = toText(picked.name);
+              setPickedNames((known) => ({
+                ...known,
+                [v]: toText(picked.name),
+              }));
+            }
             set(field.key, v || null);
           }}
           // A record opened from its parent's page keeps that parent; one
@@ -739,6 +780,18 @@ export function RecordForm({
           )}
         </div>
       );
+    // A task's time: a day, and a time of day and an end when it is at an
+    // hour; "date only" and the end are set through it, not drawn apart.
+    if (entity === 'tasks' && field.key === 'dueAt')
+      return (
+        <TaskTimeField
+          id={common.id}
+          value={{
+            dueAt: input.dueAt,
+          }}
+          onChange={(time) => setInput((current) => ({ ...current, ...time }))}
+        />
+      );
     // Entered on the laptop's clock; the dialog names that timezone.
     if (field.type === 'datetime')
       return (
@@ -802,12 +855,6 @@ export function RecordForm({
         <div className='grid gap-x-4 gap-y-3 @xl:grid-cols-2 @2xl:grid-cols-3'>
           {fields.map((field) => {
             if (tucked(field)) return null;
-            // An activity's type and name share the first row, the type
-            // in a narrow column: "call" then what the call is about.
-            const pairedName =
-              entity === 'activities' && field.key === 'type'
-                ? fields.find((f) => f.key === 'name')
-                : undefined;
             // An opportunity's amount and currency are one thing: one
             // field labelled Amount, the currency picker leading the number.
             const pairedCurrency =
@@ -818,12 +865,6 @@ export function RecordForm({
               entity === 'opportunities' &&
               field.key === 'currency' &&
               fields.some((f) => f.key === 'amount')
-            )
-              return null;
-            if (
-              entity === 'activities' &&
-              field.key === 'name' &&
-              fields.some((f) => f.key === 'type')
             )
               return null;
             const block = (f: Field, lead?: Field): ReactElement =>
@@ -918,25 +959,20 @@ export function RecordForm({
             }
             if (pairedCurrency)
               return <div key={field.key}>{block(field, pairedCurrency)}</div>;
-            if (pairedName)
-              return (
-                <div
-                  key={field.key}
-                  className='grid gap-x-4 gap-y-3 @xl:col-span-2 sm:grid-cols-[9rem_minmax(0,1fr)]'
-                >
-                  {block(field)}
-                  {block(pairedName)}
-                </div>
-              );
             return (
               <div
                 key={field.key}
                 className={
                   ['textarea', 'contacts', 'files', 'multi'].includes(
                     field.type,
-                  )
+                  ) ||
+                  // What to do reads as one line across the form.
+                  (entity === 'tasks' && field.key === 'name')
                     ? 'col-span-full'
-                    : ''
+                    : // A day, its time of day and an end, side by side.
+                      entity === 'tasks' && field.key === 'dueAt'
+                      ? 'col-span-full @2xl:col-span-2'
+                      : ''
                 }
               >
                 {block(field)}
@@ -968,6 +1004,59 @@ export function RecordForm({
       </div>
     </>
   );
+  const submit = (e: FormEvent): void => {
+    void (async () => {
+      e.preventDefault();
+      setBusy(true);
+      setError(undefined);
+      const payload = Object.fromEntries(
+        fields
+          .map((f): [string, unknown] => [f.key, input[f.key]])
+          .filter(([, v]) => v !== undefined),
+      );
+      // A required select has no native "required" the browser
+      // enforces, so the check happens here, naming the field, rather
+      // than as a server round trip ending in the same message.
+      const missing = fields.find(
+        (f) =>
+          f.required &&
+          (payload[f.key] === undefined ||
+            payload[f.key] === null ||
+            payload[f.key] === ''),
+      );
+      if (missing) {
+        setError({ code: 'requiredField', field: missing.key });
+        setBusy(false);
+        return;
+      }
+      try {
+        if (onSubmit) await onSubmit(payload);
+        else {
+          const response = await api<{ data: CrmRecord }>(
+            recordId
+              ? `${toText(entity)}/${toText(recordId)}`
+              : (entity === 'leads' || entity === 'opportunities') && !followUp
+                ? `${entity}?followUp=0`
+                : entity,
+            recordId ? 'PATCH' : 'POST',
+            payload,
+          );
+          if (!recordId) setCreatedId(toText(response.data.id));
+          if (thenRef.current && andThen) await andThen.run(response.data);
+          await refresh();
+          onClose();
+          onSaved?.(response.data);
+          return;
+        }
+        await refresh();
+        onClose();
+      } catch (err) {
+        setError(err);
+      } finally {
+        setBusy(false);
+      }
+    })();
+  };
   // Inside the lead capture review: the fields alone, their values reported
   // as they change, no dialog, no buttons.
   if (embedded)
@@ -977,6 +1066,163 @@ export function RecordForm({
         {grid}
       </div>
     );
+  if (quick && meta) {
+    const field = (key: string): Field | undefined =>
+      fields.find((f) => f.key === key);
+    const owner = meta.users.find((u) => u.id === input.ownerId)?.name;
+    const title = field('name');
+    const description = field('description');
+    const ownerField = field('ownerId');
+    return (
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (!open && !busy) onClose();
+        }}
+      >
+        <DialogContent
+          showCloseButton={false}
+          className='max-h-[90svh] overflow-y-auto sm:max-w-xl'
+        >
+          {/* Named for screen readers; the task's own title leads. */}
+          <DialogHeader className='sr-only'>
+            <DialogTitle>
+              {text('newRecord', { entity: text('entity.tasks') })}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={submit} className='space-y-4'>
+            <ErrorNotice error={error} />
+            <div className='space-y-1'>
+              <input
+                autoFocus
+                aria-label={toText(text(fieldLabelKey(entity, 'name')))}
+                placeholder={toText(text('taskQuick.titlePlaceholder'))}
+                maxLength={title ? lengthLimit(title.type) : undefined}
+                className='w-full bg-transparent text-base font-medium outline-none placeholder:text-muted-foreground'
+                value={toText(input.name ?? '')}
+                onChange={(e) => set('name', e.target.value)}
+              />
+              <textarea
+                onDragOver={(e) => {
+                  if (e.dataTransfer.types.includes('Files'))
+                    e.preventDefault();
+                }}
+                onDrop={(e) => {
+                  if (!e.dataTransfer.files.length) return;
+                  e.preventDefault();
+                  uploadFiles([...e.dataTransfer.files]);
+                }}
+                onPaste={(e) => {
+                  if (!e.clipboardData.files.length) return;
+                  e.preventDefault();
+                  uploadFiles([...e.clipboardData.files]);
+                }}
+                aria-label={toText(text(fieldLabelKey(entity, 'description')))}
+                placeholder={toText(text('taskQuick.descriptionPlaceholder'))}
+                maxLength={
+                  description ? lengthLimit(description.type) : undefined
+                }
+                ref={descriptionRef}
+                rows={3}
+                className='w-full resize-none bg-transparent text-sm outline-none placeholder:text-muted-foreground'
+                value={toText(input.description ?? '')}
+                onChange={(e) => set('description', e.target.value)}
+              />
+              {arrayValues(input.attachments).length > 0 && (
+                <FileLinks
+                  files={arrayValues(input.attachments)}
+                  onRemove={(fileId) =>
+                    set(
+                      'attachments',
+                      arrayValues(input.attachments).filter(
+                        (v) => toText(v) !== fileId,
+                      ),
+                    )
+                  }
+                />
+              )}
+            </div>
+            <div className='flex flex-wrap items-center gap-1.5'>
+              <TaskTimeField
+                size='sm'
+                value={{
+                  dueAt: input.dueAt,
+                }}
+                onChange={(time) =>
+                  setInput((current) => ({ ...current, ...time }))
+                }
+              />
+              {ownerField && (
+                <TaskSearchChip
+                  icon={<User />}
+                  label={owner ?? text(fieldLabelKey(entity, 'ownerId'))}
+                  empty={!owner}
+                  placeholder={toText(text('taskQuick.searchPeople'))}
+                  groups={[
+                    {
+                      key: 'users',
+                      options: choices(ownerField).map((c) => ({
+                        id: c.value,
+                        label: c.label,
+                      })),
+                    },
+                  ]}
+                  selected={new Set([toText(input.ownerId ?? '')])}
+                  limit={8}
+                  onPick={(_group, option) => set('ownerId', option.id)}
+                />
+              )}
+              <TaskLinkChips
+                input={input}
+                names={{ ...names, ...pickedNames }}
+                onChange={(changes) =>
+                  setInput((current) => ({ ...current, ...changes }))
+                }
+              />
+              <input
+                ref={fileInputRef}
+                type='file'
+                multiple
+                hidden
+                onChange={(e) => {
+                  uploadFiles([...(e.target.files ?? [])]);
+                  e.target.value = '';
+                }}
+              />
+              <Button
+                type='button'
+                variant='ghost'
+                size='icon-sm'
+                className='text-muted-foreground'
+                aria-label={toText(text('taskQuick.attach'))}
+                title={toText(text('taskQuick.attach'))}
+                disabled={busy}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Paperclip />
+              </Button>
+            </div>
+            <DialogFooter>
+              <Button
+                type='button'
+                variant='outline'
+                disabled={busy}
+                onClick={onClose}
+              >
+                {text('cancel')}
+              </Button>
+              <Button
+                type='submit'
+                disabled={busy || !toText(input.name ?? '').trim()}
+              >
+                {busy ? text('saving') : text('taskQuick.add')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    );
+  }
   return (
     <Dialog
       open
@@ -997,9 +1243,9 @@ export function RecordForm({
             </DialogTitle>
             {tabs}
           </div>
-          {/* The required fields carry their asterisk; only an activity's
+          {/* The required fields carry their asterisk; only a task's
               times need a word on how they are read. */}
-          {entity === 'activities' && (
+          {entity === 'tasks' && (
             <DialogDescription>
               {text('localTimeHint', {
                 zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -1010,64 +1256,7 @@ export function RecordForm({
         {!meta ? (
           <Loading />
         ) : (
-          <form
-            onSubmit={(e) => {
-              void (async () => {
-                e.preventDefault();
-                setBusy(true);
-                setError(undefined);
-                const payload = Object.fromEntries(
-                  fields
-                    .map((f): [string, unknown] => [f.key, input[f.key]])
-                    .filter(([, v]) => v !== undefined),
-                );
-                // A required select has no native "required" the browser
-                // enforces, so the check happens here, naming the field, rather
-                // than as a server round trip ending in the same message.
-                const missing = fields.find(
-                  (f) =>
-                    f.required &&
-                    (payload[f.key] === undefined ||
-                      payload[f.key] === null ||
-                      payload[f.key] === ''),
-                );
-                if (missing) {
-                  setError({ code: 'requiredField', field: missing.key });
-                  setBusy(false);
-                  return;
-                }
-                try {
-                  if (onSubmit) await onSubmit(payload);
-                  else {
-                    const response = await api<{ data: CrmRecord }>(
-                      recordId
-                        ? `${toText(entity)}/${toText(recordId)}`
-                        : (entity === 'leads' || entity === 'opportunities') &&
-                            !followUp
-                          ? `${entity}?followUp=0`
-                          : entity,
-                      recordId ? 'PATCH' : 'POST',
-                      payload,
-                    );
-                    if (!recordId) setCreatedId(toText(response.data.id));
-                    if (thenRef.current && andThen)
-                      await andThen.run(response.data);
-                    await refresh();
-                    onClose();
-                    onSaved?.(response.data);
-                    return;
-                  }
-                  await refresh();
-                  onClose();
-                } catch (err) {
-                  setError(err);
-                } finally {
-                  setBusy(false);
-                }
-              })();
-            }}
-            className='space-y-4'
-          >
+          <form onSubmit={submit} className='space-y-4'>
             <ErrorNotice error={error} />
             {typeof notice === 'function' ? notice(unfilled) : notice}
             {grid}

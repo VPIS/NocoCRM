@@ -1,5 +1,5 @@
 // Business-time helpers with no imports, so the browser bundle can take
-// them as well (the lead's follow-up card shows when its activity will be
+// them as well (the lead's follow-up card shows when its task will be
 // planned, as the server plans it).
 
 // The offset of a zone at an instant, so the business day's end can be
@@ -37,5 +37,29 @@ export function contactTime(
     day: '2-digit',
   }).format(new Date(now.getTime() + inDays * 86_400_000));
   const local = Date.parse(`${day}T10:00:00.000Z`);
+  return new Date(local - zoneOffsetMinutes(timeZone, new Date(local)) * 60000);
+}
+
+// The end of the business day an instant falls on: where a task due on a
+// date alone keeps its due time, so today's list, the overdue list and the
+// order compare due times alike (a date-only task is overdue once its day
+// is over).
+// Whether a task's time is a date alone: the last instant of its business
+// day, which no time of day picked to the minute can be.
+export function isEndOfDay(at: Date, timeZone: string): boolean {
+  return (
+    Number.isFinite(at.getTime()) &&
+    endOfDay(at, timeZone).getTime() === at.getTime()
+  );
+}
+
+export function endOfDay(at: Date, timeZone: string): Date {
+  const day = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(at);
+  const local = Date.parse(`${day}T23:59:59.999Z`);
   return new Date(local - zoneOffsetMinutes(timeZone, new Date(local)) * 60000);
 }

@@ -17,18 +17,13 @@ import { useTranslation } from '@nocobase/i18n/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState, type ReactNode } from 'react';
 import {
-  LONG_TEXT_LIMIT,
-  TEXT_LIMIT,
-} from '../../../server/providers/crm/limits.js';
-import {
   searchTerms,
   type MailTarget,
 } from '../../../server/providers/crm/mail-target.js';
-import { planPartsOf } from '../../../server/providers/crm/plan.js';
 import { toText, useCrmApi, useCrmText, useRefresh, type Data } from './api.js';
 
 // The Mail plugin as the CRM uses it: who has mail and their mailboxes, the
-// plugin's composer opened over a page, the email activity logged for what is
+// plugin's composer opened over a page, the email task logged for what is
 // sent from a record, and how a record's addresses are found. Raw mail stays
 // in the plugin; nothing is sent but by the person pressing Send, and an AI
 // draft only fills the composer. The record's Mail tab and the planned
@@ -38,10 +33,6 @@ const MAIL_WORKSPACE = {
   resource: { type: 'page', id: 'mail.workspace' },
   action: 'access',
 } as const;
-
-// How a record is linked from the email activity logged when mail is sent
-// from it: the same fields an activity created on its page takes.
-export type MailLink = Data;
 
 export function emailsOf(records: readonly Data[]): string[] {
   return records.map((record) => toText(record.email).trim()).filter(Boolean);
@@ -288,58 +279,18 @@ export function useMailComposer(): {
   return { available: senders.length > 0, compose, composer };
 }
 
-// What a sent message leaves on the record: a completed email activity named
-// by its subject, with the recipients and the text as its description, linked
-// as an activity created on the record's page would be.
-export function useLogSentMail(link: MailLink) {
+// A message sent from a record: the record's timeline is brought up to date
+// at once (the server's mail sync, which otherwise runs every minute), so
+// the conversation shows there; nothing else is written for it.
+export function useMailSent() {
   const api = useCrmApi();
   const refresh = useRefresh();
-  const { text } = useCrmText();
   return useCallback(
     async (sent: MailSubmissionLogView | undefined): Promise<void> => {
       if (!sent) return;
-      const recipients = (sent.recipients ?? [])
-        .map((address) => address.address)
-        .join(', ');
-      const description = [
-        `${toText(text('mail.to'))}: ${recipients}`,
-        sent.text?.trim() ?? '',
-      ]
-        .filter(Boolean)
-        .join('\n\n')
-        .slice(0, LONG_TEXT_LIMIT);
-      await api('activities', 'POST', {
-        ...link,
-        type: 'email',
-        status: 'completed',
-        name: (sent.subject?.trim() || toText(text('mail.noSubject'))).slice(
-          0,
-          TEXT_LIMIT,
-        ),
-        startAt: sent.createdAt,
-        description,
-      });
+      await api('mail/sync', 'POST', {});
       await refresh();
     },
-    [api, link, refresh, text],
+    [api, refresh],
   );
-}
-
-// The email a follow-up drafted into a planned activity's description (its
-// email part: the subject on the first line, then the body), or none.
-export function emailDraftOf(
-  description: unknown,
-): { subject: string; body: string } | undefined {
-  const part = planPartsOf(toText(description)).parts.email;
-  if (!part) return undefined;
-  const lines = part.split('\n').slice(1);
-  const start = lines.findIndex((line) => line.trim());
-  if (start < 0) return undefined;
-  return {
-    subject: lines[start].trim(),
-    body: lines
-      .slice(start + 1)
-      .join('\n')
-      .trim(),
-  };
 }

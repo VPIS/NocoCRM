@@ -19,6 +19,7 @@ import { bodyLimit } from 'hono/body-limit';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { crmToken } from '../providers/crm/index.js';
 import { crmSkillNotesToken } from '../providers/crm/skills.js';
+import { mailTimelineToken } from '../providers/crm/mail-timeline.js';
 import { captureLeads } from '../providers/crm/lead-capture.js';
 import {
   captureOpportunity,
@@ -211,7 +212,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         data: {
           ...data,
           ...(await resolveTitles(service, c.get('actor'), {
-            activities: [...rows(data.today), ...rows(data.overdue)],
+            tasks: [...rows(data.today), ...rows(data.overdue)],
             approvals: rows(data.approvals),
           })),
         },
@@ -234,7 +235,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         page,
         pageSize,
       });
-      const entity: Entity = name === 'approvals' ? 'approvals' : 'activities';
+      const entity: Entity = name === 'approvals' ? 'approvals' : 'tasks';
       return c.json({
         ...result,
         ...(await resolveTitles(service, c.get('actor'), {
@@ -299,6 +300,34 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           );
         }
       },
+      async enable(id) {
+        if (!app.container.has(userManagementServiceToken))
+          throw new CrmError('demoAccounts', 500);
+        try {
+          await app.container.resolve(userManagementServiceToken).enable(id);
+        } catch (error) {
+          throw new CrmError(
+            'demoAccounts',
+            500,
+            undefined,
+            error instanceof Error ? error.message : toText(error),
+          );
+        }
+      },
+      async disable(id) {
+        if (!app.container.has(userManagementServiceToken))
+          throw new CrmError('demoAccounts', 500);
+        try {
+          await app.container.resolve(userManagementServiceToken).disable(id);
+        } catch (error) {
+          throw new CrmError(
+            'demoAccounts',
+            500,
+            undefined,
+            error instanceof Error ? error.message : toText(error),
+          );
+        }
+      },
       async rename(id, name) {
         if (!app.container.has(userManagementServiceToken))
           throw new CrmError('demoAccounts', 500);
@@ -333,7 +362,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       });
     });
     routes.post('/demo/reset', async (c) =>
-      c.json({ data: await resetDemo(service, c.get('actor')) }),
+      c.json({ data: await resetDemo(service, c.get('actor'), demoAccounts) }),
     );
     // The CRM's AI skills and the company's notes on them (settings page).
     routes.get('/skills', async (c) =>
@@ -552,6 +581,15 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
     // browser tab.
     // And how many are still being worked on, so the badge can look again
     // soon rather than in half a minute.
+    // The signed-in user's mail brought into the timeline now rather than at
+    // the next minute's pass: the browser asks after sending, and on the Mail
+    // plugin's `mail.changed` for its user (mail-timeline.ts). Only the
+    // user's own mailboxes are read.
+    routes.post('/mail/sync', async (c) => {
+      const timeline = app.container.resolve(mailTimelineToken);
+      const written = await timeline.syncUser(c.get('actor').id);
+      return c.json({ data: { written } });
+    });
     routes.get('/decisions/count', async (c) => {
       const decisions = await pendingDecisions(service, c.get('actor'), {
         pageSize: 1000,
@@ -715,7 +753,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           c.req.param('entryId'),
           toText(body.decision) as 'accept',
           body.fields,
-          body.activity,
+          body.task,
           body.approvals,
           body.contacts,
         ),
@@ -732,7 +770,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           c.req.param('entryId'),
           toText(body.decision) as 'accept',
           body.fields,
-          body.activity,
+          body.task,
         ),
       });
     });
@@ -774,9 +812,9 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         ),
       });
     });
-    // What came of an activity, jotted down, written up by the AI as its
+    // What came of a task, jotted down, written up by the AI as its
     // feedback for the person to read and record (feedback.ts).
-    routes.post('/activities/:id/feedback/organise', async (c) =>
+    routes.post('/tasks/:id/feedback/organise', async (c) =>
       c.json({
         data: await organiseFeedback(
           service,
@@ -787,9 +825,9 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         ),
       }),
     );
-    // A planned activity's outcome, recorded, and, as asked, its lead
+    // A planned task's outcome, recorded, and, as asked, its lead
     // followed up anew (feedback.ts).
-    routes.post('/activities/:id/outcome', async (c) =>
+    routes.post('/tasks/:id/outcome', async (c) =>
       c.json({
         data: await recordOutcome(
           service,
@@ -1027,20 +1065,20 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       const actor = c.get('actor');
       const entity = asEntity(c.req.param('entity'));
       const id = c.req.param('id');
-      // What the change is measured against: an activity marked done, a
+      // What the change is measured against: a task marked done, a
       // lead's company changed.
       const before =
-        entity === 'activities' || entity === 'leads'
+        entity === 'tasks' || entity === 'leads'
           ? await service.get(actor, entity, id).catch(() => undefined)
           : undefined;
       const record = await service.save(actor, entity, await c.req.json(), id);
       if (
-        entity === 'activities' &&
+        entity === 'tasks' &&
         before &&
         before.status !== 'completed' &&
         record.status === 'completed'
       )
-        service.activityCompleted?.(actor, record);
+        service.taskCompleted?.(actor, record);
       if (
         entity === 'leads' &&
         before &&

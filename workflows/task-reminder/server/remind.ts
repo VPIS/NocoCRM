@@ -4,9 +4,9 @@ import type {
 } from '@nocobase/app-plugin-workflow';
 import { messageArgs, queueMessage } from './queue.js';
 
-// Queues one reminder; the key names the activity, its start and the
+// Queues one reminder; the key names the task, its start and the
 // recipient (the same key the scan used before), so a rerun of the node,
-// or a later scan of the same activity, never queues it twice.
+// or a later scan of the same task, never queues it twice.
 export const run: WorkflowRunFunction = async (
   rawArgs: unknown,
   options,
@@ -15,8 +15,8 @@ export const run: WorkflowRunFunction = async (
   const message = messageArgs(
     rawArgs,
     ['starting'],
-    (args) => `activity:${args.recordId}:${args.at}:${args.recipientId}`,
-    'activities',
+    (args) => `task:${args.recordId}:${args.at}:${args.recipientId}`,
+    'tasks',
   );
   return { queued: await queueMessage(options, message) };
 };

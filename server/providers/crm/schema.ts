@@ -15,12 +15,7 @@ export function toText(value: unknown): string {
 }
 
 export type Entity =
-  | 'leads'
-  | 'accounts'
-  | 'contacts'
-  | 'opportunities'
-  | 'activities'
-  | 'approvals';
+  'leads' | 'accounts' | 'contacts' | 'opportunities' | 'tasks' | 'approvals';
 export interface CrmRecord extends Row {
   id: string;
   name: string;
@@ -332,36 +327,28 @@ export const definitions: Record<Entity, EntityDefinition> = {
       attachments,
     ],
   },
-  activities: {
-    table: 'crmActivities',
+  tasks: {
+    table: 'crmTasks',
     statusField: 'status',
-    statuses: ['planned', 'completed', 'cancelled'],
-    columns: ['name', 'type', 'startAt', 'status', 'accountId', 'ownerId'],
+    statuses: ['open', 'completed', 'cancelled'],
+    columns: ['name', 'dueAt', 'status', 'accountId', 'ownerId'],
     fields: [
-      // Type leads: "a call about X" is how an activity is thought of.
-      field('type', 'select', true, [
-        'call',
-        'meeting',
-        'email',
-        'task',
-        'meal',
-        'visit',
-        'demo',
-        'other',
-      ]),
+      // What to do, in the person's words: no type to pick.
       field('name', 'text', true),
       owner,
-      field('status', 'select', true, ['planned', 'completed', 'cancelled']),
-      field('startAt', 'datetime', true),
-      // Optional: a call or an email often has no end worth noting.
-      field('endAt', 'datetime', false),
+      field('status', 'select', true, ['open', 'completed', 'cancelled']),
+      // Optional: a time, or a date alone, kept as the last instant of
+      // that business day (isEndOfDay in zone-time.ts); with a time it is
+      // reminded of before it starts.
+      field('dueAt', 'datetime', false),
+      // Optional: a task may stand on its own.
       field('leadId', 'relation', false, undefined, 'leads'),
       { ...account, required: false },
       field('opportunityId', 'relation', false, undefined, 'opportunities'),
       field('internalParticipants', 'multi', false, undefined, 'users'),
-      field('externalParticipants', 'multi', false, undefined, 'contacts'),
       field('description', 'textarea'),
-      field('feedback', 'textarea'),
+      // What came of it, written when it is done.
+      field('result', 'textarea'),
       attachments,
     ],
   },
@@ -411,7 +398,7 @@ export const extraFields: Partial<Record<Entity, string[]>> = {
     'convertedOpportunityId',
   ],
   opportunities: ['closedAt'],
-  activities: ['completedAt'],
+  tasks: ['completedAt'],
   approvals: ['status', 'decisionComment', 'submittedAt', 'decidedAt'],
 };
 export function fieldsFor(entity: Entity): string[] {
@@ -426,11 +413,12 @@ export function fieldsFor(entity: Entity): string[] {
 export interface CrmSettings {
   currency: string;
   timeZone: string;
-  activityReminderMinutes: number;
+  taskReminderMinutes: number;
   closeReminderDays: number;
   // A new lead nobody has contacted in this many days (the daily lead check).
   uncontactedDays: number;
-  // A lead or a deal with no activity in this many days: stalled on the
+  // A lead or a deal with no exchange (a task done, a note, mail) in this
+  // many days: stalled on the
   // dashboard, followed up by the daily checks.
   leadStaleDays: number;
   staleDays: number;
@@ -450,7 +438,7 @@ export const aiLanguages = ['zh-CN', 'en-US'];
 export const defaultSettings: CrmSettings = {
   currency: 'USD',
   timeZone: 'Asia/Shanghai',
-  activityReminderMinutes: 30,
+  taskReminderMinutes: 30,
   closeReminderDays: 7,
   uncontactedDays: 2,
   leadStaleDays: 14,

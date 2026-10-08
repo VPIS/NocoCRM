@@ -63,7 +63,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
     ],
     permissions: {
       contacts: { create: false },
-      activities: { create: false },
+      tasks: { create: false },
       approvals: { create: false },
     },
   };
@@ -195,7 +195,7 @@ describe('the opportunity page', () => {
       expect(heading.textContent).toContain('供应链集成系统');
     }
     expect(screen.queryByText(/ID: opp-1/)).toBeNull();
-    for (const group of ['概况', '详情', '系统'])
+    for (const group of ['概况', '详情'])
       expect(screen.getByRole('heading', { name: group })).toBeTruthy();
     // No stepper: the stage is a row among the particulars.
     expect(screen.getByRole('button', { name: '阶段' })).toBeTruthy();
@@ -211,7 +211,7 @@ describe('the opportunity page', () => {
     expect(screen.queryByText('关闭时间')).toBeNull();
   });
 
-  it('shows the closing time and no probability for a won deal', () => {
+  it('shows no probability for a won deal, its closing told by the timeline', () => {
     state.record = {
       ...deal,
       stage: 'won',
@@ -219,7 +219,7 @@ describe('the opportunity page', () => {
     };
     renderPage();
     expect(screen.queryByText('100%')).toBeNull();
-    expect(screen.getByText('关闭时间')).toBeTruthy();
+    expect(screen.queryByText('关闭时间')).toBeNull();
   });
 
   it('shows the resume date while paused', () => {
@@ -258,7 +258,7 @@ describe('the opportunity page', () => {
 
   it('gives each of the six tabs its place, the timeline without a count', async () => {
     renderPage();
-    for (const name of ['动态', '活动', '联系人', '审批', '附件', '备注'])
+    for (const name of ['动态', '任务', '联系人', '审批', '附件', '备注'])
       expect(
         screen.getAllByRole('tab', { name: new RegExp(name) }),
       ).toHaveLength(1);

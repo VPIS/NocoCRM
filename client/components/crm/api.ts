@@ -1,3 +1,4 @@
+import { isEndOfDay } from '../../../server/providers/crm/zone-time.js';
 import {
   authenticationClientToken,
   type AuthClient,
@@ -343,6 +344,19 @@ export function localDate(
   }
 }
 // The time of day alone, 14:30, where the date is already on screen.
+// When a task is due, as a list shows it: its date alone for a date-only
+// task, else its date and time; empty when it has no due time.
+export function dueText(task: Data, timeZone: string): string {
+  if (!task.dueAt) return '';
+  // A date alone is kept as the last instant of its day.
+  return localDate(
+    task.dueAt,
+    '',
+    timeZone,
+    !isEndOfDay(new Date(toText(task.dueAt)), timeZone),
+  );
+}
+
 export function localTime(value: unknown, timeZone: string): string {
   if (!value) return '—';
   try {
@@ -383,7 +397,7 @@ export function editsAll(meta: Metadata | undefined, entity: Entity): boolean {
 export function fieldLabelKey(entity: Entity, field: string): string {
   if (entity === 'leads' && field === 'name') return 'fields.leadName';
   if (entity === 'contacts' && field === 'name') return 'fields.contactName';
-  if (entity === 'activities' && field === 'name') return 'fields.activityName';
+  if (entity === 'tasks' && field === 'name') return 'fields.taskName';
   // On an approval the owner is the person asking.
   if (entity === 'approvals' && field === 'ownerId') return 'fields.applicant';
   if (entity === 'approvals' && field === 'name')
@@ -391,10 +405,10 @@ export function fieldLabelKey(entity: Entity, field: string): string {
   // The specification calls an account's description its introduction.
   if (entity === 'accounts' && field === 'description')
     return 'fields.accountDescription';
-  // On an activity the record links are "related lead / account /
+  // On a task the record links are "related lead / account /
   // opportunity", not the bare object names.
   if (
-    entity === 'activities' &&
+    entity === 'tasks' &&
     ['leadId', 'accountId', 'opportunityId'].includes(field)
   )
     return `fields.related.${field}`;

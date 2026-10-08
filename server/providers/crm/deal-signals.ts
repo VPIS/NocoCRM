@@ -3,6 +3,7 @@ import { crmActor } from '../../ai/tools/crm-records.js';
 import { readEntry } from './ai-entries.js';
 import type { OpportunityEvaluator } from './opportunity-evaluation.js';
 import { toText } from './schema.js';
+import { lastExchanges } from './exchanges.js';
 import type { CrmService } from './service.js';
 
 // The daily look over the open deals for what should have happened and has
@@ -35,13 +36,16 @@ export interface DealSignalPass {
 }
 
 // The signal a deal gives at `now`, if any, from its stage, its dates and
-// its activities. A paused deal only says when its pause is over; an open
-// one first that its close date is near or past, else that it went quiet.
+// its tasks and its last exchange (a task completed, a note, mail;
+// exchanges.ts), 0 when it has had none. A paused deal only says when its
+// pause is over; an open one first that its close date is near or past,
+// else that it went quiet.
 export function dealSignal(
   deal: Row,
-  activities: readonly Row[],
+  tasks: readonly Row[],
   now: number,
   days: DealSignalDays = DEFAULT_DAYS,
+  lastExchange = 0,
 ): DealSignal | undefined {
   const SILENT_AFTER = days.stale * DAY;
   const CLOSING_WITHIN = days.closing * DAY;
@@ -52,14 +56,9 @@ export function dealSignal(
   if (stage === 'paused')
     return at(deal.resumeAt) <= now ? 'resumeDue' : undefined;
   if (at(deal.expectedCloseAt) - now <= CLOSING_WITHIN) return 'closeDue';
-  const ahead = activities.some(
-    (a) => a.status === 'planned' && at(a.startAt) >= now,
-  );
-  return now - at(deal.createdAt) > SILENT_AFTER &&
-    !ahead &&
-    !activities.some(
-      (a) => a.status !== 'cancelled' && now - at(a.startAt) <= SILENT_AFTER,
-    )
+  const ahead = tasks.some((a) => a.status === 'open' && at(a.dueAt) >= now);
+  return now - Math.max(lastExchange, at(deal.createdAt)) > SILENT_AFTER &&
+    !ahead
     ? 'silent'
     : undefined;
 }
@@ -94,18 +93,19 @@ export async function scanDealSignals(
   pass.checked = deals.length;
   if (!deals.length) return pass;
   const ids = deals.map((deal) => toText(deal.id));
-  const activities = new Map<string, Row[]>();
+  const exchanges = await lastExchanges(query, 'opportunities');
+  const tasks = new Map<string, Row[]>();
   const entries = new Map<string, ReturnType<typeof readEntry>[]>();
   // In chunks, as SQLite caps the parameters of one statement.
   for (let i = 0; i < ids.length; i += 500) {
     const chunk = ids.slice(i, i + 500);
-    for (const activity of await query
-      .selectFrom('crmActivities')
-      .select(['opportunityId', 'status', 'startAt'])
+    for (const task of await query
+      .selectFrom('crmTasks')
+      .select(['opportunityId', 'status', 'dueAt'])
       .where('opportunityId', 'in', chunk)
       .execute()) {
-      const key = toText(activity.opportunityId);
-      activities.set(key, [...(activities.get(key) ?? []), activity]);
+      const key = toText(task.opportunityId);
+      tasks.set(key, [...(tasks.get(key) ?? []), task]);
     }
     for (const row of await query
       .selectFrom('crmHistory')
@@ -129,9 +129,10 @@ export async function scanDealSignals(
       continue;
     const signal = dealSignal(
       deal,
-      activities.get(id) ?? [],
+      tasks.get(id) ?? [],
       now.getTime(),
       days,
+      exchanges.get(id) ?? 0,
     );
     if (!signal || !deal.ownerId) continue;
     // Once a week per signal, counting only follow-ups that came to

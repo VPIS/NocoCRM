@@ -7,6 +7,7 @@ import {
   type CrmRecord,
   type Entity,
 } from './schema.js';
+import { lastExchanges, upcomingTasks } from './exchanges.js';
 import type { CrmService, ListOptions } from './service.js';
 
 export async function allRecords(
@@ -27,6 +28,13 @@ export async function allRecords(
     if (result.length >= batch.total || !batch.data.length) return result;
     page++;
   }
+}
+
+// Whether an open task is past due. A date-only task is due at the end of
+// its business day (zone-time.ts), so one rule covers both; a task with no
+// due time never is.
+export function taskOverdue(task: CrmRecord, now: Date): boolean {
+  return Boolean(task.dueAt) && new Date(toText(task.dueAt)) < now;
 }
 
 export async function statistics(
@@ -63,29 +71,20 @@ export async function statistics(
   }));
   if (entity === 'leads') {
     // The same rules the dashboard uses for its reminders, so the numbers
-    // here and the risks there agree. "Contacted" means a completed activity.
-    const activities = await allRecords(service, actor, 'activities');
-    const completedFor = (id: string): CrmRecord[] =>
-      activities.filter((a) => a.leadId === id && a.status === 'completed');
-    const hasUpcoming = (id: string): boolean =>
-      activities.some(
-        (a) =>
-          a.leadId === id &&
-          a.status === 'planned' &&
-          new Date(toText(a.startAt)) >= now,
-      );
+    // here and the risks there agree. "Contacted" means an exchange: a task
+    // completed, a note, mail (exchanges.ts).
+    const query = service.database.query();
+    const last = await lastExchanges(query, 'leads');
+    const upcoming = await upcomingTasks(query, 'leads', now);
     // Every new lead nobody has talked to yet is waiting on someone; there
     // is no grace period.
     const uncontacted = records.filter(
-      (r) => r.status === 'new' && !completedFor(r.id).length,
+      (r) => r.status === 'new' && !last.has(r.id),
     );
     const stale = records.filter((r) => {
       if (!['working', 'nurturing'].includes(toText(r.status))) return false;
-      if (hasUpcoming(r.id)) return false;
-      const latest = completedFor(r.id).reduce(
-        (last, a) => Math.max(last, +new Date(toText(a.completedAt))),
-        +new Date(r.createdAt),
-      );
+      if (upcoming.has(r.id)) return false;
+      const latest = Math.max(last.get(r.id) ?? 0, +new Date(r.createdAt));
       return +now - latest > settings.leadStaleDays * 86400000;
     });
     // Invalid leads were never a chance to convert, so they leave the base.
@@ -119,24 +118,17 @@ export async function statistics(
       convertedThisMonth: convertedThisMonth.map((r) => r.id),
     };
   }
-  // Shared by accounts and activities: which records have what activity.
-  const activities =
+  // An account's or a deal's last exchange with the customer
+  // (exchanges.ts), from its creation when it has had none.
+  const exchanges =
     entity === 'accounts' || entity === 'opportunities'
-      ? await allRecords(service, actor, 'activities')
-      : [];
+      ? await lastExchanges(service.database.query(), entity)
+      : new Map<string, number>();
   const month = today.slice(0, 7);
   const inMonth = (value: unknown): boolean =>
     Boolean(value) && date(value).slice(0, 7) === month;
-  const lastCompletedAt = (
-    relation: 'accountId' | 'opportunityId',
-    r: CrmRecord,
-  ): number =>
-    activities
-      .filter((a) => a[relation] === r.id && a.status === 'completed')
-      .reduce(
-        (last, a) => Math.max(last, +new Date(toText(a.completedAt))),
-        +new Date(r.createdAt),
-      );
+  const lastExchangeAt = (r: CrmRecord): number =>
+    Math.max(exchanges.get(r.id) ?? 0, +new Date(r.createdAt));
 
   if (entity === 'accounts') {
     const contacts = await allRecords(service, actor, 'contacts');
@@ -150,12 +142,12 @@ export async function statistics(
       'contract',
     ]);
     // The dashboard's staleAccount rule, so the card and the reminder agree.
-    // A scheduled activity does not clear it: the account has still not been
+    // A scheduled task does not clear it: the account has still not been
     // reached for that long.
     const stale = records.filter(
       (r) =>
         r.status !== 'churned' &&
-        +now - lastCompletedAt('accountId', r) > settings.staleDays * 86400000,
+        +now - lastExchangeAt(r) > settings.staleDays * 86400000,
     );
     const noContacts = records.filter(
       (r) => !contacts.some((c) => c.accountId === r.id),
@@ -229,27 +221,27 @@ export async function statistics(
       newThisMonth: newThisMonth.map((r) => r.id),
     };
   }
-  if (entity === 'activities') {
-    const todayActivities = records.filter((r) => date(r.startAt) === today);
-    // Overdue means it should have started and nobody has said what happened.
+  if (entity === 'tasks') {
+    // A task with no due time is in none of these.
+    const todayTasks = records.filter((r) => date(r.dueAt) === today);
     const overdue = records.filter(
-      (r) => r.status === 'planned' && new Date(toText(r.startAt)) < now,
+      (r) => r.status === 'open' && taskOverdue(r, now),
     );
     const upcoming = records.filter(
-      (r) => r.status === 'planned' && new Date(toText(r.startAt)) >= now,
+      (r) => r.status === 'open' && Boolean(r.dueAt) && !taskOverdue(r, now),
     );
     const completedThisMonth = records.filter(
-      (r) => r.status === 'completed' && inMonth(r.completedAt ?? r.endAt),
+      (r) => r.status === 'completed' && inMonth(r.completedAt ?? r.dueAt),
     );
     Object.assign(total, {
-      todayActivities: todayActivities.length,
-      overdueActivities: overdue.length,
+      todayTasks: todayTasks.length,
+      overdueTasks: overdue.length,
       upcoming: upcoming.length,
       completedThisMonth: completedThisMonth.length,
     });
     members = {
-      todayActivities: todayActivities.map((r) => r.id),
-      overdueActivities: overdue.map((r) => r.id),
+      todayTasks: todayTasks.map((r) => r.id),
+      overdueTasks: overdue.map((r) => r.id),
       upcoming: upcoming.map((r) => r.id),
       completedThisMonth: completedThisMonth.map((r) => r.id),
     };

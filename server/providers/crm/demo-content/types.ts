@@ -37,8 +37,8 @@ export type DemoCity =
 export interface DemoCompany {
   // The account's name.
   readonly name: string;
-  // How an activity name refers to the account.
-  readonly activitySubject: string;
+  // How a task name refers to the account.
+  readonly taskSubject: string;
   // The website's and the email addresses' domain, before .example.
   readonly domain: string;
   readonly description: string;
@@ -77,28 +77,28 @@ export interface DemoContent {
   readonly leads: readonly DemoLead[];
   // A lead's job title: even positions, then odd ones.
   readonly leadJobTitles: readonly [string, string];
-  // An activity's name: who it concerns and the matter.
-  readonly activityName: (subject: string, matter: string) => string;
-  // The description every demo activity carries.
-  readonly activityDescription: string;
-  // The two activities placed on the first leads.
+  // A task's name: who it concerns and the matter.
+  readonly taskName: (subject: string, matter: string) => string;
+  // The description every demo task carries.
+  readonly taskDescription: string;
+  // The two tasks placed on the first leads.
   readonly discoveryCall: { readonly name: string; readonly feedback: string };
   readonly productDemo: { readonly name: string; readonly feedback: string };
-  // The matters of the completed and planned activities on the first deals.
+  // The matters of the completed and planned tasks on the first deals.
   readonly completedMatters: readonly string[];
   readonly completedFeedback: readonly string[];
   readonly plannedMatters: readonly string[];
-  // Today's two late-evening activities.
+  // Today's two late-evening tasks.
   readonly eveningCall: string;
   readonly ssoConfirmation: string;
-  // The matter of a lead's activity, by its status.
-  readonly leadActivityMatters: {
+  // The matter of a lead's task, by its status.
+  readonly leadTaskMatters: {
     readonly completed: string;
     readonly cancelled: string;
     readonly planned: string;
   };
-  readonly leadActivityFeedback: string;
-  // The steady cadence of activities around the hand-placed ones.
+  readonly leadTaskFeedback: string;
+  // The steady cadence of tasks around the hand-placed ones.
   readonly cadenceMatters: readonly string[];
   readonly cadenceFeedback: readonly string[];
   readonly approvals: {

@@ -12,7 +12,7 @@ export function keepLineBreaks(text: string): string {
 // text cut to a line (a note's excerpt, a change on the timeline): its
 // marks dropped, links and images by their text, lines run together. A
 // heading (a line that is only a heading or bold text, as the AI writes an
-// activity's outcome) ends with a colon, so it reads as leading what
+// task's outcome) ends with a colon, so it reads as leading what
 // follows rather than running into it.
 export function markdownLine(text: string): string {
   return (

@@ -36,13 +36,13 @@ import { array, type CrmService } from './service.js';
 // or the same person at the same company, among the open leads the reader
 // may see. Merging keeps one lead, takes for each field the value the
 // person picks (either lead's, or for the long texts both), moves the
-// other's activities, notes and attachments over, notes the merge on the
+// other's tasks, notes and attachments over, notes the merge on the
 // kept lead's timeline with what the other lead held, and deletes the
 // other. The AI proposes which lead to keep and which values are right;
 // the person decides in the dialog. Converted and invalid leads take no
 // part: a converted one is read-only, an invalid one already handled.
 // Whoever may edit both leads may merge them: nothing is lost (the other
-// lead's values stay on the merge's timeline entry, its activities and notes
+// lead's values stay on the merge's timeline entry, its tasks and notes
 // move), so it asks for edit access, not for the right to delete, which a
 // salesperson does not have even for their own leads.
 
@@ -317,14 +317,14 @@ export async function findDuplicates(
 // own history goes with it.
 interface MergeSide {
   lead: CrmRecord;
-  activities: number;
+  tasks: number;
   notes: number;
   // Which of the two the reader may keep (and so delete the other).
   keepable: boolean;
 }
 
 export interface MergeProposal {
-  leads: (CrmRecord & { activities: number; notes: number })[];
+  leads: (CrmRecord & { tasks: number; notes: number })[];
   // The lead to keep, the other's id being the other one.
   keepId: string;
   // Which lead's value each differing group takes (its first field names
@@ -374,8 +374,8 @@ async function side(
   if (!OPEN.includes(toText(lead.status)))
     throw new CrmError('convertedReadOnly', 409);
   const query = service.database.query();
-  const activities = await query
-    .selectFrom('crmActivities')
+  const tasks = await query
+    .selectFrom('crmTasks')
     .select('id')
     .where('leadId', '=', id)
     .execute();
@@ -388,7 +388,7 @@ async function side(
     .execute();
   return {
     lead,
-    activities: activities.length,
+    tasks: tasks.length,
     notes: notes.length,
     // Whether it may be changed; the caller adds whether the other may go.
     keepable: await may(service, actor, id, 'update'),
@@ -425,7 +425,7 @@ export function differing(a: Row, b: Row): (readonly string[])[] {
 const filled = (lead: Row, group: readonly string[]): boolean =>
   group.some((key) => !blank(lead[key]));
 
-// The plain proposal: keep the lead with more history (more activities,
+// The plain proposal: keep the lead with more history (more tasks,
 // then more notes, then the older one), and for each field its value, or
 // the other's where it has none; two different long texts are both kept.
 export function plainProposal(
@@ -433,7 +433,7 @@ export function plainProposal(
   b: MergeSide,
 ): Pick<MergeProposal, 'keepId' | 'picks'> {
   const weight = (s: MergeSide): [number, number, number] => [
-    s.activities,
+    s.tasks,
     s.notes,
     -Date.parse(toText(s.lead.createdAt)) || 0,
   ];
@@ -488,7 +488,7 @@ export async function mergeProposal(
     throw new CrmError('invalidInput', 400, 'with');
   const a = await side(service, actor, id);
   const b: MergeSide = unsaved
-    ? { lead: unsavedLead(raw.input), activities: 0, notes: 0, keepable: false }
+    ? { lead: unsavedLead(raw.input), tasks: 0, notes: 0, keepable: false }
     : await side(service, actor, otherId);
   if (!matchReasons(a.lead, b.lead).length)
     throw new CrmError('invalidInput', 400, 'with');
@@ -499,7 +499,7 @@ export async function mergeProposal(
     .map((s) => toText(s.lead.id));
   const leads = [a, b].map((s) => ({
     ...s.lead,
-    activities: s.activities,
+    tasks: s.tasks,
     notes: s.notes,
   }));
   const plain = plainProposal(a, b);
@@ -559,7 +559,7 @@ export async function mergeProposal(
         : leadSummary(
             day(s.lead.createdAt),
             day(s.lead.updatedAt),
-            s.activities,
+            s.tasks,
             s.notes,
           )[lang(zh)],
       ...groups.flatMap((group) =>
@@ -710,7 +710,7 @@ function mergePrompt(
   const t = pick(mergeLabels, zh);
   return `The two leads are very likely the same enquiry and are to be merged into one. Give a merge plan: which lead to keep (keep), and for each differing field below, which lead's value to take (pick).
 Rules:
-- Keep the one with more history (more activities and notes) and the further follow-up; when they are about even, keep the one created earlier.${only ? `\n- Only ${only} may be kept.` : ''}
+- Keep the one with more history (more tasks and notes) and the further follow-up; when they are about even, keep the one created earlier.${only ? `\n- Only ${only} may be kept.` : ''}
 - For each field: take the more complete, more specific, more recent value (for example, a company's full name beats a short name, and a phone number confirmed later beats an old number); never pick an empty value.
 - When a person's or company's name differs only in how it is written (a typo, a homophone, simplified or traditional characters, letter case), take the kept lead's spelling: the lead followed up more has been checked through contact, and the newly entered one is more likely a slip; take the other only when it is clearly more complete (such as a company's full name), and explain it in why.
 - message (the original enquiry) and companyDescription: when both leads have one and they differ, pick both, keeping both texts; when they repeat each other, pick the more complete one.
@@ -720,7 +720,7 @@ Rules:
 - Answer only for the fields listed here: ${fields.join(', ')}.
 - reason says in one sentence which lead to keep and why; why is one sentence only where the choice is not obvious, otherwise null.
 - The reader cannot see the code names A and B: in reason and why, refer to each lead by its "${t.callIt}", never as A or B.
-- "${t.unsaved}" is not yet saved as a lead: do not say on which day it was created, and do not give its having no activities as a reason; it is to be merged into the existing lead, so the one kept is always the existing lead, and reason need only say that it is the same enquiry as the existing lead.
+- "${t.unsaved}" is not yet saved as a lead: do not say on which day it was created, and do not give its having no tasks as a reason; it is to be merged into the existing lead, so the one kept is always the existing lead, and reason need only say that it is the same enquiry as the existing lead.
 - Write values in natural words (in progress, trade show, food and beverage), not codes or field names such as working or exhibition.
 - Write reason and why in ${zh ? 'Chinese' : 'English'}.
 
@@ -813,30 +813,30 @@ export async function mergeLeads(
             ),
           ),
           captured: true,
-          activities: 0,
+          tasks: 0,
           notes: 0,
         },
       );
       return service.get(prepared, 'leads', keepId, tx);
     }
     const now = new Date().toISOString();
-    // The other's activities, with their history, now the kept lead's.
-    const activities = await tx
-      .selectFrom('crmActivities')
+    // The other's tasks, with their history, now the kept lead's.
+    const tasks = await tx
+      .selectFrom('crmTasks')
       .select('id')
       .where('leadId', '=', fromId)
       .execute();
-    for (const activity of activities) {
+    for (const task of tasks) {
       await tx
-        .updateTable('crmActivities')
+        .updateTable('crmTasks')
         .set({ leadId: keepId, updatedAt: now })
-        .where('id', '=', toText(activity.id))
+        .where('id', '=', toText(task.id))
         .execute();
       await service.history(
         tx,
         prepared,
-        'activities',
-        toText(activity.id),
+        'tasks',
+        toText(task.id),
         'updated',
         undefined,
         undefined,
@@ -875,11 +875,11 @@ export async function mergeLeads(
         lead: Object.fromEntries(
           Object.entries(other).filter(([key]) => key !== 'attachments'),
         ),
-        activities: activities.length,
+        tasks: tasks.length,
         notes: Number(notes.updatedCount ?? 0),
       },
     );
-    // Gone, its activities moved: deleted here rather than through
+    // Gone, its tasks moved: deleted here rather than through
     // remove(), which asks for the right to delete (see the top).
     await tx.deleteFrom('crmLeads').where('id', '=', fromId).execute();
     await service.history(tx, prepared, 'leads', fromId, 'deleted');

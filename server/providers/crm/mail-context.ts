@@ -8,7 +8,7 @@ import { concerns, searchTerms, type MailTarget } from './mail-target.js';
 
 // The mail a record's owner exchanged with its customer, as the AI
 // follow-ups read it: what the customer wrote is information gained in
-// conversation, beside the activities a salesperson logs. Read through the
+// conversation, beside the tasks a salesperson logs. Read through the
 // Mail plugin as the owner, so a follow-up sees only the owner's own
 // mailboxes, as the owner's Mail tab on the record does; without the plugin,
 // or with nothing found, it is empty.

@@ -7,7 +7,7 @@ import {
   type Actor,
 } from './authorization.js';
 import { CrmError, object, type CrmRecord } from './schema.js';
-import { array, type CrmService } from './service.js';
+import type { CrmService } from './service.js';
 
 export async function conversionPreview(
   service: CrmService,
@@ -203,24 +203,21 @@ export async function convertLead(
     .execute();
   if (!updated.updatedCount) throw new CrmError('conflict', 409);
   // Conversion is the single authorized system operation that links all existing history,
-  // including activities owned by colleagues, while preserving their original content.
-  const activities = await tx
-    .selectFrom('crmActivities')
+  // including tasks owned by colleagues, while preserving their original content.
+  const tasks = await tx
+    .selectFrom('crmTasks')
     .selectAll()
     .where('leadId', '=', id)
     .execute();
-  for (const activity of activities)
+  for (const task of tasks)
     await tx
-      .updateTable('crmActivities')
+      .updateTable('crmTasks')
       .set({
         accountId: account.id,
         opportunityId: opportunity?.id ?? null,
-        externalParticipants: JSON.stringify([
-          ...new Set([...array(activity.externalParticipants), contact.id]),
-        ]),
         updatedAt: now,
       })
-      .where('id', '=', activity.id)
+      .where('id', '=', task.id)
       .execute();
   await service.history(
     tx,

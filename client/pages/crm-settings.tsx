@@ -327,7 +327,7 @@ function SettingsForm({
             fields(['currency', 'timeZone', 'aiLanguage'])
           ) : section === 'reminders' ? (
             fields([
-              'activityReminderMinutes',
+              'taskReminderMinutes',
               'closeReminderDays',
               'uncontactedDays',
               'leadStaleDays',

@@ -326,6 +326,19 @@ export async function provisionCrm(
     }
     await mark('crm-mail-v1');
   }
+  // Activities became tasks (202610080001_crm_tasks): every set's grants on
+  // the activities operation, page and table are renamed once to the tasks
+  // ones, with the same actions and scopes. This runs in boot, before the
+  // plugin scans the stored grants at start and refuses any it no longer
+  // knows, which would stop the application.
+  if (!(await marker('crm-tasks-v1'))) {
+    for (const set of await authz.permissionSets.list()) {
+      const grants = taskGrants(set.grants);
+      if (grants)
+        await authz.permissionSets.update(set.key, { ...set, grants });
+    }
+    await mark('crm-tasks-v1');
+  }
   const initialized = await database
     .query()
     .selectFrom('crmSettings')
@@ -357,6 +370,27 @@ export async function provisionCrm(
         })
         .execute();
   }
+}
+
+// Renames grants on the former activities to the tasks: the operation
+// `crm.activities`, the page `crm-activities` and the table `crmActivities`.
+// Returns undefined when nothing needed it.
+const TASK_RENAMES: Record<string, Record<string, string>> = {
+  composite: { 'crm.activities': 'crm.tasks' },
+  page: { 'crm-activities': 'crm-tasks' },
+  collection: { crmActivities: 'crmTasks' },
+};
+export function taskGrants(
+  grants: readonly PermissionGrant[],
+): PermissionGrant[] | undefined {
+  let changed = false;
+  const result = grants.map((grant) => {
+    const id = TASK_RENAMES[grant.resource.type]?.[grant.resource.id];
+    if (!id) return grant;
+    changed = true;
+    return { ...grant, resource: { ...grant.resource, id } };
+  });
+  return changed ? result : undefined;
 }
 
 // Rewrites grants of the former type `resource` into `composite` grants:

@@ -6,7 +6,7 @@ import { cn } from 'cn';
 // Application change: every CRM tag shares one shape, a rounded rectangle
 // (the registry's is a pill), and differs from the others only in colour.
 const badgeVariants = cva(
-  'group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-md border border-transparent px-1.5 py-0.5 text-xs font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3!',
+  'group/badge inline-flex h-5.5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-md border border-transparent px-1.5 py-0.5 text-xs font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3!',
   {
     variants: {
       variant: {
@@ -22,7 +22,7 @@ const badgeVariants = cva(
         link: 'text-primary underline-offset-4 hover:underline',
         // Application variant: something the assistant is waiting on.
         ai: 'bg-ai/10 text-ai dark:bg-ai/20',
-        // Application variant: what kind of thing a row is (an activity's
+        // Application variant: what kind of thing a row is (a task's
         // type, an approval's topic) rather than where it stands. A tint of
         // the text colour rather than the muted surface, which is also the
         // rows' hover colour: on a hovered row the tag would disappear.

@@ -8,6 +8,18 @@ import {
 import { crmZh } from '../../client/locales/crm/index.js';
 
 const state = vi.hoisted(() => ({ api: vi.fn(), assign: true }));
+// No mail here: the Mail plugin needs the application root, which these
+// tests do not mount.
+vi.mock('../../client/components/crm/mail.js', async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import('../../client/components/crm/mail.js')
+  >()),
+  useMailComposer: () => ({
+    available: false,
+    compose: () => undefined,
+    composer: null,
+  }),
+}));
 vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('../../client/components/crm/api.js')>();
@@ -20,16 +32,15 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
         ? undefined
         : {
             record:
-              entity === 'activities'
+              entity === 'tasks'
                 ? {
                     id,
-                    type: 'call',
                     name: '首次电话',
-                    status: 'planned',
+                    status: 'open',
                     ownerId: 'rep',
                     // act-1 long gone by (overdue); any other still ahead,
                     // already prepared.
-                    startAt:
+                    dueAt:
                       id === 'act-1'
                         ? '2020-01-01T02:00:00.000Z'
                         : '2099-01-01T02:00:00.000Z',
@@ -110,7 +121,7 @@ const entry = {
       reasons: [],
       edition: null,
       invalidReason: null,
-      nextStep: { type: 'call', subject: '确认集成范围', inDays: 2 },
+      nextStep: { type: 'task', subject: '确认集成范围', inDays: 2 },
       prep: ['梳理方案'],
       questions: ['覆盖哪些环节？'],
     },
@@ -123,7 +134,7 @@ beforeEach(() => {
   state.assign = true;
 });
 
-describe('the activity a follow-up card creates', () => {
+describe('the task a follow-up card creates', () => {
   it('lays it out and accepts it as the person changed it', async () => {
     render(
       <VerdictPanel
@@ -133,7 +144,7 @@ describe('the activity a follow-up card creates', () => {
         onChanged={() => Promise.resolve()}
       />,
     );
-    expect(screen.getByText('将创建的活动')).toBeTruthy();
+    expect(screen.getByText('将创建的任务')).toBeTruthy();
     // Shown as it will be, not as a form: the proposed name, the lead's
     // owner and the description it will hold, headed.
     expect(screen.getByRole('button', { name: '名称' }).textContent).toBe(
@@ -175,7 +186,7 @@ describe('the activity a follow-up card creates', () => {
     expect(state.api).toHaveBeenCalledWith(
       'leads/lead-1/evaluation/entry-1',
       'POST',
-      { decision: 'accept', fields: [], activity: { name: '发送方案资料' } },
+      { decision: 'accept', fields: [], task: { name: '发送方案资料' } },
     );
   });
 
@@ -188,8 +199,8 @@ describe('the activity a follow-up card creates', () => {
         onChanged={() => Promise.resolve()}
       />,
     );
-    await userEvent.dblClick(screen.getByRole('button', { name: '开始时间' }));
-    const start = screen.getByRole('textbox', { name: '开始时间' });
+    await userEvent.dblClick(screen.getByRole('button', { name: '时间' }));
+    const start = screen.getByRole('textbox', { name: '时间' });
     expect(start).not.toHaveAttribute('type', 'datetime-local');
     expect((start as HTMLInputElement).value).toMatch(
       /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/,
@@ -206,7 +217,7 @@ describe('the activity a follow-up card creates', () => {
       {
         decision: 'accept',
         fields: [],
-        activity: { startAt: new Date(2026, 9, 9, 15, 45).toISOString() },
+        task: { dueAt: new Date(2026, 9, 9, 15, 45).toISOString() },
       },
     );
   });
@@ -234,12 +245,12 @@ describe('the activity a follow-up card creates', () => {
         onChanged={() => Promise.resolve()}
       />,
     );
-    expect(screen.queryByText('将创建的活动')).toBeNull();
+    expect(screen.queryByText('将创建的任务')).toBeNull();
     expect(screen.getByText('下一步：')).toBeTruthy();
   });
 });
 
-describe('the planned activity description', () => {
+describe('the planned task description', () => {
   it('heads what to prepare, ask and send, in the reader language', async () => {
     const { planDescription } =
       await import('../../server/providers/crm/plan.js');
@@ -259,7 +270,7 @@ describe('the planned activity description', () => {
   });
 });
 
-describe('a follow-up that carries on an overdue activity', () => {
+describe('a follow-up that carries on an overdue task', () => {
   it('asks whether it was done, and records what came of it', async () => {
     render(
       <VerdictPanel
@@ -269,10 +280,10 @@ describe('a follow-up that carries on an overdue activity', () => {
             result: {
               ...entry.ai.result,
               nextStep: {
-                type: 'call',
+                type: 'task',
                 subject: '首次电话',
                 inDays: 1,
-                activityId: 'act-1',
+                taskId: 'act-1',
               },
             },
           },
@@ -282,8 +293,8 @@ describe('a follow-up that carries on an overdue activity', () => {
         onChanged={() => Promise.resolve()}
       />,
     );
-    expect(screen.getByText('逾期的活动')).toBeTruthy();
-    // The activity is shown as it stands, while its outcome is being told:
+    expect(screen.getByText('逾期的任务')).toBeTruthy();
+    // The task is shown as it stands, while its outcome is being told:
     // read, not open for changes.
     expect(screen.getByText('首次电话')).toBeTruthy();
     expect(screen.queryByRole('button', { name: '名称' })).toBeNull();
@@ -291,7 +302,7 @@ describe('a follow-up that carries on an overdue activity', () => {
     const record = screen.getByRole('button', { name: '记录结果' });
     expect((record as HTMLButtonElement).disabled).toBe(true);
     await userEvent.type(
-      screen.getByRole('textbox', { name: '反馈 / 结果' }),
+      screen.getByRole('textbox', { name: '结果' }),
       '对方下周看演示',
     );
     await userEvent.click(screen.getByRole('button', { name: '记录结果' }));
@@ -301,7 +312,7 @@ describe('a follow-up that carries on an overdue activity', () => {
       {
         decision: 'accept',
         fields: [],
-        activity: { mode: 'report', outcome: '对方下周看演示' },
+        task: { mode: 'report', outcome: '对方下周看演示' },
       },
     );
     // Not done: moved instead.
@@ -310,7 +321,7 @@ describe('a follow-up that carries on an overdue activity', () => {
   });
 });
 
-describe('a follow-up on an activity that has an earlier one', () => {
+describe('a follow-up on a task that has an earlier one', () => {
   it('takes the place of the earlier parts, keeping what a person wrote', async () => {
     const { mergePlanDescription } =
       await import('../../server/providers/crm/plan.js');
@@ -358,7 +369,7 @@ describe('a follow-up on an activity that has an earlier one', () => {
   });
 });
 
-describe('a follow-up that carries on a planned activity', () => {
+describe('a follow-up that carries on a planned task', () => {
   const carry = (email: { subject: string; body: string }) => ({
     ...entry,
     ai: {
@@ -368,16 +379,16 @@ describe('a follow-up that carries on a planned activity', () => {
         questions: [],
         email,
         nextStep: {
-          type: 'email',
+          type: 'task',
           subject: '首次电话',
           inDays: 2,
-          activityId: 'act-2',
+          taskId: 'act-2',
         },
       },
     },
   });
 
-  it('says when the activity is ready as it is', () => {
+  it('says when the task is ready as it is', () => {
     render(
       <VerdictPanel
         entry={carry({ subject: '方案', body: '您好。' })}
@@ -386,8 +397,8 @@ describe('a follow-up that carries on a planned activity', () => {
         onChanged={() => Promise.resolve()}
       />,
     );
-    expect(screen.getByText('跟进的活动（已安排）')).toBeTruthy();
-    expect(screen.getByText('活动内容已经准备好，无需改动。')).toBeTruthy();
+    expect(screen.getByText('跟进的任务（已安排）')).toBeTruthy();
+    expect(screen.getByText('任务内容已经准备好，无需改动。')).toBeTruthy();
     expect(screen.getByRole('button', { name: '采纳' })).toBeTruthy();
   });
 
@@ -403,7 +414,7 @@ describe('a follow-up that carries on a planned activity', () => {
     expect(
       screen.getByText('采纳后：准备要点 不变 · 邮件草稿 更新'),
     ).toBeTruthy();
-    expect(screen.getByRole('button', { name: '采纳并更新活动' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '采纳并更新任务' })).toBeTruthy();
   });
 
   it('may be told as done though not yet due, the notes written up by the AI', async () => {
@@ -420,18 +431,18 @@ describe('a follow-up that carries on a planned activity', () => {
     );
     // Not due: "not yet" to start with.
     await userEvent.click(screen.getByRole('radio', { name: '已完成' }));
-    const outcome = screen.getByRole('textbox', { name: '反馈 / 结果' });
+    const outcome = screen.getByRole('textbox', { name: '结果' });
     await userEvent.type(outcome, '张总说下周看演示');
     await userEvent.click(screen.getByRole('button', { name: 'AI 整理' }));
     expect(state.api).toHaveBeenCalledWith(
-      'activities/act-2/feedback/organise',
+      'tasks/act-2/feedback/organise',
       'POST',
       { text: '张总说下周看演示' },
     );
     expect(
       (
         screen.getByRole('textbox', {
-          name: '反馈 / 结果',
+          name: '结果',
         }) as HTMLTextAreaElement
       ).value,
     ).toBe('**对方反馈**\n- 下周看演示');
@@ -448,7 +459,7 @@ describe('a follow-up that carries on a planned activity', () => {
       'POST',
       expect.objectContaining({
         decision: 'accept',
-        activity: expect.objectContaining({
+        task: expect.objectContaining({
           mode: 'report',
           outcome: '**对方反馈**\n- 下周看演示',
           followUp: false,
@@ -469,9 +480,9 @@ describe("a deal's follow-up card", () => {
         confidence: 'medium' as const,
         stage: 'validation',
         summary: '演示做过，客户试用反馈良好',
-        reasons: ['上周演示（活动）'],
+        reasons: ['上周演示（备注）'],
         risks: ['还没见过拍板人'],
-        nextStep: { type: 'meeting', subject: '技术评估会', inDays: 2 },
+        nextStep: { type: 'task', subject: '技术评估会', inDays: 2 },
         prep: ['带上部署方案'],
         questions: [],
         email: null,
@@ -524,7 +535,7 @@ describe("a deal's follow-up card", () => {
     expect(state.api).toHaveBeenCalledWith(
       'opportunities/opp-1/evaluation/entry-2',
       'POST',
-      { decision: 'accept', fields: ['expectedCloseAt'], activity: {} },
+      { decision: 'accept', fields: ['expectedCloseAt'], task: {} },
     );
   });
 
@@ -617,7 +628,7 @@ describe("a deal's follow-up card", () => {
     expect(state.api).toHaveBeenCalledWith(
       'opportunities/opp-1/evaluation/entry-2',
       'POST',
-      { decision: 'accept', fields: [], activity: {} },
+      { decision: 'accept', fields: [], task: {} },
     );
   });
 });

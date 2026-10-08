@@ -6,22 +6,22 @@ import {
   type WorkflowSourceAst,
 } from '@nocobase/app-plugin-workflow';
 
-// The reminder an activity sends shortly before it starts, to its owner
+// The reminder a task sends shortly before it starts, to its owner
 // and each internal participant. The CRM's scheduled scan finds the
-// activities due and starts one run per recipient, keyed by the activity,
-// its start and the recipient, so a later scan of the same activity starts
+// tasks due and starts one run per recipient, keyed by the task,
+// its start and the recipient, so a later scan of the same task starts
 // nothing new; the workflow is the only sender.
 const workflow: WorkflowSourceAst = defineWorkflow({
-  title: 'Activity reminder',
+  title: 'Task reminder',
   description:
-    'Reminds the owner and the internal participants that an activity is about to start; how far ahead follows the "Activity reminder" system setting. Administrators can switch reminders off in the parameters.',
+    'Reminds the owner and the internal participants that a task is about to start; how far ahead follows the "Task reminder" system setting. Administrators can switch reminders off in the parameters.',
   inputSchema: {
     type: 'object',
-    required: ['activityId', 'recipientId', 'startAt'],
+    required: ['taskId', 'recipientId', 'dueAt'],
     properties: {
-      activityId: { type: 'string', minLength: 1 },
+      taskId: { type: 'string', minLength: 1 },
       recipientId: { type: 'string', minLength: 1 },
-      startAt: { type: 'string', minLength: 1 },
+      dueAt: { type: 'string', minLength: 1 },
     },
     additionalProperties: false,
   },
@@ -29,8 +29,7 @@ const workflow: WorkflowSourceAst = defineWorkflow({
     notify: {
       type: 'boolean',
       title: 'Send reminders',
-      description:
-        'When off, no in-app reminder is sent before an activity starts.',
+      description: 'When off, no in-app reminder is sent before a task starts.',
       default: true,
     },
   },
@@ -39,7 +38,7 @@ const workflow: WorkflowSourceAst = defineWorkflow({
       key: 'shouldNotify',
       title: 'Reminders on?',
       description:
-        'Whether to send activity reminders, as the administrator parameter says.',
+        'Whether to send task reminders, as the administrator parameter says.',
       config: { module: './server/notify-enabled' },
     }).branch({
       yes: [],
@@ -55,17 +54,17 @@ const workflow: WorkflowSourceAst = defineWorkflow({
     }),
     RunInstruction.create({
       key: 'remind',
-      title: 'Send the activity reminder',
+      title: 'Send the task reminder',
       description:
-        'Sends the recipient "Upcoming activity" through the CRM notification queue.',
+        'Sends the recipient "Upcoming task" through the CRM notification queue.',
       config: {
         module: './server/remind',
         args: {
-          recordId: '{{$input.activityId}}',
+          recordId: '{{$input.taskId}}',
           recipientId: '{{$input.recipientId}}',
           actorId: 'system',
           event: 'starting',
-          at: '{{$input.startAt}}',
+          at: '{{$input.dueAt}}',
         },
       },
       result: {

@@ -3,11 +3,12 @@ import { crmActor } from '../../ai/tools/crm-records.js';
 import { readEntry } from './ai-entries.js';
 import type { FollowUpTrigger, LeadEvaluator } from './lead-evaluation.js';
 import { toText } from './schema.js';
+import { lastExchanges } from './exchanges.js';
 import type { CrmService } from './service.js';
 
 // The daily look over the open leads for what should have happened and has
 // not (the plan's signals): a new lead nobody has contacted in two days, a
-// lead being worked with no activity in fourteen, and a nurtured lead whose
+// lead being worked with no task in fourteen, and a nurtured lead whose
 // review is due. Each starts the lead's follow-up as its owner, the card
 // saying what started it, so it lands in the owner's Waiting on me; a
 // nurtured lead's review also looks the company up again. A lead with a
@@ -33,35 +34,35 @@ export interface LeadSignalPass {
   started: Partial<Record<FollowUpTrigger, number>>;
 }
 
-// The signal a lead gives at `now`, if any, from its status, its age and
-// its activities.
+// The signal a lead gives at `now`, if any, from its status, its age, its
+// tasks and its last exchange (a task completed, a note, mail;
+// exchanges.ts), 0 when it has had none.
 export function leadSignal(
   lead: Row,
-  activities: readonly Row[],
+  tasks: readonly Row[],
   now: number,
   days: LeadSignalDays = DEFAULT_DAYS,
+  lastExchange = 0,
 ): FollowUpTrigger | undefined {
   const at = (value: unknown): number => Date.parse(toText(value));
   const UNCONTACTED_AFTER = days.uncontacted * DAY;
   const SILENT_AFTER = days.stale * DAY;
-  const planned = activities.filter((a) => a.status === 'planned');
-  const ahead = planned.some((a) => at(a.startAt) >= now);
+  const open = tasks.filter((a) => a.status === 'open' && a.dueAt);
+  // Something planned still to come: nobody needs reminding yet.
+  const ahead = open.some((a) => at(a.dueAt) >= now);
   if (lead.status === 'new')
     return now - at(lead.createdAt) > UNCONTACTED_AFTER &&
-      !activities.some((a) => a.status === 'completed') &&
+      !lastExchange &&
       !ahead
       ? 'uncontacted'
       : undefined;
   if (lead.status === 'working')
-    return now - at(lead.createdAt) > SILENT_AFTER &&
-      !ahead &&
-      !activities.some(
-        (a) => a.status !== 'cancelled' && now - at(a.startAt) <= SILENT_AFTER,
-      )
+    return now - Math.max(lastExchange, at(lead.createdAt)) > SILENT_AFTER &&
+      !ahead
       ? 'silent'
       : undefined;
   if (lead.status === 'nurturing')
-    return planned.some((a) => at(a.startAt) <= now) ? 'nurtureDue' : undefined;
+    return open.some((a) => at(a.dueAt) <= now) ? 'nurtureDue' : undefined;
   return undefined;
 }
 
@@ -88,18 +89,19 @@ export async function scanLeadSignals(
   pass.checked = leads.length;
   if (!leads.length) return pass;
   const ids = leads.map((lead) => toText(lead.id));
-  const activities = new Map<string, Row[]>();
+  const exchanges = await lastExchanges(query, 'leads');
+  const tasks = new Map<string, Row[]>();
   const entries = new Map<string, ReturnType<typeof readEntry>[]>();
   // In chunks, as SQLite caps the parameters of one statement.
   for (let i = 0; i < ids.length; i += 500) {
     const chunk = ids.slice(i, i + 500);
-    for (const activity of await query
-      .selectFrom('crmActivities')
-      .select(['leadId', 'status', 'startAt'])
+    for (const task of await query
+      .selectFrom('crmTasks')
+      .select(['leadId', 'status', 'dueAt'])
       .where('leadId', 'in', chunk)
       .execute()) {
-      const key = toText(activity.leadId);
-      activities.set(key, [...(activities.get(key) ?? []), activity]);
+      const key = toText(task.leadId);
+      tasks.set(key, [...(tasks.get(key) ?? []), task]);
     }
     for (const row of await query
       .selectFrom('crmHistory')
@@ -123,9 +125,10 @@ export async function scanLeadSignals(
       continue;
     const signal = leadSignal(
       lead,
-      activities.get(id) ?? [],
+      tasks.get(id) ?? [],
       now.getTime(),
       days,
+      exchanges.get(id) ?? 0,
     );
     if (!signal || !lead.ownerId) continue;
     // Once a week per signal, counting only follow-ups that came to

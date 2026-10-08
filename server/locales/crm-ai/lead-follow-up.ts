@@ -10,9 +10,9 @@ export const followUpTitle: Pair = ['跟进线索', 'Lead follow-up'];
 // The name of the review task a nurtured lead gets, after the company name.
 export const nurtureReviewName: Pair = ['培育复查', 'nurture review'];
 
-// An activity's name where the model left its reference (A1…) in a text;
+// A task's name where the model left its reference (A1…) in a text;
 // `%s` is the name. Chinese corner brackets, English quotation marks.
-export const activityNameQuote: Pair = ['「%s」', '“%s”'];
+export const taskNameQuote: Pair = ['「%s」', '“%s”'];
 
 // Words the verdict prompt hands the model to write in its output, in the
 // output language.

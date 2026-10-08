@@ -1,3 +1,4 @@
+import { isEndOfDay } from '../../server/providers/crm/zone-time.js';
 import { OpportunityCaptureDialog } from '../components/crm/opportunity-capture.js';
 import {
   PAGE_SIZE,
@@ -6,7 +7,13 @@ import {
 } from '../components/crm/api.js';
 import { recordTitle } from '../components/crm/lookups.js';
 import { editsAll, fieldLabelKey, toText } from '../components/crm/api.js';
-import { useEffect, useRef, useState, type ReactElement } from 'react';
+import {
+  Fragment,
+  useEffect,
+  useRef,
+  useState,
+  type ReactElement,
+} from 'react';
 import { useLocation } from 'react-router';
 import {
   useInfiniteQuery,
@@ -124,23 +131,23 @@ function EntityList({
   const api = useCrmApi();
   const scopeKey = useCrmScopeKey();
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState(initialStatus ?? '');
+  // Tasks open on what is still to do, unless a workspace card opened the
+  // list on a set of its own.
+  const defaultStatus =
+    initialStatus ?? (entity === 'tasks' && !initialMetric ? 'open' : '');
+  const [status, setStatus] = useState(defaultStatus);
   const [ownerId, setOwnerId] = useState('');
   const [source, setSource] = useState('');
   const [employed, setEmployed] = useState('');
   const [topic, setTopic] = useState('');
-  // Activities only: everyone's, the ones I own, the ones I take part in.
+  // Tasks only: everyone's, the ones I own, the ones I take part in.
   const [scope, setScope] = useState<'all' | 'mine' | 'participating'>('all');
   const [approverId, setApproverId] = useState('');
   // Leads and opportunities are worked as funnels, so they open on the
-  // board; activities are read by date, so they open on the calendar; the
-  // rest open on the list.
+  // board; the rest, tasks included, open on the list (tasks by when they
+  // are due, the calendar beside it).
   const [view, setView] = useState(
-    ['leads', 'opportunities'].includes(entity)
-      ? 'board'
-      : entity === 'activities'
-        ? 'calendar'
-        : 'list',
+    ['leads', 'opportunities'].includes(entity) ? 'board' : 'list',
   );
   const [page, setPage] = useState(1);
   // The column the list is sorted by, from a header click; unset, the server
@@ -176,8 +183,17 @@ function EntityList({
         ? { key: initialMetric, ids: initialIds }
         : undefined
       : (metric ?? undefined);
+  // What the page opens on (a task list's to-do status) is not a filter
+  // the reader set, so it leaves the search closed, as on every list.
   const filtering = Boolean(
-    search || status || ownerId || source || employed || topic || approverId,
+    search ||
+    (status && status !== defaultStatus) ||
+    ownerId ||
+    source ||
+    employed ||
+    topic ||
+    approverId ||
+    scope !== 'all',
   );
   const [month, setMonth] = useState(() =>
     new Date().toISOString().slice(0, 7),
@@ -186,7 +202,7 @@ function EntityList({
   const [expandedDays, setExpandedDays] = useState<Set<string>>(
     () => new Set(),
   );
-  // The day a phone's calendar shows the activities of; unset, today when
+  // The day a phone's calendar shows the tasks of; unset, today when
   // the month shown is this one, else its first day.
   const [pickedDay, setPickedDay] = useState<string>();
   // Where a swipe across the phone's calendar started.
@@ -320,6 +336,9 @@ function EntityList({
       'sort',
       sort.direction === 'desc' ? `-${sort.key}` : sort.key,
     );
+  // Tasks, unsorted by the reader, come soonest first, those with no time
+  // last.
+  else if (entity === 'tasks') listParams.set('sort', 'dueAt');
   const path = `${toText(entity)}?${listParams.toString()}`;
   const query = useQuery({
     queryKey: [...scopeKey, path],
@@ -329,11 +348,11 @@ function EntityList({
     refetchInterval: (q) =>
       Object.values(q.state.data?.ai ?? {}).includes('running') ? 5000 : false,
   });
-  // The calendar reads one month from the server, by when activities
+  // The calendar reads one month from the server, by when tasks
   // happen, with the same filters as the list. The range is widened by a
   // day either side so every business timezone's month is covered; the
   // cells only draw the days they own. Pages are read until the month is
-  // complete: a month's activities are bounded, and a cell needs them all
+  // complete: a month's tasks are bounded, and a cell needs them all
   // to say how many it hides.
   const monthStart = Date.UTC(
     Number(month.slice(0, 4)),
@@ -347,11 +366,8 @@ function EntityList({
   );
   const calendarParams = new URLSearchParams(params);
   for (const key of ['page', 'pageSize']) calendarParams.delete(key);
-  calendarParams.set(
-    'startFrom',
-    new Date(monthStart - 86400000).toISOString(),
-  );
-  calendarParams.set('startTo', new Date(monthEnd + 86400000).toISOString());
+  calendarParams.set('dueFrom', new Date(monthStart - 86400000).toISOString());
+  calendarParams.set('dueTo', new Date(monthEnd + 86400000).toISOString());
   calendarParams.set('pageSize', '500');
   const calendarPath = `${toText(entity)}?${calendarParams.toString()}`;
   const calendar = useQuery({
@@ -371,19 +387,19 @@ function EntityList({
   });
   const filtered = calendar.data ?? [];
   const calendarTimeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
-  // The month's activities by the day they start on in the business time
+  // The month's tasks by the day they start on in the business time
   // zone, morning first, the way a day is read.
   const byDay = new Map<string, CrmRecord[]>();
   for (const r of [...filtered].sort((a, b) =>
-    toText(a.startAt).localeCompare(toText(b.startAt)),
+    toText(a.dueAt).localeCompare(toText(b.dueAt)),
   )) {
-    if (!r.startAt) continue;
+    if (!r.dueAt) continue;
     const day = new Intl.DateTimeFormat('en-CA', {
       timeZone: calendarTimeZone,
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
-    }).format(new Date(toText(r.startAt)));
+    }).format(new Date(toText(r.dueAt)));
     byDay.set(day, [...(byDay.get(day) ?? []), r]);
   }
   const monthDays = Array.from(
@@ -427,7 +443,7 @@ function EntityList({
     : today.startsWith(month)
       ? today
       : `${month}-01`;
-  // An activity on the calendar: its title, then the clock time and owner,
+  // A task on the calendar: its title, then the clock time and owner,
   // the way the workspace's agenda cards read; the date is the cell's or the
   // heading's. On today's tinted cell a card sits on the card surface, so it
   // still reads as a card; under a phone's month it is a full-size card.
@@ -446,10 +462,13 @@ function EntityList({
     >
       <RecordLink entity={entity} record={r} />
       <p className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground'>
-        <span className='inline-flex items-center gap-1 tabular-nums'>
-          <Clock className='size-3 shrink-0' />
-          {localTime(r.startAt, calendarTimeZone)}
-        </span>
+        {/* A task due on a date alone has no time to show. */}
+        {!isEndOfDay(new Date(toText(r.dueAt)), calendarTimeZone) && (
+          <span className='inline-flex items-center gap-1 tabular-nums'>
+            <Clock className='size-3 shrink-0' />
+            {localTime(r.dueAt, calendarTimeZone)}
+          </span>
+        )}
         <span className='inline-flex items-center gap-1'>
           <User className='size-3 shrink-0' />
           {meta?.users.find((u) => u.id === r.ownerId)?.name}
@@ -537,7 +556,7 @@ function EntityList({
       </CrmFrame>
     );
   if (!meta || !definition) return <Loading />;
-  // The view switch, the activity scope, the search toggle and the CSV
+  // The view switch, the task scope, the search toggle and the CSV
   // actions sit in the header beside the create button, not on a row of
   // their own.
   const views: [string, typeof LayoutList][] = [
@@ -545,7 +564,7 @@ function EntityList({
     ...(['leads', 'accounts', 'opportunities'].includes(entity)
       ? [['board', Columns3] as [string, typeof LayoutList]]
       : []),
-    ...(entity === 'activities'
+    ...(entity === 'tasks'
       ? [['calendar', CalendarDays] as [string, typeof LayoutList]]
       : []),
   ];
@@ -576,24 +595,6 @@ function EntityList({
       >
         <Search />
       </Button>
-      {/* Whose activities: always in the toolbar, not a filter to open. */}
-      {entity === 'activities' && (
-        <div className='flex rounded-lg border p-0.5'>
-          {(['all', 'mine', 'participating'] as const).map((value) => (
-            <Button
-              key={value}
-              size='sm'
-              variant={scope === value ? 'secondary' : 'ghost'}
-              onClick={() => {
-                setScope(value);
-                setPage(1);
-              }}
-            >
-              {text(value)}
-            </Button>
-          ))}
-        </div>
-      )}
       <div className='flex gap-2'>
         {writable && (
           <Button
@@ -696,6 +697,25 @@ function EntityList({
               onChange={(e) => change(setSearch)(e.target.value)}
             />
           </div>
+          {/* Whose tasks: everyone's, the ones I own, the ones I take part in. */}
+          {entity === 'tasks' && (
+            <div className='w-44'>
+              <Choice
+                label={text('taskScope')}
+                value={scope}
+                onChange={(v) => {
+                  setScope((v || 'all') as 'all' | 'mine' | 'participating');
+                  setPage(1);
+                }}
+                choices={(['all', 'mine', 'participating'] as const).map(
+                  (value) => ({
+                    value,
+                    label: text(value === 'all' ? 'taskScopeAll' : value),
+                  }),
+                )}
+              />
+            </div>
+          )}
           {definition?.statuses.length ? (
             <div className='w-44'>
               <Choice
@@ -825,85 +845,86 @@ function EntityList({
                 </TableHeader>
                 <TableBody>
                   {query.data.data.map((record) => (
-                    <TableRow key={record.id}>
-                      {columns.map((key) => (
-                        <TableCell
-                          // Every value, the name included, is cut with an
-                          // ellipsis, so a cell never runs over the next one,
-                          // which on a phone put two columns' text on top of
-                          // each other.
-                          className='max-w-72 truncate px-4 py-4'
-                          key={key}
-                        >
-                          {key === 'name' ? (
-                            <span className='flex min-w-0 flex-col items-start gap-1'>
-                              <RecordLink
-                                entity={entity}
-                                record={{
-                                  id: record.id,
-                                  // A contact's account is its own column
-                                  // here, so the link is the bare name.
-                                  name:
-                                    entity === 'contacts'
-                                      ? toText(record.name)
-                                      : recordTitle(entity, record, lookup),
-                                }}
-                              />
-                              {/* Under the name: the AI at work on the
+                    <Fragment key={record.id}>
+                      <TableRow>
+                        {columns.map((key) => (
+                          <TableCell
+                            // Every value, the name included, is cut with an
+                            // ellipsis, so a cell never runs over the next one,
+                            // which on a phone put two columns' text on top of
+                            // each other.
+                            className='max-w-72 truncate px-4 py-4'
+                            key={key}
+                          >
+                            {key === 'name' ? (
+                              <span className='flex min-w-0 flex-col items-start gap-1'>
+                                <RecordLink
+                                  entity={entity}
+                                  record={{
+                                    id: record.id,
+                                    // A contact's account is its own column
+                                    // here, so the link is the bare name.
+                                    name:
+                                      entity === 'contacts'
+                                        ? toText(record.name)
+                                        : recordTitle(entity, record, lookup),
+                                  }}
+                                />
+                                {/* Under the name: the AI at work on the
                                   row, or its suggestion waiting, as on
                                   the board. */}
-                              <AiRowMark
-                                state={query.data.ai?.[toText(record.id)]}
-                                review={entity === 'approvals'}
-                              />
-                            </span>
-                          ) : key === 'opportunityAmount' ? (
-                            (() => {
-                              const deal = opportunityOf(record);
-                              return deal?.amount ? (
-                                <span className='tabular-nums'>
-                                  {money(
-                                    deal.amount,
-                                    toText(deal.currency),
-                                    language,
-                                  )}
-                                </span>
+                                <AiRowMark
+                                  state={query.data.ai?.[toText(record.id)]}
+                                  review={entity === 'approvals'}
+                                />
+                              </span>
+                            ) : key === 'opportunityAmount' ? (
+                              (() => {
+                                const deal = opportunityOf(record);
+                                return deal?.amount ? (
+                                  <span className='tabular-nums'>
+                                    {money(
+                                      deal.amount,
+                                      toText(deal.currency),
+                                      language,
+                                    )}
+                                  </span>
+                                ) : (
+                                  '—'
+                                );
+                              })()
+                            ) : entity === 'approvals' && key === 'topic' ? (
+                              record[key] ? (
+                                <KindTag value={record[key]} />
                               ) : (
                                 '—'
-                              );
-                            })()
-                          ) : (entity === 'activities' && key === 'type') ||
-                            (entity === 'approvals' && key === 'topic') ? (
-                            record[key] ? (
-                              <KindTag value={record[key]} />
+                              )
+                            ) : key === 'status' &&
+                              entity === 'approvals' &&
+                              record.status === 'pending' &&
+                              record.approverId === meta?.userId ? (
+                              // The reader's own queue, marked as on the page.
+                              <span className='flex flex-wrap items-center gap-2'>
+                                <Status value={record.status} />
+                                <Badge>{text('yourDecision')}</Badge>
+                              </span>
                             ) : (
-                              '—'
-                            )
-                          ) : key === 'status' &&
-                            entity === 'approvals' &&
-                            record.status === 'pending' &&
-                            record.approverId === meta?.userId ? (
-                            // The reader's own queue, marked as on the page.
-                            <span className='flex flex-wrap items-center gap-2'>
-                              <Status value={record.status} />
-                              <Badge>{text('yourDecision')}</Badge>
-                            </span>
-                          ) : (
-                            <Value
-                              record={record}
-                              field={
-                                definition.fields.find(
-                                  (f) => f.key === key,
-                                ) ?? {
-                                  key,
+                              <Value
+                                record={record}
+                                field={
+                                  definition.fields.find(
+                                    (f) => f.key === key,
+                                  ) ?? {
+                                    key,
+                                  }
                                 }
-                              }
-                              lookup={lookup}
-                            />
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
+                                lookup={lookup}
+                              />
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </Fragment>
                   ))}
                 </TableBody>
               </Table>
@@ -1128,7 +1149,7 @@ function EntityList({
           </div>
           {/* The month grid needs about 110px a day, which a phone or a tablet
               beside the sidebar does not have: below 1024px the month is a
-              grid of dates, and the activities of the date picked show under
+              grid of dates, and the tasks of the date picked show under
               it. */}
           <div className='space-y-4 lg:hidden'>
             <div
@@ -1275,7 +1296,7 @@ function EntityList({
                 )
               ) : (
                 <p className='rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground'>
-                  {text('noActivitiesOnDay')}
+                  {text('noTasksOnDay')}
                 </p>
               )}
             </div>

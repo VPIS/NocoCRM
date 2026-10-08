@@ -122,15 +122,14 @@ const filterProperties = {
     type: 'string',
     description: 'ISO timestamp; keeps records created at or before it.',
   },
-  startFrom: {
+  dueFrom: {
     type: 'string',
     description:
-      'Activities only: ISO timestamp; keeps activities that start at or after it (when they take place, not when they were recorded).',
+      'Tasks only: ISO timestamp; keeps tasks due at or after it (when they are due, not when they were recorded).',
   },
-  startTo: {
+  dueTo: {
     type: 'string',
-    description:
-      'Activities only: ISO timestamp; keeps activities that start at or before it.',
+    description: 'Tasks only: ISO timestamp; keeps tasks due at or before it.',
   },
 };
 
@@ -145,8 +144,8 @@ function filtersOf(args: Row): ListOptions {
     source: text(args.source),
     from: text(args.from),
     to: text(args.to),
-    startFrom: text(args.startFrom),
-    startTo: text(args.startTo),
+    dueFrom: text(args.dueFrom),
+    dueTo: text(args.dueTo),
   };
 }
 
@@ -164,7 +163,7 @@ export function crmRecordTools(
       introduction: {
         title: 'Search CRM records',
         about:
-          'Finds leads, accounts, contacts, opportunities, activities and approvals the current user may read, a page at a time.',
+          'Finds leads, accounts, contacts, opportunities, tasks and approvals the current user may read, a page at a time.',
       },
       definition: {
         name: 'search_records',
@@ -225,7 +224,7 @@ export function crmRecordTools(
       definition: {
         name: 'summarize_records',
         description:
-          'Count and total the records of one CRM object that this user may read, with the same filters as search_records, optionally grouped by a field (stage, status, source, industry, ownerId, accountId, a country ...) or by a period of a date field (createdAt, closedAt, expectedCloseAt, startAt ...; period day, week, month, quarter or year, in the business time zone), with sum, average, min and max of number fields (measures, such as amount). Returns {total, truncated, groupBy, period, groups: [{key, count, measures}], overall, names}: total is every matching record, a group key is the field value (an enum value to put in words, or an id whose display name is in names) or the period ("2026-09", "2026-Q3", a week by its Monday), null for records without one; measures and overall hold {field, currency, sum, average, min, max, counted}, one entry per currency, since amounts in different currencies are never added together. A participants field counts a record once for each participant. Use it for every count, total, breakdown or trend instead of paging through search_records.',
+          'Count and total the records of one CRM object that this user may read, with the same filters as search_records, optionally grouped by a field (stage, status, source, industry, ownerId, accountId, a country ...) or by a period of a date field (createdAt, closedAt, expectedCloseAt, dueAt ...; period day, week, month, quarter or year, in the business time zone), with sum, average, min and max of number fields (measures, such as amount). Returns {total, truncated, groupBy, period, groups: [{key, count, measures}], overall, names}: total is every matching record, a group key is the field value (an enum value to put in words, or an id whose display name is in names) or the period ("2026-09", "2026-Q3", a week by its Monday), null for records without one; measures and overall hold {field, currency, sum, average, min, max, counted}, one entry per currency, since amounts in different currencies are never added together. A participants field counts a record once for each participant. Use it for every count, total, breakdown or trend instead of paging through search_records.',
         schema: {
           type: 'object',
           properties: {

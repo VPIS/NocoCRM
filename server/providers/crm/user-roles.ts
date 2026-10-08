@@ -1,4 +1,4 @@
-import type { DatabaseConnection } from '@nocobase/db';
+import type { DatabaseConnection, QueryAdapter } from '@nocobase/db';
 import type { AppAuthorization } from '@nocobase/app-plugin-authorization/server';
 import {
   UserManagementError,
@@ -15,6 +15,37 @@ import { roleKey, roles } from './authorization.js';
 // only the three CRM roles are offered. The permission sets stay the
 // source of truth.
 const ADMINISTRATOR = 'system-administrator';
+
+// Whether a user still owns, created or decides a CRM record: deleting them
+// would leave it without its person, so such an account is disabled instead.
+const CRM_TABLES = [
+  'crmLeads',
+  'crmAccounts',
+  'crmContacts',
+  'crmOpportunities',
+  'crmTasks',
+  'crmApprovals',
+] as const;
+export async function holdsCrmRecords(
+  query: QueryAdapter,
+  userId: string,
+): Promise<boolean> {
+  for (const table of CRM_TABLES) {
+    const row = await query
+      .selectFrom(table)
+      .select('id')
+      .where((eb) =>
+        eb.or([
+          eb('ownerId', '=', userId),
+          eb('createdById', '=', userId),
+          ...(table === 'crmApprovals' ? [eb('approverId', '=', userId)] : []),
+        ]),
+      )
+      .executeTakeFirst();
+    if (row) return true;
+  }
+  return false;
+}
 const USERS_I18N_NAMESPACE = '@nocobase/app-plugin-users';
 
 export function createCrmUserRoleScope(
@@ -129,6 +160,31 @@ export function createCrmUserRoleScope(
         subject: { type: 'user', id: userId },
         managedPermissionSets: managed,
         permissionSets: chosen,
+      });
+    },
+    // Deleting a user (the Users page, or removing the demo data): never the
+    // last administrator, and never someone a CRM record still names as its
+    // owner, creator or approver; their CRM roles go with them.
+    async assertCanDelete(userId, _actorId, connection) {
+      const admins = administrators(await sets(connection).listAssignments());
+      if (admins.length === 1 && admins[0] === userId)
+        throw new UserRoleScopeError(
+          'LAST_ADMINISTRATOR',
+          'The last administrator cannot be deleted',
+          409,
+        );
+      if (await holdsCrmRecords(connection.query, userId))
+        throw new UserRoleScopeError(
+          'USER_HAS_CRM_RECORDS',
+          'This user still owns, created or decides CRM records; disable the account instead',
+          409,
+        );
+    },
+    async onDelete(userId, connection) {
+      await sets(connection).replaceSubjectAssignments({
+        subject: { type: 'user', id: userId },
+        managedPermissionSets: managed,
+        permissionSets: [],
       });
     },
     async assertCanDisable(userId, connection) {

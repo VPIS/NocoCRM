@@ -71,18 +71,18 @@ export interface ListOptions {
   source?: string;
   // "true" / "false": contacts by whether they are still at the account.
   employed?: string;
-  // Activities a user is an internal participant of (their id).
+  // Tasks a user is an internal participant of (their id).
   participantId?: string;
   topic?: string;
   approverId?: string;
   from?: string;
   to?: string;
-  // Activities by when they happen (ISO instants), for the calendar's month.
-  startFrom?: string;
-  startTo?: string;
+  // Tasks by when they happen (ISO instants), for the calendar's month.
+  dueFrom?: string;
+  dueTo?: string;
   // Everything but this status: a picker that must not offer converted leads.
   excludeStatus?: string;
-  // Activities a user runs or takes part in: their own agenda.
+  // Tasks a user runs or takes part in: their own agenda.
   involvedId?: string;
   // The order rows come in: a column this reader may read, a leading minus
   // for descending; the default is newest first by creation. The columns a
@@ -108,10 +108,10 @@ export interface ListResult {
 // at the parent. Shared by remove(), which refuses when any exist, and
 // detail(), which counts them so the confirmation can say what is in the way.
 export function deletionChecks(entity: Entity): [Entity, string][] {
-  // Activities are not listed for accounts: they are handled like a lead's,
+  // Tasks are not listed for accounts: they are handled like a lead's,
   // deleted when the account was their only anchor and unlinked otherwise.
   // Contacts have no blockers: the places that mention one (an opportunity's
-  // contact list, an activity's participants, a converted lead's pointer)
+  // contact list, a task's participants, a converted lead's pointer)
   // are cleaned up by remove() instead, since none of them needs the contact
   // to stay valid.
   return entity === 'accounts'
@@ -122,7 +122,7 @@ export function deletionChecks(entity: Entity): [Entity, string][] {
       ]
     : entity === 'opportunities'
       ? // Only approvals block: they are an audit trail that cannot follow
-        // the deal out. Activities cascade or unlink as they do for an
+        // the deal out. Tasks cascade or unlink as they do for an
         // account; a converted lead's pointer is cleared.
         [['approvals', 'opportunityId']]
       : [];
@@ -139,12 +139,11 @@ function noteText(value: unknown): string {
   return text;
 }
 
-// What of an activity its lead, account, opportunity or contact is told
-// on its timeline: planned, moved (its time), handed to another owner,
-// completed or cancelled (a no-show, as recorded before that status went,
-// reads as cancelled), and deleted. Its other edits stay on the activity.
-const TOLD = ['startAt', 'ownerId'];
-const TOLD_STATUSES = ['completed', 'cancelled', 'noShow'];
+// What of a task its lead, account, opportunity or contact is told on its
+// timeline: added, moved (its due time), handed to another owner, completed
+// or cancelled, and deleted. Its other edits stay on the task.
+const TOLD = ['dueAt', 'ownerId'];
+const TOLD_STATUSES = ['completed', 'cancelled'];
 
 export class CrmService {
   constructor(
@@ -307,7 +306,7 @@ export class CrmService {
     if (!aiLanguages.includes(value.aiLanguage))
       throw new CrmError('invalidInput', 400, 'aiLanguage');
     for (const key of [
-      'activityReminderMinutes',
+      'taskReminderMinutes',
       'closeReminderDays',
       'uncontactedDays',
       'leadStaleDays',
@@ -392,11 +391,11 @@ export class CrmService {
   // conversion route (unless the person unticked it) and the assistant's
   // conversion tool.
   opportunityOpened?: (by: Actor, opportunityId: string) => void;
-  // Set by CrmProvider: an activity's status set to completed outside the
+  // Set by CrmProvider: a task's status set to completed outside the
   // outcome dialogs (its form, a list, the assistant), which follow its
   // record up themselves; and a lead's company or website changed by a
   // person, which has the AI look the company up again.
-  activityCompleted?: (by: Actor, activity: CrmRecord) => void;
+  taskCompleted?: (by: Actor, task: CrmRecord) => void;
   // An approval approved or rejected: its deal is followed up again, so the
   // AI reads the decision (CrmProvider).
   approvalDecided?: (by: Actor, approval: CrmRecord) => void;
@@ -473,11 +472,10 @@ export class CrmService {
         '!=',
         options.excludeStatus,
       );
-    if (entity === 'activities') {
-      if (options.startFrom)
-        select = select.where('startAt', '>=', options.startFrom);
-      if (options.startTo)
-        select = select.where('startAt', '<=', options.startTo);
+    if (entity === 'tasks') {
+      if (options.dueFrom)
+        select = select.where('dueAt', '>=', options.dueFrom);
+      if (options.dueTo) select = select.where('dueAt', '<=', options.dueTo);
     }
     if (
       (options.employed === 'true' || options.employed === 'false') &&
@@ -486,13 +484,13 @@ export class CrmService {
       select = select.where('employed', '=', options.employed === 'true');
     // Participants are a JSON array of ids; the quoted id is what marks
     // membership, so a prefix of another id cannot match.
-    if (options.participantId && entity === 'activities')
+    if (options.participantId && entity === 'tasks')
       select = select.where(
         'internalParticipants',
         'like',
         `%"${options.participantId.replace(/[%_"]/g, '')}"%`,
       );
-    if (options.involvedId && entity === 'activities') {
+    if (options.involvedId && entity === 'tasks') {
       const id = options.involvedId;
       select = select.where((eb) =>
         eb.or([
@@ -559,7 +557,7 @@ export class CrmService {
       if (!DATABASE_ORDERS.has(sortField) && total <= ORDER_IN_MEMORY_LIMIT) {
         const keyed = await select
           .clearSelect()
-          .select(['id', sortField])
+          .select(['id', 'createdAt', sortField])
           .execute();
         const order = orderKind(entity, sortField);
         let names: Record<string, string> = {};
@@ -604,7 +602,7 @@ export class CrmService {
           pageSize,
         };
       }
-      // On a tie (two activities starting at the same time), the one
+      // On a tie (two tasks starting at the same time), the one
       // created later comes first; the id only keeps the order stable.
       let ordered = select.orderBy(sortField, direction);
       if (sortField !== 'createdAt')
@@ -624,12 +622,13 @@ export class CrmService {
     // Related contact membership is JSON; apply its filter before pagination.
     const all = await select.orderBy('createdAt', 'desc').execute();
     const filtered = options.contactId
-      ? all.filter((r) =>
-          entity === 'activities'
-            ? array(r.externalParticipants).includes(options.contactId)
-            : array(r.contacts).some(
-                (x) => object(x).contactId === options.contactId,
-              ),
+      ? all.filter(
+          (r) =>
+            // A task has no customer people of its own.
+            entity !== 'tasks' &&
+            array(r.contacts).some(
+              (x) => object(x).contactId === options.contactId,
+            ),
         )
       : all;
     return {
@@ -749,25 +748,24 @@ export class CrmService {
       Math.max(1, options.pageSize ?? RELATED_PAGE),
     );
     const query = this.database.query();
-    // The activities linked to the record that the reader may see: their
+    // The tasks linked to the record that the reader may see: their
     // planning, edits and outcome are part of the record's story (one
-    // deleted is told on the record itself, as activityDeleted). Not for
+    // deleted is told on the record itself, as taskDeleted). Not for
     // the notes alone.
     const link = (
       {
         leads: 'leadId',
         accounts: 'accountId',
         opportunities: 'opportunityId',
-        contacts: 'contactId',
       } as Partial<Record<Entity, keyof ListOptions>>
     )[entity];
-    const activities = new Map<string, CrmRecord>();
+    const tasks = new Map<string, CrmRecord>();
     if (link && options.action !== 'note')
-      for (const activity of (
-        await this.list(actor, 'activities', { [link]: id, pageSize: 1000 })
+      for (const task of (
+        await this.list(actor, 'tasks', { [link]: id, pageSize: 1000 })
       ).data)
-        activities.set(toText(activity.id), activity);
-    const activityIds = [...activities.keys()];
+        tasks.set(toText(task.id), task);
+    const taskIds = [...tasks.keys()];
     // A deal's approvals the reader may read: submitted, decided and
     // withdrawn are part of the deal's story too. Only their status
     // changes: an approval's AI review stays its approver's.
@@ -781,27 +779,24 @@ export class CrmService {
       ).data)
         approvals.set(toText(approval.id), approval);
     const approvalIds = [...approvals.keys()];
-    const activityFields = activityIds.length
-      ? outputFields(
-          'activities',
-          await conditions(actor, 'activities', 'read'),
-        )
+    const taskFields = taskIds.length
+      ? outputFields('tasks', await conditions(actor, 'tasks', 'read'))
       : [];
     const readableOf = (values: Row): Row =>
       Object.fromEntries(
         Object.entries(values).filter(
-          ([key]) => TOLD.includes(key) && activityFields.includes(key),
+          ([key]) => TOLD.includes(key) && taskFields.includes(key),
         ),
       );
-    // The record's own entries, and those of its activities that tell.
+    // The record's own entries, and those of its tasks that tell.
     const ofRecord = (eb: ExpressionBuilder): Expression<SqlBool> => {
       const own = eb.and([eb('entity', '=', entity), eb('recordId', '=', id)]);
       const linked = [
-        ...(activityIds.length
+        ...(taskIds.length
           ? [
               eb.and([
-                eb('entity', '=', 'activities'),
-                eb('recordId', 'in', activityIds),
+                eb('entity', '=', 'tasks'),
+                eb('recordId', 'in', taskIds),
                 eb('action', 'in', ['created', 'status', 'updated']),
               ]),
             ]
@@ -838,15 +833,15 @@ export class CrmService {
         ? shown.where('action', '=', 'note')
         : shown;
     };
-    // An activity's edit tells the record only when it changes who has it
+    // A task's edit tells the record only when it changes who has it
     // or when it is (TOLD), and a change of status only to done or called
-    // off; its other edits stay on the activity. Which
+    // off; its other edits stay on the task. Which
     // fields an edit changed is read from its JSON, so a record with
-    // activities is filtered and paged here rather than by the database (a
+    // tasks is filtered and paged here rather than by the database (a
     // record's history is short).
     const told = (event: Row): boolean =>
-      event.entity !== 'activities' ||
-      entity === 'activities' ||
+      event.entity !== 'tasks' ||
+      entity === 'tasks' ||
       event.action === 'created' ||
       (event.action === 'status' &&
         TOLD_STATUSES.includes(toText(event.toValue))) ||
@@ -861,7 +856,7 @@ export class CrmService {
       .orderBy('id', 'asc');
     let rows: Row[];
     let total: number;
-    if (activityIds.length) {
+    if (taskIds.length) {
       const all = (await ordered.execute()).filter(told);
       total = all.length;
       rows = all.slice((page - 1) * pageSize, page * pageSize);
@@ -898,45 +893,46 @@ export class CrmService {
               },
             };
           })()
-        : // An activity's entry: the activity as it now reads (name, type,
-          // status, time, outcome) and, for a new time, the time before.
-          // (Not the activity's own history, whose entries are its own.)
-          event.entity === 'activities' && entity !== 'activities'
+        : // A task's entry: the task as it now reads (name, status, due
+          // time, result) and, for a new due time, the one before.
+          // (Not the task's own history, whose entries are its own.)
+          event.entity === 'tasks' && entity !== 'tasks'
           ? (() => {
-              const activity = activities.get(toText(event.recordId))!;
+              const task = tasks.get(toText(event.recordId))!;
               const changes = object(jsonValue(event.changes) ?? {});
               const previous = object(jsonValue(event.previous) ?? {});
               return {
                 ...event,
-                // When it was planned for; for an edit, the fields it changed
+                // When it is due; for an edit, the fields it changed
                 // that the record is told of and the reader may read, before
                 // and after.
                 changes:
                   event.action === 'created'
-                    ? { startAt: changes.startAt ?? null }
+                    ? { dueAt: changes.dueAt ?? null }
                     : event.action === 'updated'
                       ? readableOf(changes)
                       : {},
                 previous:
                   event.action === 'updated' ? readableOf(previous) : null,
                 ai: null,
-                activity: {
-                  id: activity.id,
-                  name: activity.name,
-                  type: activity.type,
-                  status: activity.status,
-                  startAt: activity.startAt,
-                  feedback: activity.feedback ?? null,
+                task: {
+                  id: task.id,
+                  name: task.name,
+                  status: task.status,
+                  dueAt: task.dueAt ?? null,
+                  result: task.result ?? null,
                 },
               };
             })()
           : // A note's text is the note, not a field of the record; an edit
             // entry carries the text as changed, and a person's instruction to
-            // the AI to redo a card (aiRevise) its words.
+            // the AI to redo a card (aiRevise) its words, and a mail
+            // conversation (mail-timeline.ts) its summary.
             event.action === 'note' ||
+              event.action === 'mail' ||
               event.action === 'noteEdited' ||
               event.action === 'aiRevise' ||
-              event.action === 'activityDeleted'
+              event.action === 'taskDeleted'
             ? {
                 ...event,
                 changes: object(jsonValue(event.changes) ?? {}),
@@ -960,7 +956,7 @@ export class CrmService {
                               ([key]) => key === 'id' || readable.includes(key),
                             ),
                           ),
-                          activities: merge.activities ?? 0,
+                          tasks: merge.tasks ?? 0,
                           notes: merge.notes ?? 0,
                           // A lead not yet saved, merged from the capture review.
                           ...(merge.captured ? { captured: true } : {}),
@@ -1029,7 +1025,7 @@ export class CrmService {
               ? { contactId: id }
               : {};
     if (['leads', 'accounts', 'contacts', 'opportunities'].includes(entity))
-      await firstPage('activities', { ...link, sort: '-startAt' });
+      await firstPage('tasks', { ...link, sort: '-dueAt' });
     if (entity === 'accounts') {
       await firstPage('contacts', { accountId: id });
       await firstPage('opportunities', { accountId: id });
@@ -1102,13 +1098,12 @@ export class CrmService {
       }
     }
     // What deleting a contact would edit rather than block: the opportunities
-    // and activities that list it. Counted by reading, as the lists are JSON.
+    // that list it. Counted by reading, as the lists are JSON.
     const unlinks: Partial<Record<Entity, number>> = {};
     if (canDelete && entity === 'contacts') {
       const query = this.database.query();
       for (const [child, table, field] of [
         ['opportunities', 'crmOpportunities', 'contacts'],
-        ['activities', 'crmActivities', 'externalParticipants'],
       ] as const) {
         const rows = await query
           .selectFrom(table)
@@ -1195,12 +1190,10 @@ export class CrmService {
                   currency: settings.currency,
                   contacts: [],
                 }
-              : entity === 'activities'
+              : entity === 'tasks'
                 ? {
-                    status: 'planned',
-                    type: 'call',
+                    status: 'open',
                     internalParticipants: [],
-                    externalParticipants: [],
                   }
                 : { status: 'draft' }),
     };
@@ -1337,18 +1330,11 @@ export class CrmService {
         )
       )
         throw new CrmError('relatedRecords', 409);
-      const activities = await tx
-        .selectFrom('crmActivities')
-        .select('externalParticipants')
-        .where('accountId', '=', previous.accountId)
-        .execute();
-      if (activities.some((r) => array(r.externalParticipants).includes(id)))
-        throw new CrmError('relatedRecords', 409);
     }
     if (entity === 'opportunities') {
       if (!/^[A-Z]{3}$/.test(toText(input.currency)))
         throw new CrmError('invalidInput', 400, 'currency');
-      // A deal's activities were held with its account's people, so a deal
+      // A deal's tasks were held with its account's people, so a deal
       // that has any stays with that account. Checked before the contacts,
       // which the page takes off the deal when it moves: this is the reason
       // a move with both cannot go ahead.
@@ -1356,12 +1342,12 @@ export class CrmService {
         previous &&
         previous.accountId !== input.accountId &&
         (await tx
-          .selectFrom('crmActivities')
+          .selectFrom('crmTasks')
           .select('id')
           .where('opportunityId', '=', id)
           .executeTakeFirst())
       )
-        throw new CrmError('opportunityHasActivities', 409);
+        throw new CrmError('opportunityHasTasks', 409);
       if (input.stage === 'lost' && !input.lostReason)
         throw new CrmError('required', 400, 'lostReason');
       if (input.stage === 'paused' && !input.pauseReason)
@@ -1431,15 +1417,9 @@ export class CrmService {
         }
       }
     }
-    if (entity === 'activities') {
-      if (!input.leadId && !input.accountId && !input.opportunityId)
-        throw new CrmError('activityRelation');
-      // An end, when there is one, comes after the start.
-      if (
-        input.endAt &&
-        new Date(toText(input.endAt)) < new Date(toText(input.startAt))
-      )
-        throw new CrmError('endBeforeStart');
+    if (entity === 'tasks') {
+      // A task may stand on its own: no record to link is required. Its
+      // time is optional and has no end.
       if (input.opportunityId) {
         const opp = await this.get(
           actor,
@@ -1458,33 +1438,23 @@ export class CrmService {
           (!previous || previous.leadId !== input.leadId)
         )
           throw new CrmError('convertedReadOnly');
-        if (!id && lead.status === 'new') {
-          await tx
-            .updateTable('crmLeads')
-            .set({ status: 'working', updatedAt: now })
-            .where('id', '=', input.leadId)
-            .where('status', '=', 'new')
-            .execute();
-          await this.history(
-            tx,
-            actor,
-            'leads',
-            toText(input.leadId),
-            'status',
-            'new',
-            'working',
-          );
-        }
-      }
-      for (const contactId of array(input.externalParticipants)) {
-        const contact = await this.get(
-          actor,
-          'contacts',
-          toText(contactId),
-          tx,
-        );
-        if (!input.accountId || contact.accountId !== input.accountId)
-          throw new CrmError('accountMismatch');
+        // A task is about a lead, or about an account and its deal, not
+        // both: a lead has neither until it is converted, when its tasks are
+        // given the account and deal it became (conversion.ts).
+        // Checked when the links are set, so a task linked both ways before
+        // this rule can still be edited otherwise.
+        if (
+          lead.status !== 'converted' &&
+          (input.accountId || input.opportunityId) &&
+          ['leadId', 'accountId', 'opportunityId'].some(
+            (key) => key in supplied,
+          )
+        )
+          throw new CrmError('leadOrAccount');
+        // A new lead is being worked once something has been done with it:
+        // a task of it completed (as a note or mail does).
+        if (input.status === 'completed' && previous?.status !== 'completed')
+          await this.leadWorked(tx, actor, toText(input.leadId), now);
       }
       if (
         array(input.internalParticipants).some(
@@ -1666,7 +1636,6 @@ export class CrmService {
       const now = new Date().toISOString();
       for (const [child, table, field] of [
         ['opportunities', 'crmOpportunities', 'contacts'],
-        ['activities', 'crmActivities', 'externalParticipants'],
       ] as const) {
         const rows = await tx
           .selectFrom(table)
@@ -1702,10 +1671,10 @@ export class CrmService {
         .where('convertedContactId', '=', id)
         .execute();
     }
-    // A lead's activities go with it, because an activity must keep at least one
-    // of lead/account/opportunity: clearing the lead from an activity that has no
+    // A lead's tasks go with it, because a task must keep at least one
+    // of lead/account/opportunity: clearing the lead from a task that has no
     // other link would leave a record that fails its own validation and can never
-    // be saved again. Activities with another anchor survive, unlinked.
+    // be saved again. Tasks with another anchor survive, unlinked.
     if (entity === 'opportunities')
       await tx
         .updateTable('crmLeads')
@@ -1727,40 +1696,37 @@ export class CrmService {
         (key) => key !== own,
       );
       const linked = await tx
-        .selectFrom('crmActivities')
+        .selectFrom('crmTasks')
         .select(['id', 'leadId', 'accountId', 'opportunityId'])
         .where(own, '=', id)
         .execute();
-      for (const activity of linked) {
-        const activityId = toText(activity.id);
-        if (others.some((key) => activity[key])) {
+      for (const task of linked) {
+        const taskId = toText(task.id);
+        if (others.some((key) => task[key])) {
           await tx
-            .updateTable('crmActivities')
+            .updateTable('crmTasks')
             .set({ [own]: null, updatedAt: new Date().toISOString() })
-            .where('id', '=', activityId)
+            .where('id', '=', taskId)
             .execute();
           await this.history(
             tx,
             actor,
-            'activities',
-            activityId,
+            'tasks',
+            taskId,
             'updated',
             undefined,
             undefined,
             { [own]: null },
           );
         } else {
-          await tx
-            .deleteFrom('crmActivities')
-            .where('id', '=', activityId)
-            .execute();
-          await this.history(tx, actor, 'activities', activityId, 'deleted');
+          await tx.deleteFrom('crmTasks').where('id', '=', taskId).execute();
+          await this.history(tx, actor, 'tasks', taskId, 'deleted');
         }
       }
     }
-    // An activity gone is told on each record it belonged to, by name: the
-    // activity's own history can no longer be read through it.
-    if (entity === 'activities')
+    // A task gone is told on each record it belonged to, by name: the
+    // task's own history can no longer be read through it.
+    if (entity === 'tasks')
       for (const [field, owner] of [
         ['leadId', 'leads'],
         ['accountId', 'accounts'],
@@ -1772,14 +1738,14 @@ export class CrmService {
             actor,
             owner,
             toText(record[field]),
-            'activityDeleted',
+            'taskDeleted',
             undefined,
             undefined,
             {
-              activityId: id,
+              taskId: id,
               name: record.name,
-              type: record.type,
-              startAt: record.startAt,
+
+              dueAt: record.dueAt,
             },
           );
     await tx
@@ -1843,8 +1809,43 @@ export class CrmService {
       source: actor.via ?? null,
       createdAt: new Date().toISOString(),
     };
-    await this.database.query().insertInto('crmHistory').values(note).execute();
+    await this.database.transaction(async ({ query }) => {
+      await query.insertInto('crmHistory').values(note).execute();
+      // Writing down what happened with a new lead is working it.
+      if (entity === 'leads')
+        await this.leadWorked(query, actor, id, note.createdAt);
+    });
     return { ...note, changes: { text: body }, editedAt: null };
+  }
+  // A new lead turns working once something has been done with it: a task
+  // of it completed, a note written, mail exchanged (mail-timeline.ts).
+  // Anything else leaves it as it is.
+  async leadWorked(
+    query: QueryAdapter,
+    actor: Actor,
+    leadId: string,
+    now: string,
+  ): Promise<void> {
+    const lead = await query
+      .selectFrom('crmLeads')
+      .select('status')
+      .where('id', '=', leadId)
+      .executeTakeFirst();
+    if (lead?.status !== 'new') return;
+    await query
+      .updateTable('crmLeads')
+      .set({ status: 'working', updatedAt: now })
+      .where('id', '=', leadId)
+      .execute();
+    await this.history(
+      query,
+      actor,
+      'leads',
+      leadId,
+      'status',
+      'new',
+      'working',
+    );
   }
   async editNote(actor: Actor, noteId: string, text: unknown): Promise<Row> {
     const body = noteText(text);
@@ -2096,7 +2097,7 @@ export class CrmService {
       `approval-notification:${approvalId}:${event}:${at}`,
     );
   }
-  // "record-notification": a record changing hands, and an activity's
+  // "record-notification": a record changing hands, and a task's
   // internal participants being invited, removed, rescheduled or told of
   // a cancellation.
   async notifyRecord(
@@ -2116,21 +2117,21 @@ export class CrmService {
       `record-notification:${entity}:${recordId}:${event}:${recipientId}:${at}`,
     );
   }
-  // "activity-reminder": an activity about to start, to its owner and each
+  // "task-reminder": a task about to start, to its owner and each
   // internal participant; the event key is the reminder's identity, so a
-  // scan that sees the same activity again starts nothing new.
-  async remindActivity(
-    activity: Row,
+  // scan that sees the same task again starts nothing new.
+  async remindTask(
+    task: Row,
     recipientId: string,
   ): Promise<
     Awaited<ReturnType<WorkflowServiceContract['trigger']>> | undefined
   > {
-    const activityId = toText(activity.id);
-    const startAt = toText(activity.startAt);
+    const taskId = toText(task.id);
+    const dueAt = toText(task.dueAt);
     return this.trigger(
-      'activity-reminder',
-      { activityId, recipientId, startAt },
-      `activity:${activityId}:${startAt}:${recipientId}`,
+      'task-reminder',
+      { taskId, recipientId, dueAt },
+      `task:${taskId}:${dueAt}:${recipientId}`,
     );
   }
   async enqueue(
@@ -2187,7 +2188,7 @@ export class CrmService {
     const messages: [string, string][] = [];
     if (previous?.ownerId !== record.ownerId)
       messages.push([toText(record.ownerId), 'assigned']);
-    if (entity === 'activities') {
+    if (entity === 'tasks') {
       const before = array(previous?.internalParticipants);
       const after = array(record.internalParticipants);
       for (const user of new Set([...before, ...after])) {
@@ -2197,8 +2198,7 @@ export class CrmService {
             ? 'invited'
             : record.status === 'cancelled'
               ? 'cancelled'
-              : record.startAt !== previous?.startAt ||
-                  record.endAt !== previous?.endAt
+              : record.dueAt !== previous?.dueAt
                 ? 'rescheduled'
                 : '';
         if (event) messages.push([toText(user), event]);

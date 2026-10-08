@@ -74,7 +74,7 @@ export function crmWriteTools(
       introduction: {
         title: 'Create a CRM record',
         about:
-          'Creates a lead, account, contact, opportunity, activity or approval once the user confirms the values.',
+          'Creates a lead, account, contact, opportunity, task or approval once the user confirms the values.',
       },
       definition: {
         name: 'create_record',
@@ -123,7 +123,7 @@ export function crmWriteTools(
       definition: {
         name: 'update_record',
         description:
-          'Update fields of one existing CRM record. Read the record with get_record first so the proposal is based on its current values, and send only the fields that change. Use it to move an opportunity to another stage, complete or reschedule an activity, mark a lead invalid, or hand a record to another owner. Include a one-line "title" naming the change.',
+          'Update fields of one existing CRM record. Read the record with get_record first so the proposal is based on its current values, and send only the fields that change. Use it to move an opportunity to another stage, complete or reschedule a task, mark a lead invalid, or hand a record to another owner. Include a one-line "title" naming the change.',
         schema: {
           type: 'object',
           properties: {
@@ -145,9 +145,9 @@ export function crmWriteTools(
         return guarded(async () => {
           const args = (raw ?? {}) as Row;
           const entity = asEntity(toText(args.entity));
-          // An activity marked done follows its record up, as on its page.
+          // A task marked done follows its record up, as on its page.
           const before =
-            entity === 'activities'
+            entity === 'tasks'
               ? await service
                   .get(actor, entity, toText(args.id))
                   .catch(() => undefined)
@@ -163,7 +163,7 @@ export function crmWriteTools(
             before.status !== 'completed' &&
             record.status === 'completed'
           )
-            service.activityCompleted?.(actor, record);
+            service.taskCompleted?.(actor, record);
           return summary(entity, record, args.input ?? {});
         });
       },

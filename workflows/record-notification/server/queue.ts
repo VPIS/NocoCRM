@@ -24,7 +24,7 @@ const tables: Record<string, string> = {
   accounts: 'crmAccounts',
   contacts: 'crmContacts',
   opportunities: 'crmOpportunities',
-  activities: 'crmActivities',
+  tasks: 'crmTasks',
   approvals: 'crmApprovals',
 };
 

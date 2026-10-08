@@ -12,11 +12,12 @@ import { definitions, toText, type Entity } from './schema.js';
 export const ORDER_IN_MEMORY_LIMIT = 20000;
 
 // The columns the database orders well by itself: instants that every
-// record has, which the list has always sorted by.
+// record has, which the list has always sorted by. A task's due time is
+// not one: many have none, and those go last, which only ordering here
+// does on every database.
 export const DATABASE_ORDERS = new Set([
   'createdAt',
   'updatedAt',
-  'startAt',
   'submittedAt',
 ]);
 
@@ -94,7 +95,8 @@ export function orderKey(
 
 // Orders records by their keys, blanks last whichever the direction; text
 // compares the way the reader's language orders it (Chinese by pinyin), and
-// ties keep a stable order by id.
+// ties put the record created later first (two tasks due at the same time:
+// the one just added on top), then keep a stable order by id.
 export function orderRecords(
   records: readonly Row[],
   keys: ReadonlyMap<string, Key>,
@@ -103,17 +105,25 @@ export function orderRecords(
 ): string[] {
   const collator = new Intl.Collator(locale, { numeric: true });
   const sign = direction === 'asc' ? 1 : -1;
+  const created = new Map(
+    records.map((r) => [
+      toText(r.id),
+      Date.parse(toText(r.createdAt ?? '')) || 0,
+    ]),
+  );
+  const tie = (a: string, b: string): number =>
+    (created.get(b) ?? 0) - (created.get(a) ?? 0) || a.localeCompare(b);
   return records
     .map((r) => toText(r.id))
     .sort((a, b) => {
       const x = keys.get(a);
       const y = keys.get(b);
       if (x === undefined || y === undefined)
-        return x === y ? a.localeCompare(b) : x === undefined ? 1 : -1;
+        return x === y ? tie(a, b) : x === undefined ? 1 : -1;
       const compared =
         typeof x === 'number' && typeof y === 'number'
           ? x - y
           : collator.compare(String(x), String(y));
-      return compared ? sign * compared : a.localeCompare(b);
+      return compared ? sign * compared : tie(a, b);
     });
 }

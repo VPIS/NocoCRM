@@ -7,7 +7,7 @@ import {
 } from '@nocobase/app-plugin-workflow';
 
 // The message a record change sends: to the new owner when a record
-// changes hands, and to an activity's internal participants when they are
+// changes hands, and to a task's internal participants when they are
 // invited, removed, rescheduled or told of a cancellation. The CRM service
 // commits the change and starts this workflow with the event and its
 // recipient; the workflow is the only sender.
@@ -38,7 +38,7 @@ const notify = (key: string, title: string, description: string) =>
 const workflow: WorkflowSourceAst = defineWorkflow({
   title: 'Record change notifications',
   description:
-    "Notifies the new owner when a record changes hands, and an activity's internal participants when they are invited or removed, or the activity is rescheduled or cancelled. Administrators can switch notifications off in the parameters.",
+    "Notifies the new owner when a record changes hands, and a task's internal participants when they are invited or removed, or the task is rescheduled or cancelled. Administrators can switch notifications off in the parameters.",
   inputSchema: {
     type: 'object',
     required: ['entity', 'recordId', 'recipientId', 'actorId', 'event', 'at'],
@@ -50,7 +50,7 @@ const workflow: WorkflowSourceAst = defineWorkflow({
           'accounts',
           'contacts',
           'opportunities',
-          'activities',
+          'tasks',
           'approvals',
         ],
       },
@@ -70,7 +70,7 @@ const workflow: WorkflowSourceAst = defineWorkflow({
       type: 'boolean',
       title: 'Send notifications',
       description:
-        "When off, no in-app notification is sent for a change of owner or of an activity's participants.",
+        "When off, no in-app notification is sent for a change of owner or of a task's participants.",
       default: true,
     },
   },
@@ -97,7 +97,7 @@ const workflow: WorkflowSourceAst = defineWorkflow({
       key: 'handoff',
       title: 'A change of owner?',
       description:
-        "A change of owner goes to the new owner; every other event goes to the activity's participants.",
+        "A change of owner goes to the new owner; every other event goes to the task's participants.",
       config: { module: './server/is-handoff' },
     }).branch({
       yes: [
@@ -110,7 +110,7 @@ const workflow: WorkflowSourceAst = defineWorkflow({
       no: [
         notify(
           'notifyParticipant',
-          "Tell the activity's participants",
+          "Tell the task's participants",
           'Sends the participants an invitation, removal, rescheduling or cancellation message through the CRM notification queue.',
         ),
       ],

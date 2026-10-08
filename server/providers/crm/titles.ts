@@ -34,13 +34,10 @@ const want = (wanted: Wanted, entity: Entity, id: unknown): void => {
   (wanted[entity] ??= new Set()).add(key);
 };
 
-// The ids a row points at: its relation fields, the contacts on a deal, the
-// external participants of an activity.
+// The ids a row points at: its relation fields and the contacts on a deal.
 export function referencedIds(wanted: Wanted, row: Row): void {
   for (const [field, entity] of Object.entries(relationFields))
     if (field in row) want(wanted, entity, row[field]);
-  if (Array.isArray(row.externalParticipants))
-    for (const id of row.externalParticipants) want(wanted, 'contacts', id);
   if (Array.isArray(row.contacts))
     for (const item of row.contacts)
       if (item && typeof item === 'object')

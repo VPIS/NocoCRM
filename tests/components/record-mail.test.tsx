@@ -1,15 +1,10 @@
 import { expect, it } from 'vitest';
-import {
-  emailDraftOf,
-  emailsOf,
-  threadsOf,
-} from '../../client/components/crm/mail.js';
+import { emailsOf, threadsOf } from '../../client/components/crm/mail.js';
 import {
   domainOf,
   searchTerms,
 } from '../../server/providers/crm/mail-target.js';
 import type { MailMessageSummary } from '@nocobase/app-plugin-mail/client';
-import { planDescription } from '../../server/providers/crm/plan.js';
 
 it("takes an account's own domain from its website, never a shared mail service's", () => {
   expect(domainOf('https://www.Acme-Robotics.com/about')).toBe(
@@ -33,30 +28,6 @@ it('searches each address once and the domain by its at sign', () => {
   expect(
     emailsOf([{ email: ' a@b.com ' }, { email: '' }, { name: 'x' }]),
   ).toEqual(['a@b.com']);
-});
-
-it('reads back the email a follow-up drafted into an activity, in either language', () => {
-  for (const zh of [true, false]) {
-    const description = [
-      'Call before sending.',
-      planDescription(
-        {
-          prep: ['Check the quote'],
-          email: {
-            subject: 'Next steps for the pilot',
-            body: 'Hi Lin,\n\nThanks for the call.',
-          },
-        },
-        zh,
-      ),
-    ].join('\n\n');
-    expect(emailDraftOf(description)).toEqual({
-      subject: 'Next steps for the pilot',
-      body: 'Hi Lin,\n\nThanks for the call.',
-    });
-  }
-  expect(emailDraftOf('Just a note.')).toBeUndefined();
-  expect(emailDraftOf(undefined)).toBeUndefined();
 });
 
 const message = (

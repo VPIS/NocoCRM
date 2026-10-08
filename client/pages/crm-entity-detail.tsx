@@ -16,8 +16,6 @@ import {
 import {
   ArrowUpRight,
   ClipboardCheck,
-  CalendarCheck,
-  CalendarDays,
   Clock,
   ContactRound,
   History,
@@ -31,6 +29,8 @@ import {
   Ellipsis,
   X,
   type LucideIcon,
+  SquareCheckBig,
+  Check,
 } from 'lucide-react';
 import { KindTag } from '../components/crm/kind-tag.js';
 import { Badge } from '../components/ui/badge.js';
@@ -91,7 +91,7 @@ import { Choice, RecordForm } from '../components/crm/form.js';
 import { StageField } from '../components/crm/reasons.js';
 import { ApprovalActions } from '../components/crm/approval-actions.js';
 import {
-  ActivityItem,
+  TaskItem,
   AfterSlash,
   ConfirmDialog,
   DetailColumns,
@@ -105,10 +105,7 @@ import {
 } from './crm-detail.js';
 import { UploadZone } from '../components/crm/attachments.js';
 import { RecordOutcomeDialog } from '../components/crm/outcome.js';
-import {
-  RecordMailPanel,
-  SendPlannedEmailButton,
-} from '../components/crm/record-mail.js';
+import { RecordMailPanel } from '../components/crm/record-mail.js';
 import { emailsOf, useMailSetup } from '../components/crm/mail.js';
 import {
   domainOf,
@@ -151,12 +148,14 @@ export default function EntityDetail({
   const refresh = useRefresh();
   const navigate = useNavigate();
   const drawer = useRecordDrawer();
-  const { text, language } = useCrmText();
+  const { text } = useCrmText();
   // The tab the address names (…/contacts), resolved once the page knows
   // which tabs it shows; an address naming another opens the first.
   const [tabSlug, setTab] = useDetailTab();
   // The note the timeline opened in the Notes tab.
   const [noteFocus, setNoteFocus] = useState<string>();
+  // The conversation a timeline mail entry opens on the Mail tab.
+  const [mailFocus, setMailFocus] = useState<string>();
   // The AI entry the timeline was opened at (a deal's latest follow-up).
   const [focus, setFocus] = useState<{ id: string; at: number }>();
   // The related lists and the history arrive one page each with the
@@ -179,9 +178,9 @@ export default function EntityDetail({
             detail.relatedTotals?.[name] ?? rows(detail.related[name]).length,
         }
       : undefined;
-  const moreActivities = useMore(
-    `activities?${linkParam}&sort=-startAt`,
-    firstPage('activities'),
+  const moreTasks = useMore(
+    `tasks?${linkParam}&sort=-dueAt`,
+    firstPage('tasks'),
   );
   const moreApprovals = useMore(
     `approvals?opportunityId=${toText(id)}`,
@@ -190,7 +189,7 @@ export default function EntityDetail({
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState<{ entity: Entity; initial: Data }>();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  // A planned activity's outcome being recorded.
+  // A planned task's outcome being recorded.
   const [recording, setRecording] = useState(false);
   const [error, setError] = useState<unknown>();
   // A deal's account change waiting for the user to confirm it takes the
@@ -222,7 +221,7 @@ export default function EntityDetail({
   // under their own account.
   const names = {
     ...detail.titles,
-    ...moreActivities.titles,
+    ...moreTasks.titles,
     ...moreApprovals.titles,
   };
   const bareNames = detail.names;
@@ -235,14 +234,14 @@ export default function EntityDetail({
   };
   // Moving a deal to another account takes its contacts off it: they are
   // the old account's people. The move is confirmed first, naming them, and
-  // saved with the empty list in one request. A deal with activities goes
+  // saved with the empty list in one request. A deal with tasks goes
   // straight to the server, which refuses the move and says why.
   const dealContacts =
     entity === 'opportunities' && Array.isArray(record.contacts)
       ? (record.contacts as { contactId?: unknown }[])
       : [];
   const changeAccount = (accountId: unknown): Promise<void> =>
-    dealContacts.length && !moreActivities.total
+    dealContacts.length && !moreTasks.total
       ? new Promise((resolve, reject) => {
           setAccountMove({ accountId, resolve, reject });
         })
@@ -260,15 +259,13 @@ export default function EntityDetail({
       setAccountMove(undefined);
     }
   };
-  // An activity's external participants come from its account, shown by bare
-  // name: the account is already on the page.
   const inline = (key: string): ReactElement => (
     <InlineField
       entity={entity}
       record={record}
       field={field(key)}
       editable={editable}
-      lookup={key === 'externalParticipants' ? bareNames : names}
+      lookup={names}
       relationFilter={
         record.accountId ? { accountId: toText(record.accountId) } : undefined
       }
@@ -283,14 +280,14 @@ export default function EntityDetail({
   const convertedFrom = rows(detail.related.leads) as CrmRecord[];
   // Newest first, in the server's order, so pages join up.
   const approvals = moreApprovals.records;
-  const activities = moreActivities.records;
+  const tasks = moreTasks.records;
   const linkedOpportunities = rows(detail.related.opportunities);
   // A contact has no attachments field of its own: its tab only gathers the
-  // files on the activities and opportunities it takes part in.
+  // files on the tasks and opportunities it takes part in.
   const hasOwnFiles = definition.fields.some((f) => f.key === 'attachments');
   const attachmentCount = new Set([
     ...rows(record.attachments as unknown[]).map(toText),
-    ...activities.flatMap((a) => rows(a.attachments as unknown[]).map(toText)),
+    ...tasks.flatMap((a) => rows(a.attachments as unknown[]).map(toText)),
     ...linkedOpportunities.flatMap((o) =>
       rows(o.attachments as unknown[]).map(toText),
     ),
@@ -302,7 +299,7 @@ export default function EntityDetail({
   const closedDeal =
     entity === 'opportunities' &&
     (currentStatus === 'won' || currentStatus === 'lost');
-  // Which related lists this object has, beyond activities.
+  // Which related lists this object has, beyond tasks.
   const relatedTabs = (
     entity === 'accounts'
       ? (['contacts', 'opportunities'] as const)
@@ -316,9 +313,11 @@ export default function EntityDetail({
   // people's changes and the AI's work alike.
   const tabs: [string, string, number][] = [
     ['historyTab', 'historyTab', detail.historyTotal ?? detail.history.length],
-    ...(entity !== 'activities' && entity !== 'approvals'
+    // A contact has no tasks of its own: a task concerns a lead, an
+    // account or a deal.
+    ...(entity !== 'tasks' && entity !== 'approvals' && entity !== 'contacts'
       ? [
-          ['activities', 'entities.activities', moreActivities.total] as [
+          ['tasks', 'entities.tasks', moreTasks.total] as [
             string,
             string,
             number,
@@ -344,7 +343,7 @@ export default function EntityDetail({
         ] as [string, string, number],
     ),
     // A contact keeps no files of its own; the ones it appears in are read
-    // from the activity or opportunity that holds them.
+    // from the task or opportunity that holds them.
     ...(hasOwnFiles
       ? [
           ['attachments', 'fields.attachments', attachmentCount] as [
@@ -369,7 +368,7 @@ export default function EntityDetail({
   const blockerEntries = Object.entries(detail.blockers ?? {}).filter(
     ([, n]) => Number(n) > 0,
   ) as [Entity, number][];
-  // An account's activities go the way a lead's do: those anchored only here
+  // An account's tasks go the way a lead's do: those anchored only here
   // are deleted with it, those also on a lead or opportunity are kept and
   // unlinked. The dialog states both counts so nothing is a surprise.
   const cascades = entity === 'accounts' || entity === 'opportunities';
@@ -377,17 +376,14 @@ export default function EntityDetail({
     entity === 'accounts'
       ? Boolean(a.leadId || a.opportunityId)
       : Boolean(a.leadId || a.accountId);
-  const cascadedActivities = cascades
-    ? activities.filter((a) => !otherAnchors(a))
-    : [];
-  const keptActivities = cascades ? activities.filter(otherAnchors) : [];
+  const cascadedTasks = cascades ? tasks.filter((a) => !otherAnchors(a)) : [];
+  const keptTasks = cascades ? tasks.filter(otherAnchors) : [];
   const relatedInput: Data =
     entity === 'accounts'
       ? { accountId: id }
       : entity === 'contacts'
         ? {
             accountId: record.accountId,
-            externalParticipants: [id],
             contacts: [{ contactId: id, role: 'other' }],
           }
         : entity === 'opportunities'
@@ -396,7 +392,7 @@ export default function EntityDetail({
   // Where the Mail tab looks: a contact's address; an account's domain and
   // its contacts' addresses; a deal's contacts' addresses (or, while it
   // names none, its account's people). What is sent from the tab is logged
-  // as an activity linked as one created here is.
+  // as a task linked as one created here is.
   const relatedContacts = rows(detail.related.contacts);
   const dealContactIds = new Set(
     rows(record.contacts).map((row) => toText(row.contactId)),
@@ -418,14 +414,13 @@ export default function EntityDetail({
             ),
           }
         : { addresses: emailsOf([record]) };
-  const { contacts: _dealContacts, ...mailLink } = relatedInput;
   // What the active tab shows, in the right column.
   const tabContent = (
     <>
       {activeTab === 'mail' ? (
         <RecordMailPanel
           target={mailTarget}
-          link={mailLink}
+          focus={mailFocus}
           scope={
             entity === 'accounts'
               ? { kind: 'account', name: toText(record.name) }
@@ -497,45 +492,41 @@ export default function EntityDetail({
             </>
           )}
         </div>
-      ) : activeTab === 'activities' ? (
+      ) : activeTab === 'tasks' ? (
         <div className='space-y-3'>
-          {entity !== 'activities' &&
-            Boolean(meta.permissions.activities.create) && (
-              <Button
-                size='sm'
-                variant='outline'
-                onClick={() =>
-                  setForm({
-                    entity: 'activities',
-                    initial: relatedInput,
-                  })
-                }
-              >
-                <Plus />
-                {text('newActivity')}
-              </Button>
-            )}
-          {!activities.length ? (
-            <p className='text-sm text-muted-foreground'>
-              {text('noActivities')}
-            </p>
+          {entity !== 'tasks' && Boolean(meta.permissions.tasks.create) && (
+            <Button
+              size='sm'
+              variant='outline'
+              onClick={() =>
+                setForm({
+                  entity: 'tasks',
+                  initial: relatedInput,
+                })
+              }
+            >
+              <Plus />
+              {text('newTask')}
+            </Button>
+          )}
+          {!tasks.length ? (
+            <p className='text-sm text-muted-foreground'>{text('noTasks')}</p>
           ) : (
             <>
               <ol className='relative ml-1.5 border-l border-border'>
-                {activities.map((activity) => (
-                  <ActivityItem key={toText(activity.id)} activity={activity} />
+                {tasks.map((task) => (
+                  <TaskItem key={toText(task.id)} task={task} />
                 ))}
               </ol>
-              {moreActivities.hasMore && (
+              {moreTasks.hasMore && (
                 <Button
                   className='mt-3'
                   variant='ghost'
                   size='sm'
-                  disabled={moreActivities.loading}
-                  onClick={() => void moreActivities.loadMore()}
+                  disabled={moreTasks.loading}
+                  onClick={() => void moreTasks.loadMore()}
                 >
-                  {text('loadMore')} ·{' '}
-                  {moreActivities.total - activities.length}
+                  {text('loadMore')} · {moreTasks.total - tasks.length}
                 </Button>
               )}
             </>
@@ -545,7 +536,7 @@ export default function EntityDetail({
         <RecordAttachments
           entity={entity}
           record={record}
-          activities={activities}
+          tasks={tasks}
           opportunities={linkedOpportunities}
           approvals={approvals}
           editable={editable}
@@ -585,6 +576,14 @@ export default function EntityDetail({
             setNoteFocus(noteId);
             setTab('notes');
           }}
+          onOpenMail={
+            mailSetup.can
+              ? (sourceKey) => {
+                  setMailFocus(sourceKey);
+                  setTab('mail');
+                }
+              : undefined
+          }
         />
       ) : (
         // A related list: name, status, owner, updated — with a create
@@ -617,10 +616,10 @@ export default function EntityDetail({
           {...form}
           onClose={() => setForm(undefined)}
           // An approval raised here shows up in this page's approvals tab;
-          // an activity in its activities tab. Other new records are opened.
+          // a task in its tasks tab. Other new records are opened.
           onSaved={(r) => {
             if (
-              !['activities', 'approvals'].includes(form.entity) &&
+              !['tasks', 'approvals'].includes(form.entity) &&
               form.entity !== entity
             ) {
               if (drawer) drawer.open(form.entity, toText(r.id));
@@ -662,7 +661,7 @@ export default function EntityDetail({
       )}
       {recording && (
         <RecordOutcomeDialog
-          activity={record}
+          task={record}
           onClose={() => setRecording(false)}
         />
       )}
@@ -741,15 +740,15 @@ export default function EntityDetail({
                         ? ['draft', 'withdrawn'].includes(toText(record.status))
                           ? 'deleteApprovalHint'
                           : 'deleteDecidedApprovalHint'
-                        : entity === 'activities'
-                          ? 'deleteActivityHint'
+                        : entity === 'tasks'
+                          ? 'deleteTaskHint'
                           : 'deleteHint',
                   )}
                 </span>
-                {cascadedActivities.length > 0 && (
+                {cascadedTasks.length > 0 && (
                   <span className='block text-destructive'>
-                    {text('deleteAccountActivities', {
-                      count: cascadedActivities.length,
+                    {text('deleteAccountTasks', {
+                      count: cascadedTasks.length,
                       entity: text(`entity.${toText(entity)}`),
                     })}
                   </span>
@@ -764,10 +763,10 @@ export default function EntityDetail({
                       })}
                     </span>
                   ))}
-                {keptActivities.length > 0 && (
+                {keptTasks.length > 0 && (
                   <span className='block'>
-                    {text('deleteAccountKeptActivities', {
-                      count: keptActivities.length,
+                    {text('deleteAccountKeptTasks', {
+                      count: keptTasks.length,
                       entity: text(`entity.${toText(entity)}`),
                     })}
                   </span>
@@ -807,13 +806,6 @@ export default function EntityDetail({
   const row = (key: string): ReactElement => (
     <InfoRow key={key} label={text(fieldLabelKey(entity, key))}>
       {inline(key)}
-    </InfoRow>
-  );
-  const time = (key: string): ReactElement => (
-    <InfoRow key={key} label={text(`fields.${key}`)}>
-      <div className='px-2 py-1.5'>
-        {localDate(record[key], language, meta.settings.timeZone)}
-      </div>
     </InfoRow>
   );
   // A long text (an approval's description, its decision comment) takes the
@@ -932,7 +924,7 @@ export default function EntityDetail({
   });
   const tabIcons: Record<string, LucideIcon> = {
     historyTab: History,
-    activities: CalendarDays,
+    tasks: SquareCheckBig,
     opportunityContacts: ContactRound,
     contacts: ContactRound,
     opportunities: Target,
@@ -973,24 +965,17 @@ export default function EntityDetail({
     </DetailColumns>
   );
 
-  if (entity === 'activities')
+  if (entity === 'tasks')
     return page(
       headingOf(),
       actionsOf(
         <>
-          {/* A planned email: written and sent from here, the draft a
-              follow-up left in it filled in; sending records it as done. */}
-          {currentStatus === 'planned' &&
-            editable &&
-            record.type === 'email' && (
-              <SendPlannedEmailButton activity={record} />
-            )}
-          {/* A planned activity: what came of it, recorded (and its lead
-              followed up anew), in one step. */}
-          {currentStatus === 'planned' && editable && (
+          {/* An open task: done, with what came of it if anything (and
+              its record followed up anew), in one step. */}
+          {currentStatus === 'open' && editable && (
             <Button size='sm' onClick={() => setRecording(true)}>
-              <CalendarCheck />
-              {text('evaluation.recordOutcome')}
+              <Check />
+              {text('completeTask')}
             </Button>
           )}
           {askAI}
@@ -998,9 +983,19 @@ export default function EntityDetail({
         </>,
       ),
       <>
-        {/* Who has it and where it stands, then what it is and when. */}
-        <InfoGroup title={text('activityGroups.general')}>
+        {/* What it is first, across the column with neither heading nor
+            label, then what came of it once done. An open task has no result yet: it is
+            written on completing it, which also has the AI follow up, not
+            typed into the field, where it would do neither. */}
+        <InfoGroup>
+          <div className='min-w-0 py-0.5 text-sm'>{inline('description')}</div>
+          {(currentStatus !== 'open' || toText(record.result ?? '')) &&
+            longRow('result', inline('result'))}
+        </InfoGroup>
+        {/* Who has it and who takes part, where it stands, and when. */}
+        <InfoGroup title={text('taskGroups.general')}>
           {row('ownerId')}
+          {row('internalParticipants')}
           {statusKey && (
             <InfoRow label={text(`fields.${statusKey}`)}>
               <StageField
@@ -1010,39 +1005,22 @@ export default function EntityDetail({
                 editable={editable}
                 title={title}
                 onSave={patch}
-                // Done with a planned activity is its outcome recorded, as
-                // the button does: the AI then follows up with it, where a
-                // bare status change would start before there is one.
+                // Done with an open task goes through the same dialog as
+                // the button: what came of it is written then, and the AI
+                // follows up with it.
                 instead={
-                  currentStatus === 'planned'
+                  currentStatus === 'open'
                     ? { completed: () => setRecording(true) }
                     : undefined
                 }
               />
             </InfoRow>
           )}
-          {['type', 'startAt', 'endAt'].map(row)}
+          {/* When it is, if it is. */}
+          {row('dueAt')}
         </InfoGroup>
-        <InfoGroup title={text('activityGroups.participants')}>
-          {['internalParticipants', 'externalParticipants'].map(row)}
-        </InfoGroup>
-        <InfoGroup title={text('activityGroups.related')}>
+        <InfoGroup title={text('taskGroups.related')}>
           {['leadId', 'accountId', 'opportunityId'].map(row)}
-        </InfoGroup>
-        {/* A planned activity has no outcome yet: it is recorded through
-            "Record outcome", which completes it and has the AI follow up,
-            not typed into the field, where it would do neither. */}
-        <InfoGroup title={text('activityGroups.content')}>
-          {(currentStatus === 'planned' && !toText(record.feedback ?? '')
-            ? ['description']
-            : ['description', 'feedback']
-          ).map(row)}
-        </InfoGroup>
-        <InfoGroup title={text('activityGroups.system')}>
-          {time('createdAt')}
-          {time('updatedAt')}
-          {/* When it was done, under its last update. */}
-          {currentStatus === 'completed' && time('completedAt')}
         </InfoGroup>
       </>,
     );
@@ -1124,12 +1102,6 @@ export default function EntityDetail({
           {convertedRow}
           {row('description')}
         </InfoGroup>
-        <InfoGroup title={text('opportunityGroups.system')}>
-          {time('createdAt')}
-          {time('updatedAt')}
-          {/* When it was won or lost, under its last update. */}
-          {closedDeal && time('closedAt')}
-        </InfoGroup>
       </>,
     );
   }
@@ -1178,10 +1150,6 @@ export default function EntityDetail({
           {['address', 'description'].map(row)}
           {convertedRow}
         </InfoGroup>
-        <InfoGroup title={text('accountGroups.system')}>
-          {time('createdAt')}
-          {time('updatedAt')}
-        </InfoGroup>
       </>,
     );
 
@@ -1210,17 +1178,12 @@ export default function EntityDetail({
         <InfoGroup title={text('contactGroups.reach')}>
           {['jobTitle', 'phone', 'email'].map(row)}
         </InfoGroup>
-        <InfoGroup title={text('contactGroups.system')}>
-          {time('createdAt')}
-          {time('updatedAt')}
-        </InfoGroup>
       </>,
     );
 
   // An approval (leads have LeadDetail). Its status moves only through its
   // actions, so it is shown rather than edited.
   const approver = record.approverId === meta.userId;
-  const decided = ['approved', 'rejected'].includes(currentStatus);
   return page(
     headingOf(),
     actionsOf(
@@ -1281,13 +1244,6 @@ export default function EntityDetail({
               </span>,
             )
           : null}
-      </InfoGroup>
-      <InfoGroup title={text('approvalGroups.system')}>
-        {/* The approver's timeline starts when the request reached them, so
-            for them the creation time is left out. */}
-        {!approver && time('createdAt')}
-        {record.submittedAt ? time('submittedAt') : null}
-        {time(decided ? 'decidedAt' : 'updatedAt')}
       </InfoGroup>
     </>,
   );
@@ -1401,7 +1357,7 @@ function RelatedList({
       )}
     </div>
   );
-  // Contacts open in the drawer the way activities do, so a phone number or
+  // Contacts open in the drawer the way tasks do, so a phone number or
   // a job title is corrected without leaving the account.
   function contactList(list: CrmRecord[]): ReactElement {
     return (
@@ -1462,7 +1418,7 @@ function RelatedList({
 
 // One contact on a record's contacts tab: a row that opens the contact in
 // the page's drawer (its full page on a phone or in a new tab), where its
-// fields are edited, the way an activity does in the activities tab. The
+// fields are edited, the way a task does in the tasks tab. The
 // star and the opportunity's role and remove control sit beside the link
 // rather than inside it, so using them does not also open the contact.
 function ContactItem({
@@ -1878,7 +1834,7 @@ function PrimaryStar({
 }
 
 // One approval on an opportunity's approvals tab: a timeline entry that
-// opens the approval in the page's drawer, the way an activity does, where
+// opens the approval in the page's drawer, the way a task does, where
 // it is edited and decided.
 function ApprovalItem({ approval }: { approval: Data }): ReactElement {
   const { text, language } = useCrmText();

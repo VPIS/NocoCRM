@@ -20,7 +20,7 @@ import { recordTitle } from './lookups.js';
 // Picking a record by searching for it, one page of matches at a time, so a
 // form never has to load every account or contact there is. The search goes
 // through the list endpoint with the same filters the pages use (an
-// activity's participants come from its account, a deal's contacts too).
+// task's participants come from its account, a deal's contacts too).
 interface SearchProps {
   entity: Entity;
   filter?: Record<string, string | undefined>;

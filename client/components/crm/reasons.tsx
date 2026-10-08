@@ -147,7 +147,7 @@ export function StageField({
   editable: boolean;
   title: string;
   onSave: (values: Data) => Promise<void>;
-  // A status the page takes over instead of saving it: a planned activity
+  // A status the page takes over instead of saving it: a planned task
   // made completed records its outcome first.
   instead?: Partial<Record<string, () => void>>;
 }): ReactElement {
@@ -255,16 +255,23 @@ export function StageField({
                       {text(`options.${value}`)}
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent>
-                      {(meta?.settings.options[single.key] ?? []).map((reason) => (
-                        <DropdownMenuItem
-                          key={reason}
-                          onClick={() =>
-                            void commit({ [field]: value, [single.key]: reason })
-                          }
-                        >
-                          {text(`options.${reason}`, { defaultValue: reason })}
-                        </DropdownMenuItem>
-                      ))}
+                      {(meta?.settings.options[single.key] ?? []).map(
+                        (reason) => (
+                          <DropdownMenuItem
+                            key={reason}
+                            onClick={() =>
+                              void commit({
+                                [field]: value,
+                                [single.key]: reason,
+                              })
+                            }
+                          >
+                            {text(`options.${reason}`, {
+                              defaultValue: reason,
+                            })}
+                          </DropdownMenuItem>
+                        ),
+                      )}
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
                 );

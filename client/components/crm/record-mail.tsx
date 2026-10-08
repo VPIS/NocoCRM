@@ -1,6 +1,5 @@
 import {
   mailErrorMessage,
-  plainTextToMailHtml,
   useMailClient,
   type MailMessage,
   type MailMessageSummary,
@@ -8,124 +7,31 @@ import {
 import { MailConversationView } from '@nocobase/app-plugin-mail/client/components';
 import { useTranslation } from '@nocobase/i18n/client';
 import { useQuery } from '@tanstack/react-query';
-import { AtSign, Mail, Paperclip, PenLine, Send } from 'lucide-react';
-import { useMemo, useState, type ReactElement, type ReactNode } from 'react';
+import { AtSign, Mail, Paperclip, PenLine } from 'lucide-react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { Link } from 'react-router';
 import { Button } from '../ui/button.js';
-import { LONG_TEXT_LIMIT } from '../../../server/providers/crm/limits.js';
+import { localDate, toText, useCrmText, useMetadata } from './api.js';
 import {
-  localDate,
-  toText,
-  useCrmApi,
-  useCrmText,
-  useMetadata,
-  useRefresh,
-  type Data,
-} from './api.js';
-import {
-  emailDraftOf,
-  emailsOf,
   uniqueMessages,
-  useLogSentMail,
+  useMailSent,
   useMailComposer,
   useMailSetup,
   useRecordMessages,
-  type MailLink,
 } from './mail.js';
 import {
   searchTerms,
   type MailTarget,
 } from '../../../server/providers/crm/mail-target.js';
 
-// A record's mail on its page and a planned email sent from its activity,
-// built on the CRM's mail helpers (mail.tsx) and the Mail plugin's components.
-
-// "Send email" on a planned email activity: the composer, addressed to its
-// customer participants (and its lead), holding the draft a follow-up wrote
-// into it, or the activity's name as the subject. Once the provider accepts
-// the message, the activity's outcome is recorded as sent, with the text that
-// went; the AI follows up when the reply comes, not now.
-export function SendPlannedEmailButton({
-  activity,
-}: {
-  readonly activity: Data;
-}): ReactElement | null {
-  const { text } = useCrmText();
-  const api = useCrmApi();
-  const refresh = useRefresh();
-  const { available, compose, composer } = useMailComposer();
-  const [busy, setBusy] = useState(false);
-  if (!available) return null;
-  const open = async (): Promise<void> => {
-    setBusy(true);
-    try {
-      const reads = [
-        ...arrayOf(activity.externalParticipants).map((contactId) =>
-          api<{ data: { record: Data } }>(`contacts/${contactId}`),
-        ),
-        ...(activity.leadId
-          ? [
-              api<{ data: { record: Data } }>(
-                `leads/${toText(activity.leadId)}`,
-              ),
-            ]
-          : []),
-      ];
-      const people = await Promise.allSettled(reads);
-      const to = emailsOf(
-        people.flatMap((result) =>
-          result.status === 'fulfilled' ? [result.value.data.record] : [],
-        ),
-      );
-      const draft = emailDraftOf(activity.description);
-      const body = draft?.body ?? '';
-      compose(
-        {
-          to: [...new Set(to)].join(', '),
-          subject: draft?.subject ?? toText(activity.name),
-          text: body,
-          html: body ? plainTextToMailHtml(body) : '',
-        },
-        async (sent) => {
-          const recipients = (sent?.recipients ?? [])
-            .map((address) => address.address)
-            .join(', ');
-          await api(`activities/${toText(activity.id)}/outcome`, 'POST', {
-            outcome: [
-              toText(
-                text('mail.outcomeSent', {
-                  to: recipients,
-                  subject: sent?.subject ?? '',
-                }),
-              ),
-              sent?.text?.trim() ?? '',
-            ]
-              .filter(Boolean)
-              .join('\n\n')
-              .slice(0, LONG_TEXT_LIMIT),
-            followUp: false,
-          });
-          await refresh();
-        },
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <>
-      <Button size='sm' disabled={busy} onClick={() => void open()}>
-        <Send />
-        {toText(text('mail.send'))}
-      </Button>
-      {composer}
-    </>
-  );
-}
-
-function arrayOf(value: unknown): string[] {
-  return Array.isArray(value) ? value.map(toText).filter(Boolean) : [];
-}
+// A record's mail on its page, built on the CRM's mail helpers (mail.tsx)
+// and the Mail plugin's components.
 
 function addressLine(message: MailMessageSummary, unknown: string): string {
   return message.from?.name || message.from?.address || unknown;
@@ -145,12 +51,14 @@ export type MailScope =
 // workspace.
 export function RecordMailPanel({
   target,
-  link,
   scope,
+  focus,
 }: {
   readonly target: MailTarget;
-  readonly link: MailLink;
   readonly scope?: MailScope;
+  // A conversation to open, as a timeline mail entry names it
+  // (`accountId:conversationId`, mail-timeline.ts).
+  readonly focus?: string;
 }): ReactElement {
   const { text } = useCrmText();
   const { t } = useTranslation('@nocobase/app-plugin-mail');
@@ -165,8 +73,29 @@ export function RecordMailPanel({
     error,
   } = useRecordMessages(target, connected);
   const { available, compose, composer } = useMailComposer();
-  const log = useLogSentMail(link);
+  const log = useMailSent();
   const [selected, setSelected] = useState<string>();
+  // The timeline's mail entry opened here: its conversation unfolded and in
+  // view, once the list has it.
+  const focused = focus
+    ? threads.find(
+        ({ key, latest }) =>
+          key === focus ||
+          `${latest.accountId}:${latest.internetMessageId}` === focus,
+      )?.key
+    : undefined;
+  // Unfolded once when it arrives; the person may fold it again.
+  const [arrived, setArrived] = useState<string>();
+  if (focused && focused !== arrived) {
+    setArrived(focused);
+    setSelected(focused);
+  }
+  useEffect(() => {
+    if (focused)
+      document
+        .getElementById(`mail-${focused}`)
+        ?.scrollIntoView({ block: 'nearest' });
+  }, [focused]);
   const selectedMessage = threads.find(
     (thread) => thread.key === selected,
   )?.latest;
@@ -284,7 +213,7 @@ export function RecordMailPanel({
         {threads.map(({ key, latest: message, unread }) => {
           const open = key === selected;
           return (
-            <li key={key}>
+            <li key={key} id={`mail-${key}`}>
               <button
                 type='button'
                 aria-expanded={open}

@@ -1,4 +1,5 @@
 import type { QueryAdapter, Row } from '@nocobase/db';
+import { randomUUID } from 'node:crypto';
 import type { AppAuthorization } from '@nocobase/app-plugin-authorization/server';
 import { convertLead } from './conversion.js';
 import { CrmError, definitions, object, stages, toText } from './schema.js';
@@ -18,7 +19,7 @@ import {
 
 // The demo dataset: NocoBase selling its own licences and services (the
 // editions and prices of nocobase.com/cn/commercial) to fictional customers,
-// with accounts, contacts, leads, opportunities, activities and approvals
+// with accounts, contacts, leads, opportunities, tasks and approvals
 // dated relative to the day it is imported. It follows the business guidance
 // in server/ai/employees/crm-guidance.ts. Imported and removed from the settings
 // page by an administrator; a manifest row in crm_settings records exactly
@@ -74,6 +75,11 @@ export interface DemoAccountCreator {
   resetPassword(id: string, password: string): Promise<void>;
   // And its name set back to the demo one, should it have been changed.
   rename(id: string, name: string): Promise<void>;
+  // Removing the demo data disables its accounts (the users plugin keeps a
+  // deleted account's address, so a deleted one could not be made again on
+  // the next import); importing again enables them.
+  disable(id: string): Promise<void>;
+  enable(id: string): Promise<void>;
 }
 
 export interface DemoStatus {
@@ -194,10 +200,22 @@ export async function populateDemo(
   // Accounts: reuse one that exists by username, create the rest, and make
   // sure each holds its demo role and nothing else among the CRM roles.
   const existing = await listUsers(service.database);
+  const disabled = new Set(
+    (
+      await query
+        .selectFrom('user')
+        .select('id')
+        .where('disabledAt', 'is not', null)
+        .where('deletedAt', 'is', null)
+        .execute()
+    ).map((row) => toText(row.id)),
+  );
   const userIds = {} as Record<DemoSeat, string>;
   for (const account of demoAccountsIn(language)) {
     const found = existing.find((u) => u.username === account.username);
     if (found) {
+      // One a removal disabled is the demo's again.
+      if (disabled.has(found.id)) await accounts.enable(found.id);
       await accounts.resetPassword(found.id, demoPassword(account.username));
       if (found.name !== account.name)
         await accounts.rename(found.id, account.name);
@@ -302,8 +320,8 @@ export async function populateDemo(
         ['won', 'lost'].includes(toText(record.stage))
       )
         patch.closedAt = date;
-      if (entity === 'activities' && record.status === 'completed')
-        patch.completedAt = input.endAt ?? record.endAt;
+      if (entity === 'tasks' && record.status === 'completed')
+        patch.completedAt = record.dueAt ?? date;
       await q
         .updateTable(definitions[entity].table)
         .set(patch)
@@ -315,7 +333,7 @@ export async function populateDemo(
 
   // Who owns which account (by index): the first seller 0,1,4 · the second
   // seller 2,5,7 · the manager 3,6.
-  // Leads rotate the same way by position; activities follow their record.
+  // Leads rotate the same way by position; tasks follow their record.
   const accountOwner = (i: number): Actor =>
     [0, 1, 4].includes(i)
       ? sellerActors[0]
@@ -586,50 +604,71 @@ export async function populateDemo(
         ),
       );
     }
-    const activity = async (
+    const task = async (
       name: string,
       links: Row,
       day: number,
       hour: number,
-      status = 'planned',
-      type = 'call',
-      feedback?: string | null,
+      status = 'open',
+      result?: string | null,
     ): Promise<Row> =>
       save(
-        'activities',
+        'tasks',
         {
           name,
           ...links,
-          startAt: at(day, hour),
-          endAt: at(day, hour + 1),
+          dueAt: at(day, hour),
           status,
-          type,
-          description: text.activityDescription,
-          feedback: feedback ?? null,
+          description: text.taskDescription,
+          result: result ?? null,
         },
         Math.min(day - 2, -1),
       );
+    // A call or a meeting that took place is a note on the record it was
+    // about, written by whoever held it, at the time it ended.
+    const note = async (
+      entity: 'leads' | 'opportunities',
+      recordId: unknown,
+      authorId: unknown,
+      heading: string,
+      body: string,
+      day: number,
+      hour: number,
+    ): Promise<void> => {
+      await q
+        .insertInto('crmHistory')
+        .values({
+          id: randomUUID(),
+          entity,
+          recordId: toText(recordId),
+          actorId: toText(authorId),
+          action: 'note',
+          changes: JSON.stringify({ text: `**${heading}**\n\n${body}` }),
+          createdAt: at(day, hour + 1),
+        })
+        .execute();
+    };
     const leadLinks = (i: number): Row => ({
       leadId: leads[i].id,
       ownerId: leadOwner(i).id,
     });
-    await activity(
+    await note(
+      'leads',
+      leads[0].id,
+      leadOwner(0).id,
       text.discoveryCall.name,
-      leadLinks(0),
+      text.discoveryCall.feedback,
       -12,
       10,
-      'completed',
-      'call',
-      text.discoveryCall.feedback,
     );
-    await activity(
+    await note(
+      'leads',
+      leads[1].id,
+      leadOwner(1).id,
       text.productDemo.name,
-      leadLinks(1),
+      text.productDemo.feedback,
       -5,
       14,
-      'completed',
-      'meeting',
-      text.productDemo.feedback,
     );
     for (const [i, accountIndex, contactIndex, day] of [
       [0, 0, 0, -10],
@@ -652,7 +691,7 @@ export async function populateDemo(
         .where('id', '=', converted.id)
         .execute();
       await q
-        .updateTable('crmActivities')
+        .updateTable('crmTasks')
         .set({ updatedAt: at(day) })
         .where('leadId', '=', converted.id)
         .execute();
@@ -666,94 +705,93 @@ export async function populateDemo(
         accountId: accounts_[a].id,
         opportunityId: opportunities[i].id,
         ownerId: accountOwner(a).id,
-        externalParticipants: [contacts[a][0].id, contacts[a][1].id],
       };
-      await activity(
-        text.activityName(
-          text.companies[a].activitySubject,
-          text.completedMatters[i],
-        ),
-        links,
+      await note(
+        'opportunities',
+        links.opportunityId,
+        links.ownerId,
+        text.taskName(text.companies[a].taskSubject, text.completedMatters[i]),
+        text.completedFeedback[i],
         -6 - i,
         10,
-        'completed',
-        i % 2 ? 'meeting' : 'demo',
-        text.completedFeedback[i],
       );
       if (i < 5)
-        await activity(
-          text.activityName(
-            text.companies[a].activitySubject,
-            text.plannedMatters[i],
-          ),
+        await task(
+          text.taskName(text.companies[a].taskSubject, text.plannedMatters[i]),
           links,
           [0, 0, -2, 2, 5][i],
           [10, 15, 11, 14, 10][i],
-          'planned',
-          i === 3 ? 'meeting' : 'call',
+          'open',
         );
     }
     // Two late-evening calls today, so the workspace's "upcoming today" list
     // still has entries at the end of the working day.
-    await activity(
+    await task(
       text.eveningCall,
       {
         accountId: accounts_[0].id,
         opportunityId: opportunities[0].id,
         ownerId: accountOwner(0).id,
-        externalParticipants: [contacts[0][0].id],
       },
       0,
       21.5,
-      'planned',
-      'call',
+      'open',
     );
-    await activity(
+    await task(
       text.ssoConfirmation,
       {
         accountId: accounts_[1].id,
         opportunityId: opportunities[1].id,
         ownerId: accountOwner(1).id,
-        externalParticipants: [contacts[1][1].id],
       },
       0,
       23.5,
-      'planned',
-      'meeting',
+      'open',
     );
-    const leadActivities: [number, number, number, string, string][] = [
-      [2, 1, 11, 'planned', 'call'],
-      [5, -5, 10, 'completed', 'call'],
-      [5, 0, 16, 'planned', 'meeting'],
-      [6, -7, 14, 'completed', 'email'],
-      [7, 3, 11, 'planned', 'demo'],
-      [8, -10, 10, 'completed', 'call'],
-      [9, -14, 15, 'completed', 'call'],
-      [10, -3, 10, 'completed', 'email'],
-      [13, -2, 11, 'completed', 'meeting'],
-      [13, 2, 15, 'planned', 'demo'],
-      [15, 4, 10, 'planned', 'call'],
-      [4, -1, 14, 'cancelled', 'meeting'],
-      [14, -2, 11, 'cancelled', 'call'],
-      [7, -1, 16, 'planned', 'task'],
-      [6, 7, 10, 'planned', 'call'],
+    const leadTasks: [number, number, number, string][] = [
+      [2, 1, 11, 'open'],
+      [5, -5, 10, 'completed'],
+      [5, 0, 16, 'open'],
+      [6, -7, 14, 'completed'],
+      [7, 3, 11, 'open'],
+      [8, -10, 10, 'completed'],
+      [9, -14, 15, 'completed'],
+      [10, -3, 10, 'completed'],
+      [13, -2, 11, 'completed'],
+      [13, 2, 15, 'open'],
+      [15, 4, 10, 'open'],
+      [4, -1, 14, 'cancelled'],
+      [14, -2, 11, 'cancelled'],
+      [7, -1, 16, 'open'],
+      [6, 7, 10, 'open'],
     ];
-    const activityLabel = (status: string): string =>
+    const taskLabel = (status: string): string =>
       status === 'completed'
-        ? text.leadActivityMatters.completed
+        ? text.leadTaskMatters.completed
         : status === 'cancelled'
-          ? text.leadActivityMatters.cancelled
-          : text.leadActivityMatters.planned;
-    for (const [i, day, hour, status, type] of leadActivities)
-      await activity(
-        text.activityName(text.leads[i].company, activityLabel(status)),
-        leadLinks(i),
-        day,
-        hour,
-        status,
-        type,
-        status === 'completed' ? text.leadActivityFeedback : null,
-      );
+          ? text.leadTaskMatters.cancelled
+          : text.leadTaskMatters.planned;
+    // A contact that took place is a note; what is still to do, or called
+    // off, a task.
+    for (const [i, day, hour, status] of leadTasks)
+      if (status === 'completed')
+        await note(
+          'leads',
+          leads[i].id,
+          leadOwner(i).id,
+          text.taskName(text.leads[i].company, taskLabel(status)),
+          text.leadTaskFeedback,
+          day,
+          hour,
+        );
+      else
+        await task(
+          text.taskName(text.leads[i].company, taskLabel(status)),
+          leadLinks(i),
+          day,
+          hour,
+          status,
+        );
     // A steady cadence beyond the hand-placed fortnight, so the calendar
     // and the day's agenda have something on every working day from a
     // month back to three months ahead, whichever day the demo is opened
@@ -770,15 +808,9 @@ export async function populateDemo(
       .filter(
         ({ lead }) => !['converted', 'invalid'].includes(toText(lead.status)),
       );
-    const cadenceTypes = [
-      'call',
-      'meeting',
-      'demo',
-      'email',
-      'task',
-      'call',
-      'meeting',
-    ];
+    // Which of the past matters took place with the customer (a note of
+    // it) and which were the team's own work (a task done).
+    const cadenceExchange = [true, true, true, false, true, false];
     const weekdayOf = new Intl.DateTimeFormat('en-US', {
       timeZone,
       weekday: 'short',
@@ -795,45 +827,59 @@ export async function populateDemo(
       for (let k = 0; k < perDay; k++, n++) {
         const hour = [9, 10, 11, 14, 15, 16][n % 6];
         const name = text.cadenceMatters[n % text.cadenceMatters.length];
-        const type = cadenceTypes[n % cadenceTypes.length];
+        const exchange = cadenceExchange[n % cadenceExchange.length];
         const status =
           day < 0
             ? n % 9 === 4 || n % 11 === 6
               ? 'cancelled'
               : 'completed'
-            : 'planned';
+            : 'open';
         const feedback =
           status === 'completed'
             ? text.cadenceFeedback[n % text.cadenceFeedback.length]
             : null;
         if (n % 3 === 2 && openLeads.length) {
           const { lead, index } = openLeads[n % openLeads.length];
-          await activity(
-            text.activityName(toText(lead.company), name),
-            leadLinks(index),
-            day,
-            hour,
-            status,
-            type,
-            feedback,
-          );
+          const subject = text.taskName(toText(lead.company), name);
+          if (status === 'completed' && exchange && feedback)
+            await note(
+              'leads',
+              lead.id,
+              leadOwner(index).id,
+              subject,
+              feedback,
+              day,
+              hour,
+            );
+          else
+            await task(subject, leadLinks(index), day, hour, status, feedback);
         } else {
           const { deal, index } = activeDeals[n % activeDeals.length];
           const a = deals[index][0];
-          await activity(
-            text.activityName(text.companies[a].activitySubject, name),
-            {
-              accountId: accounts_[a].id,
-              opportunityId: deal.id,
-              ownerId: accountOwner(a).id,
-              externalParticipants: [contacts[a][0].id],
-            },
-            day,
-            hour,
-            status,
-            type,
-            feedback,
-          );
+          const subject = text.taskName(text.companies[a].taskSubject, name);
+          if (status === 'completed' && exchange && feedback)
+            await note(
+              'opportunities',
+              deal.id,
+              accountOwner(a).id,
+              subject,
+              feedback,
+              day,
+              hour,
+            );
+          else
+            await task(
+              subject,
+              {
+                accountId: accounts_[a].id,
+                opportunityId: deal.id,
+                ownerId: accountOwner(a).id,
+              },
+              day,
+              hour,
+              status,
+              feedback,
+            );
         }
       }
     }
@@ -941,6 +987,7 @@ export async function populateDemo(
 export async function resetDemo(
   service: CrmService,
   actor: Actor,
+  accounts?: DemoAccountCreator,
 ): Promise<DemoStatus> {
   await requireCapability(actor, 'manage', 'settings');
   const query = service.database.query();
@@ -964,7 +1011,7 @@ export async function resetDemo(
       await q.deleteFrom('crmOutbox').where('recordId', 'in', all).execute();
     }
     for (const [entity, table] of [
-      ['activities', 'crmActivities'],
+      ['tasks', 'crmTasks'],
       ['approvals', 'crmApprovals'],
       ['opportunities', 'crmOpportunities'],
       ['contacts', 'crmContacts'],
@@ -977,5 +1024,38 @@ export async function resetDemo(
     }
     await q.deleteFrom('crmSettings').where('id', '=', DEMO_MARKER).execute();
   });
+  if (accounts) await disableDemoAccounts(service, actor, accounts);
   return demoStatus(service, actor);
+}
+
+// The demo's accounts go with its data: those an import created (a demo
+// username at the demo's own mail domain; an existing account an import
+// reused keeps its own address and stays as it was), of either language, are
+// disabled: they no longer sign in, nor are they offered as owners or
+// participants. Never the reader's own account.
+const DEMO_DOMAIN = '@demo.example';
+async function disableDemoAccounts(
+  service: CrmService,
+  actor: Actor,
+  accounts: DemoAccountCreator,
+): Promise<void> {
+  const usernames = new Set(
+    (['zh-CN', 'en-US'] as const).flatMap((language) =>
+      demoAccountsIn(language).map((account) => account.username),
+    ),
+  );
+  const rows = await service.database
+    .query()
+    .selectFrom('user')
+    .select(['id', 'username', 'email'])
+    .where('deletedAt', 'is', null)
+    .where('disabledAt', 'is', null)
+    .execute();
+  for (const user of rows)
+    if (
+      toText(user.id) !== actor.id &&
+      usernames.has(toText(user.username)) &&
+      toText(user.email).toLowerCase().endsWith(DEMO_DOMAIN)
+    )
+      await accounts.disable(toText(user.id));
 }

@@ -1,6 +1,14 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import { RecordForm } from '../../client/components/crm/form.js';
 import {
   definitions,
@@ -8,6 +16,12 @@ import {
 } from '../../server/providers/crm/schema.js';
 import { crmEn, crmZh } from '../../client/locales/crm/index.js';
 import { csvCell, parseCsv } from '../../client/components/crm/csv.js';
+// The task form's search chips read through React Query.
+const withQueries = ({ children }: { children: ReactNode }) => (
+  <QueryClientProvider client={new QueryClient()}>
+    {children}
+  </QueryClientProvider>
+);
 const state = vi.hoisted(() => ({
   api: vi.fn(),
   refresh: vi.fn(),
@@ -20,6 +34,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
   return {
     ...actual,
     useCrmApi: () => state.api,
+    useCrmScopeKey: () => ['test'],
     useRefresh: () => state.refresh,
     // A picker names its preset value through one record read.
     useRecord: (entity: string, id: unknown) => ({
@@ -186,45 +201,82 @@ describe('CRM forms and file interchange', () => {
     expect(cell(employed)).not.toBeNull();
     expect(cell(employed)).toBe(cell(primary));
   });
-  it('keeps a lead activity linked and hides account and external participants', () => {
+  // Editing keeps the whole form, a task opened from a lead keeps its lead.
+  it('keeps a lead task linked in the whole form when editing it', () => {
     render(
       <RecordForm
-        entity='activities'
-        initial={{ leadId: 'lead-a' }}
+        entity='tasks'
+        id='task-a'
+        initial={{ leadId: 'lead-a', name: 'Call back' }}
         onClose={vi.fn()}
       />,
     );
-    expect(screen.getByRole('combobox', { name: 'Lead' })).toBeDisabled();
     expect(
-      screen.queryByRole('combobox', { name: 'Account' }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText('External participants')).not.toBeInTheDocument();
+      screen.getByRole('combobox', { name: 'Related lead' }),
+    ).toBeInTheDocument();
   });
-  it('edits an activity time as yyyy-mm-dd HH:mm, not a locale clock', () => {
+  it('creates a task from a title and chips', async () => {
     state.locale = 'en';
-    const startAt = new Date(2026, 8, 24, 14, 30).toISOString();
+    state.api.mockResolvedValue({ data: { id: 'saved', name: 'Call back' } });
+    const onClose = vi.fn();
+    render(<RecordForm entity='tasks' onClose={onClose} />, {
+      wrapper: withQueries,
+    });
+    const add = screen.getByRole('button', { name: 'Add' });
+    expect(add).toBeDisabled();
+    for (const chip of ['Time', 'Record', 'Participants'])
+      expect(screen.getByRole('button', { name: chip })).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), {
+      target: { value: 'Call back' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Description' }), {
+      target: { value: 'About the quote' },
+    });
+    await userEvent.click(add);
+    await waitFor(() =>
+      expect(state.api).toHaveBeenCalledWith(
+        'tasks',
+        'POST',
+        expect.objectContaining({
+          name: 'Call back',
+          description: 'About the quote',
+          // Whoever sells owns what they create.
+          ownerId: 'rep',
+        }),
+      ),
+    );
+    expect(onClose).toHaveBeenCalled();
+  });
+  it('shows a task time as a date and a 24-hour time of day, with no end', async () => {
+    state.locale = 'en';
+    const dueAt = new Date(2026, 8, 24, 14, 30).toISOString();
     render(
-      <RecordForm
-        entity='activities'
-        initial={{ startAt }}
-        onClose={vi.fn()}
-      />,
+      <RecordForm entity='tasks' initial={{ dueAt }} onClose={vi.fn()} />,
+      {
+        wrapper: withQueries,
+      },
     );
-    const start = screen.getByLabelText('Start time');
-    // A native datetime-local control would show 02:30 PM in English.
-    expect(start).not.toHaveAttribute('type', 'datetime-local');
-    expect(start).toHaveValue('2026-09-24 14:30');
-    expect(screen.getByLabelText('End time')).toHaveAttribute(
-      'placeholder',
-      'yyyy-mm-dd HH:mm',
-    );
+    const time = screen.getByRole('button', { name: 'Time' });
+    expect(time).toHaveTextContent('2026-09-24 14:30');
+    await userEvent.click(time);
+    // Picked from an hour and a minute column, not typed or a native
+    // control, whose clock would read 02:30 PM in English.
+    const hours = await screen.findByRole('listbox', { name: 'Hour' });
+    const minutes = screen.getByRole('listbox', { name: 'Minute' });
+    expect(
+      within(hours).getByRole('option', { selected: true }),
+    ).toHaveTextContent('14');
+    expect(
+      within(minutes).getByRole('option', { selected: true }),
+    ).toHaveTextContent('30');
+    expect(screen.queryByLabelText('End time')).not.toBeInTheDocument();
   });
   it('renders Chinese labels and keeps a failed submission editable', async () => {
     state.locale = 'zh';
     state.api.mockRejectedValue(new Error('failed'));
     const onClose = vi.fn();
     render(<RecordForm entity='leads' onClose={onClose} />);
-    fireEvent.change(screen.getByLabelText('名称'), {
+    fireEvent.change(screen.getByLabelText('姓名'), {
       target: { value: '新线索' },
     });
     await userEvent.click(
@@ -234,7 +286,7 @@ describe('CRM forms and file interchange', () => {
       expect(screen.getByRole('alert')).toHaveTextContent('Could not save'),
     );
     expect(onClose).not.toHaveBeenCalled();
-    expect(screen.getByLabelText('名称')).toHaveValue('新线索');
+    expect(screen.getByLabelText('姓名')).toHaveValue('新线索');
   });
   it('opens a lead the AI captured prefilled, marking its doubts', async () => {
     state.api.mockResolvedValue({ data: { id: 'captured' } });

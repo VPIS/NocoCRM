@@ -1,4 +1,4 @@
-// The description of the activity a follow-up's accept creates or carries
+// The description of the task a follow-up's accept creates or carries
 // on: what to prepare, what to ask and the email draft, as Markdown under
 // headings in the reader's language. It imports only the headings' import-
 // free translations, so the browser bundle takes it too: the card shows,
@@ -61,7 +61,7 @@ export function planDescription(verdict: Planned, zh: boolean): string {
     .join('\n\n');
 }
 
-// An activity's description with a new follow-up's parts in it: what a
+// A task's description with a new follow-up's parts in it: what a
 // person wrote first, as it was, then the parts in their order, each the
 // one this follow-up brings or, where it brings none, the earlier one's (a
 // part runs from its heading to the next part's or the end).
@@ -82,7 +82,7 @@ export function mergePlanDescription(
     .join('\n\n');
 }
 
-// An activity's description read into what a person wrote and the parts a
+// A task's description read into what a person wrote and the parts a
 // follow-up wrote, by kind, each with its heading (a part runs from its
 // heading to the next part's or the end).
 export function planPartsOf(description: string): {
@@ -103,7 +103,7 @@ export function planPartsOf(description: string): {
   return { own: own.join('\n').trim(), parts };
 }
 
-// What a follow-up does to each part of an activity's description: adds it,
+// What a follow-up does to each part of a task's description: adds it,
 // changes it, or keeps it (the same words, headings and spacing aside).
 // Parts neither has are left out.
 export function planPartChanges(
