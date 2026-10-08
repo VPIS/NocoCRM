@@ -105,7 +105,6 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
               relatedTotals: {},
               history: [],
               historyTotal: 0,
-              notesTotal: 2,
               permissions: {
                 edit: true,
                 delete: state.canDelete,
@@ -236,7 +235,7 @@ describe('the account page', () => {
       expect(
         screen.queryByRole('button', { name: new RegExp(name) }),
       ).toBeNull();
-    for (const name of ['动态', '任务', '联系人', '商机', '附件', '备注'])
+    for (const name of ['动态', '任务', '联系人', '商机', '附件'])
       expect(
         screen.getAllByRole('tab', { name: new RegExp(name) }),
       ).toHaveLength(1);

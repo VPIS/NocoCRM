@@ -1,7 +1,14 @@
 import { fieldLabelKey, linkOf, toText } from '../components/crm/api.js';
 import { AutoLoadMore } from '../components/crm/auto-load.js';
 import { markdownLine } from '../components/crm/line-breaks.js';
-import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { useTranslation } from '@nocobase/i18n/client';
 import {
   Link,
@@ -63,8 +70,6 @@ import {
 import {
   useCrmApi,
   useCrmQuery,
-  useCrmScopeKey,
-  PAGE_SIZE,
   useMore,
   useCrmText,
   useMetadata,
@@ -92,7 +97,6 @@ import {
 } from '../components/crm/common.js';
 import { revealScrollbar } from '../components/crm/scrollbar.js';
 import { RecordForm } from '../components/crm/form.js';
-import { useQuery } from '@tanstack/react-query';
 import {
   EvaluateButton,
   EvaluationStatus,
@@ -265,7 +269,6 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       'historyTab',
       'tasks',
       'attachments',
-      'notes',
       ...(mailSetup.can ? ['mail'] : []),
     ]) ?? 'historyTab';
   // The tasks and the history arrive one page each with the lead;
@@ -285,8 +288,6 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   // The timeline entry the page was asked to show (a waiting evaluation).
   // `at` tells a repeated click from the last one, so it scrolls again.
   const [focus, setFocus] = useState<{ id: string; at: number }>();
-  // The note the timeline opened in the Notes tab.
-  const [noteFocus, setNoteFocus] = useState<string>();
   // The conversation a timeline mail entry opens on the Mail tab.
   const [mailFocus, setMailFocus] = useState<string>();
   const [convert, setConvert] = useState(false);
@@ -401,12 +402,6 @@ function LeadDetail({ id }: { id: string }): ReactElement {
           label: 'fields.attachments',
           icon: Paperclip,
           count: attachmentCount,
-        },
-        {
-          name: 'notes',
-          label: 'notes.tab',
-          icon: StickyNote,
-          count: detail.notesTotal ?? 0,
         },
         // The reader's own mail with the lead, for whoever has mail.
         ...(mailSetup.can
@@ -633,8 +628,6 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                 </>
               )}
             </div>
-          ) : tab === 'notes' ? (
-            <NotesPanel entity='leads' id={id} focusId={noteFocus} />
           ) : tab === 'mail' ? (
             <RecordMailPanel
               target={{ addresses: emailsOf([record]) }}
@@ -674,10 +667,6 @@ function LeadDetail({ id }: { id: string }): ReactElement {
               recordName={contextName}
               focusId={focus?.id}
               focusAt={focus?.at}
-              onOpenNote={(noteId) => {
-                setNoteFocus(noteId);
-                setTab('notes');
-              }}
               onOpenMail={
                 mailSetup.can
                   ? (sourceKey) => {
@@ -1915,12 +1904,10 @@ function TaskEvent({
   };
   return (
     <>
+      {/* What was done to the task, in one phrase ("planned the task"),
+          whatever its type: the name says what it is. */}
       <span className='shrink-0 text-muted-foreground'>
         {text(`feed.task.${verb}`, { defaultValue: verb })}
-      </span>
-      {/* "Task", whatever its type: the name says what it is. */}
-      <span className='shrink-0 text-muted-foreground'>
-        {text('feed.task.noun')}
       </span>
       {/* A long name is cut short, whole on hover; one deleted is no
           longer a link. On an edit the change comes first, the name taking
@@ -2064,7 +2051,6 @@ export function HistoryFeed({
   recordName,
   focusId,
   focusAt,
-  onOpenNote,
   onOpenMail,
 }: {
   entity: Entity;
@@ -2081,9 +2067,6 @@ export function HistoryFeed({
   // `focusAt` asks for it again (the same entry, clicked once more).
   focusId?: string;
   focusAt?: number;
-  // Opens a note in the Notes tab, where it is read whole and changed: the
-  // timeline only points to it.
-  onOpenNote?: (noteId: string) => void;
   // Opens a mail conversation on the Mail tab, for the mailbox's owner.
   onOpenMail?: (sourceKey: string) => void;
 }): ReactElement {
@@ -2155,34 +2138,36 @@ export function HistoryFeed({
   useEffect(() => {
     if (focus && !loaded && more.hasMore && !more.loading) void more.loadMore();
   }, [focus, loaded, more]);
-  // The note an edit belongs to: named by the entry, or, for edits recorded
-  // before they named it, the note that reads as the edit left it.
-  const noteOf = (event: Data): string | undefined => {
-    const named = toText((event.changes as Data | undefined)?.noteId);
-    if (named) return named;
-    const edited = noteText(event);
-    return edited
-      ? toText(
-          more.records.find(
-            (entry) =>
-              entry.action === 'note' &&
-              toText(entry.recordId) === toText(event.recordId) &&
-              noteText(entry) === edited,
-          )?.id ?? '',
-        ) || undefined
-      : undefined;
-  };
   const allNames = { ...names, ...more.titles };
+  // The notes read whole below their line (several lines, or too long for
+  // it), and the one its author is editing.
+  const [longNotes, setLongNotes] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const markLong = (key: string, long: boolean): void =>
+    setLongNotes((previous) => {
+      if (previous.has(key) === long) return previous;
+      const next = new Set(previous);
+      if (long) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  const [editingNote, setEditingNote] = useState<string>();
+  // A note's edits show on the note itself, marked edited, not as entries.
+  const shown = more.records.filter((event) => event.action !== 'noteEdited');
   return (
     <>
-      {!more.records.length ? (
+      {/* A note or a comment is written here, atop the timeline, and reads
+          whole in it: there is no Notes tab. */}
+      <NoteComposer entity={entity} id={id} />
+      {!shown.length ? (
         <p className='text-sm text-muted-foreground'>{text('feed.empty')}</p>
       ) : (
         // One list, newest first, each entry on a rail of icons, read as a
         // sentence — who, what they did (muted), what changed — with its
         // full date and time on the right; no month headings.
         <div className='grid grid-cols-[minmax(0,1fr)] gap-6'>
-          {[more.records].map((events) => (
+          {[shown].map((events) => (
             <section
               key='timeline'
               className='grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4'
@@ -2196,10 +2181,10 @@ export function HistoryFeed({
                 {events.map((event, index) => {
                   const key = toText(event.id);
                   const ai = event.action === 'ai';
-                  // A note: its text in one line. Its edits and its removal
-                  // only say that they happened, so the text shows once, on
-                  // the entry that added it (the note as it now reads,
-                  // marked edited).
+                  // A note: its text whole under its line, as it now reads,
+                  // marked edited. Its edits are not entries of their own
+                  // here; its removal says that it happened, without the
+                  // text.
                   const note = event.action === 'note';
                   const pending =
                     ai && followed && event.aiStatus === 'pending';
@@ -2235,7 +2220,7 @@ export function HistoryFeed({
                     <li
                       id={`feed-${key}`}
                       key={key}
-                      className='relative flex scroll-mt-24 gap-3'
+                      className='group/entry relative flex scroll-mt-24 gap-3'
                     >
                       <div className='flex w-5 shrink-0 flex-col items-center'>
                         <span className='flex h-[26px] items-center justify-center'>
@@ -2262,16 +2247,15 @@ export function HistoryFeed({
                           {/* Clipped at its end: on a narrow column (a
                               drawer's) nothing runs into the time. */}
                           <span className='flex min-w-0 flex-1 items-center gap-x-1.5 overflow-hidden whitespace-nowrap'>
-                            {/* Who: a person, or "AI" for its own work. */}
-                            <span className='shrink-0'>
+                            {/* Who: a person, or "AI" for its own work,
+                                in bold. */}
+                            <span className='shrink-0 font-semibold text-foreground'>
                               {ai
                                 ? text('feed.ai')
                                 : meta?.users.find(
                                     (u) => u.id === event.actorId,
                                   )?.name}
                             </span>
-                            {/* "Edited a note" leads to the note it changed,
-                                whose entry shows the text. */}
                             {taskEvent ? (
                               <TaskEvent
                                 event={event}
@@ -2284,16 +2268,6 @@ export function HistoryFeed({
                               <ApprovalEvent event={event} />
                             ) : event.action === 'mail' ? (
                               <MailEvent event={event} onOpen={onOpenMail} />
-                            ) : event.action === 'noteEdited' &&
-                              onOpenNote &&
-                              noteOf(event) ? (
-                              <button
-                                type='button'
-                                className='text-muted-foreground underline-offset-2 hover:text-foreground hover:underline'
-                                onClick={() => onOpenNote(noteOf(event)!)}
-                              >
-                                {text('feed.did.noteEdited')}
-                              </button>
                             ) : (
                               // Empty for files alone, whose "added" or
                               // "removed" follows: hidden, so no gap doubles.
@@ -2388,34 +2362,27 @@ export function HistoryFeed({
                                   onToggle={() => toggle(key)}
                                 />
                               )}
-                            {/* A note in one line, as a change is: its text
-                                cut where the line ends, opening the note in
-                                the Notes tab, where it is read whole and
-                                changed. */}
                             {/* What the person asked the AI to change, in
                                 their words, cut where the line ends. */}
                             {event.action === 'merged' ? (
                               <MergedLead changes={event.changes} />
                             ) : null}
+                            {/* A note that fits reads on its line after
+                                "Note:"; one of several lines, or longer
+                                than the line, reads whole below it, as
+                                Clarify shows a comment. */}
+                            {note ? (
+                              <NoteExcerpt
+                                value={noteText(event)}
+                                long={longNotes.has(key)}
+                                onLong={(long) => markLong(key, long)}
+                                tight={language.startsWith('zh')}
+                              />
+                            ) : null}
                             {event.action === 'aiRevise' ? (
                               <span className='min-w-0 truncate'>
                                 「{noteText(event).replace(/\s+/g, ' ')}」
                               </span>
-                            ) : null}
-                            {note ? (
-                              onOpenNote ? (
-                                <button
-                                  type='button'
-                                  className='min-w-0 truncate text-left underline-offset-2 hover:underline'
-                                  onClick={() => onOpenNote(key)}
-                                >
-                                  {markdownLine(noteText(event))}
-                                </button>
-                              ) : (
-                                <span className='min-w-0 truncate'>
-                                  {markdownLine(noteText(event))}
-                                </span>
-                              )
                             ) : null}
                             {/* The AI's part in a person's change, last on the
                                 line: proposed
@@ -2467,6 +2434,13 @@ export function HistoryFeed({
                                 </Button>
                               )}
                           </span>
+                          {/* Its author's edit and delete, on hover. */}
+                          {note && event.actorId === meta?.userId ? (
+                            <NoteActions
+                              id={key}
+                              onEdit={() => setEditingNote(key)}
+                            />
+                          ) : null}
                           <time
                             dateTime={toText(event.createdAt)}
                             // On the entry's first line, however far the
@@ -2476,6 +2450,16 @@ export function HistoryFeed({
                             {localDate(event.createdAt, language, timeZone)}
                           </time>
                         </div>
+                        {note && editingNote === key ? (
+                          <NoteEditor
+                            note={event}
+                            onDone={() => setEditingNote(undefined)}
+                          />
+                        ) : note && longNotes.has(key) ? (
+                          <div className='mt-0.5 text-sm'>
+                            <LongText value={noteText(event)} />
+                          </div>
+                        ) : null}
                         {/* A waiting verdict is handled here, open; any other
                             evaluation is its record, when opened. */}
                         {review && open && event.aiStatus !== 'running' ? (
@@ -2590,99 +2574,20 @@ export function HistoryFeed({
   );
 }
 
-// A record's notes tab: the note box, then every note, newest first, with
-// who wrote it and when; its author may change or remove one. The same
-// notes show in the timeline among its other entries.
-export function NotesPanel({
-  entity,
-  id,
-  focusId,
-}: {
-  entity: Entity;
-  id: string;
-  // The note the timeline opened, brought into view and marked.
-  focusId?: string;
-}): ReactElement {
-  const { text, language } = useCrmText();
-  const { data: meta } = useMetadata();
-  const api = useCrmApi();
-  const scopeKey = useCrmScopeKey();
-  const base = `${toText(entity)}/${toText(id)}/history?action=note`;
-  const first = useQuery({
-    queryKey: [...scopeKey, base],
-    queryFn: () =>
-      api<{ data: Data[]; total: number }>(
-        `${base}&pageSize=${toText(PAGE_SIZE)}`,
-      ),
-  });
-  const more = useMore<Data>(
-    base,
-    first.data ? { data: first.data.data, total: first.data.total } : undefined,
-  );
-  const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
-  // The note asked for: brought into view once loaded, the pages before it
-  // loaded first.
-  const loaded = more.records.some((note) => toText(note.id) === focusId);
-  useEffect(() => {
-    if (focusId && loaded)
-      document
-        .getElementById(`note-${focusId}`)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [focusId, loaded]);
-  useEffect(() => {
-    if (focusId && !loaded && more.hasMore && !more.loading)
-      void more.loadMore();
-  }, [focusId, loaded, more]);
-  return (
-    <div>
-      <NoteComposer entity={entity} id={id} />
-      {first.isLoading ? (
-        <Loading />
-      ) : !more.records.length ? (
-        <p className='text-sm text-muted-foreground'>{text('notes.empty')}</p>
-      ) : (
-        <ol className='grid gap-4'>
-          {more.records.map((note) => (
-            <li
-              key={toText(note.id)}
-              id={`note-${toText(note.id)}`}
-              // Marked as a timeline entry opened from elsewhere is.
-              className={
-                toText(note.id) === focusId
-                  ? 'crm-arrive -mx-2 rounded-lg bg-ai/5 px-2 py-1'
-                  : undefined
-              }
-            >
-              <div className='flex items-center justify-between gap-3 text-sm'>
-                <span className='flex min-w-0 items-center gap-1.5'>
-                  <span className='truncate'>
-                    {meta?.users.find((u) => u.id === note.actorId)?.name}
-                  </span>
-                  {note.source === 'assistant' && (
-                    <Badge variant='ai'>{text('feed.aiProposed')}</Badge>
-                  )}
-                </span>
-                <span className='shrink-0 text-xs text-muted-foreground/80 tabular-nums'>
-                  {note.editedAt ? `${toText(text('notes.edited'))} · ` : ''}
-                  {localDate(note.createdAt, language, timeZone)}
-                </span>
-              </div>
-              <NoteBody note={note} mine={note.actorId === meta?.userId} />
-            </li>
-          ))}
-        </ol>
-      )}
-      <AutoLoadMore
-        hasMore={more.hasMore}
-        loading={more.loading}
-        onLoad={() => void more.loadMore()}
-      />
-    </div>
-  );
+// A name's initials, as the account menu draws them: the first letter of
+// each of its first two words.
+function initials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  return words.length
+    ? words
+        .slice(0, 2)
+        .map((word) => word[0]?.toUpperCase() ?? '')
+        .join('')
+    : '?';
 }
 
-// The note box atop a record's notes. Anyone who may read the record may add
-// a note, which everyone who may read it sees; Ctrl/⌘+Enter adds it.
+// The note box atop a record's timeline. Anyone who may read the record may
+// add a note, which everyone who may read it sees; Ctrl/⌘+Enter adds it.
 function NoteComposer({
   entity,
   id,
@@ -2691,6 +2596,7 @@ function NoteComposer({
   id: string;
 }): ReactElement {
   const { text } = useCrmText();
+  const { data: meta } = useMetadata();
   const api = useCrmApi();
   const refresh = useRefresh();
   const [draft, setDraft] = useState('');
@@ -2712,23 +2618,37 @@ function NoteComposer({
       setBusy(false);
     }
   };
+  const me = meta?.users.find((user) => user.id === meta.userId)?.name ?? '';
   return (
     <div className='mb-5 grid gap-2'>
-      <Textarea
-        aria-label={text('notes.label')}
-        value={draft}
-        placeholder={text('notes.placeholder')}
-        maxLength={LONG_TEXT_LIMIT}
-        rows={2}
-        className='min-h-14 resize-y text-sm'
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-            event.preventDefault();
-            void add();
-          }
-        }}
-      />
+      {/* The writer's avatar before the box, drawn as the account menu's:
+          the first letter of each of the name's first two words. */}
+      <div className='flex items-start gap-3'>
+        <span
+          aria-hidden
+          className='grid size-10 shrink-0 place-items-center rounded-full bg-muted text-xs font-medium text-muted-foreground'
+        >
+          {initials(me)}
+        </span>
+        <Textarea
+          aria-label={text('notes.label')}
+          value={draft}
+          placeholder={text('notes.placeholder')}
+          maxLength={LONG_TEXT_LIMIT}
+          // One line until more is written, as tall as the avatar beside
+          // it, then as tall as the text (the primitive sizes to its
+          // content), up to half the screen.
+          rows={1}
+          className='max-h-[50vh] min-h-10 flex-1 resize-none py-1.5 text-sm'
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+              event.preventDefault();
+              void add();
+            }
+          }}
+        />
+      </div>
       {draft.trim() ? (
         <div className='flex items-center justify-end gap-3'>
           <span className='text-xs text-muted-foreground'>
@@ -2744,92 +2664,159 @@ function NoteComposer({
   );
 }
 
-// A note in the feed: its text, and for its author, edit and delete in the
-// corner (delete asks once more).
-function NoteBody({ note, mine }: { note: Data; mine: boolean }): ReactElement {
+// A note's text on its entry's line. It tells the timeline whether it is
+// long (several lines, or wider than the line), which then shows it whole
+// below and keeps this in place, unseen, to measure the line again as it
+// widens or narrows.
+function NoteExcerpt({
+  value,
+  long,
+  onLong,
+  tight,
+}: {
+  value: string;
+  long: boolean;
+  onLong: (long: boolean) => void;
+  // Right after a Chinese full-width colon, which carries its own space;
+  // the line's gap stays after an English one.
+  tight: boolean;
+}): ReactElement {
+  const ref = useRef<HTMLSpanElement>(null);
+  const reportRef = useRef(onLong);
+  useEffect(() => {
+    reportRef.current = onLong;
+  });
+  const lines = value.trim().includes('\n');
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const measure = (): void =>
+      reportRef.current(lines || node.scrollWidth > node.clientWidth + 1);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [value, lines]);
+  return (
+    <span
+      ref={ref}
+      aria-hidden={long || undefined}
+      className={`min-w-0 flex-1 truncate ${tight ? '-ml-1.5' : ''} ${
+        long ? 'invisible' : ''
+      }`}
+    >
+      {markdownLine(value)}
+    </span>
+  );
+}
+
+// A note's author's edit and delete, on the entry's line while it is
+// hovered or focused; delete asks once more.
+function NoteActions({
+  id,
+  onEdit,
+}: {
+  id: string;
+  onEdit: () => void;
+}): ReactElement {
   const { text } = useCrmText();
   const api = useCrmApi();
   const refresh = useRefresh();
-  const body = toText((note.changes as Data | undefined)?.text ?? '');
-  const [draft, setDraft] = useState<string>();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
-  const run = async (call: () => Promise<unknown>): Promise<void> => {
-    setBusy(true);
-    setError(undefined);
-    try {
-      await call();
-      await refresh();
-      setDraft(undefined);
-      setConfirming(false);
-    } catch (cause) {
-      setError(cause);
-    } finally {
-      setBusy(false);
-    }
-  };
-  const path = `notes/${toText(note.id)}`;
-  if (draft !== undefined)
-    return (
-      <div className='mt-1 grid gap-2'>
-        <Textarea
-          aria-label={text('notes.label')}
-          value={draft}
-          maxLength={LONG_TEXT_LIMIT}
-          className='min-h-20 text-sm'
-          onChange={(event) => setDraft(event.target.value)}
-        />
-        <div className='flex justify-end gap-2'>
-          <Button size='sm' variant='ghost' onClick={() => setDraft(undefined)}>
-            {text('cancel')}
-          </Button>
-          <Button
-            size='sm'
-            disabled={busy || !draft.trim()}
-            onClick={() => void run(() => api(path, 'PATCH', { text: draft }))}
-          >
-            {text('save')}
-          </Button>
-        </div>
-        <ErrorNotice error={error} />
-      </div>
-    );
   return (
-    <div className='group/note relative mt-1 rounded-lg bg-muted/40 px-3 py-2 text-sm'>
-      {/* A long note shows its first lines until opened. */}
-      <LongText value={body} />
-      {mine ? (
-        <div
-          className={`absolute top-1 right-1 flex gap-0.5 rounded-md bg-background/90 transition-opacity focus-within:opacity-100 group-hover/note:opacity-100 ${
-            confirming ? 'opacity-100' : 'opacity-0'
-          }`}
+    <span
+      className={`flex shrink-0 items-center gap-0.5 self-start transition-opacity group-hover/entry:opacity-100 focus-within:opacity-100 ${
+        confirming ? 'opacity-100' : 'opacity-0'
+      }`}
+    >
+      <Button
+        size='icon-xs'
+        variant='ghost'
+        aria-label={text('edit')}
+        title={text('edit')}
+        disabled={busy}
+        onClick={onEdit}
+      >
+        <PencilLine />
+      </Button>
+      <Button
+        size={confirming ? 'xs' : 'icon-xs'}
+        variant={confirming ? 'destructive' : 'ghost'}
+        aria-label={text(confirming ? 'notes.confirmDelete' : 'delete')}
+        title={text('delete')}
+        disabled={busy}
+        onClick={() => {
+          if (!confirming) {
+            setConfirming(true);
+            return;
+          }
+          setBusy(true);
+          setError(undefined);
+          api(`notes/${toText(id)}`, 'DELETE')
+            .then(() => refresh())
+            .catch(setError)
+            .finally(() => {
+              setBusy(false);
+              setConfirming(false);
+            });
+        }}
+        onBlur={() => setConfirming(false)}
+      >
+        <Trash2 />
+        {confirming ? text('notes.confirmDelete') : null}
+      </Button>
+      {error ? <ErrorNotice error={error} /> : null}
+    </span>
+  );
+}
+
+// A note changed in place by its author, under its line.
+function NoteEditor({
+  note,
+  onDone,
+}: {
+  note: Data;
+  onDone: () => void;
+}): ReactElement {
+  const { text } = useCrmText();
+  const api = useCrmApi();
+  const refresh = useRefresh();
+  const [draft, setDraft] = useState(() => noteText(note));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>();
+  return (
+    <div className='mt-1 grid gap-2'>
+      <Textarea
+        autoFocus
+        aria-label={text('notes.label')}
+        value={draft}
+        maxLength={LONG_TEXT_LIMIT}
+        className='max-h-[50vh] min-h-10 resize-none py-1.5 text-sm'
+        onChange={(event) => setDraft(event.target.value)}
+      />
+      <div className='flex justify-end gap-2'>
+        <Button size='sm' variant='ghost' onClick={onDone}>
+          {text('cancel')}
+        </Button>
+        <Button
+          size='sm'
+          disabled={busy || !draft.trim()}
+          onClick={() => {
+            setBusy(true);
+            setError(undefined);
+            api(`notes/${toText(note.id)}`, 'PATCH', { text: draft })
+              .then(() => refresh())
+              .then(onDone)
+              .catch(setError)
+              .finally(() => setBusy(false));
+          }}
         >
-          <Button
-            size='xs'
-            variant='ghost'
-            disabled={busy}
-            onClick={() => setDraft(body)}
-          >
-            <PencilLine />
-            {text('edit')}
-          </Button>
-          <Button
-            size='xs'
-            variant={confirming ? 'destructive' : 'ghost'}
-            disabled={busy}
-            onClick={() =>
-              confirming
-                ? void run(() => api(path, 'DELETE'))
-                : setConfirming(true)
-            }
-            onBlur={() => setConfirming(false)}
-          >
-            <Trash2 />
-            {text(confirming ? 'notes.confirmDelete' : 'delete')}
-          </Button>
-        </div>
-      ) : null}
+          {text('save')}
+        </Button>
+      </div>
       <ErrorNotice error={error} />
     </div>
   );

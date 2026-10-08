@@ -1008,10 +1008,6 @@ export class CrmService {
     const historyPage = await this.historyOf(actor, entity, id);
     const history = historyPage.data;
     const historyTotal = historyPage.total;
-    // The notes tab's count.
-    const notesTotal = (
-      await this.historyOf(actor, entity, id, { action: 'note', pageSize: 1 })
-    ).total;
     const related: Partial<Record<Entity, CrmRecord[]>> = {};
     const relatedTotals: Partial<Record<Entity, number>> = {};
     const firstPage = async (
@@ -1133,7 +1129,6 @@ export class CrmService {
       record,
       history,
       historyTotal,
-      notesTotal,
       related,
       relatedTotals,
       blockers,

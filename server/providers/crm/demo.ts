@@ -461,7 +461,6 @@ export async function populateDemo(
           type: i === 3 ? 'partner' : 'direct',
           website: `https://www.${domain}.example`,
           description,
-          notes: null,
         },
         -75 + i * 5,
       );
@@ -483,7 +482,6 @@ export async function populateDemo(
               phone: i === 4 && j === 1 ? null : phone(i * 2 + j),
               employed: !(i === 7 && j === 1),
               primary: j === 0,
-              notes: text.contactNotes[j],
             },
             i === 4 ? -4 - j : -70 + i * 5 + j,
           ),
@@ -553,7 +551,6 @@ export async function populateDemo(
       {
         status: 'churned',
         churnReason: 'toCompetitor',
-        notes: text.churnNotes,
       },
       -20,
       toText(accounts_[7].id),
@@ -627,7 +624,7 @@ export async function populateDemo(
     // A call or a meeting that took place is a note on the record it was
     // about, written by whoever held it, at the time it ended.
     const note = async (
-      entity: 'leads' | 'opportunities',
+      entity: 'leads' | 'opportunities' | 'accounts' | 'contacts',
       recordId: unknown,
       authorId: unknown,
       heading: string,
@@ -643,11 +640,35 @@ export async function populateDemo(
           recordId: toText(recordId),
           actorId: toText(authorId),
           action: 'note',
-          changes: JSON.stringify({ text: `**${heading}**\n\n${body}` }),
+          changes: JSON.stringify({
+            text: heading ? `**${heading}**\n\n${body}` : body,
+          }),
           createdAt: at(day, hour + 1),
         })
         .execute();
     };
+    // What is known of each contact, and why the churned account left: notes
+    // by their owners, written when the record was.
+    for (const [i, pair] of contacts.entries())
+      for (const [j, contact] of pair.entries())
+        await note(
+          'contacts',
+          contact.id,
+          contact.ownerId,
+          '',
+          text.contactNotes[j],
+          i === 4 ? -4 - j : -70 + i * 5 + j,
+          9,
+        );
+    await note(
+      'accounts',
+      accounts_[7].id,
+      accounts_[7].ownerId,
+      '',
+      text.churnNotes,
+      -20,
+      9,
+    );
     const leadLinks = (i: number): Row => ({
       leadId: leads[i].id,
       ownerId: leadOwner(i).id,

@@ -139,16 +139,11 @@ const wording = {
   },
   notes: {
     label: ['Note', '备注'],
-    tab: ['Notes', '备注'],
-    placeholder: [
-      'Write a note… everyone who can see this record will see it',
-      '写备注…能看到这条记录的人都能看到',
-    ],
+    placeholder: ['Write a note…', '写备注…'],
     add: ['Add note', '添加备注'],
     shortcut: ['⌘/Ctrl + Enter to add', '⌘/Ctrl + Enter 添加'],
     edited: ['Edited', '已编辑'],
     confirmDelete: ['Delete it?', '确认删除'],
-    empty: ['No notes yet.', '还没有备注。'],
   },
   collapse: ['Hide details', '收起详情'],
   leadGroups: {
@@ -244,13 +239,12 @@ const wording = {
     fieldCount: ['{{count}} fields', '{{count}} 个字段'],
     // One of the record's tasks, after who did it.
     task: {
-      planned: ['planned', '安排了'],
-      completed: ['completed', '完成了'],
-      cancelled: ['cancelled', '取消了'],
-      moved: ['moved', '改期了'],
-      edited: ['edited', '修改了'],
-      noun: ['task', '任务'],
-      deleted: ['deleted', '删除了'],
+      planned: ['planned the task', '安排任务'],
+      completed: ['completed the task', '完成任务'],
+      cancelled: ['cancelled the task', '取消任务'],
+      moved: ['moved the task', '改期任务'],
+      edited: ['edited the task', '修改任务'],
+      deleted: ['deleted the task', '删除任务'],
       to: ['to {{time}}', '改到 {{time}}'],
     },
     // A deal's contact with their role, in a change of the deal's contacts.
@@ -277,7 +271,7 @@ const wording = {
       updated: ['updated', '更新了'],
       deleted: ['deleted the record', '删除了记录'],
       converted: ['converted the lead', '转化了线索'],
-      note: ['added a note', '添加了备注'],
+      note: ['note:', '备注：'],
       noteEdited: ['edited a note', '编辑了备注'],
       noteDeleted: ['removed a note', '删除了一条备注'],
       aiRevise: ['asked the AI to revise the suggestion', '让 AI 修改建议'],

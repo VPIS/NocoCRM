@@ -16,6 +16,7 @@ import { crmZh } from '../../client/locales/crm/index.js';
 const state = vi.hoisted(() => ({
   api: vi.fn(),
   record: {} as Record<string, unknown>,
+  history: [] as Record<string, unknown>[],
   canDelete: true,
 }));
 
@@ -91,9 +92,8 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
               names: {},
               related: {},
               relatedTotals: {},
-              history: [],
-              historyTotal: 0,
-              notesTotal: 2,
+              history: state.history,
+              historyTotal: state.history.length,
               permissions: {
                 edit: true,
                 delete: state.canDelete,
@@ -179,6 +179,7 @@ beforeEach(() => {
   state.api.mockResolvedValue({ data: {} });
   state.record = { ...planned };
   state.canDelete = true;
+  state.history = [];
 });
 
 describe('the task page', () => {
@@ -246,10 +247,55 @@ describe('the task page', () => {
     expect(screen.getByText('结果')).toBeTruthy();
   });
 
-  it('counts attachments and notes but not the timeline, and keeps the tab in the address', async () => {
+  it('shows a note of several lines whole under its line, and edits it in place', async () => {
+    const note = {
+      id: 'note-1',
+      action: 'note',
+      entity: 'tasks',
+      recordId: 'act-1',
+      actorId: 'rep',
+      changes: { text: '客户确认下周三演示\n需要准备报价单' },
+      editedAt: '2026-09-23T02:00:00.000Z',
+      createdAt: '2026-09-22T03:00:00.000Z',
+    };
+    state.history = [
+      {
+        ...note,
+        id: 'edit-1',
+        action: 'noteEdited',
+        changes: { text: note.changes.text, noteId: 'note-1' },
+        createdAt: '2026-09-23T02:00:00.000Z',
+      },
+      note,
+    ];
+    renderPage();
+    // "Note:" on the entry's line; a note of several lines reads whole
+    // below it, as Clarify shows a comment, and its edits are not entries.
+    expect(screen.getByText('备注：')).toBeTruthy();
+    // (The line keeps its one-line text unseen, to measure.)
+    expect(
+      screen
+        .getAllByText(/需要准备报价单/)
+        .filter((node) => !node.closest('[aria-hidden="true"]')),
+    ).toHaveLength(1);
+    expect(screen.getByText('已编辑')).toBeTruthy();
+    expect(screen.queryByText('编辑了备注')).toBeNull();
+    // Its author changes it in place, from the line's edit button.
+    await userEvent.click(screen.getByRole('button', { name: '编辑' }));
+    expect(
+      (
+        screen
+          .getAllByRole('textbox', { name: '备注' })
+          .at(-1) as HTMLTextAreaElement
+      ).value,
+    ).toContain('需要准备报价单');
+  });
+
+  it('writes notes in the timeline, with no Notes tab, and keeps the tab in the address', async () => {
     renderPage();
     expect(screen.getByRole('tab', { name: /动态/ }).textContent).toBe('动态');
-    expect(screen.getByRole('tab', { name: /备注/ }).textContent).toBe('备注2');
+    expect(screen.queryByRole('tab', { name: /备注/ })).toBeNull();
+    expect(screen.getByRole('textbox', { name: '备注' })).toBeTruthy();
     await userEvent.click(screen.getByRole('tab', { name: /附件/ }));
     expect(screen.getByTestId('where').textContent).toBe(
       '/crm/tasks/act-1/attachments',

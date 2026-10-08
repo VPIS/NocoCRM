@@ -6919,10 +6919,9 @@ it('reverses the CRM migration on a real SQLite database', async () => {
     ).toEqual([]);
     // Activities give way to tasks, starting empty, and the timeline takes
     // entries brought in from mail.
-    expect((await migrator.latest()).executed).toEqual([
-      '202610080001_crm_tasks',
-      '202610080002_crm_history_sources',
-    ]);
+    expect(
+      (await migrator.upTo('202610080002_crm_history_sources')).executed,
+    ).toEqual(['202610080001_crm_tasks', '202610080002_crm_history_sources']);
     expect(await isolated.builder().hasCollection('crmActivities')).toBe(false);
     expect(
       await isolated.query().selectFrom('crmTasks').select('id').execute(),
@@ -6956,7 +6955,86 @@ it('reverses the CRM migration on a real SQLite database', async () => {
         createdAt: at,
       })
       .execute();
+    // An account's and a contact's Notes field becomes a note in their
+    // timelines, written by the owner at the record's last change, and the
+    // column goes; down puts it back.
+    await isolated
+      .query()
+      .insertInto('crmAccounts')
+      .values({
+        id: 'account',
+        name: 'Noted account',
+        ownerId: 'rep',
+        createdById: 'manager',
+        createdAt: at,
+        updatedAt: at,
+        status: 'customer',
+        source: 'website',
+        notes: 'Moved to a competitor.',
+      })
+      .execute();
+    await isolated
+      .query()
+      .insertInto('crmContacts')
+      .values({
+        id: 'contact',
+        name: 'Noted contact',
+        accountId: 'account',
+        ownerId: 'rep',
+        createdById: 'rep',
+        createdAt: at,
+        updatedAt: at,
+        notes: '  ',
+      })
+      .execute();
+    expect((await migrator.latest()).executed).toEqual([
+      '202610080003_crm_record_notes_to_timeline',
+    ]);
+    const moved = await isolated
+      .query()
+      .selectFrom('crmHistory')
+      .select(['entity', 'recordId', 'actorId', 'action', 'changes'])
+      .where('action', '=', 'note')
+      .execute();
+    expect(moved).toHaveLength(1);
+    expect(moved[0]).toMatchObject({
+      entity: 'accounts',
+      recordId: 'account',
+      actorId: 'rep',
+    });
+    expect(JSON.stringify(moved[0].changes)).toContain(
+      'Moved to a competitor.',
+    );
+    expect(
+      Object.keys(
+        (await isolated
+          .query()
+          .selectFrom('crmAccounts')
+          .selectAll()
+          .executeTakeFirstOrThrow()) as object,
+      ),
+    ).not.toContain('notes');
     expect((await migrator.latest()).executed).toEqual([]);
+    expect((await migrator.rollback()).rolledBack).toEqual([
+      '202610080003_crm_record_notes_to_timeline',
+    ]);
+    expect(
+      await isolated
+        .query()
+        .selectFrom('crmAccounts')
+        .select('notes')
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ notes: 'Moved to a competitor.' });
+    await isolated
+      .query()
+      .deleteFrom('crmContacts')
+      .where('id', '=', 'contact')
+      .execute();
+    await isolated
+      .query()
+      .deleteFrom('crmAccounts')
+      .where('id', '=', 'account')
+      .execute();
     // Each run is a batch, rolled back the last one first: tasks give way
     // to an empty activities table again, without the mail entries ...
     expect((await migrator.rollback()).rolledBack).toEqual([
@@ -7349,15 +7427,12 @@ describe('notes in the activity feed', () => {
       'Already runs SAP; wants an integration only.',
       'Seen',
     ]);
-    // The notes tab reads them alone, and the record says how many.
+    // Notes can be read alone (the AI follow-ups read them so).
     expect(
       (
         await service.historyOf(actor('rep'), 'leads', id, { action: 'note' })
       ).data.every((entry) => entry.action === 'note'),
     ).toBe(true);
-    expect((await service.detail(actor('rep'), 'leads', id)).notesTotal).toBe(
-      2,
-    );
     // A person's note counts among the people's entries.
     expect(
       (

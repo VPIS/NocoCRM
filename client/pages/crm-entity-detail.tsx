@@ -24,7 +24,6 @@ import {
   Paperclip,
   Plus,
   Star,
-  StickyNote,
   Target,
   Trash2,
   Ellipsis,
@@ -100,7 +99,6 @@ import {
   HistoryFeed,
   InfoGroup,
   InfoRow,
-  NotesPanel,
   RecordAttachments,
   WebsiteField,
 } from './crm-detail.js';
@@ -153,8 +151,6 @@ export default function EntityDetail({
   // The tab the address names (…/contacts), resolved once the page knows
   // which tabs it shows; an address naming another opens the first.
   const [tabSlug, setTab] = useDetailTab();
-  // The note the timeline opened in the Notes tab.
-  const [noteFocus, setNoteFocus] = useState<string>();
   // The conversation a timeline mail entry opens on the Mail tab.
   const [mailFocus, setMailFocus] = useState<string>();
   // The AI entry the timeline was opened at (a deal's latest follow-up).
@@ -354,8 +350,6 @@ export default function EntityDetail({
           ],
         ]
       : []),
-    // The notes, last, which also show in the timeline among its entries.
-    ['notes', 'notes.tab', detail.notesTotal ?? 0],
     // The reader's own mail with the record, for whoever has mail.
     ...(mailSetup.can && mailEntity
       ? [['mail', 'mail.tab', 0] as [string, string, number]]
@@ -542,8 +536,6 @@ export default function EntityDetail({
             ) : undefined
           }
         />
-      ) : activeTab === 'notes' ? (
-        <NotesPanel entity={entity} id={id} focusId={noteFocus} />
       ) : activeTab === 'historyTab' ? (
         <HistoryFeed
           entity={entity}
@@ -561,10 +553,6 @@ export default function EntityDetail({
           recordName={contextName}
           focusId={focus?.id}
           focusAt={focus?.at}
-          onOpenNote={(noteId) => {
-            setNoteFocus(noteId);
-            setTab('notes');
-          }}
           onOpenMail={
             mailSetup.can
               ? (sourceKey) => {
@@ -919,7 +907,6 @@ export default function EntityDetail({
     opportunities: Target,
     approvals: ClipboardCheck,
     attachments: Paperclip,
-    notes: StickyNote,
     mail: Mail,
   };
   // The timeline without a count, as on the lead page: its entries only grow.
@@ -1123,7 +1110,7 @@ export default function EntityDetail({
           )}
           {/* The reason stays editable while the account is churned. */}
           {currentStatus === 'churned' && row('churnReason')}
-          {['type', 'source', 'notes'].map(row)}
+          {['type', 'source'].map(row)}
         </InfoGroup>
         <InfoGroup title={text('accountGroups.company')}>
           <InfoRow label={text('fields.website')}>
@@ -1162,7 +1149,6 @@ export default function EntityDetail({
             'source',
           ].map(row)}
           {convertedRow}
-          {row('notes')}
         </InfoGroup>
         <InfoGroup title={text('contactGroups.reach')}>
           {['jobTitle', 'phone', 'email'].map(row)}

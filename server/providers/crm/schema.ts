@@ -260,7 +260,6 @@ export const definitions: Record<Entity, EntityDefinition> = {
       field('website', 'url'),
       field('address'),
       field('description', 'textarea'),
-      field('notes', 'textarea'),
       attachments,
     ],
   },
@@ -286,7 +285,6 @@ export const definitions: Record<Entity, EntityDefinition> = {
       field('employed', 'boolean'),
       // The main person to reach at the account; false unless chosen.
       field('primary', 'boolean'),
-      field('notes', 'textarea'),
     ],
   },
   opportunities: {

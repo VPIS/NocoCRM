@@ -74,7 +74,6 @@ export interface Detail extends Titled {
   // how much more the history and list endpoints hold.
   history: Data[];
   historyTotal?: number;
-  notesTotal?: number;
   related: Partial<Record<Entity, CrmRecord[]>>;
   relatedTotals?: Partial<Record<Entity, number>>;
   // What a delete would orphan, counted per child object; empty when clear.
