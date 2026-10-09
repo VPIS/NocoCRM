@@ -286,6 +286,24 @@ export async function provisionCrm(
     }
     await mark('crm-agents-v1');
   }
+  // The reports page, split from the overview after the sets were
+  // provisioned: both sales roles get it once.
+  if (!(await marker('crm-reports-v1'))) {
+    for (const role of salesRoles) {
+      const set = await authz.permissionSets.get(roleKey(role));
+      if (
+        set &&
+        !set.grants.some(
+          (g) => g.resource.type === 'page' && g.resource.id === 'crm-reports',
+        )
+      )
+        await authz.permissionSets.update(set.key, {
+          ...set,
+          grants: [...set.grants, pageGrant('crm-reports')],
+        });
+    }
+    await mark('crm-reports-v1');
+  }
   // Mail arrived after the sets were provisioned, and the CRM's own
   // notification centre went with the move to the template's inbox: both
   // sales roles get the Mail plugin's workspace once, and lose the grant of

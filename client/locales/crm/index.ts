@@ -1,6 +1,7 @@
 const wording = {
   conversionRate: ['Conversion rate', '转化率'],
   uncontacted: ['Leads awaiting first contact', '待首次跟进线索'],
+  uncontactedCard: ['New leads', '新线索'],
   stale: ['Stalled', '停滞'],
   convertedThisMonth: ['Converted this month', '本月转化'],
   converted: ['Converted leads', '已转化线索'],
@@ -8,7 +9,7 @@ const wording = {
   customers: ['Customers', '成交客户'],
   churnedThisMonth: ['Churned this month', '本月流失客户'],
   inactiveContacts: ['Former employees', '已离职人数'],
-  missingContact: ['Missing phone and email', '缺少联系方式'],
+  missingContact: ['No contact details', '缺少联系方式'],
   todayTasks: ['Today’s tasks', '今日任务'],
   myDecisions: ['Waiting for me', '待我审批'],
   awaitingApproval: ['Awaiting approval', '等待审批'],
@@ -35,7 +36,10 @@ const wording = {
   },
   sourcesSection: ['Lead sources', '线索来源'],
   // The overview's own navigation, a row of its sections.
-  overviewSections: ['Sections of the overview', '工作台导航'],
+  reportSections: ['Sections of the reports', '报表导航'],
+  reportsTitle: ['Reports', '报表'],
+  // The four figures that open the reports page.
+  keyFigures: ['Key figures', '关键数字'],
   // The Mailbox page's way to the Mail accounts page (pages/crm-mail).
   mailManageAccounts: ['Manage mail accounts', '管理邮箱账户'],
   // The user's conversations with the assistant, under the menu
@@ -1242,7 +1246,7 @@ const wording = {
   newLeads: ['New leads this month', '本月新增线索'],
   convertedLeads: ['Converted this month', '本月转化'],
   staleLeads: ['Stalled leads', '停滞线索'],
-  staleAccounts: ['Accounts not contacted recently', '长期未联系客户'],
+  staleAccounts: ['Quiet accounts', '客户久未联系'],
   amount: ['Amount', '金额'],
   count: ['Count', '数量'],
   overdueApprovalHint: ['Nothing waiting for you', '没有待你审批的申请'],
@@ -1308,6 +1312,7 @@ const wording = {
       record: ['Record pages', '记录详情页'],
       decisions: ['AI suggestions in the inbox', '收件箱的 AI 建议'],
       agents: ['Agents', 'Agents'],
+      reports: ['Reports', '报表'],
     },
   },
   aiLanguages: {
@@ -1486,10 +1491,7 @@ const wording = {
   noRecords: ['None yet', '暂无'],
   showing: ['Showing', '当前显示'],
   metricNotes: {
-    uncontacted: [
-      'New leads with no contact yet (no task done, note or mail)',
-      '新线索，还没有任何联系（无已完成任务、备注或邮件）',
-    ],
+    uncontacted: ['No follow-up yet', '没有任何跟进'],
     conversionRate: [
       'All time: converted ÷ all leads except invalid',
       '全部时间：已转化 ÷ 无效外的全部线索',
@@ -1503,23 +1505,24 @@ const wording = {
       'Moved to churned this month; {{added}} new this month',
       '本月转为流失；本月新增 {{added}}',
     ],
-    noContacts: ['Accounts with no contact recorded', '没有任何联系人的客户'],
+    noContacts: ['Accounts with no contacts yet', '客户下还没有联系人'],
     noOpenOpportunity: [
-      'Qualified or customer accounts with no open opportunity',
-      '状态为已确认意向或成交客户，但没有进行中的商机',
+      'Qualified or customer, no open opportunity',
+      '有意向或已成交，但没有进行中的商机',
     ],
     staleLeads: [
-      'Working or nurturing, {{days}}+ days since the last contact, nothing scheduled',
-      '跟进中或培育中，{{days}} 天以上无联系，也没安排下一步',
+      'No contact for {{days}}+ days, nothing planned',
+      '{{days}} 天没联系，也没安排下一步',
     ],
-    staleAccounts: [
-      'Not churned, {{days}}+ days since the last contact',
-      '非流失，{{days}} 天以上无联系',
+    staleAccounts: ['No contact for {{days}}+ days', '{{days}} 天没联系'],
+    staleOpportunities: [
+      'No contact for {{days}}+ days, nothing planned',
+      '{{days}} 天没联系，也没安排下一步',
     ],
     newLeads: ['Leads created this month', '本月创建的线索'],
     convertedLeads: ['Leads converted this month', '本月转化的线索'],
     pipeline: ['All open opportunities added up', '所有进行中商机的金额合计'],
-    missingContact: ['Neither phone nor email', '既无电话也无邮箱'],
+    missingContact: ['Contacts with no phone or email', '联系人没有电话和邮箱'],
     inactiveContacts: ['Marked as left the company', '标记为已离职'],
     open: ['Open opportunities', '进行中的商机'],
     weighted: [
@@ -1527,13 +1530,10 @@ const wording = {
       '金额 × 阶段概率，进行中的商机',
     ],
     closingSoon: [
-      'Open, expected close within {{days}} days',
-      '进行中，预计成交日在 {{days}} 天内',
+      'Expected to close within {{days}} days',
+      '{{days}} 天内预计成交',
     ],
-    overdueOpportunities: [
-      'Open, expected close date already passed',
-      '进行中，预计成交日已过',
-    ],
+    overdueOpportunities: ['Expected close date passed', '预计成交日已过'],
     wonThisMonth: ['Amount closed as won this month', '本月赢单的金额'],
     winRate: [
       'All time: won ÷ (won + lost)',
@@ -1548,7 +1548,7 @@ const wording = {
       'Raised by me, pending a decision',
       '我发起、正在审批中的申请',
     ],
-    toSubmit: ['My drafts and withdrawn requests', '我的草稿和已撤回的申请'],
+    toSubmit: ['Drafts and withdrawn approvals', '草稿和撤回的审批'],
     approvedThisMonth: ['Decided as approved this month', '本月通过的审批'],
     rejectedThisMonth: [
       'Decided as rejected this month; approval rate {{rate}}',
@@ -1602,10 +1602,11 @@ const wording = {
   ],
   moveTo: ['Move to {{stage}}', '移到「{{stage}}」'],
   moveToDetail: ['{{name}}: a reason is required.', '{{name}}：必须填写原因。'],
-  noContacts: ['No contacts', '无联系人'],
+  noContacts: ['No contacts', '客户无联系人'],
   noOpenOpportunity: ['No open opportunity', '无进行中商机'],
-  closingSoon: ['Opportunities closing soon', '即将到期商机'],
-  overdueOpportunities: ['Opportunities past close date', '已逾期商机'],
+  staleOpportunities: ['Stalled opportunities', '商机停滞'],
+  closingSoon: ['Closing soon', '商机即将到期'],
+  overdueOpportunities: ['Past close date', '商机已逾期'],
   wonThisMonth: ['Won this month', '本月赢单'],
   upcoming: ['Upcoming', '待进行'],
   completedThisMonth: ['Completed this month', '本月完成'],
@@ -1651,6 +1652,7 @@ const wording = {
     approvals: ['approval', '审批'],
   },
   navigation: {
+    reports: ['Reports', '报表'],
     inbox: ['Inbox', '收件箱'],
     agents: ['Agents', 'Agents'],
     action: ['Action', '行动'],

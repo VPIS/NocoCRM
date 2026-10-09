@@ -1771,6 +1771,30 @@ describe('CRM API security and domain rules', () => {
       weighted: { CNY: 100 },
       open: 1,
     });
+    // Stalled as a lead is: a deal with something planned ahead is not;
+    // once nothing is planned and it has gone without contact for the
+    // leads' stale days, it is, and the overview counts it.
+    expect(stats.metrics).toMatchObject({ stale: 0 });
+    await service.save(
+      actor('other'),
+      'tasks',
+      { status: 'cancelled' },
+      planned.id,
+    );
+    await service.database
+      .query()
+      .updateTable('crmOpportunities')
+      .set({ createdAt: new Date(Date.now() - 60 * 86400000).toISOString() })
+      .where('id', '=', opportunity.id)
+      .execute();
+    const stalled = await statistics(service, actor('rep'), 'opportunities', {
+      search: 'Statistics opportunity',
+    });
+    expect(stalled.metrics).toMatchObject({ stale: 1 });
+    expect(stalled.members?.stale).toEqual([opportunity.id]);
+    expect(
+      (await dashboard(service, actor('rep'), {})).attention,
+    ).toMatchObject({ staleOpportunities: 1 });
     await service.save(
       actor('rep'),
       'opportunities',

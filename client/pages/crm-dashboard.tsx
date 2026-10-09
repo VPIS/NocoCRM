@@ -1,14 +1,5 @@
-import { TrendChart } from '../components/crm/trend-chart.js';
 import { AssistantAskBox } from '../components/crm/assistant-ask-box.js';
-import { SectionNav } from '../components/crm/section-nav.js';
-import {
-  ActivityReport,
-  CycleReport,
-  ReasonsReport,
-  RevenueReport,
-} from '../components/crm/dashboard-reports.js';
 import { AutoLoadMore } from '../components/crm/auto-load.js';
-import { SortableTable } from '../components/crm/sortable-table.js';
 import { dueText, toText } from '../components/crm/api.js';
 import {
   Suspense,
@@ -28,33 +19,18 @@ import {
   AlertCircle,
   ArrowUpRight,
   CalendarClock,
-  CheckCircle2,
-  CircleDashed,
   Clock,
-  Inbox,
-  Layers,
   PauseCircle,
-  Percent,
-  Trophy,
   type LucideIcon,
-  Scale,
   User,
   ShieldCheck,
-  Building2,
   FilePen,
+  TimerOff,
+  Hourglass,
   PhoneOff,
-  UserMinus,
   UserX,
-  XCircle,
   ListChecks,
   SquareCheckBig,
-  Gauge,
-  ChartLine,
-  TriangleAlert,
-  CalendarDays,
-  TrendingDown,
-  Radar,
-  Users,
 } from 'lucide-react';
 import { Button } from '../components/ui/button.js';
 import {
@@ -68,7 +44,6 @@ import {
   CrmFrame,
   Loading,
   ErrorNotice,
-  Metric,
   RecordLink,
 } from '../components/crm/common.js';
 import {
@@ -77,8 +52,6 @@ import {
   useCrmText,
   useMetadata,
   useSessionUser,
-  rows,
-  moneyTotals,
   localDate,
   type Data,
   type CrmRecord,
@@ -95,12 +68,17 @@ const attentionCards: {
   metric: string;
   icon: LucideIcon;
   days?: 'leadStaleDays' | 'staleDays' | 'closeReminderDays';
+  // The card's own title where it is not the metric's name.
+  title?: string;
 }[] = [
+  // Titled plainly "New leads": its note says they are the ones nobody has
+  // contacted yet.
   {
     key: 'uncontacted',
     entity: 'leads',
     metric: 'uncontacted',
     icon: Clock,
+    title: 'uncontactedCard',
   },
   {
     key: 'staleLeads',
@@ -113,14 +91,15 @@ const attentionCards: {
     key: 'staleAccounts',
     entity: 'accounts',
     metric: 'stale',
-    icon: PauseCircle,
+    icon: Hourglass,
     days: 'staleDays',
   },
   {
-    key: 'noOpenOpportunity',
-    entity: 'accounts',
-    metric: 'noOpenOpportunity',
-    icon: CircleDashed,
+    key: 'staleOpportunities',
+    entity: 'opportunities',
+    metric: 'stale',
+    icon: TimerOff,
+    days: 'leadStaleDays',
   },
   {
     key: 'closingSoon',
@@ -163,17 +142,13 @@ export default function DashboardPage(): ReactElement {
   // Loaded on the first open and kept mounted after, so closing animates.
   const [drawerLoaded, setDrawerLoaded] = useState(false);
   if (drawer.opened && !drawerLoaded) setDrawerLoaded(true);
-  const { text, language } = useCrmText();
+  const { text } = useCrmText();
   const { data: meta } = useMetadata();
   const navigate = useNavigate();
   const [scope, setScope] = useState<'mine' | 'team'>('team');
   const query = useCrmQuery<Data>(`dashboard?scope=${scope}`);
   const data = query.data;
   const attention = (data?.attention ?? {}) as Data;
-  const business = (data?.business ?? {}) as Data;
-  const overall = (data?.overall ?? {}) as Data;
-  const funnel = rows(data?.funnel);
-  const maxCount = Math.max(1, ...funnel.map((r) => Number(r.count)));
   const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
   // The page greets the user by the time of day rather than naming itself;
   // the menu, the breadcrumb and the window title still call it the
@@ -205,83 +180,12 @@ export default function DashboardPage(): ReactElement {
     />
   );
 
-  // A section of the page, by its title's key, which also gives the id the
-  // page's own navigation (SectionNav) scrolls to; its top clears that
-  // navigation.
-  const sectionId = (key: string): string =>
-    `overview-${key.replace(/\W+/g, '-')}`;
+  // A section of the page, under a heading of its own.
   const section = (key: string, children: ReactNode): ReactElement => (
-    <section id={sectionId(key)} className='scroll-mt-16 space-y-3'>
+    <section className='space-y-3'>
       <h2 className='text-sm font-medium text-muted-foreground'>{text(key)}</h2>
       {children}
     </section>
-  );
-  // Today's work opens the page, under the ask box and above this row,
-  // which lists the sections below it.
-  const sectionKeys = [
-    'overall',
-    'reports.revenueSection',
-    'risks',
-    'monthBusiness',
-    'reports.lossSection',
-    'sourcesSection',
-    ...(scope === 'team' ? ['teamSection'] : []),
-  ];
-
-  // The value a cell shows and the value its column sorts by: an amount by
-  // its total, a source by its label, a rate or a count as a number.
-  const display = (row: Data, key: string): ReactNode =>
-    key === 'conversionRate'
-      ? row[key] == null
-        ? '—'
-        : `${toText(Math.round(Number(row[key]) * 100))}%`
-      : typeof row[key] === 'object' && row[key] !== null
-        ? moneyTotals(row[key], language)
-        : key === 'source'
-          ? text(`options.${toText(row[key])}`, {
-              defaultValue: toText(row[key]),
-            })
-          : toText(row[key] ?? '—');
-  const sortValue = (row: Data, key: string): number | string | undefined => {
-    const value = row[key];
-    if (value === null || value === undefined || value === '') return undefined;
-    if (key === 'source') return toText(display(row, key));
-    if (typeof value === 'number') return value;
-    if (typeof value === 'object') {
-      // No amount at all shows as "—" and sorts with the other blanks.
-      const amounts = Object.values(value as Record<string, unknown>);
-      if (!amounts.length) return undefined;
-      return amounts.reduce<number>(
-        (sum, amount) => sum + Number(amount ?? 0),
-        0,
-      );
-    }
-    const number = Number(value);
-    return Number.isFinite(number) ? number : toText(value);
-  };
-  const table = (
-    title: string,
-    items: Data[],
-    columns: [string, string][],
-    keyOf: (row: Data) => string,
-  ): ReactElement => (
-    <Card className={FRAME}>
-      <CardHeader>
-        <CardTitle className='text-base'>{text(title)}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <SortableTable
-          rows={items}
-          rowKey={keyOf}
-          columns={columns.map(([key, label]) => ({
-            id: key,
-            title: text(label),
-            sortValue: (row: Data) => sortValue(row, key),
-            cell: (row: Data) => display(row, key),
-          }))}
-        />
-      </CardContent>
-    </Card>
   );
 
   return (
@@ -289,6 +193,7 @@ export default function DashboardPage(): ReactElement {
       value={{ open: drawer.open, close: drawer.close, inDrawer: false }}
     >
       <CrmFrame
+        narrow
         title={
           <>
             <GreetingFace className='mr-3 h-[0.92em] w-[0.94em] shrink-0' />
@@ -319,14 +224,14 @@ export default function DashboardPage(): ReactElement {
           <Loading />
         ) : (
           <>
-            {/* Today's work needs no heading: it opens the page, right under
-                the ask box; named for screen readers. Set well apart from the
-                box, so the box stands out as the page's opening, and apart
-                from the section row below by more than the frame's spacing. */}
-            <section
-              aria-label={toText(text('todaysWork'))}
-              className='pt-14 pb-6'
-            >
+            {/* Today's work, under a heading like the section below it. Set
+                well apart from the box, so the box stands out as the page's
+                opening, and apart from the section below by more than the
+                frame's spacing. */}
+            <section className='space-y-3 pt-14 pb-6'>
+              <h2 className='text-sm font-medium text-muted-foreground'>
+                {text('todaysWork')}
+              </h2>
               <div className='grid gap-4 lg:grid-cols-3'>
                 {agenda(
                   'today',
@@ -347,286 +252,32 @@ export default function DashboardPage(): ReactElement {
                 )}
               </div>
             </section>
-            <SectionNav
-              label={text('overviewSections')}
-              sections={sectionKeys.map((key) => ({
-                id: sectionId(key),
-                label: text(key),
-                icon: SECTION_ICONS[key],
-              }))}
-            />
-            {section(
-              'overall',
-              <>
-                <div className='grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))]'>
-                  <Metric
-                    title={text('pipeline')}
-                    icon={Layers}
-                    value={moneyTotals(business.pipeline, language)}
-                    note={text('metricNotes.pipeline')}
-                    onClick={() => openList('opportunities', 'open')}
-                  />
-                  <Metric
-                    title={text('weighted')}
-                    icon={Scale}
-                    value={moneyTotals(business.weighted, language)}
-                    note={text('metricNotes.weighted')}
-                    onClick={() => openList('opportunities', 'open')}
-                  />
-                  <Metric
-                    title={text('leadConversionRate')}
-                    icon={Percent}
-                    value={
-                      overall.conversionRate == null
-                        ? '—'
-                        : `${toText(Math.round(Number(overall.conversionRate) * 100))}%`
-                    }
-                    note={
-                      overall.conversionRate == null
-                        ? text('noRate')
-                        : text('metricNotes.conversionRate')
-                    }
-                  />
-                  <Metric
-                    title={text('winRate')}
-                    icon={Percent}
-                    value={
-                      overall.winRate == null
-                        ? '—'
-                        : `${toText(Math.round(Number(overall.winRate) * 100))}%`
-                    }
-                    note={
-                      overall.winRate == null
-                        ? text('noRate')
-                        : text('metricNotes.winRate')
-                    }
-                  />
-                  <Metric
-                    title={text('customers')}
-                    icon={Building2}
-                    value={Number(overall.customers ?? 0)}
-                    note={text('metricNotes.customers', {
-                      share: Number(overall.accounts)
-                        ? `${toText(Math.round((Number(overall.customers ?? 0) / Number(overall.accounts)) * 100))}%`
-                        : '0%',
-                    })}
-                    onClick={() => openList('accounts', 'customers')}
-                  />
-                </div>
-                <Card className={FRAME}>
-                  <CardHeader className='flex flex-row items-center justify-between'>
-                    <CardTitle className='text-base'>
-                      {text('funnel')}
-                    </CardTitle>
-                    <Link
-                      className='text-xs text-muted-foreground hover:text-primary'
-                      to='/crm/opportunities'
-                    >
-                      {text('more')} ↗
-                    </Link>
-                  </CardHeader>
-                  <CardContent className='space-y-3'>
-                    {funnel.map((stage) => (
-                      <div
-                        key={toText(stage.stage)}
-                        className='grid grid-cols-[7rem_1fr_auto] items-center gap-3 text-xs'
-                      >
-                        <span>{text(`options.${toText(stage.stage)}`)}</span>
-                        <div className='h-6 rounded-md bg-muted'>
-                          <div
-                            className='h-full rounded-md bg-primary/75'
-                            style={{
-                              width: `${toText((Number(stage.count) / maxCount) * 100)}%`,
-                            }}
-                          />
-                        </div>
-                        <span className='text-right tabular-nums'>
-                          <span className='font-medium'>
-                            {Number(stage.count)}
-                          </span>
-                          <span className='ml-2 text-muted-foreground'>
-                            {moneyTotals(stage.amount, language)}
-                          </span>
-                        </span>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              </>,
-            )}
-            {section(
-              'reports.revenueSection',
-              <div className='space-y-4'>
-                <RevenueReport revenue={data.revenue as Data | undefined} />
-                <TrendChart
-                  title={text('trends')}
-                  rows={rows(data.trends)}
-                  language={language}
-                  table={
-                    <SortableTable
-                      rows={rows(data.trends)}
-                      rowKey={(row) => toText(row.month)}
-                      columns={(
-                        [
-                          ['month', 'month'],
-                          ['won', 'options.won'],
-                          ['lost', 'options.lost'],
-                        ] as const
-                      ).map(([key, label]) => ({
-                        id: key,
-                        title: text(label),
-                        sortValue: (row: Data) =>
-                          key === 'month'
-                            ? toText(row.month)
-                            : Number(row[key] ?? 0),
-                        cell: (row: Data) =>
-                          key === 'month'
-                            ? toText(row.month)
-                            : Number(row[key] ?? 0),
-                      }))}
-                    />
-                  }
-                />
-              </div>,
-            )}
             {section(
               'risks',
-              // The same grid as the other sections, so every group of figures
-              // lays out alike: two to a row on a phone, as many as fit wider.
-              <div className='grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))]'>
-                {attentionCards.map((card) => (
-                  <Metric
-                    key={card.key}
-                    title={text(card.key)}
-                    icon={card.icon}
-                    value={Number(attention[card.key] ?? 0)}
-                    tone={
-                      Number(attention[card.key] ?? 0) > 0
-                        ? 'attention'
-                        : 'neutral'
-                    }
-                    note={text(`metricNotes.${card.key}`, {
-                      defaultValue: '',
-                      days: card.days ? meta?.settings[card.days] : undefined,
-                    })}
-                    onClick={() => openList(card.entity, card.metric)}
-                  />
-                ))}
-              </div>,
-            )}
-            {section(
-              'monthBusiness',
-              <>
-                <div className='grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))]'>
-                  <Metric
-                    title={text('newLeads')}
-                    icon={Inbox}
-                    value={Number(business.newLeads ?? 0)}
-                    note={text('metricNotes.newLeads')}
-                    onClick={() => openList('leads', 'newThisMonth')}
-                  />
-                  <Metric
-                    title={text('convertedLeads')}
-                    icon={CheckCircle2}
-                    value={Number(business.convertedLeads ?? 0)}
-                    note={text('metricNotes.convertedLeads')}
-                    onClick={() => openList('leads', 'convertedThisMonth')}
-                  />
-                  <Metric
-                    title={text('wonThisMonth')}
-                    icon={Trophy}
-                    value={moneyTotals(business.wonThisMonth, language)}
-                    note={text('metricNotes.wonThisMonth')}
-                    onClick={() => openList('opportunities', 'wonThisMonth')}
-                  />
-                  <Metric
-                    title={text('completedThisMonth')}
-                    icon={CheckCircle2}
-                    value={Number(business.completedThisMonth ?? 0)}
-                    note={text('metricNotes.completedThisMonth')}
-                    onClick={() => openList('tasks', 'completedThisMonth')}
-                  />
-                  <Metric
-                    title={text('churnedThisMonth')}
-                    icon={UserMinus}
-                    value={Number(business.churnedThisMonth ?? 0)}
-                    tone={
-                      Number(business.churnedThisMonth ?? 0) > 0
-                        ? 'attention'
-                        : 'neutral'
-                    }
-                    note={text('metricNotes.churnedThisMonth', {
-                      added: Number(business.newAccounts ?? 0),
-                    })}
-                    onClick={() => openList('accounts', 'churnedThisMonth')}
-                  />
-                  <Metric
-                    title={text('approvedThisMonth')}
-                    icon={ShieldCheck}
-                    value={Number(business.approvedThisMonth ?? 0)}
-                    note={text('metricNotes.approvedThisMonth')}
-                    onClick={() => openList('approvals', 'approvedThisMonth')}
-                  />
-                  <Metric
-                    title={text('rejectedThisMonth')}
-                    icon={XCircle}
-                    value={Number(business.rejectedThisMonth ?? 0)}
-                    note={text('metricNotes.rejectedThisMonth', {
-                      rate:
-                        business.approvalRate == null
-                          ? '—'
-                          : `${toText(Math.round(Number(business.approvalRate) * 100))}%`,
-                    })}
-                    onClick={() => openList('approvals', 'rejectedThisMonth')}
-                  />
+              // One row per card in even columns: three across when they
+              // fit, then two, then one.
+              <div className='@container'>
+                <div className='grid gap-3 @xl:grid-cols-2 @3xl:grid-cols-3'>
+                  {attentionCards.map((card) => (
+                    <AttentionCard
+                      key={card.key}
+                      title={toText(text(card.title ?? card.key))}
+                      note={toText(
+                        text(`metricNotes.${card.key}`, {
+                          defaultValue: '',
+                          days: card.days
+                            ? meta?.settings[card.days]
+                            : undefined,
+                        }),
+                      )}
+                      icon={card.icon}
+                      count={Number(attention[card.key] ?? 0)}
+                      onClick={() => openList(card.entity, card.metric)}
+                    />
+                  ))}
                 </div>
-              </>,
-            )}
-            {section(
-              'reports.lossSection',
-              <div className='space-y-4'>
-                <ReasonsReport reasons={data.reasons as Data | undefined} />
-                <CycleReport cycle={data.cycle as Data | undefined} />
               </div>,
             )}
-            {section(
-              'sourcesSection',
-              table(
-                'sources',
-                rows(data.sources),
-                [
-                  ['source', 'fields.source'],
-                  ['leads', 'entities.leads'],
-                  ['converted', 'converted'],
-                  ['conversionRate', 'conversionRate'],
-                  ['won', 'won'],
-                ],
-                (row) => toText(row.source),
-              ),
-            )}
-            {scope === 'team' &&
-              section(
-                'teamSection',
-                <div className='space-y-4'>
-                  {table(
-                    'sellers',
-                    rows(data.sellers),
-                    [
-                      ['name', 'owner'],
-                      ['pipeline', 'pipeline'],
-                      ['wonThisMonth', 'wonThisMonth'],
-                      ['uncontacted', 'uncontacted'],
-                      ['staleLeads', 'staleLeads'],
-                      ['staleAccounts', 'staleAccounts'],
-                      ['overdueTasks', 'overdueTasks'],
-                    ],
-                    (row) => toText(row.id),
-                  )}
-                  <ActivityReport
-                    activity={data.activity as Data | undefined}
-                  />
-                </div>,
-              )}
           </>
         )}
       </CrmFrame>
@@ -640,6 +291,54 @@ export default function DashboardPage(): ReactElement {
         </Suspense>
       )}
     </RecordDrawerContext.Provider>
+  );
+}
+
+// One thing that may need attention: its icon on a grey tile, its title with
+// the rule under it, and the count on the right, all aligned to the card's
+// top, so cards whose rule takes two lines line up with their neighbours.
+// Something waiting turns only the count amber, a zero stays grey: amber is a
+// small signal beside the AI's purple, never a block of colour. A click opens
+// the list behind the count.
+function AttentionCard({
+  title,
+  note,
+  icon: Icon,
+  count,
+  onClick,
+}: {
+  title: string;
+  note: string;
+  icon: LucideIcon;
+  count: number;
+  onClick: () => void;
+}): ReactElement {
+  const waiting = count > 0;
+  return (
+    <button
+      type='button'
+      onClick={onClick}
+      className='flex min-w-0 items-start gap-3 rounded-xl border border-border/60 bg-card px-4 py-3 text-left shadow-xs transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
+    >
+      <span className='grid size-9 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground'>
+        <Icon className='size-4' aria-hidden />
+      </span>
+      <span className='min-w-0 flex-1'>
+        <span className='block truncate text-sm font-medium'>{title}</span>
+        {note && (
+          <span className='line-clamp-2 text-xs text-muted-foreground'>
+            {note}
+          </span>
+        )}
+      </span>
+      <span
+        className={`shrink-0 text-2xl leading-9 font-semibold tabular-nums ${
+          waiting ? 'text-warning' : 'text-muted-foreground/70'
+        }`}
+      >
+        {count}
+      </span>
+    </button>
   );
 }
 
@@ -693,40 +392,6 @@ function GreetingFace({ className }: { className?: string }): ReactElement {
   );
 }
 
-// The icon each section carries in the page's navigation: the lead
-// sources take the leads' menu icon.
-const SECTION_ICONS: Record<string, LucideIcon> = {
-  overall: Gauge,
-  'reports.revenueSection': ChartLine,
-  risks: TriangleAlert,
-  monthBusiness: CalendarDays,
-  'reports.lossSection': TrendingDown,
-  sourcesSection: Radar,
-  teamSection: Users,
-};
-
-// Each card's colour, from the theme's status tokens: today's tasks in the
-// info colour, the overdue ones in the destructive, the approvals waiting in
-// the warning; its icon sits on a tile of it and its top is washed with it.
-const AGENDA_TONES: Record<
-  AgendaName | 'quiet',
-  { tile: string; wash: string }
-> = {
-  today: {
-    tile: 'bg-info/10 text-info dark:bg-info/20',
-    wash: 'from-info/8',
-  },
-  overdue: {
-    tile: 'bg-destructive/10 text-destructive dark:bg-destructive/20',
-    wash: 'from-destructive/8',
-  },
-  approvals: {
-    tile: 'bg-warning/10 text-warning dark:bg-warning/20',
-    wash: 'from-warning/8',
-  },
-  quiet: { tile: 'bg-muted text-muted-foreground', wash: 'from-transparent' },
-};
-
 // The part of the day the page greets in, by the hour in the CRM's time
 // zone: morning until noon, afternoon until six, evening after.
 function dayPart(timeZone: string): 'morning' | 'afternoon' | 'evening' {
@@ -771,9 +436,6 @@ function AgendaCard({
   const [loading, setLoading] = useState(false);
   const records = [...(initial?.data ?? []), ...more];
   const total = initial?.total ?? 0;
-  // Nothing overdue is nothing to warn of: the card then takes no colour.
-  const tone =
-    name === 'overdue' && !total ? AGENDA_TONES.quiet : AGENDA_TONES[name];
   const loadMore = async (): Promise<void> => {
     setLoading(true);
     try {
@@ -787,16 +449,9 @@ function AgendaCard({
     }
   };
   return (
-    <Card className={`${FRAME} relative overflow-hidden`}>
-      {/* A wash of the card's colour across its top, behind the header. */}
-      <div
-        aria-hidden
-        className={`pointer-events-none absolute inset-x-0 top-0 h-20 bg-linear-to-b to-transparent ${tone.wash}`}
-      />
-      <CardHeader className='relative flex flex-row items-center gap-2.5'>
-        <span
-          className={`grid size-8 shrink-0 place-items-center rounded-lg ${tone.tile}`}
-        >
+    <Card className={FRAME}>
+      <CardHeader className='flex flex-row items-center gap-2.5'>
+        <span className='grid size-8 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground'>
           <AgendaIcon className='size-4' />
         </span>
         <div className='flex min-w-0 flex-1 items-baseline gap-2'>
@@ -809,7 +464,13 @@ function AgendaCard({
                 : name,
             )}
           </CardTitle>
-          <span className='font-heading text-lg leading-none font-semibold text-muted-foreground tabular-nums'>
+          {/* The count, amber while the card lists something, as the
+              attention cards' counts; the tile stays grey. */}
+          <span
+            className={`font-heading text-lg leading-none font-semibold tabular-nums ${
+              total ? 'text-warning' : 'text-muted-foreground'
+            }`}
+          >
             {total}
           </span>
         </div>

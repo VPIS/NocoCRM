@@ -5,6 +5,7 @@ import {
 } from '@nocobase/app-client/plugins';
 import {
   Building2,
+  ChartLine,
   ContactRound,
   Handshake,
   LayoutDashboard,
@@ -43,6 +44,16 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     name: 'home',
     navigation: { title: 'navigation.home', icon: LayoutDashboard },
     path: '/',
+  },
+  // How the business is going: the analyses taken out of the overview, which
+  // keeps today's work.
+  {
+    auth: 'required',
+    authz: page('crm-reports'),
+    componentLoader: () => import('./pages/crm-reports.js'),
+    name: 'crm-reports',
+    navigation: { title: 'crm.navigation.reports', icon: ChartLine },
+    path: '/crm/reports',
   },
   // What to do: the AI's suggestions waiting on the reader, the tasks and
   // the approvals.

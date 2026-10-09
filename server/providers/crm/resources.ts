@@ -185,6 +185,7 @@ export const crmPages: readonly { name: string; title: AuthorizationTitle }[] =
     { name: 'crm-decisions', title: crm('authz.pages.decisions') },
     // The Agents section's three pages share one grant (client/routes.ts).
     { name: 'crm-agents', title: crm('authz.pages.agents') },
+    { name: 'crm-reports', title: crm('authz.pages.reports') },
   ];
 
 export function pageGrant(name: string): PermissionGrant {

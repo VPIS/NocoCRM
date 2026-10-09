@@ -39,6 +39,7 @@ export function CrmFrame({
   editableTitle = false,
   actions,
   fill = false,
+  narrow = false,
   children,
 }: {
   // Without one the frame has no header: the page draws its heading and
@@ -55,6 +56,9 @@ export function CrmFrame({
   // The page takes exactly the viewport height and its content scrolls
   // inside (the board), instead of growing and scrolling as a whole.
   fill?: boolean;
+  // A page read rather than worked through, the overview: centred in a
+  // narrower column than the lists and boards take.
+  narrow?: boolean;
   children: ReactNode;
 }): ReactElement {
   // Inside the record drawer the frame is a section of the drawer, not the
@@ -69,7 +73,7 @@ export function CrmFrame({
           : // A record's page sits tighter at the top than a list's, so its
             // particulars and timeline start higher; one without a header
             // starts at the top, where its own columns begin.
-            `mx-auto w-full max-w-[1600px] p-4 md:p-8 ${title === undefined ? 'space-y-4 pt-0 md:pt-0' : editableTitle ? 'space-y-4 md:pt-6' : 'space-y-6'} ${toText(
+            `mx-auto w-full ${narrow ? 'max-w-5xl' : 'max-w-[1600px]'} p-4 md:p-8 ${title === undefined ? 'space-y-4 pt-0 md:pt-0' : editableTitle ? 'space-y-4 md:pt-6' : 'space-y-6'} ${toText(
               fill ? 'flex h-full flex-col pb-0 md:pb-0' : 'pb-24 md:pb-24',
             )}`
       }

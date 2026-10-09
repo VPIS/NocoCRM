@@ -118,6 +118,17 @@ const scopes: Partial<Record<string, readonly Scope[]>> = {
   tasks: ['all', 'mine', 'participating'],
 };
 
+// The filter a card on the overview or the reports opens is named as that
+// card is, where the metric's own name differs: the same leads are "New
+// leads" on the card and in the filter, and each object's stalled records
+// are named for the object.
+const METRIC_TITLES: Partial<Record<string, string>> = {
+  'leads.uncontacted': 'uncontactedCard',
+  'leads.stale': 'staleLeads',
+  'leads.newThisMonth': 'newLeads',
+  'accounts.stale': 'staleAccounts',
+  'opportunities.stale': 'staleOpportunities',
+};
 export default function CrmListPage(): ReactElement {
   const location = useLocation();
   // The segment after /crm: on the way to a record page or the action
@@ -793,7 +804,10 @@ function EntityList({
         <div className='flex items-center gap-2 text-sm'>
           <span className='text-muted-foreground'>{text('showing')}</span>
           <Button variant='secondary' size='sm' onClick={() => setMetric(null)}>
-            {text(activeMetric.key)}
+            {text(
+              METRIC_TITLES[`${toText(entity)}.${activeMetric.key}`] ??
+                activeMetric.key,
+            )}
             <X className='size-3.5' />
           </Button>
         </div>

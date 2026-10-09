@@ -169,6 +169,7 @@ export async function dashboard(
         uncontacted: (l.metrics as Row).uncontacted,
         staleLeads: (l.metrics as Row).stale,
         staleAccounts: (a.metrics as Row).stale,
+        staleOpportunities: (o.metrics as Row).stale,
         overdueTasks: (act.metrics as Row).overdueTasks,
       };
     }),
@@ -237,7 +238,7 @@ export async function dashboard(
       uncontacted: leadMetrics.uncontacted,
       staleLeads: leadMetrics.stale,
       staleAccounts: accountMetrics.stale,
-      noOpenOpportunity: accountMetrics.noOpenOpportunity,
+      staleOpportunities: dealMetrics.stale,
       noContacts: accountMetrics.noContacts,
       missingContact: contactMetrics.missingContact,
       closingSoon: dealMetrics.closingSoon,

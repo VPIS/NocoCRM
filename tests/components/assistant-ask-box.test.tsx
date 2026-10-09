@@ -99,15 +99,15 @@ describe("the overview's ask box", () => {
   });
   afterEach(() => window.removeEventListener('crm-assistant', listen));
 
-  it('lays out its four questions and sends one with a click, the analysis as its prompt', async () => {
+  it('lays out its three questions and sends one with a click', async () => {
     const user = userEvent.setup();
     render(<AssistantAskBox />);
     const list = screen.getByRole('list', {
       name: english('dock.suggestions'),
     });
-    expect(list.querySelectorAll('li')).toHaveLength(4);
+    expect(list.querySelectorAll('li')).toHaveLength(3);
     await user.click(suggestion('home.deals'));
-    await user.click(suggestion('home.analyze'));
+    await user.click(suggestion('home.followUp'));
     expect(events).toEqual([
       {
         prompt: english('dock.q.home.deals'),
@@ -116,7 +116,7 @@ describe("the overview's ask box", () => {
         model: { llmService: 'qwen', model: 'qwen-max' },
       },
       {
-        prompt: english('prompts.analyzeSales'),
+        prompt: english('dock.q.home.followUp'),
         send: true,
         newConversation: true,
         model: { llmService: 'qwen', model: 'qwen-max' },

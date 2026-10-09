@@ -19,7 +19,6 @@ export const HOME_QUESTIONS: readonly { key: string; prompt?: string }[] = [
   { key: 'home.focus' },
   { key: 'home.deals' },
   { key: 'home.followUp' },
-  { key: 'home.analyze', prompt: 'prompts.analyzeSales' },
 ];
 
 // What a question may bring besides its text (the overview's box): files

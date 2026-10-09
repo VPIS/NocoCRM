@@ -278,8 +278,21 @@ export async function statistics(
     const wonThisMonth = records.filter(
       (r) => r.stage === 'won' && inMonth(r.closedAt),
     );
+    // Stalled, as a lead is: open, no exchange for the leads' stale days
+    // and nothing planned ahead (the daily deal check's "silent" signal).
+    const upcoming = await upcomingTasks(
+      service.database.query(),
+      'opportunities',
+      now,
+    );
+    const stale = open.filter(
+      (r) =>
+        !upcoming.has(r.id) &&
+        +now - lastExchangeAt(r) > settings.leadStaleDays * 86400000,
+    );
     Object.assign(total, {
       open: open.length,
+      stale: stale.length,
       pipeline: amounts(open),
       weighted: amounts(open, true),
       closingSoon: closingSoon.length,
@@ -292,6 +305,7 @@ export async function statistics(
     });
     members = {
       open: open.map((r) => r.id),
+      stale: stale.map((r) => r.id),
       closingSoon: closingSoon.map((r) => r.id),
       overdueOpportunities: overdue.map((r) => r.id),
       wonThisMonth: wonThisMonth.map((r) => r.id),
