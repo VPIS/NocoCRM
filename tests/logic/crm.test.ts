@@ -19,6 +19,7 @@ import {
   toText,
   entities,
   type CrmRecord,
+  type Entity,
 } from '../../server/providers/crm/schema.js';
 import geographyMigration from '../../database/main/migrations/202609100001_crm_geography_codes.js';
 import phoneMigration from '../../database/main/migrations/202610030001_crm_phone_numbers.js';
@@ -6148,7 +6149,22 @@ describe('demo dataset', () => {
     expect(await count('accounts')).toBe(before.accounts + 8);
     expect(await count('opportunities')).toBe(before.opportunities + 30);
     expect(await count('leads')).toBe(before.leads + 16);
-    expect(await count('approvals')).toBe(before.approvals + 3);
+    expect(await count('approvals')).toBe(before.approvals + 4);
+    // The administrator importing it sells too: they own something of every
+    // kind, so signing in as them shows work of their own.
+    const ownedByImporter = async (entity: Entity) =>
+      (
+        await service.list(actor('admin'), entity, {
+          ownerId: 'admin',
+          pageSize: 500,
+        })
+      ).total;
+    expect(await ownedByImporter('accounts')).toBe(2);
+    expect(await ownedByImporter('leads')).toBe(4);
+    expect(await ownedByImporter('contacts')).toBeGreaterThan(0);
+    expect(await ownedByImporter('opportunities')).toBeGreaterThan(0);
+    expect(await ownedByImporter('tasks')).toBeGreaterThan(0);
+    expect(await ownedByImporter('approvals')).toBe(1);
     // Every demo account and lead carries its whole region: the province
     // of its city as well as the country and the city.
     for (const entity of ['accounts', 'leads'] as const) {

@@ -333,5 +333,10 @@ export const enUS: DemoContent = {
       description:
         'The integrator wants the contract to state the licence scope for applications delivered to end customers.',
     },
+    commitment: {
+      name: 'Sunridge Energy go-live commitment review',
+      description:
+        'The customer wants the contract to commit to go-live within 6 weeks, shorter than the standard delivery schedule; the implementation team needs to confirm capacity.',
+    },
   },
 };

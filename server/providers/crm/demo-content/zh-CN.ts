@@ -307,5 +307,10 @@ export const zhCN: DemoContent = {
       name: '云帆信息 客户项目授权条款评审',
       description: '集成商希望在合同中写明为最终客户交付应用的授权范围。',
     },
+    commitment: {
+      name: '昊阳能源 上线时间承诺评审',
+      description:
+        '客户要求合同写明 6 周内完成巡检看板上线，短于标准交付周期，需要实施团队确认排期。',
+    },
   },
 };

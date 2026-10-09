@@ -101,5 +101,6 @@ export interface DemoContent {
     readonly discount: DemoNamedText;
     readonly paymentTerms: DemoNamedText & { readonly comment: string };
     readonly contractTerms: DemoNamedText;
+    readonly commitment: DemoNamedText;
   };
 }

@@ -919,8 +919,10 @@ export async function populateDemo(
   });
 
   // Approvals are raised by whoever owns the deal, submitted to the manager;
-  // one of them the manager has already decided, and one the manager raised
-  // goes to the second manager (an administrator is not an approver).
+  // one of them the manager has already decided, one the manager raised goes
+  // to the second manager (an administrator is not an approver), and the
+  // importing administrator raises one on a deal of theirs, so every object
+  // holds something of theirs.
   const raise = (
     who: Actor,
     input: Row,
@@ -996,6 +998,18 @@ export async function populateDemo(
     },
     -2,
     -2,
+  );
+  await raise(
+    owner,
+    {
+      name: text.approvals.commitment.name,
+      opportunityId: opportunities[24].id,
+      topic: 'commitment',
+      approverId: managerActor.id,
+      description: text.approvals.commitment.description,
+    },
+    -1,
+    -1,
   );
 
   // The manifest makes the import repeat-safe and records exactly which rows
