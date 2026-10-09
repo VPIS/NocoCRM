@@ -4,7 +4,6 @@ import {
   type AppClientRouteContribution,
 } from '@nocobase/app-client/plugins';
 import {
-  AtSign,
   Building2,
   ContactRound,
   Handshake,
@@ -99,13 +98,15 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       componentLoader: () => import('./pages/crm-list.js'),
     })),
   },
-  // The user's own mailboxes, through the Mail plugin: the workspace and the
-  // page that connects them. Both check the plugin's own page grant,
-  // `mail.workspace`, which its API checks too, so the menu shows them to
-  // exactly those whose mail requests the server answers.
+  // Integrations: the services the user connects, the mailbox now (other
+  // channels later). The Mail plugin's workspace, and the page that connects
+  // mailboxes, reached from its header with no entry of its own. Both check
+  // the plugin's own page grant, `mail.workspace`, which its API checks too,
+  // so the menu shows them to exactly those whose mail requests the server
+  // answers.
   {
-    name: 'crm-mail-section',
-    navigation: { title: 'crm.navigation.mail' },
+    name: 'crm-integrations',
+    navigation: { title: 'crm.navigation.integrations' },
     children: [
       {
         name: 'crm-mail',
@@ -115,12 +116,13 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         navigation: { title: 'crm.navigation.mailbox', icon: Mail },
         componentLoader: () => import('./pages/crm-mail/index.js'),
       },
+      // Reached from the Mailbox page's header, with no entry of its own;
+      // the menu keeps Mailbox marked while it is shown.
       {
         name: 'crm-mail-accounts',
         path: '/crm/mail/accounts',
         auth: 'required',
         authz: page('mail.workspace'),
-        navigation: { title: 'crm.navigation.mailAccounts', icon: AtSign },
         componentLoader: () => import('./pages/crm-mail/accounts.js'),
       },
     ],

@@ -25,6 +25,8 @@ const wording = {
   sourcesSection: ['Lead sources', '线索来源'],
   // The overview's own navigation, a row of its sections.
   overviewSections: ['Sections of the overview', '工作台导航'],
+  // The Mailbox page's way to the Mail accounts page (pages/crm-mail).
+  mailManageAccounts: ['Manage mail accounts', '管理邮箱账户'],
   // The user's conversations with the assistant, under the menu
   // (sidebar-chats.tsx); "conversation" as the panel's own list says it.
   chats: {
@@ -1447,9 +1449,10 @@ const wording = {
     inbox: ['Inbox', '收件箱'],
     action: ['Action', '行动'],
     records: ['Records', '记录'],
-    mail: ['Mail', '邮件'],
+    // Where the user's connected services sit: mail now, other channels
+    // (WhatsApp, LinkedIn) later.
+    integrations: ['Integrations', '集成'],
     mailbox: ['Mailbox', '邮箱'],
-    mailAccounts: ['Mail accounts', '邮箱账户'],
   },
   entities: {
     leads: ['Leads', '线索'],
