@@ -82,7 +82,7 @@ describe('the assistant dock', () => {
 
   it("shows the page's suggested questions when focused, and sends one with a click", async () => {
     const user = userEvent.setup();
-    renderDock('/');
+    renderDock('/crm/leads');
     const input = screen.getByRole('textbox', {
       name: english('dock.placeholder'),
     });
@@ -91,13 +91,13 @@ describe('the assistant dock', () => {
     const list = screen.getByRole('list', {
       name: english('dock.suggestions'),
     });
-    expect(list.querySelectorAll('li')).toHaveLength(3);
+    expect(list.querySelectorAll('li')).toHaveLength(2);
     await user.click(
-      screen.getByRole('button', { name: english('dock.q.home.focus') }),
+      screen.getByRole('button', { name: english('dock.q.leads.first') }),
     );
     expect(events).toEqual([
       {
-        prompt: english('dock.q.home.focus'),
+        prompt: english('dock.q.leads.first'),
         send: true,
         newConversation: true,
       },
@@ -148,12 +148,12 @@ describe('the assistant dock', () => {
 
   it('moves from the input to the suggestions with Tab', async () => {
     const user = userEvent.setup();
-    renderDock('/');
+    renderDock('/crm/leads');
     await user.click(screen.getByRole('textbox'));
     // The send button is disabled while the box is empty, so Tab skips it.
     await user.tab();
     expect(
-      screen.getByRole('button', { name: english('dock.q.home.focus') }),
+      screen.getByRole('button', { name: english('dock.q.leads.first') }),
     ).toHaveFocus();
     expect(screen.getByRole('list')).toBeTruthy();
   });
@@ -172,20 +172,21 @@ describe('the assistant dock', () => {
     expect(input).toHaveValue('draft');
   });
 
-  it('stays out of the way: assistant off, chat loading, panel open, filled pages', () => {
+  it('stays out of the way: assistant off, chat loading, panel open, the overview, filled pages', () => {
     state.assistant = false;
-    const off = renderDock('/');
+    const off = renderDock('/crm/leads');
     expect(screen.queryByRole('textbox')).toBeNull();
     off.unmount();
 
     state.assistant = true;
     state.readiness = { state: 'loading' };
-    const loading = renderDock('/');
+    const loading = renderDock('/crm/leads');
     expect(screen.queryByRole('textbox')).toBeNull();
     loading.unmount();
 
     state.readiness = { state: 'ready' };
-    for (const path of ['/crm/mail', '/inbox']) {
+    // The overview has an ask box of its own.
+    for (const path of ['/', '/crm/mail', '/inbox']) {
       const page = renderDock(path);
       expect(screen.queryByRole('textbox')).toBeNull();
       page.unmount();
@@ -195,7 +196,7 @@ describe('the assistant dock', () => {
     accounts.unmount();
 
     state.panelOpen = true;
-    renderDock('/');
+    renderDock('/crm/leads');
     // Hidden, not unmounted, so text being typed survives.
     expect(screen.queryByRole('textbox')).toBeNull();
     expect(
@@ -206,7 +207,7 @@ describe('the assistant dock', () => {
   it('says why when the chat cannot start, and sends nothing', async () => {
     const user = userEvent.setup();
     state.readiness = { state: 'unavailable', reason: 'No model is enabled.' };
-    renderDock('/');
+    renderDock('/crm/leads');
     const input = screen.getByRole('textbox', { name: 'No model is enabled.' });
     expect(input).toBeDisabled();
     await user.click(input);

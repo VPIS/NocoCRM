@@ -1,4 +1,5 @@
 import { TrendChart } from '../components/crm/trend-chart.js';
+import { AssistantAskBox } from '../components/crm/assistant-ask-box.js';
 import { SectionNav } from '../components/crm/section-nav.js';
 import {
   ActivityReport,
@@ -32,7 +33,6 @@ import {
   Layers,
   PauseCircle,
   Percent,
-  Sparkles,
   Trophy,
   type LucideIcon,
   Scale,
@@ -163,13 +163,6 @@ export default function DashboardPage(): ReactElement {
   const funnel = rows(data?.funnel);
   const maxCount = Math.max(1, ...funnel.map((r) => Number(r.count)));
   const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
-  const analyzeSales = (): void => {
-    window.dispatchEvent(
-      new CustomEvent('crm-assistant', {
-        detail: { prompt: text('prompts.analyzeSales'), send: true },
-      }),
-    );
-  };
   const openList = (entity: Entity, metric: string): void =>
     void navigate(`/crm/${toText(entity)}?metric=${metric}`);
 
@@ -203,8 +196,9 @@ export default function DashboardPage(): ReactElement {
       {children}
     </section>
   );
+  // Today's work opens the page, under the ask box and above this row,
+  // which lists the sections below it.
   const sectionKeys = [
-    'todaysWork',
     'overall',
     'reports.revenueSection',
     'risks',
@@ -290,35 +284,24 @@ export default function DashboardPage(): ReactElement {
             ))}
           </div>
         }
-        actions={
-          <>
-            {meta?.assistant && (
-              <Button
-                variant='ghost'
-                className='text-ai hover:text-ai'
-                onClick={analyzeSales}
-              >
-                <Sparkles />
-                {text('analyzeSales')}
-              </Button>
-            )}
-          </>
-        }
       >
+        {/* Outside the sections, so the sticky section row and the section
+            ids are untouched; above the loading state and the error, so it
+            keeps its place. */}
+        <AssistantAskBox />
         <ErrorNotice error={query.error} />
         {query.isLoading || !data ? (
           <Loading />
         ) : (
           <>
-            <SectionNav
-              label={text('overviewSections')}
-              sections={sectionKeys.map((key) => ({
-                id: sectionId(key),
-                label: text(key),
-              }))}
-            />
-            {section(
-              'todaysWork',
+            {/* Today's work needs no heading: it opens the page, right under
+                the ask box; named for screen readers. Set well apart from the
+                box, so the box stands out as the page's opening, and apart
+                from the section row below by more than the frame's spacing. */}
+            <section
+              aria-label={toText(text('todaysWork'))}
+              className='pt-14 pb-6'
+            >
               <div className='grid gap-4 lg:grid-cols-3'>
                 {agenda(
                   'today',
@@ -337,8 +320,15 @@ export default function DashboardPage(): ReactElement {
                     ? '/crm/approvals?status=pending'
                     : '/crm/approvals?metric=myDecisions',
                 )}
-              </div>,
-            )}
+              </div>
+            </section>
+            <SectionNav
+              label={text('overviewSections')}
+              sections={sectionKeys.map((key) => ({
+                id: sectionId(key),
+                label: text(key),
+              }))}
+            />
             {section(
               'overall',
               <>

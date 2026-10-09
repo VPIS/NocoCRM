@@ -1,11 +1,5 @@
 import { ArrowUp, Sparkles } from 'lucide-react';
-import {
-  useEffect,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type ReactElement,
-} from 'react';
+import { useRef, useState, type KeyboardEvent, type ReactElement } from 'react';
 import { useLocation } from 'react-router';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '../ui/button.js';
@@ -22,6 +16,7 @@ import {
   TooltipTrigger,
 } from '../ui/tooltip.js';
 import { toText, useCrmText, useMetadata } from './api.js';
+import { ask, focusComposer, useFocusReturn } from './assistant-ask.js';
 import { useAssistantReadiness, usePanelOpen } from './assistant-state.js';
 import { useCurrentRecord, type CurrentRecord } from './current-record.js';
 
@@ -38,11 +33,13 @@ import { useCurrentRecord, type CurrentRecord } from './current-record.js';
 // in the corner that opens the panel. It hides while the panel is open, and
 // on pages filled by panes of their own that cannot leave room for it.
 
-// Pages the dock is not shown on: the Mail plugin's workspace and the inbox
-// fill the window with fixed panes whose bottom (pagination, keyboard hints)
-// it would cover.
+// Pages the dock is not shown on: the overview, which opens on an ask box of
+// its own (assistant-ask-box.tsx); the Mail plugin's workspace and the inbox,
+// which fill the window with fixed panes whose bottom (pagination, keyboard
+// hints) it would cover.
 function hiddenOn(pathname: string): boolean {
   return (
+    pathname === '/' ||
     pathname === '/crm/mail' ||
     pathname === '/inbox' ||
     pathname.startsWith('/inbox/')
@@ -64,7 +61,6 @@ const RECORD_QUESTIONS: Record<string, readonly string[]> = {
   approvals: ['approval.decide'],
 };
 const PAGE_QUESTIONS: Record<string, readonly string[]> = {
-  '/': ['home.focus', 'home.deals', 'home.followUp'],
   '/crm/leads': ['leads.first', 'leads.quiet'],
   '/crm/opportunities': ['opportunities.closing', 'opportunities.risk'],
   '/crm/accounts': ['accounts.quiet'],
@@ -81,42 +77,6 @@ function questionsFor(
   return PAGE_QUESTIONS[pathname] ?? [];
 }
 
-// Ask the panel: a new conversation, from the page's record when there is
-// one, sending the question when there is one (the phone button sends none).
-function ask(prompt: string, record: CurrentRecord | undefined): void {
-  window.dispatchEvent(
-    new CustomEvent('crm-assistant', {
-      detail: {
-        prompt,
-        ...(prompt ? { send: true } : {}),
-        newConversation: true,
-        ...(record
-          ? {
-              entity: record.entity,
-              recordId: record.recordId,
-              ...(record.name ? { name: record.name } : {}),
-            }
-          : {}),
-      },
-    }),
-  );
-}
-
-// Once the panel has opened, focus goes to its composer, so it never falls
-// to the page when the dock hides; tried for a moment while the panel's chat
-// mounts.
-function focusComposer(): void {
-  let tries = 0;
-  const attempt = (): void => {
-    const textarea = document.querySelector<HTMLTextAreaElement>(
-      '[data-crm-assistant-panel] textarea',
-    );
-    if (textarea) textarea.focus();
-    else if (tries++ < 60) requestAnimationFrame(attempt);
-  };
-  requestAnimationFrame(attempt);
-}
-
 export function AssistantDock(): ReactElement | null {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
@@ -130,25 +90,7 @@ export function AssistantDock(): ReactElement | null {
   const inputRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLButtonElement>(null);
   const dockRef = useRef<HTMLDivElement>(null);
-  // When the panel closes, focus left inside it (or fallen to the page)
-  // comes back to the dock; focus the user has put elsewhere stays.
-  const wasOpenRef = useRef(panelOpen);
-  useEffect(() => {
-    if (wasOpenRef.current && !panelOpen) {
-      const active = document.activeElement;
-      // The panel stays mounted while closed, so focus can be left on its
-      // hidden composer as well as on the page itself.
-      const stranded =
-        !active ||
-        active === document.body ||
-        !active.isConnected ||
-        active.closest('[data-crm-assistant-panel]') !== null ||
-        (typeof active.checkVisibility === 'function' &&
-          !active.checkVisibility());
-      if (stranded) (isMobile ? phoneRef.current : inputRef.current)?.focus();
-    }
-    wasOpenRef.current = panelOpen;
-  }, [panelOpen, isMobile]);
+  useFocusReturn(() => (isMobile ? phoneRef.current : inputRef.current));
 
   if (!meta?.assistant || readiness.state === 'loading' || hiddenOn(pathname))
     return null;
@@ -211,7 +153,7 @@ export function AssistantDock(): ReactElement | null {
                 size='icon-sm'
                 aria-label={toText(text('send'))}
                 disabled={!value.trim() || Boolean(unavailable)}
-                className='rounded-full bg-ai text-ai-foreground hover:bg-ai/90 disabled:bg-muted disabled:text-muted-foreground'
+                className='rounded-full bg-ai text-ai-foreground hover:bg-ai/90 hover:text-ai-foreground disabled:bg-muted disabled:text-muted-foreground'
                 onClick={() => send(value)}
               />
             }

@@ -56,8 +56,9 @@ const wording = {
     ],
     deleted: ['Deleted conversation "{{title}}"', '已删除对话“{{title}}”'],
   },
-  // The assistant's dock at the bottom of the page (assistant-dock.tsx) and
-  // the questions it suggests, by page.
+  // The assistant's dock at the bottom of the page (assistant-dock.tsx), the
+  // overview's ask box (assistant-ask-box.tsx), and the questions they
+  // suggest, by page.
   dock: {
     placeholder: ['Ask anything…', '问任何问题…'],
     // On a record's page, by the kind of record.
@@ -85,6 +86,7 @@ const wording = {
         focus: ['What should I focus on today?', '今天我最该处理什么？'],
         deals: ['Which opportunities need attention?', '哪些商机需要关注？'],
         followUp: ['Who should I follow up with?', '我该跟进谁？'],
+        analyze: ['Analyze sales and make a report', '分析销售情况并生成报告'],
       },
       leads: {
         first: [
@@ -1187,13 +1189,12 @@ const wording = {
   pipeline: ['Open pipeline', '进行中商机金额'],
   won: ['Won revenue', '赢单金额'],
   winRate: ['Win rate', '赢单率'],
-  today: ['Upcoming today', '今日待进行'],
+  today: ["Today's tasks", '今日任务'],
   todaysWork: ["Today's work", '今日工作'],
   monthBusiness: ['This month', '本月生意'],
   overall: ['Sales performance', '销售表现'],
   leadConversionRate: ['Lead conversion rate', '线索转化率'],
   teamSection: ['Team', '团队'],
-  analyzeSales: ['Analyze sales', '分析销售情况'],
   scopeMine: ['Mine', '我负责的'],
   scopeTeam: ['Team', '团队'],
   newLeads: ['New leads this month', '本月新增线索'],
@@ -1574,8 +1575,8 @@ const wording = {
   showLess: ['Show less', '收起'],
   prompts: {
     analyzeSales: [
-      'Analyze the sales situation and build it as a report, with charts: the funnel by stage, this month against the pipeline, where deals are stuck, and the three most useful next actions. Look up anything the preview does not show rather than guessing.',
-      '分析销售情况，生成一份带图表的报告：各阶段商机分布、本月进展与在手商机、卡在哪里、最有价值的三项下一步行动。预览里没有的记录要查了再说，不要猜。',
+      'Analyze the sales situation and build it as a report, with charts: the funnel by stage, this month against the pipeline, where deals are stuck, and the three most useful next actions. Look the records up rather than guessing.',
+      '分析销售情况，生成一份带图表的报告：各阶段商机分布、本月进展与在手商机、卡在哪里、最有价值的三项下一步行动。需要的记录先查再说，不要猜。',
     ],
     accounts: [
       'Summarize this account and suggest opportunities to deepen the relationship.',
