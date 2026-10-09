@@ -226,3 +226,33 @@
     animation: none;
   }
 }
+
+/* The assistant's ask boxes (the overview's and the dock on the other
+   pages): a border of the AI colour shading into the info colour and back,
+   over the card, with a soft AI glow that deepens while the box has focus.
+   It stands still, unlike the turning band of `.crm-ai-working`, which means
+   the AI is at work. A floating box adds its lift through
+   `--crm-ai-lift`. */
+.crm-ai-border {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    linear-gradient(
+        120deg,
+        var(--ai),
+        color-mix(in oklch, var(--ai) 45%, var(--info)) 35%,
+        color-mix(in oklch, var(--ai) 70%, var(--destructive)) 70%,
+        var(--ai)
+      )
+      border-box;
+  box-shadow:
+    0 0 0 3px color-mix(in oklch, var(--ai) 8%, transparent),
+    0 6px 22px -8px color-mix(in oklch, var(--ai) 40%, transparent),
+    var(--crm-ai-lift, 0 0 #0000);
+}
+.crm-ai-border:focus-within {
+  box-shadow:
+    0 0 0 3px color-mix(in oklch, var(--ai) 20%, transparent),
+    0 8px 28px -8px color-mix(in oklch, var(--ai) 50%, transparent),
+    var(--crm-ai-lift, 0 0 #0000);
+}

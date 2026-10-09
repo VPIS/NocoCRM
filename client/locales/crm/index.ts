@@ -22,6 +22,17 @@ const wording = {
   opportunityName: ['{{name}} opportunity', '{{name}}商机'],
   workspace: ['Sales workspace', '销售工作台'],
   dashboard: ['Overview', '工作台'],
+  // The overview's heading, by the time of day in the CRM's time zone.
+  greeting: {
+    morning: ['Morning, {{name}}', '早上好，{{name}}'],
+    afternoon: ['Afternoon, {{name}}', '下午好，{{name}}'],
+    evening: ['Evening, {{name}}', '晚上好，{{name}}'],
+  },
+  greetingAlone: {
+    morning: ['Good morning', '早上好'],
+    afternoon: ['Good afternoon', '下午好'],
+    evening: ['Good evening', '晚上好'],
+  },
   sourcesSection: ['Lead sources', '线索来源'],
   // The overview's own navigation, a row of its sections.
   overviewSections: ['Sections of the overview', '工作台导航'],
@@ -61,6 +72,8 @@ const wording = {
   // suggest, by page.
   dock: {
     placeholder: ['Ask anything…', '问任何问题…'],
+    attach: ['Attach files', '上传文件'],
+    model: ['Model', '模型'],
     // On a record's page, by the kind of record.
     placeholderFor: {
       leads: ['Ask anything about this lead…', '关于此线索，问任何问题…'],

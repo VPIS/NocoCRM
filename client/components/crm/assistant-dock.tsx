@@ -129,7 +129,7 @@ export function AssistantDock(): ReactElement | null {
       // disabled, and the send button is whenever the box is empty: only an
       // unavailable chat fades the box here. On the card colour in both
       // themes, so the page does not show through.
-      className={`h-11 rounded-full border-border bg-card shadow-lg has-disabled:bg-card dark:bg-card dark:has-disabled:bg-card ${
+      className={`crm-ai-border h-11 rounded-full [--crm-ai-lift:var(--shadow-lg)] has-disabled:bg-card dark:bg-card dark:has-disabled:bg-card ${
         unavailable ? 'opacity-60' : 'has-disabled:opacity-100'
       }`}
     >

@@ -1,5 +1,12 @@
-import { useEffect, useRef } from 'react';
-import { usePanelOpen } from './assistant-state.js';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  findAIModel,
+  useAI,
+  type AIChatAttachment,
+  type AIModel,
+} from '@/extensions/nocobase-ai';
+import { getEmployeeModels } from '@/extensions/nocobase-ai/providers/model.js';
+import { CRM_ASSISTANT, usePanelOpen } from './assistant-state.js';
 import type { CurrentRecord } from './current-record.js';
 
 // What the assistant's ask boxes share: the dock at the bottom of the pages
@@ -15,16 +22,39 @@ export const HOME_QUESTIONS: readonly { key: string; prompt?: string }[] = [
   { key: 'home.analyze', prompt: 'prompts.analyzeSales' },
 ];
 
+// What a question may bring besides its text (the overview's box): files
+// already uploaded, and the model the new conversation runs on.
+export interface AskExtras {
+  attachments?: readonly AIChatAttachment[];
+  model?: AIModel;
+}
+
 // Ask the panel: a new conversation, from the page's record when there is
 // one, sending the question when there is one (the dock's phone button sends
 // none).
-export function ask(prompt: string, record?: CurrentRecord): void {
+export function ask(
+  prompt: string,
+  record?: CurrentRecord,
+  extras: AskExtras = {},
+): void {
+  const attachments = extras.attachments ?? [];
   window.dispatchEvent(
     new CustomEvent('crm-assistant', {
       detail: {
         prompt,
-        ...(prompt ? { send: true } : {}),
+        ...(prompt || attachments.length ? { send: true } : {}),
         newConversation: true,
+        ...(attachments.length ? { attachments } : {}),
+        ...(extras.model
+          ? {
+              model: {
+                ...(extras.model.llmService
+                  ? { llmService: extras.model.llmService }
+                  : {}),
+                model: extras.model.value,
+              },
+            }
+          : {}),
         ...(record
           ? {
               entity: record.entity,
@@ -78,4 +108,120 @@ export function useFocusReturn(
     }
     wasOpenRef.current = panelOpen;
   }, [panelOpen, target]);
+}
+
+// The files a question carries, uploaded to the AI Employee plugin's storage
+// as soon as they are picked, as the chat's own composer does, so the
+// conversation receives them ready. No local preview is made: an image
+// shows the preview the upload returns.
+export function useAskAttachments(): {
+  attachments: readonly AIChatAttachment[];
+  uploading: boolean;
+  upload: (files: readonly File[]) => void;
+  remove: (uid: string) => void;
+  clear: () => void;
+} {
+  const { uploadFile } = useAI();
+  const [attachments, setAttachments] = useState<readonly AIChatAttachment[]>(
+    [],
+  );
+  const upload = useCallback(
+    (files: readonly File[]): void => {
+      for (const file of files) {
+        const uid = `upload-${crypto.randomUUID()}`;
+        const pending: AIChatAttachment = {
+          uid,
+          filename: file.name || `pasted-${String(Date.now())}`,
+          status: 'uploading',
+          size: file.size,
+          mimetype: file.type,
+        };
+        setAttachments((current) => [...current, pending]);
+        const replace = (next: AIChatAttachment): void =>
+          setAttachments((current) =>
+            current.map((item) => (item.uid === uid ? next : item)),
+          );
+        uploadFile(file).then(
+          (response) => {
+            const text = (value: unknown, fallback: string): string =>
+              typeof value === 'string' ? value : fallback;
+            replace({
+              ...response,
+              uid: text(response.id, uid),
+              filename: text(
+                response.filename ?? response.title,
+                pending.filename,
+              ),
+              status: 'done',
+              size:
+                typeof response.size === 'number' ? response.size : file.size,
+              mimetype: text(response.mimetype, file.type),
+              url: typeof response.url === 'string' ? response.url : undefined,
+              preview:
+                typeof response.preview === 'string'
+                  ? response.preview
+                  : file.type.startsWith('image/') &&
+                      typeof response.url === 'string'
+                    ? response.url
+                    : undefined,
+            });
+          },
+          (error: unknown) =>
+            replace({
+              ...pending,
+              status: 'error',
+              ...(error instanceof Error ? { error: error.message } : {}),
+            }),
+        );
+      }
+    },
+    [uploadFile],
+  );
+  const remove = useCallback(
+    (uid: string) =>
+      setAttachments((current) => current.filter((item) => item.uid !== uid)),
+    [],
+  );
+  const clear = useCallback(() => setAttachments([]), []);
+  return {
+    attachments,
+    uploading: attachments.some((item) => item.status === 'uploading'),
+    upload,
+    remove,
+    clear,
+  };
+}
+
+// The models the CRM employee may run on (its dedicated models, else every
+// enabled one) and the one picked for the next conversation: the first until
+// the user picks another, which this browser remembers.
+const MODEL_KEY = 'nococrm:ask-model';
+
+export function useAskModel(): {
+  models: readonly AIModel[];
+  model: AIModel | undefined;
+  select: (key: string) => void;
+} {
+  const { employees, models: all } = useAI();
+  const employee = employees.find((item) => item.username === CRM_ASSISTANT);
+  const models = useMemo(
+    () => getEmployeeModels(all, employee),
+    [all, employee],
+  );
+  const [key, setKey] = useState(() => {
+    try {
+      return localStorage.getItem(MODEL_KEY) ?? '';
+    } catch {
+      return '';
+    }
+  });
+  const select = useCallback((next: string): void => {
+    setKey(next);
+    try {
+      localStorage.setItem(MODEL_KEY, next);
+    } catch {
+      // Storage may be unavailable; the choice then lasts for the page.
+    }
+  }, []);
+  return { models, model: findAIModel(models, key) ?? models[0], select };
 }

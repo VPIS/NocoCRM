@@ -81,6 +81,9 @@ export type AIEmployeeTask = {
     system?: string;
     user?: string;
     workContext?: AIWorkContextItem[];
+    // Application change: files already uploaded (the CRM's overview ask
+    // box uploads them before opening the chat), sent with the message.
+    attachments?: AIChatAttachment[];
   };
   autoSend?: boolean;
   skillSettings?: {

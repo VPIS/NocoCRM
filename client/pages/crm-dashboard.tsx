@@ -13,6 +13,7 @@ import { dueText, toText } from '../components/crm/api.js';
 import {
   Suspense,
   lazy,
+  useId,
   useState,
   type ReactElement,
   type ReactNode,
@@ -23,6 +24,7 @@ import {
 } from '../components/crm/record-drawer.js';
 import { Link, useNavigate } from 'react-router';
 import {
+  AlarmClock,
   AlertCircle,
   ArrowUpRight,
   CalendarClock,
@@ -44,6 +46,8 @@ import {
   UserMinus,
   UserX,
   XCircle,
+  ListChecks,
+  SquareCheckBig,
 } from 'lucide-react';
 import { Button } from '../components/ui/button.js';
 import {
@@ -65,6 +69,7 @@ import {
   useCrmApi,
   useCrmText,
   useMetadata,
+  useSessionUser,
   rows,
   moneyTotals,
   localDate,
@@ -163,6 +168,14 @@ export default function DashboardPage(): ReactElement {
   const funnel = rows(data?.funnel);
   const maxCount = Math.max(1, ...funnel.map((r) => Number(r.count)));
   const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
+  // The page greets the user by the time of day rather than naming itself;
+  // the menu, the breadcrumb and the window title still call it the
+  // overview.
+  const user = useSessionUser();
+  const part = dayPart(timeZone);
+  const greeting = user?.name
+    ? text(`greeting.${part}`, { name: user.name })
+    : text(`greetingAlone.${part}`);
   const openList = (entity: Entity, metric: string): void =>
     void navigate(`/crm/${toText(entity)}?metric=${metric}`);
 
@@ -269,7 +282,12 @@ export default function DashboardPage(): ReactElement {
       value={{ open: drawer.open, close: drawer.close, inDrawer: false }}
     >
       <CrmFrame
-        title={text('dashboard')}
+        title={
+          <>
+            <GreetingFace className='mr-3 h-[0.92em] w-[0.94em] shrink-0' />
+            {greeting}
+          </>
+        }
         titleAside={
           <div className='flex rounded-lg border p-0.5'>
             {(['mine', 'team'] as const).map((value) => (
@@ -618,6 +636,91 @@ export default function DashboardPage(): ReactElement {
 }
 
 type AgendaName = 'today' | 'overdue' | 'approvals';
+// Each card's icon: the tasks' and the approvals' menu icons, and an alarm
+// for the overdue tasks.
+const AGENDA_ICONS: Record<AgendaName, LucideIcon> = {
+  today: SquareCheckBig,
+  overdue: AlarmClock,
+  approvals: ListChecks,
+};
+
+// A face drawn in a few strokes that leads the greeting: two eyes, a nose
+// and a broad smile, in the band of colours the ask boxes' border carries
+// (client/styles.css), so the page's opening reads as one.
+function GreetingFace({ className }: { className?: string }): ReactElement {
+  const id = useId();
+  return (
+    <svg
+      // Cropped to the strokes, so the box is the face and lines up with the
+      // glyphs beside it.
+      viewBox='1.5 1.5 21 20.5'
+      fill='none'
+      aria-hidden
+      className={className}
+    >
+      <defs>
+        <linearGradient id={id} x1='0' y1='0' x2='1' y2='1'>
+          <stop offset='0' style={{ stopColor: 'var(--ai)' }} />
+          <stop
+            offset='0.5'
+            style={{
+              stopColor: 'color-mix(in oklch, var(--ai) 45%, var(--info))',
+            }}
+          />
+          <stop
+            offset='1'
+            style={{
+              stopColor:
+                'color-mix(in oklch, var(--ai) 70%, var(--destructive))',
+            }}
+          />
+        </linearGradient>
+      </defs>
+      <g stroke={`url(#${id})`} strokeLinecap='round' strokeLinejoin='round'>
+        <path d='M4.5 3v3.5M19.5 3v3.5' strokeWidth={3} />
+        <path d='M12.6 6.2 10.4 11.6l3.4.6' strokeWidth={2.2} />
+        <path d='M3 16.2c4.6 5.4 13.4 5.4 18 0' strokeWidth={3} />
+      </g>
+    </svg>
+  );
+}
+
+// Each card's colour, from the theme's status tokens: today's tasks in the
+// info colour, the overdue ones in the destructive, the approvals waiting in
+// the warning; its icon sits on a tile of it and its top is washed with it.
+const AGENDA_TONES: Record<
+  AgendaName | 'quiet',
+  { tile: string; wash: string }
+> = {
+  today: {
+    tile: 'bg-info/10 text-info dark:bg-info/20',
+    wash: 'from-info/8',
+  },
+  overdue: {
+    tile: 'bg-destructive/10 text-destructive dark:bg-destructive/20',
+    wash: 'from-destructive/8',
+  },
+  approvals: {
+    tile: 'bg-warning/10 text-warning dark:bg-warning/20',
+    wash: 'from-warning/8',
+  },
+  quiet: { tile: 'bg-muted text-muted-foreground', wash: 'from-transparent' },
+};
+
+// The part of the day the page greets in, by the hour in the CRM's time
+// zone: morning until noon, afternoon until six, evening after.
+function dayPart(timeZone: string): 'morning' | 'afternoon' | 'evening' {
+  const hour = Number(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hour: 'numeric',
+      hourCycle: 'h23',
+    }).format(new Date()),
+  );
+  if (hour >= 5 && hour < 12) return 'morning';
+  if (hour >= 12 && hour < 18) return 'afternoon';
+  return 'evening';
+}
 // A workspace card pages in fives: five is what fits under the day's
 // heading without scrolling, and the rest comes on request.
 const AGENDA_PAGE = 5;
@@ -641,12 +744,16 @@ function AgendaCard({
   const { data: meta } = useMetadata();
   const api = useCrmApi();
   const entity: Entity = name === 'approvals' ? 'approvals' : 'tasks';
+  const AgendaIcon = AGENDA_ICONS[name];
   // Pages fetched past the first, which came with the workspace itself.
   const [more, setMore] = useState<CrmRecord[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const records = [...(initial?.data ?? []), ...more];
   const total = initial?.total ?? 0;
+  // Nothing overdue is nothing to warn of: the card then takes no colour.
+  const tone =
+    name === 'overdue' && !total ? AGENDA_TONES.quiet : AGENDA_TONES[name];
   const loadMore = async (): Promise<void> => {
     setLoading(true);
     try {
@@ -660,28 +767,46 @@ function AgendaCard({
     }
   };
   return (
-    <Card className={FRAME}>
-      <CardHeader className='flex flex-row items-center justify-between'>
-        <CardTitle className='text-base'>
-          {text(
-            name === 'approvals'
-              ? scope === 'team'
-                ? 'pendingApprovalsTeam'
-                : 'pendingApprovals'
-              : name,
-          )}
-          <span className='ml-2 text-muted-foreground'>{total}</span>
-        </CardTitle>
-        <Link to={to} aria-label={text('more')}>
-          <ArrowUpRight className='size-4 text-muted-foreground' />
+    <Card className={`${FRAME} relative overflow-hidden`}>
+      {/* A wash of the card's colour across its top, behind the header. */}
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute inset-x-0 top-0 h-20 bg-linear-to-b to-transparent ${tone.wash}`}
+      />
+      <CardHeader className='relative flex flex-row items-center gap-2.5'>
+        <span
+          className={`grid size-8 shrink-0 place-items-center rounded-lg ${tone.tile}`}
+        >
+          <AgendaIcon className='size-4' />
+        </span>
+        <div className='flex min-w-0 flex-1 items-baseline gap-2'>
+          <CardTitle className='truncate text-base'>
+            {text(
+              name === 'approvals'
+                ? scope === 'team'
+                  ? 'pendingApprovalsTeam'
+                  : 'pendingApprovals'
+                : name,
+            )}
+          </CardTitle>
+          <span className='font-heading text-lg leading-none font-semibold text-muted-foreground tabular-nums'>
+            {total}
+          </span>
+        </div>
+        <Link
+          to={to}
+          aria-label={text('more')}
+          className='rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'
+        >
+          <ArrowUpRight className='size-4' />
         </Link>
       </CardHeader>
-      <CardContent className='space-y-3'>
+      <CardContent className='relative space-y-1'>
         {records.length ? (
           records.map((r) => (
             <div
               key={r.id}
-              className='border-b pb-3 text-sm last:border-0 last:pb-0'
+              className='-mx-2 rounded-lg px-2 py-2 text-sm transition-colors hover:bg-muted/50'
             >
               <div className='flex items-center gap-2'>
                 {name === 'approvals' && <KindTag value={r.topic} />}

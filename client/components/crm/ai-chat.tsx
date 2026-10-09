@@ -32,6 +32,7 @@ import {
   useAIChatMessages,
   useAIChatController,
   useAIChatControllerState,
+  type AIChatAttachment,
   type AIChatController,
   type AIEmployee,
   type AIService,
@@ -243,11 +244,20 @@ function CrmAssistantPanel(): ReactElement | null {
         ...(target ? [recordItem(target)] : []),
         ...(extra ? [extra] : []),
       ];
+      // Files the overview's ask box uploaded, sent with its question, and
+      // the model it chose for the new conversation.
+      const attachments = Array.isArray(data.attachments)
+        ? (data.attachments as AIChatAttachment[])
+        : [];
+      const model =
+        data.model && typeof data.model === 'object'
+          ? (data.model as { llmService?: string; model: string })
+          : undefined;
       // No prompt and nothing to attach: just open the panel. A record's
       // "Ask AI", or a shortcut bringing context of its own ("Ask about it"
       // on a card), starts its conversation with that context and an empty
       // composer.
-      if (!prompt && !workContext.length) {
+      if (!prompt && !workContext.length && !attachments.length) {
         // Asked for a new conversation (the dock's button on a phone): a
         // blank one, not the conversation the panel last showed.
         if (data.newConversation === true) shortcutOpensPanel = true;
@@ -267,7 +277,9 @@ function CrmAssistantPanel(): ReactElement | null {
           message: {
             user: prompt,
             ...(workContext.length ? { workContext } : {}),
+            ...(attachments.length ? { attachments } : {}),
           },
+          ...(model ? { model } : {}),
           autoSend: data.send === true,
           ...(data.webSearch === true ? { webSearch: true } : {}),
         },

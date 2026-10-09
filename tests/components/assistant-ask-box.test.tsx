@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { crmEn } from '../../client/locales/crm/index.js';
@@ -13,6 +19,7 @@ const state = vi.hoisted(() => ({
     | { state: 'ready' }
     | { state: 'unavailable'; reason: string },
   panelOpen: false,
+  uploads: [] as string[],
 }));
 
 // The crm locale's English text by its dotted key.
@@ -33,9 +40,42 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
   };
 });
 vi.mock('../../client/components/crm/assistant-state.js', () => ({
+  CRM_ASSISTANT: 'crm-assistant',
   useAssistantReadiness: () => state.readiness,
   usePanelOpen: () => state.panelOpen,
 }));
+// The AI Employee plugin's service: the CRM employee with two models, and an
+// upload that answers with the stored file.
+const models = [
+  { llmService: 'qwen', value: 'qwen-max', label: 'Qwen Max' },
+  { llmService: 'openai', value: 'gpt-5', label: 'GPT 5' },
+];
+vi.mock(
+  '../../client/extensions/nocobase-ai/index.js',
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import('../../client/extensions/nocobase-ai/index.js')
+      >();
+    return {
+      ...actual,
+      useAI: () => ({
+        employees: [{ username: 'crm-assistant', nickname: 'Noco' }],
+        models,
+        uploadFile: (file: File) => {
+          state.uploads.push(file.name);
+          return Promise.resolve({
+            id: `f-${file.name}`,
+            filename: file.name,
+            mimetype: file.type,
+            size: file.size,
+            url: `/files/${file.name}`,
+          });
+        },
+      }),
+    };
+  },
+);
 
 const { AssistantAskBox } =
   await import('../../client/components/crm/assistant-ask-box.js');
@@ -52,7 +92,9 @@ describe("the overview's ask box", () => {
     state.meta = { assistant: true };
     state.readiness = { state: 'ready' };
     state.panelOpen = false;
+    state.uploads = [];
     events.length = 0;
+    localStorage.clear();
     window.addEventListener('crm-assistant', listen);
   });
   afterEach(() => window.removeEventListener('crm-assistant', listen));
@@ -71,11 +113,13 @@ describe("the overview's ask box", () => {
         prompt: english('dock.q.home.deals'),
         send: true,
         newConversation: true,
+        model: { llmService: 'qwen', model: 'qwen-max' },
       },
       {
         prompt: english('prompts.analyzeSales'),
         send: true,
         newConversation: true,
+        model: { llmService: 'qwen', model: 'qwen-max' },
       },
     ]);
   });
@@ -91,16 +135,30 @@ describe("the overview's ask box", () => {
     expect(events).toHaveLength(0);
     await user.keyboard('{Enter}');
     expect(events).toEqual([
-      { prompt: '本月', send: true, newConversation: true },
+      {
+        prompt: '本月',
+        send: true,
+        newConversation: true,
+        model: { llmService: 'qwen', model: 'qwen-max' },
+      },
     ]);
     expect(input).toHaveValue('');
   });
 
-  it('moves from the box to the questions with Tab', async () => {
+  it('moves from the box through its tools to the questions with Tab', async () => {
     const user = userEvent.setup();
     render(<AssistantAskBox />);
     await user.click(screen.getByRole('textbox'));
-    // The send button is disabled while the box is empty, so Tab skips it.
+    // Then the paperclip and the model; the send button is disabled while
+    // the box is empty, so Tab skips it.
+    await user.tab();
+    expect(
+      screen.getByRole('button', { name: english('dock.attach') }),
+    ).toHaveFocus();
+    await user.tab();
+    expect(
+      screen.getByRole('combobox', { name: english('dock.model') }),
+    ).toHaveFocus();
     await user.tab();
     expect(suggestion('home.focus')).toHaveFocus();
   });
@@ -154,5 +212,61 @@ describe("the overview's ask box", () => {
       screen.getByRole('textbox', { name: english('dock.placeholder') }),
     ).toHaveFocus();
     panel.remove();
+  });
+
+  it('grows past one line: Shift+Enter breaks the line, Enter sends both', async () => {
+    const user = userEvent.setup();
+    render(<AssistantAskBox />);
+    const input = screen.getByRole('textbox', {
+      name: english('dock.placeholder'),
+    });
+    expect(input.tagName).toBe('TEXTAREA');
+    await user.type(input, 'First{Shift>}{Enter}{/Shift}second');
+    expect(events).toHaveLength(0);
+    expect(input).toHaveValue('First\nsecond');
+    await user.keyboard('{Enter}');
+    expect(events[0]?.prompt).toBe('First\nsecond');
+  });
+
+  it('uploads files as they are picked and sends them with the question', async () => {
+    const user = userEvent.setup();
+    render(<AssistantAskBox />);
+    await user.upload(
+      screen.getByTestId('ask-files'),
+      new File(['x'], 'brief.pdf', { type: 'application/pdf' }),
+    );
+    expect(state.uploads).toEqual(['brief.pdf']);
+    expect(await screen.findByText('brief.pdf')).toBeTruthy();
+    // A file alone is enough to send.
+    const send = screen.getByRole('button', { name: english('send') });
+    await waitFor(() => expect(send).toBeEnabled());
+    await user.click(send);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      prompt: '',
+      send: true,
+      newConversation: true,
+      attachments: [
+        { uid: 'f-brief.pdf', filename: 'brief.pdf', status: 'done' },
+      ],
+    });
+    // Sent files leave the box.
+    expect(screen.queryByText('brief.pdf')).toBeNull();
+  });
+
+  it('runs the new conversation on the model picked, remembered in the browser', async () => {
+    const user = userEvent.setup();
+    const first = render(<AssistantAskBox />);
+    await user.click(
+      screen.getByRole('combobox', { name: english('dock.model') }),
+    );
+    await user.click(await screen.findByRole('option', { name: 'GPT 5' }));
+    await user.click(suggestion('home.focus'));
+    expect(events[0]?.model).toEqual({ llmService: 'openai', model: 'gpt-5' });
+    first.unmount();
+    render(<AssistantAskBox />);
+    expect(
+      screen.getByRole('combobox', { name: english('dock.model') }),
+    ).toHaveTextContent('GPT 5');
   });
 });

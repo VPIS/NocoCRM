@@ -119,13 +119,21 @@ export const PAGE_SIZE = 20;
 // panel mounts there). This application registers no Refine identity
 // resolver, so Refine's useGetIdentity never resolves here.
 export function useSessionUserId(): string | undefined {
+  return useSessionUser()?.id;
+}
+
+// The signed-in user (id and display name), from the same query.
+export function useSessionUser(): { id: string; name?: string } | undefined {
   const client = useService(authenticationClientToken) as AuthClient;
   const { data } = useQuery({
     queryKey: ['crm', 'session'],
     queryFn: async () => (await client.getSession()).data ?? null,
     staleTime: 5000,
   });
-  return data?.user?.id;
+  const user = data?.user;
+  if (!user?.id) return undefined;
+  const name = typeof user.name === 'string' ? user.name.trim() : '';
+  return { id: user.id, ...(name ? { name } : {}) };
 }
 
 export function useCrmScopeKey(): readonly string[] {

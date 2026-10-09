@@ -789,6 +789,18 @@ export function AIChatProvider({
       return;
     }
 
+    // Application change: a task bringing files already uploaded puts them
+    // on its conversation first, and is carried out on the render that
+    // shows them, since a send reads the attachments as last rendered.
+    const taskAttachments = pendingTask.task.message?.attachments;
+    if (
+      taskAttachments?.length &&
+      getConversationAttachments(targetId) !== taskAttachments
+    ) {
+      setConversationAttachments(targetId, taskAttachments);
+      return;
+    }
+
     const userMessage =
       pendingTask.task.message?.user ?? pendingTask.task.title ?? '';
     pendingTaskRef.current = undefined;
@@ -800,7 +812,7 @@ export function AIChatProvider({
     if (
       pendingTask.auto &&
       pendingTask.task.autoSend &&
-      userMessage.trim() &&
+      (userMessage.trim() || taskAttachments?.length) &&
       !busy
     ) {
       void sendText(userMessage);
@@ -813,9 +825,12 @@ export function AIChatProvider({
     });
   }, [
     activeChat.status,
+    attachments,
     currentEmployee.username,
+    getConversationAttachments,
     pendingTaskSignal,
     sendText,
+    setConversationAttachments,
     state.activeConversationId,
   ]);
 
