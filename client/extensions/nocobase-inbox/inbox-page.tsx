@@ -434,18 +434,6 @@ function InboxPageContent({
                   aria-label={t('inbox.loading', { defaultValue: 'Loading' })}
                 />
               ) : null}
-              <Button
-                variant='outline'
-                disabled={readAll.isPending || unreadShown === 0}
-                onClick={() => readAll.mutate()}
-              >
-                {readAll.isPending ? (
-                  <Spinner data-icon='inline-start' />
-                ) : (
-                  <CheckCheckIcon data-icon='inline-start' />
-                )}
-                {t('inbox.readAll', { defaultValue: 'Mark all as read' })}
-              </Button>
             </>
           }
         />
@@ -504,6 +492,29 @@ function InboxPageContent({
             }
             collections={listCollections}
             footer={listFooter}
+            // Application change: "Mark all as read" acts on notifications
+            // only, so it heads their tab's list, at its right, where the AI
+            // suggestions' tab has its mine/team switch, rather than sitting
+            // in the page's header for every tab.
+            head={
+              view === 'all' ? (
+                <div className='flex justify-end px-1 pb-1'>
+                  <Button
+                    variant='ghost'
+                    size='xs'
+                    disabled={readAll.isPending || unreadShown === 0}
+                    onClick={() => readAll.mutate()}
+                  >
+                    {readAll.isPending ? (
+                      <Spinner data-icon='inline-start' />
+                    ) : (
+                      <CheckCheckIcon data-icon='inline-start' />
+                    )}
+                    {t('inbox.readAll', { defaultValue: 'Mark all as read' })}
+                  </Button>
+                </div>
+              ) : undefined
+            }
             idPrefix={idPrefix}
             onSelect={select}
             onOpen={open}

@@ -102,7 +102,11 @@ export function LeadDuplicates({
   const [merging, setMerging] = useState<Duplicate>();
   if (!open || !data?.length) return null;
   return (
-    <div className='mb-4 space-y-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5 text-sm'>
+    // Inset as the particulars' rows are, so its edges line up with their
+    // text.
+    // Small type, as a notice beside the particulars rather than one of
+    // them.
+    <div className='mx-2 mb-4 space-y-1.5 rounded-lg border border-warning/40 bg-warning/10 px-2 py-2 text-xs'>
       <div className='flex items-center gap-1.5 font-medium'>
         <TriangleAlert className='size-3.5 text-warning' />
         {text('merge.notice')}
@@ -110,7 +114,7 @@ export function LeadDuplicates({
       <ul className='space-y-1.5'>
         {data.map((duplicate) => (
           <li key={duplicate.id} className='flex items-center gap-2'>
-            <div className='min-w-0 flex-1'>
+            <div className='min-w-0 flex-1 font-medium'>
               <RecordLink
                 entity='leads'
                 record={{
@@ -120,7 +124,7 @@ export function LeadDuplicates({
                     .join(' / '),
                 }}
               />
-              <div className='truncate text-xs text-muted-foreground'>
+              <div className='truncate font-normal text-muted-foreground'>
                 {[
                   duplicate.matched
                     .map((m) => text(`merge.matched.${m}`))
@@ -139,7 +143,7 @@ export function LeadDuplicates({
             </div>
             {duplicate.mergeable && (
               <Button
-                size='sm'
+                size='xs'
                 variant='outline'
                 onClick={() => setMerging(duplicate)}
               >

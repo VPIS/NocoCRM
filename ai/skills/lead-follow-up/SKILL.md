@@ -92,7 +92,12 @@ Quote only the prices published on the website (Standard RMB 5,000, Professional
    - Only when there is no open task, plan a new next step.
    - When the results of completed tasks, the notes or the mail have already made the need, budget, decision maker and timing clear, the conclusion should be convert; when several exchanges have brought no progress, consider nurture.
 1. **First check whether it should go to someone else**: if the company is already an account or has an open opportunity, suggest linking it to the existing account and handing it to that account's owner, rather than starting afresh.
-2. **What to do next**: one concrete thing (a call, booking a meeting, sending material, a demo) and when to do it. First contact: A the same day, B within two days; after that at the time agreed with the customer, or if none was agreed, at the pace of the conversation. Usually it is a call, which is a task; when email is the only contact, or the customer is waiting for a reply, the next step is an email, written now and sent from the card, never a task.
+2. **What to do next**: one concrete thing (a call, an email, booking a meeting, sending material, a demo) and when to do it. First contact: A the same day, B within two days; after that at the time agreed with the customer, or if none was agreed, at the pace of the conversation.
+   Choose how by the situation, not by habit. When the lead has an email address, weigh an email first; it is often the better step:
+   - **An email**: the customer reached out in writing (a website form, an email, a message) and left an address; the step is sending what they asked for or what helps them decide (material, a case, a proposal, a quote); proposing or confirming a time to talk; a recap of a call with what was agreed; the customer wrote by email or asked to be emailed; calls go unanswered or there is no phone number; a light touch for a C-grade lead or a nurtured one. An email is written now and sent from the card, never a task.
+   - **A call** (a task): the matter is urgent or time-bound; the need is complex or unclear and is best explored by talking; there is something to negotiate; two emails have gone unanswered; there is a phone number and no email address.
+   - **A meeting or a demo** (a task): the need is clear enough to show how it would be met.
+   A first contact by email can also ask for a call, in the email itself.
 3. **Preparation points** (written into the task's description):
    - **How to open**: quote the customer's own words or the scenario from the last conversation, for example "I saw you want to move work reporting at your three factories off Excel"; do not open by introducing the product.
    - **Questions to ask**: ask only what is still unclear, usually three to five of these:
@@ -103,7 +108,7 @@ Quote only the prices published on the website (Standard RMB 5,000, Professional
      - budget and the purchasing process;
      - who makes the decision, who evaluates the technology.
    - **What can be demonstrated**: pick the features or cases closest to the customer's scenario.
-4. **Email draft** (when the next step is an email, or the user asks for one in the conversation): a greeting that addresses the person by name, as is polite in the language it is written in; then three to five sentences: thank them for getting in touch → respond to their scenario → propose a specific time to talk → attach one relevant piece of material; then a closing line and a sign-off with the owner's name. It goes to the lead's person. Do not quote prices the website does not publish, do not promise roadmap features or dates, do not decide for the customer.
+4. **Email draft** (when the next step is an email, or the user asks for one in the conversation): a greeting that addresses the person by name, as is polite in the language it is written in; never guess their gender from a name: use Mr or Ms (先生 or 女士) only when the material states it, otherwise their full name or their surname with their job title (in Chinese, for example 周晓，您好 or 周经理，您好); then three to five sentences: thank them for getting in touch → respond to their scenario → propose a specific time to talk → attach one relevant piece of material; then a closing line and a sign-off with the owner's name. It goes to the lead's person. Do not quote prices the website does not publish, do not promise roadmap features or dates, do not decide for the customer.
 
 ### Convert
 

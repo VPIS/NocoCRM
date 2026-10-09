@@ -405,9 +405,12 @@ export function ReviewFeedEntry({
 export function ReviewStatus({
   approvalId,
   onOpen,
+  wide = false,
 }: {
   approvalId: string;
   onOpen: (entryId: string) => void;
+  // Across its row, as atop an approval's particulars.
+  wide?: boolean;
 }): ReactElement | null {
   const { data: meta } = useMetadata();
   const { text } = useCrmText();
@@ -442,7 +445,7 @@ export function ReviewStatus({
         <button
           type='button'
           onClick={() => onOpen(entry.id)}
-          className={`inline-flex max-w-full items-center gap-1.5 rounded-lg border px-2 py-1 text-xs transition-colors ${
+          className={`${wide ? 'flex min-w-0 flex-1' : 'inline-flex max-w-full'} items-center gap-1.5 rounded-lg border px-2 py-1 text-xs transition-colors ${
             entry.status === 'running'
               ? 'crm-ai-working'
               : entry.status === 'pending'

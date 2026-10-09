@@ -249,10 +249,13 @@ export function EvaluationStatus({
   entity = 'leads',
   recordId,
   onOpen,
+  wide = false,
 }: {
   entity?: FollowedEntity;
   recordId: string;
   onOpen: (entryId: string) => void;
+  // Across its row, as atop a record's particulars.
+  wide?: boolean;
 }): ReactElement | null {
   const { data: meta } = useMetadata();
   const { text, language } = useCrmText();
@@ -304,7 +307,7 @@ export function EvaluationStatus({
       }
       // Small, as the filter beside it; the button asking for a follow-up
       // keeps the text's size.
-      className={`inline-flex max-w-full items-center gap-1.5 rounded-lg border px-2 py-1 font-sans text-xs font-normal tracking-normal transition-colors ${
+      className={`${wide ? 'flex w-full' : 'inline-flex max-w-full'} items-center gap-1.5 rounded-lg border px-2 py-1 font-sans text-xs font-normal tracking-normal transition-colors ${
         entry.status === 'running'
           ? 'crm-ai-working'
           : pending

@@ -505,11 +505,12 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       )}
     </>
   );
-  // Under the heading, where the AI's latest follow-up stands, which opens
-  // it in the timeline.
+  // Atop the particulars, where the AI's latest follow-up stands, which
+  // opens it in the timeline.
   const leadStatus = (
     <EvaluationStatus
       recordId={id}
+      wide
       onOpen={(entryId) => {
         setFocus({ id: entryId, at: Date.now() });
         setTab('historyTab');
@@ -811,7 +812,7 @@ export function DetailColumns({
   heading: ReactNode;
   // Everything the reader can do with the record, right of the heading.
   actions: ReactNode;
-  // Where the AI's latest work on the record stands, under the heading.
+  // Where the AI's latest work on the record stands, atop the particulars.
   status?: ReactNode;
   tabBar: ReactNode;
   notice: ReactNode;
@@ -873,10 +874,6 @@ export function DetailColumns({
                   </div>
                 ) : null}
               </div>
-              {/* Empty when the status draws nothing (no AI work yet). */}
-              {status ? (
-                <div className='mt-2 empty:hidden'>{status}</div>
-              ) : null}
             </header>
             <div className='grid gap-6 pt-5 @3xl:min-h-0 @3xl:flex-1 @3xl:grid-cols-[22rem_minmax(0,1fr)] @3xl:grid-rows-[minmax(0,1fr)] @3xl:gap-0 @3xl:pt-0 md:@3xl:grid-cols-[23rem_minmax(0,1fr)]'>
               {/* The particulars in a narrow column on the left, the timeline
@@ -894,6 +891,10 @@ export function DetailColumns({
                 className='min-w-0 rounded-xl border border-border/60 bg-card px-2 py-3 shadow-xs @3xl:mb-4 @3xl:ml-4 @3xl:overflow-y-auto @3xl:pb-24 md:@3xl:ml-6 scroll-quiet'
                 onScroll={revealScrollbar}
               >
+                {/* Empty when the status draws nothing (no AI work yet). */}
+                {status ? (
+                  <div className='mb-3 px-2 empty:hidden'>{status}</div>
+                ) : null}
                 {left}
               </section>
               {/* The tabs head the right column: stacked, they stay in view as

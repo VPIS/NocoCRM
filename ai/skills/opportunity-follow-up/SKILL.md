@@ -99,6 +99,7 @@ Keep confidence stable: when the last follow-up already gave a confidence, chang
    - Contract: follow the customer's approval and sealing, and confirm the invoicing details and the payment date.
 
    The time is what was agreed with the customer; if nothing was agreed, within a week. A call, a meeting, a demo or a proof of concept is a task, due when it takes place; an email is written now and sent from the card, never a task.
+   Choose how by the situation, not by habit. When the deal's contacts have email addresses, weigh an email first; it is often the better step: sending the proposal, the quote or material; proposing or confirming a meeting or a demo; a recap after a meeting with what was agreed and who does what; answering what the customer wrote; a nudge when a decision is due and nothing has come. Prefer a call or a meeting when there is something to negotiate, when the matter is urgent or unclear, or when emails have gone unanswered.
 
 2. **To prepare** (written into the task's description):
    - **How to open**: quote the customer's words or a conclusion from the last conversation, for example "Last week you said three factories need to go live next month".
@@ -107,7 +108,7 @@ Keep confidence stable: when the last follow-up already gave a confidence, chang
    - **Who to bring in**: whether a technical colleague, the sales manager or someone on the customer's side needs to be there.
 3. **Contacts**: name any role that is missing, and suggest how to reach it (for example "Haven't met the person with the final say yet; ask the champion to introduce the head of IT").
 4. **Field changes**: when the expected close date, amount or currency is clearly wrong, suggest what it should be and on what grounds. Suggest only; the salesperson confirms.
-5. **Email draft** (when the next step is an email): a greeting that addresses the primary contact by name (the others on the deal are copied), as is polite in the language it is written in; then three to five sentences — recall the conclusion of the last conversation → say what this step is to move forward → propose a specific time or ask them to confirm one → attach the relevant material; then a closing line and a sign-off with the owner's name. Quote no price that is not published on the website; promise no discounts, payment terms or roadmap features.
+5. **Email draft** (when the next step is an email): a greeting that addresses the primary contact by name, as is polite in the language it is written in; never guess their gender from a name: use Mr or Ms (先生 or 女士) only when the material states it, otherwise their full name or their surname with their job title (in Chinese, for example 周晓，您好 or 周经理，您好) (the others on the deal are copied); then three to five sentences — recall the conclusion of the last conversation → say what this step is to move forward → propose a specific time or ask them to confirm one → attach the relevant material; then a closing line and a sign-off with the owner's name. Quote no price that is not published on the website; promise no discounts, payment terms or roadmap features.
 
 ### Pause
 

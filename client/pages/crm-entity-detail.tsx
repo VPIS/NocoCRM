@@ -430,6 +430,32 @@ export default function EntityDetail({
           }
         : { addresses: emailsOf([record]) };
   // What the active tab shows, in the right column.
+  // Atop the particulars, where the AI stands on the record, opening it in
+  // the timeline:
+  // a deal's latest follow-up, or an approval's review for its approver
+  // (approval-review.tsx), which advises only; the decision stays with the
+  // approver.
+  const aiStatus =
+    entity === 'opportunities' ? (
+      <EvaluationStatus
+        entity='opportunities'
+        recordId={id}
+        wide
+        onOpen={(entryId) => {
+          setFocus({ id: entryId, at: Date.now() });
+          setTab('historyTab');
+        }}
+      />
+    ) : entity === 'approvals' ? (
+      <ReviewStatus
+        approvalId={id}
+        wide
+        onOpen={(entryId) => {
+          setFocus({ id: entryId, at: Date.now() });
+          setTab('historyTab');
+        }}
+      />
+    ) : undefined;
   const tabContent = (
     <>
       {activeTab === 'mail' ? (
@@ -955,7 +981,7 @@ export default function EntityDetail({
       entity={entity}
       heading={heading}
       actions={actions.buttons}
-      status={actions.status}
+      status={aiStatus}
       tabBar={tabBar}
       notice={<ErrorNotice error={error ?? loadError} />}
       left={left}
@@ -1034,16 +1060,6 @@ export default function EntityDetail({
           )}
           {moreMenu}
         </>,
-        // Where the AI's latest follow-up stands, opening it in the
-        // timeline.
-        <EvaluationStatus
-          entity='opportunities'
-          recordId={id}
-          onOpen={(entryId) => {
-            setFocus({ id: entryId, at: Date.now() });
-            setTab('historyTab');
-          }}
-        />,
       ),
       <>
         {/* What the deal is, across the column with neither heading nor
@@ -1176,17 +1192,6 @@ export default function EntityDetail({
         <ApprovalActions approval={record} names={names} />
         {moreMenu}
       </>,
-      // Under them, the AI's review for the approver (approval-review.tsx),
-      // which opens it in the timeline, and asking for another; it replaced
-      // the "Help me review" chat shortcut. It advises only — the decision
-      // stays with the approver.
-      <ReviewStatus
-        approvalId={id}
-        onOpen={(entryId) => {
-          setFocus({ id: entryId, at: Date.now() });
-          setTab('historyTab');
-        }}
-      />,
     ),
     <>
       {/* What is asked, across the column with neither heading nor label,

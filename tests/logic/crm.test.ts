@@ -129,6 +129,7 @@ import {
   latestEvaluation,
   pendingDecisions,
   researchDue,
+  unwrittenFindings,
   stringValues,
 } from '../../server/providers/crm/lead-evaluation.js';
 import {
@@ -8792,5 +8793,75 @@ describe('agents', () => {
     expect(
       (outsider.runs as { id: string }[]).some((r) => r.id === 'agent-run-1'),
     ).toBe(false);
+  });
+});
+
+// A follow-up that does not look the company up again keeps the findings
+// of the last look-up nobody wrote, so asking again soon after loses none.
+describe('unwritten web findings', () => {
+  it('carries those of the last look-up until they are written', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Carry lead',
+      company: 'Carry Co',
+      source: 'website',
+    });
+    const entry = (
+      id: string,
+      createdAt: string,
+      ai: Record<string, unknown>,
+    ) =>
+      database
+        .query()
+        .insertInto('crmHistory')
+        .values({
+          id,
+          entity: 'leads',
+          recordId: lead.id,
+          actorId: 'rep',
+          action: 'ai',
+          changes: '{}',
+          source: 'ai',
+          aiStatus: 'superseded',
+          ai: JSON.stringify({ kind: 'evaluation', ...ai }),
+          createdAt,
+        })
+        .execute();
+    await entry('carry-1', '2026-10-09T07:00:00.000Z', {
+      researchedAt: '2026-10-09T07:00:30.000Z',
+      result: {
+        enrich: [
+          {
+            field: 'website',
+            value: 'https://carry.example',
+            source: 'https://carry.example/about',
+            current: null,
+          },
+          // From the CRM's material, not the web: not carried.
+          { field: 'jobTitle', value: 'CTO', source: null, current: null },
+        ],
+      },
+    });
+    // A later run that did not search.
+    await entry('carry-2', '2026-10-09T07:05:00.000Z', {});
+    const found = await unwrittenFindings(service, lead, 'carry-3');
+    expect(found.researchedAt).toBe('2026-10-09T07:00:30.000Z');
+    expect(found.items.map((item) => item.field)).toEqual(['website']);
+    // Written: nothing is carried any more.
+    await database
+      .query()
+      .updateTable('crmHistory')
+      .set({
+        ai: JSON.stringify({
+          kind: 'evaluation',
+          researchedAt: '2026-10-09T07:00:30.000Z',
+          enrichedAt: '2026-10-09T07:01:00.000Z',
+          result: { enrich: [] },
+        }),
+      })
+      .where('id', '=', 'carry-1')
+      .execute();
+    expect((await unwrittenFindings(service, lead, 'carry-3')).items).toEqual(
+      [],
+    );
   });
 });

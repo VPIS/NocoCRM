@@ -90,6 +90,8 @@ export interface InboxListProps {
   readonly collections?: Readonly<Record<string, InboxListCollection>>;
   /** Beside the kind filter, such as a sound reminder switch. */
   readonly footer?: ReactNode;
+  /** Application change: atop the list itself, such as "Mark all as read". */
+  readonly head?: ReactNode;
   /** The prefix of the element ids it renders. */
   readonly idPrefix?: string;
 }
@@ -121,6 +123,7 @@ export function InboxList({
   feedCount = 0,
   collections = {},
   footer,
+  head,
   idPrefix = 'nocobase-inbox',
 }: InboxListProps): ReactElement {
   const { t } = useInboxFrameText();
@@ -399,7 +402,10 @@ export function InboxList({
           ) : null}
         </div>
       ) : null}
-      <div className='min-h-0 flex-1 overflow-y-auto px-2 py-3'>{content}</div>
+      <div className='min-h-0 flex-1 overflow-y-auto px-2 py-3'>
+        {head}
+        {content}
+      </div>
       <p className='hidden shrink-0 items-center gap-3 border-t px-4 py-2 text-xs text-muted-foreground lg:flex'>
         <span className='inline-flex items-center gap-1'>
           <Kbd>J</Kbd>
