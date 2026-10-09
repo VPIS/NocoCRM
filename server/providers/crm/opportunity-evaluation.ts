@@ -47,7 +47,7 @@ import { jsonIn } from './lead-capture.js';
 import { JobInterruptedError } from '@nocobase/jobs';
 import { markStarted, within, type FollowUpPayload } from './follow-up-jobs.js';
 import { LONG_TEXT_LIMIT, TEXT_LIMIT } from './limits.js';
-import { mailOf } from './mail-context.js';
+import { mailOf, mailboxOwnersOf } from './mail-context.js';
 import type { MailTarget } from './mail-target.js';
 import { ROLES, matchAccount } from './opportunity-capture.js';
 import { normalizePhone } from './phone.js';
@@ -1605,7 +1605,15 @@ export class OpportunityEvaluator {
               ownerId,
               await dealMailTarget(this.service, actor, opportunity),
               settings.timeZone,
-              { signal },
+              {
+                signal,
+                // And whoever else exchanged mail with the deal's people.
+                readers: await mailboxOwnersOf(
+                  this.service.database,
+                  'opportunities',
+                  toText(opportunity.id),
+                ),
+              },
             ),
           }),
         ),

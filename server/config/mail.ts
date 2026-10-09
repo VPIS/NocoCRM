@@ -25,6 +25,10 @@ const mail: AppConfigFactory<MailConfig> = defineAppConfig({
     // After Google or Microsoft authorization the browser returns to the CRM's
     // own accounts page, not the plugin's development page.
     oauthReturnUrl: '/crm/mail/accounts',
+    // Every minute rather than the plugin's five, the least it allows: a
+    // customer's reply reaches the record's timeline, and starts the AI's
+    // follow-up, within a minute or two (mail-timeline.ts).
+    automaticSyncIntervalMs: 60_000,
   },
   env: {
     MAIL_OAUTH_CALLBACK_URL: envString('oauthCallbackUrl', {

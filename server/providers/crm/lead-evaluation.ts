@@ -21,7 +21,7 @@ import { contactTime, isEndOfDay } from './zone-time.js';
 import { mergePlanDescription, planDescription } from './plan.js';
 import { followUpLead } from './feedback.js';
 import { jsonIn } from './lead-capture.js';
-import { mailOf } from './mail-context.js';
+import { mailOf, mailboxOwnersOf } from './mail-context.js';
 import { JobInterruptedError } from '@nocobase/jobs';
 import { markStarted, within, type FollowUpPayload } from './follow-up-jobs.js';
 import { LONG_TEXT_LIMIT, TEXT_LIMIT } from './limits.js';
@@ -1397,7 +1397,15 @@ export class LeadEvaluator {
               ownerId,
               { addresses: lead.email ? [toText(lead.email)] : [] },
               settings.timeZone,
-              { signal },
+              {
+                signal,
+                // And whoever else exchanged mail with the lead's person.
+                readers: await mailboxOwnersOf(
+                  this.service.database,
+                  'leads',
+                  toText(lead.id),
+                ),
+              },
             ),
             toText(
               (await this.service.users(actor)).find(

@@ -26,11 +26,14 @@ interface FakeMessage {
   draft?: boolean;
   text?: string;
   html?: string;
+  // Whose mailbox it is in; everyone's when left out.
+  owner?: string;
 }
 
 function container(
   messages: FakeMessage[],
   calls: { actor: string; query: string }[] = [],
+  reads: { actor: string; id: string }[] = [],
 ): ServiceResolver {
   const summary = (m: FakeMessage) => ({
     id: m.id,
@@ -62,6 +65,7 @@ function container(
       const q = (input.query ?? '').toLowerCase();
       return {
         items: messages
+          .filter((m) => !m.owner || m.owner === context.actorId)
           .filter((m) =>
             [m.subject, m.from, ...m.to].some((v) =>
               v.toLowerCase().includes(q),
@@ -71,11 +75,16 @@ function container(
       };
     },
     getMessage: async (
-      _context: { actorId: string },
+      context: { actorId: string },
       _accountId: string,
       id: string,
     ) => {
-      const m = messages.find((message) => message.id === id);
+      reads.push({ actor: context.actorId, id });
+      const m = messages.find(
+        (message) =>
+          message.id === id &&
+          (!message.owner || message.owner === context.actorId),
+      );
       return m
         ? { ...summary(m), text: m.text, html: m.html, attachments: [] }
         : undefined;
@@ -212,5 +221,60 @@ describe('mail with a record, for an AI follow-up', () => {
       ownText('Thanks.\n-----Original Message-----\nFrom: me\nOld text'),
     ).toBe('Thanks.');
     expect(ownText('x'.repeat(3000))).toHaveLength(1500);
+  });
+});
+
+describe('mail in a colleague’s mailbox', () => {
+  it('reads it too, as that colleague, once even when both hold it', async () => {
+    const reads: { actor: string; id: string }[] = [];
+    const rows = await mailOf(
+      container(
+        [
+          {
+            id: 'reply',
+            owner: 'admin',
+            internetMessageId: '<r@x>',
+            from: 'zhou@x.example',
+            to: ['admin@team.example'],
+            subject: 'Re: 方案',
+            receivedAt: '2026-10-08T07:00:00Z',
+            text: '售后 60 人，ERP 是用友 U8。',
+          },
+          {
+            id: 'copy',
+            owner: 'owner',
+            internetMessageId: '<r@x>',
+            from: 'zhou@x.example',
+            to: ['admin@team.example', 'owner@team.example'],
+            subject: 'Re: 方案',
+            receivedAt: '2026-10-08T07:00:00Z',
+            text: '售后 60 人，ERP 是用友 U8。',
+          },
+        ],
+        [],
+        reads,
+      ),
+      'owner',
+      { addresses: ['zhou@x.example'] },
+      'UTC',
+      { now: NOW, readers: ['admin'] },
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ direction: 'fromCustomer' });
+    expect(String(rows[0].text)).toContain('用友 U8');
+    // Read as whoever's mailbox the kept copy is in.
+    expect(reads).toHaveLength(1);
+  });
+
+  it('reads only the owner’s mailbox when nobody else holds mail with the customer', async () => {
+    const calls: { actor: string; query: string }[] = [];
+    await mailOf(
+      container([], calls),
+      'owner',
+      { addresses: ['zhou@x.example'] },
+      'UTC',
+      { now: NOW },
+    );
+    expect(new Set(calls.map((c) => c.actor))).toEqual(new Set(['owner']));
   });
 });
