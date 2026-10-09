@@ -488,19 +488,14 @@ function EntityList({
       : `${month}-01`;
   // A task on the calendar: its title, then the clock time and owner,
   // the way the workspace's agenda cards read; the date is the cell's or the
-  // heading's. On today's tinted cell a card sits on the card surface, so it
-  // still reads as a card; under a phone's month it is a full-size card.
-  const calendarCard = (
-    r: CrmRecord,
-    onToday: boolean,
-    large = false,
-  ): ReactElement => (
+  // heading's; under a phone's month it is a full-size card.
+  const calendarCard = (r: CrmRecord, large = false): ReactElement => (
     <div
       key={r.id}
       className={`rounded-lg ${toText(
         large
           ? 'border border-border/60 bg-card p-3 text-sm shadow-xs'
-          : `p-2 text-xs ${toText(onToday ? 'bg-card' : 'bg-muted')}`,
+          : 'bg-muted p-2 text-xs',
       )} ${
         // Done or cancelled: struck through and faded, marked by its kind,
         // so what is still to do stands out on the day.
@@ -1323,7 +1318,7 @@ function EntityList({
                           picked
                             ? 'bg-primary font-semibold text-primary-foreground'
                             : isToday
-                              ? 'bg-ai/10 font-semibold text-ai dark:bg-ai/20'
+                              ? 'font-semibold text-foreground ring-1 ring-foreground/40'
                               : !inMonth
                                 ? 'text-muted-foreground/35'
                                 : quiet
@@ -1340,7 +1335,7 @@ function EntityList({
                           <span
                             key={i}
                             className={`size-1 rounded-full ${toText(
-                              isToday ? 'bg-ai' : 'bg-primary/50',
+                              'bg-primary/50',
                             )}`}
                           />
                         ))}
@@ -1368,9 +1363,7 @@ function EntityList({
                 )}
               </p>
               {(byDay.get(shownDay) ?? []).length ? (
-                (byDay.get(shownDay) ?? []).map((r) =>
-                  calendarCard(r, false, true),
-                )
+                (byDay.get(shownDay) ?? []).map((r) => calendarCard(r, true))
               ) : (
                 <p className='rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground'>
                   {text('noTasksOnDay')}
@@ -1421,34 +1414,36 @@ function EntityList({
                 return (
                   <div
                     key={day}
-                    className={`min-h-36 space-y-2 p-3 ${toText(
-                      isToday ? 'bg-ai/10 dark:bg-ai/20' : 'bg-card',
-                    )}`}
+                    className='min-h-36 space-y-2 bg-card p-3'
                     aria-current={isToday ? 'date' : undefined}
                   >
+                    {/* Today is the date on a small dark pill, as calendars
+                        mark it; the cell itself stays as every other. */}
                     <p
-                      className={`flex items-center gap-1.5 text-sm font-medium ${toText(
-                        isToday ? 'text-ai' : 'text-muted-foreground',
+                      className={`flex text-sm font-medium ${toText(
+                        isToday ? '' : 'text-muted-foreground',
                       )}`}
                     >
-                      {isToday && (
-                        <span
-                          aria-hidden
-                          className='inline-block size-1.5 rounded-full bg-ai'
-                        />
-                      )}
-                      {new Intl.DateTimeFormat(language, {
-                        month: 'numeric',
-                        day: 'numeric',
-                        timeZone: 'UTC',
-                      }).format(new Date(`${day}T00:00:00Z`))}
+                      <span
+                        className={
+                          isToday
+                            ? 'rounded-full bg-primary px-2 text-primary-foreground'
+                            : ''
+                        }
+                      >
+                        {new Intl.DateTimeFormat(language, {
+                          month: 'numeric',
+                          day: 'numeric',
+                          timeZone: 'UTC',
+                        }).format(new Date(`${day}T00:00:00Z`))}
+                      </span>
                     </p>
                     {/* A cell shows a handful; a busy day reveals the rest
                         on demand rather than stretching the whole row. */}
                     {(expandedDays.has(day)
                       ? items
                       : items.slice(0, CALENDAR_DAY_LIMIT)
-                    ).map((r) => calendarCard(r, isToday))}
+                    ).map((r) => calendarCard(r))}
                     {!expandedDays.has(day) &&
                       items.length > CALENDAR_DAY_LIMIT && (
                         <Button
