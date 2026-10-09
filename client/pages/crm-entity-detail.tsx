@@ -338,6 +338,11 @@ export default function EntityDetail({
           ],
         ]
       : []),
+    // The reader's own mail with the record, for whoever has mail, right after
+    // the tasks (first after the timeline on a contact, which has none).
+    ...(mailSetup.can && mailEntity
+      ? [['mail', 'mail.tab', 0] as [string, string, number]]
+      : []),
     // The opportunity's own contact list with roles, a tab like its others.
     ...(entity === 'opportunities'
       ? [
@@ -356,10 +361,6 @@ export default function EntityDetail({
           detail.relatedTotals?.[name] ?? rows(detail.related[name]).length,
         ] as [string, string, number],
     ),
-    // The reader's own mail with the record, for whoever has mail.
-    ...(mailSetup.can && mailEntity
-      ? [['mail', 'mail.tab', 0] as [string, string, number]]
-      : []),
     // Attachments last, on every record that has them. A contact keeps no
     // files of its own; the ones it appears in are read from the task or
     // opportunity that holds them.

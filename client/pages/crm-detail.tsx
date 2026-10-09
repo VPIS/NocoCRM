@@ -851,8 +851,9 @@ export function DetailColumns({
             onScroll={revealScrollbar}
           >
             {/* The record's header, across both columns: the heading with
-                the actions at its right (below it when there is no room),
-                the AI's latest suggestion under it. */}
+                the actions at its right, also in a drawer or on a phone
+                while they fit (below it, still at the right, when they do
+                not), the AI's latest suggestion under it. */}
             {/* In a drawer the frame's own padding already sets it off from
                 the drawer's bar, so the header adds none above. */}
             <header
@@ -862,11 +863,11 @@ export function DetailColumns({
             >
               <DetailBack entity={entity} />
               <div className='flex flex-wrap items-start justify-between gap-x-6 gap-y-2'>
-                <div className='min-w-0 flex-1 basis-full @3xl:basis-80'>
+                <div className='min-w-0 flex-1 basis-60 @3xl:basis-80'>
                   {heading}
                 </div>
                 {actions ? (
-                  <div className='flex flex-wrap items-center gap-2 empty:hidden @3xl:pt-1'>
+                  <div className='ml-auto flex flex-wrap items-center justify-end gap-2 empty:hidden @3xl:pt-1'>
                     {actions}
                   </div>
                 ) : null}
