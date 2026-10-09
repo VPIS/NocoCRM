@@ -119,7 +119,7 @@ import {
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu.js';
 import { InlineField } from '../components/crm/inline.js';
-import { AskAIButton } from '../components/crm/ask-ai.js';
+import { useAnnounceRecord } from '../components/crm/current-record.js';
 import { ConvertDialog } from '../components/crm/conversion.js';
 import { LeadDuplicates } from '../components/crm/lead-merge.js';
 import { RecordMailPanel } from '../components/crm/record-mail.js';
@@ -311,11 +311,17 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<unknown>();
   const [busy, setBusy] = useState(false);
-  // The lead's title, for "Ask AI", which starts the assistant's
-  // conversation from it.
+  // The lead's title, for the assistant: a question asked from the dock on
+  // this page starts its conversation from the lead (current-record.ts); not
+  // from the drawer, whose backdrop covers the dock.
   const contextName = detail
     ? `${toText(detail.record.name)}${detail.record.company ? ` / ${toText(detail.record.company)}` : ''}`
     : undefined;
+  useAnnounceRecord(
+    detail && !drawer?.inDrawer
+      ? { entity: 'leads', recordId: id, name: contextName }
+      : undefined,
+  );
   if (isLoading || !meta) return <Loading />;
   if (!detail)
     return (
@@ -468,7 +474,6 @@ function LeadDetail({ id }: { id: string }): ReactElement {
           {text('convert')}
         </Button>
       )}
-      <AskAIButton entity='leads' recordId={id} name={contextName} />
       {meta.assistant && !converted && editable && (
         <EvaluateButton recordId={id} onError={setError} />
       )}
@@ -877,10 +882,12 @@ export function DetailColumns({
               {/* A long white card on the page's tint, with the open tab's
                   faint border and shadow, set apart by itself rather than by
                   a rule; side by side it runs the height of
-                  the page and scrolls inside. Its rows keep 8px of their own
-                  on each side for an inline editor's hover fill. */}
+                  the page and scrolls inside, ending in 6rem of room so its
+                  last row scrolls above the assistant's dock. Its rows keep
+                  8px of their own on each side for an inline editor's hover
+                  fill. */}
               <section
-                className='min-w-0 rounded-xl border border-border/60 bg-card px-2 py-3 shadow-xs @3xl:mb-4 @3xl:ml-4 @3xl:overflow-y-auto @3xl:pb-6 md:@3xl:ml-6 scroll-quiet'
+                className='min-w-0 rounded-xl border border-border/60 bg-card px-2 py-3 shadow-xs @3xl:mb-4 @3xl:ml-4 @3xl:overflow-y-auto @3xl:pb-24 md:@3xl:ml-6 scroll-quiet'
                 onScroll={revealScrollbar}
               >
                 {left}

@@ -9,9 +9,6 @@ vi.mock('../../client/theme/index.js', () => ({
 vi.mock('../../client/layouts/components/user-menu.js', () => ({
   UserMenu: () => null,
 }));
-vi.mock('../../client/components/crm/ai-chat.js', () => ({
-  AssistantButton: () => <button aria-label='AI 助手' />,
-}));
 it('hides Settings when navigation has no accessible pages', () => {
   render(
     <MemoryRouter>
@@ -33,17 +30,16 @@ it('keeps Settings visible and current on an accessible settings page', () => {
     'aria-current',
     'page',
   );
-  // The assistant opens from the header on every surface.
-  expect(screen.getByRole('button', { name: 'AI 助手' })).toBeInTheDocument();
 });
 
-// The inbox leads the menu instead (client/routes.ts).
-it('has the assistant beside the account menu and no inbox button', () => {
+// The inbox leads the menu (client/routes.ts) and the assistant is asked
+// from the dock at the bottom of the page (assistant-dock.tsx).
+it('has neither an inbox nor an assistant button', () => {
   render(
     <MemoryRouter initialEntries={['/leads']}>
       <HeaderActions showSettings />
     </MemoryRouter>,
   );
   expect(screen.queryByRole('link', { name: /Inbox/u })).toBeNull();
-  expect(screen.getByRole('button', { name: 'AI 助手' })).toBeInTheDocument();
+  expect(screen.queryAllByRole('button')).toHaveLength(0);
 });

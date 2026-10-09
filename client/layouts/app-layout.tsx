@@ -27,6 +27,7 @@ import { NavigationBadgesContext } from './components/navigation-badges.js';
 import { useInboxCount } from '../components/crm/waiting-count.js';
 import { useMailUnreadCount } from '../components/crm/mail-unread.js';
 import { DemoBanner } from '../components/crm/demo-banner.js';
+import { AssistantDock } from '../components/crm/assistant-dock.js';
 import { AppBrand } from './components/app-brand.js';
 import { HeaderActions } from './components/header-actions.js';
 import { AppSidebarFooter } from './components/sidebar-footer.js';
@@ -115,6 +116,9 @@ export function AppLayout({
               <div className='h-full overflow-y-auto'>
                 <Outlet />
               </div>
+              {/* Application change: the assistant's entry, floating over the
+                  bottom of this column (assistant-dock.tsx). */}
+              <AssistantDock />
             </main>
           </div>
         </AppSidebarProvider>

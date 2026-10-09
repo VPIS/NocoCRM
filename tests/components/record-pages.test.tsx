@@ -228,11 +228,10 @@ describe('the account page', () => {
     expect(within(company).getByRole('link', { name: /张伟/ })).toBeTruthy();
   });
 
-  it('offers Ask AI as its one AI action, outside the tab band', () => {
+  it('offers no AI button of its own: the assistant is asked from the dock', () => {
     renderPage();
-    const askAI = screen.getByRole('button', { name: /问 AI/ });
-    expect(askAI.closest('[role="tablist"]')).toBeNull();
-    // The former canned shortcuts are asked through Ask AI instead.
+    expect(screen.queryByRole('button', { name: /问 AI/ })).toBeNull();
+    // Nor the former canned shortcuts: the dock suggests such questions.
     for (const name of ['总结客户', '调研公司', '发现销售机会'])
       expect(
         screen.queryByRole('button', { name: new RegExp(name) }),

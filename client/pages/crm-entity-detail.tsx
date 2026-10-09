@@ -84,7 +84,7 @@ import {
   Value,
 } from '../components/crm/common.js';
 import { InlineField } from '../components/crm/inline.js';
-import { AskAIButton } from '../components/crm/ask-ai.js';
+import { useAnnounceRecord } from '../components/crm/current-record.js';
 import {
   EvaluateButton,
   EvaluationStatus,
@@ -207,11 +207,17 @@ export default function EntityDetail({
   }>();
   const [moving, setMoving] = useState(false);
   const [busy, setBusy] = useState(false);
-  // The record's title, for "Ask AI", which starts the assistant's
-  // conversation from it.
+  // The record's title, for the assistant: a question asked from the dock on
+  // this page starts its conversation from the record (current-record.ts);
+  // not from the drawer, whose backdrop covers the dock.
   const contextName = detail
     ? recordTitle(entity, detail.record, detail.titles)
     : undefined;
+  useAnnounceRecord(
+    detail && !drawer?.inDrawer
+      ? { entity, recordId: id, name: contextName }
+      : undefined,
+  );
   if (isLoading || !meta) return <Loading />;
   if (!detail)
     return (
@@ -877,9 +883,6 @@ export default function EntityDetail({
       {after ? <AfterSlash>{after}</AfterSlash> : null}
     </div>
   );
-  const askAI = (
-    <AskAIButton entity={entity} recordId={id} name={contextName} />
-  );
   // The rarer deleting, last, in a "More" menu.
   const moreMenu = detail.permissions.delete ? (
     <DropdownMenu>
@@ -969,7 +972,6 @@ export default function EntityDetail({
               {text('completeTask')}
             </Button>
           )}
-          {askAI}
           {moreMenu}
         </>,
       ),
@@ -1017,7 +1019,6 @@ export default function EntityDetail({
       headingOf(accountCrumb),
       actionsOf(
         <>
-          {askAI}
           {editable && !closedDeal && (
             <EvaluateButton
               entity='opportunities'
@@ -1100,12 +1101,7 @@ export default function EntityDetail({
   if (entity === 'accounts')
     return page(
       headingOf(),
-      actionsOf(
-        <>
-          {askAI}
-          {moreMenu}
-        </>,
-      ),
+      actionsOf(<>{moreMenu}</>),
       <>
         {/* Who has it and where it stands (a churned account's reason
             beside its status). */}
@@ -1147,12 +1143,7 @@ export default function EntityDetail({
   if (entity === 'contacts')
     return page(
       headingOf(undefined, accountCrumb),
-      actionsOf(
-        <>
-          {askAI}
-          {moreMenu}
-        </>,
-      ),
+      actionsOf(<>{moreMenu}</>),
       <>
         <InfoGroup title={text('detailsGroup')}>
           {[
@@ -1177,7 +1168,6 @@ export default function EntityDetail({
     actionsOf(
       <>
         <ApprovalActions approval={record} names={names} />
-        {askAI}
         {moreMenu}
       </>,
       // Under them, the AI's review for the approver (approval-review.tsx),

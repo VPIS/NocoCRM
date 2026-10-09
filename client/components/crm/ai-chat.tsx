@@ -3,7 +3,6 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
   type PropsWithChildren,
   type ReactElement,
   type ReactNode,
@@ -16,7 +15,6 @@ import {
   PanelLeftClose,
   PanelRight,
   PlusCircle,
-  Sparkles,
   X,
 } from 'lucide-react';
 import {
@@ -26,7 +24,6 @@ import {
   ChatSurface,
   NocoBaseAIRootProvider,
   NocoBaseAIService,
-  useAI,
   getAIEmployeeAvatar,
   useAIChat,
   useAIChatBase,
@@ -41,45 +38,32 @@ import {
 import { AI_DRAFT_CONVERSATION_ID } from '@/extensions/nocobase-ai/providers/types.js';
 import { UserPromptEditor } from '@/extensions/nocobase-ai/components/chat/user-prompt-editor.js';
 import { Button } from '../ui/button.js';
-import { cn } from '@/lib/utils';
 import { sentence, toText, useCrmText, useMetadata, type Data } from './api.js';
 import { crmToolRenderers } from './ai-tool-renderers.js';
+import {
+  CRM_ASSISTANT,
+  publishPanelOpen,
+  useAssistantReadiness,
+} from './assistant-state.js';
 
-// The CRM assistant: the AI Employee plugin's chat, mounted in the side
-// panel the header's AI button opens, talking to the CRM employee defined in
-// server/ai, which reads the CRM and proposes writes the user confirms on
-// cards in the conversation. A record's "Ask AI" (ask-ai.tsx) and the page
-// shortcuts dispatch `crm-assistant` events: a new conversation whose
-// starting point is that record (work context the employee reads with
-// get_record), with a prompt for a shortcut. Nothing is attached by merely
-// being on a page: the header's button opens a blank conversation.
+// The CRM assistant: the AI Employee plugin's chat, mounted in a side panel,
+// talking to the CRM employee defined in server/ai, which reads the CRM and
+// proposes writes the user confirms on cards in the conversation. The dock at
+// the bottom of the page (assistant-dock.tsx) and the cards' own "Ask AI"
+// dispatch `crm-assistant` events: a new conversation, whose starting point
+// is the record of the page the question was asked on (work context the
+// employee reads with get_record), with the question to send. Being on a
+// record's page attaches nothing by itself; asking from it does.
 
-const CRM_ASSISTANT = 'crm-assistant';
 const openKey = 'crm-assistant-open';
 // The panel opened to start afresh: by a shortcut used while it was closed,
 // whose task is queued for the chat that mounts and starts a conversation of
 // its own (restoring the remembered one would change the active
-// conversation under the queued task and drop it), or by the header's
-// button, which opens a blank new conversation. Either way the remembered
+// conversation under the queued task and drop it), or by a request for a new
+// blank conversation (the dock on a phone). Either way the remembered
 // conversation is not restored on that mount; it is still in the
 // conversation list. Only a reload brings it back.
 let shortcutOpensPanel = false;
-
-// Whether the panel is open, for the header's button, which is not the
-// panel's: the chat controller belongs to the panel alone (the plugin's
-// useAIChatController makes one per component), so the panel publishes its
-// state here and the button asks it to open or close through an event.
-const panelListeners = new Set<() => void>();
-let panelOpen = false;
-function publishPanelOpen(open: boolean): void {
-  if (panelOpen === open) return;
-  panelOpen = open;
-  for (const listener of panelListeners) listener();
-}
-function subscribePanel(listener: () => void): () => void {
-  panelListeners.add(listener);
-  return () => panelListeners.delete(listener);
-}
 
 interface RecordContext {
   entity: string;
@@ -192,49 +176,6 @@ export function CrmAssistantProvider({
   );
 }
 
-// The assistant's one entry, in the header just left of the account menu on
-// every surface: it opens the panel on a new conversation, whose starting
-// point is the record on screen (attached to the draft as a detail page
-// announces it, see RecordContext), and closes it again; marked while the
-// panel is open. Earlier conversations stay in the list. A title rather than
-// a tooltip, whose popup lingered when the panel closed under the pointer.
-export function AssistantButton({
-  className,
-}: {
-  className: string;
-}): ReactElement | null {
-  const { text } = useCrmText();
-  const { data: meta } = useMetadata();
-  const open = useSyncExternalStore(
-    subscribePanel,
-    () => panelOpen,
-    () => false,
-  );
-  if (!meta?.assistant) return null;
-  const label = toText(text(open ? 'assistantClose' : 'assistant'));
-  return (
-    <button
-      type='button'
-      aria-label={label}
-      aria-pressed={open}
-      title={label}
-      // In the AI's colour, as every AI entry is: its border and icon, on a
-      // pale ground, deeper while the panel is open. Merged over the
-      // header's shared look, whose border and ground it replaces.
-      className={cn(
-        className,
-        'border-ai bg-ai/10 text-ai hover:bg-ai/15',
-        open && 'bg-ai/20',
-      )}
-      onClick={() =>
-        window.dispatchEvent(new CustomEvent('crm-assistant-toggle'))
-      }
-    >
-      <Sparkles className='size-5' />
-    </button>
-  );
-}
-
 function CrmAssistantPanel(): ReactElement | null {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
@@ -247,15 +188,15 @@ function CrmAssistantPanel(): ReactElement | null {
     if (!next) setExpanded(false);
     controller.setOpen(next);
   };
-  // However it was closed (here, or by the header's button), it opens
-  // again as the side panel: adjusted as it renders closed.
+  // However it was closed, it opens again as the side panel: adjusted as it
+  // renders closed.
   const [wasOpen, setWasOpen] = useState(open);
   if (wasOpen !== open) {
     setWasOpen(open);
     if (!open) setExpanded(false);
   }
-  // The panel starts closed on every screen; the floating launcher and the
-  // page shortcuts open it. Once the user opens or closes it, that choice
+  // The panel starts closed on every screen; the dock and the cards'
+  // shortcuts open it. Once the user opens or closes it, that choice
   // survives a reload in the same tab.
   useEffect(() => {
     let initial = false;
@@ -296,6 +237,9 @@ function CrmAssistantPanel(): ReactElement | null {
       // on a card), starts its conversation with that context and an empty
       // composer.
       if (!prompt && !workContext.length) {
+        // Asked for a new conversation (the dock's button on a phone): a
+        // blank one, not the conversation the panel last showed.
+        if (data.newConversation === true) shortcutOpensPanel = true;
         controller.open();
         return;
       }
@@ -325,21 +269,9 @@ function CrmAssistantPanel(): ReactElement | null {
         reuseConversation: data.newConversation !== true,
       });
     };
-    // The header's button: closes the panel, or opens it on a new
-    // conversation about the record on screen.
-    const toggle = (): void => {
-      if (controller.getSnapshot().open) {
-        controller.setOpen(false);
-        return;
-      }
-      shortcutOpensPanel = true;
-      controller.open();
-    };
     window.addEventListener('crm-assistant', show);
-    window.addEventListener('crm-assistant-toggle', toggle);
     return () => {
       window.removeEventListener('crm-assistant', show);
-      window.removeEventListener('crm-assistant-toggle', toggle);
     };
   }, [controller]);
   // Expand and close, as the plugin's ChatSurfaceActions offers them but
@@ -386,7 +318,9 @@ function CrmAssistantPanel(): ReactElement | null {
       >
         {/* No title of the panel's own: the chat's header says who the
             user talks to (NocoHeader). */}
-        <div className='flex h-full min-h-0 flex-col'>
+        {/* data-crm-assistant-panel: the dock moves focus to the composer in
+            here once it has sent a question. */}
+        <div className='flex h-full min-h-0 flex-col' data-crm-assistant-panel>
           <div className='flex min-h-0 flex-1 flex-col'>
             <ConfiguredChat controller={controller} actions={actions} />
           </div>
@@ -408,13 +342,7 @@ function ConfiguredChat({
   actions: ReactNode;
 }): ReactElement {
   const { text } = useCrmText();
-  const {
-    configurationStatus,
-    configurationError,
-    modelConfigurationError,
-    employees,
-    hasEnabledModels,
-  } = useAI();
+  const readiness = useAssistantReadiness();
   const notice = (message: string, alert = true): ReactElement => (
     <>
       <div className='flex justify-end gap-1 border-b px-3 py-2'>{actions}</div>
@@ -426,18 +354,9 @@ function ConfiguredChat({
       </p>
     </>
   );
-  if (configurationStatus === 'loading')
+  if (readiness.state === 'loading')
     return notice(toText(text('assistantLoading')), false);
-  if (configurationStatus === 'error')
-    return notice(
-      configurationError?.message ?? toText(text('assistantConfigError')),
-    );
-  if (!employees.some((employee) => employee.username === CRM_ASSISTANT))
-    return notice(toText(text('assistantNoEmployee')));
-  if (modelConfigurationError || !hasEnabledModels)
-    return notice(
-      modelConfigurationError?.message ?? toText(text('assistantNoModel')),
-    );
+  if (readiness.state === 'unavailable') return notice(readiness.reason);
   return (
     <AIPageContextScope context={[]}>
       <AIChatProvider

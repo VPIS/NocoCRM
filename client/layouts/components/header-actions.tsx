@@ -11,17 +11,15 @@ import {
 
 import { ThemeSettings } from '../../theme/index.js';
 import { UserMenu } from './user-menu.js';
-// Application change to the template's header: the AI assistant's entry, just
-// left of the account menu on every surface (client/components/crm/ai-chat.tsx).
-import { AssistantButton } from '../../components/crm/ai-chat.js';
 
 const ACTION_LINK_CLASS =
   'inline-flex size-10 items-center justify-center rounded-xl border border-border/70 bg-background/60 text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50';
 
 /**
  * Keep header entries visible on their destination pages so navigation stays consistent across surfaces. Application
- * changes: the settings link is marked while the settings surface is shown, the AI assistant's button sits just left
- * of the account menu, and the inbox has no button here: it leads the menu's Action section (`client/routes.ts`).
+ * changes: the settings link is marked while the settings surface is shown, and neither the inbox nor the AI assistant
+ * has a button here: the inbox leads the menu's Action section (`client/routes.ts`), and the assistant is asked from the
+ * dock at the bottom of the page (`client/components/crm/assistant-dock.tsx`).
  */
 export function HeaderActions({
   showSettings,
@@ -54,7 +52,6 @@ export function HeaderActions({
           </Tooltip>
         ) : null}
         <ThemeSettings />
-        <AssistantButton className={ACTION_LINK_CLASS} />
         <UserMenu />
       </div>
     </TooltipProvider>
