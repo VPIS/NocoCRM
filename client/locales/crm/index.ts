@@ -26,7 +26,115 @@ const wording = {
     'Your pipeline, priorities, and next conversations — in one place.',
     '客户、商机和下一步行动，尽在掌握',
   ],
-  assistant: ['AI assistant', 'AI 助手'],
+  // The assistant's dock at the bottom of the page (assistant-dock.tsx) and
+  // the questions it suggests, by page.
+  dock: {
+    placeholder: ['Ask anything…', '问任何问题…'],
+    // On a record's page, by the kind of record.
+    placeholderFor: {
+      leads: ['Ask anything about this lead…', '关于此线索，问任何问题…'],
+      opportunities: [
+        'Ask anything about this opportunity…',
+        '关于此商机，问任何问题…',
+      ],
+      accounts: ['Ask anything about this account…', '关于此客户，问任何问题…'],
+      contacts: [
+        'Ask anything about this contact…',
+        '关于此联系人，问任何问题…',
+      ],
+      tasks: ['Ask anything about this task…', '关于此任务，问任何问题…'],
+      approvals: [
+        'Ask anything about this approval…',
+        '关于此审批，问任何问题…',
+      ],
+    },
+    open: ['Ask Noco', '问 Noco'],
+    suggestions: ['Suggested questions', '推荐问题'],
+    q: {
+      home: {
+        focus: ['What should I focus on today?', '今天我最该处理什么？'],
+        deals: ['Which opportunities need attention?', '哪些商机需要关注？'],
+        followUp: ['Who should I follow up with?', '我该跟进谁？'],
+      },
+      leads: {
+        first: [
+          'Which new leads should I contact first?',
+          '哪些新线索应该先联系？',
+        ],
+        quiet: ['Which leads have gone quiet?', '哪些线索很久没有跟进了？'],
+      },
+      opportunities: {
+        closing: [
+          'Which opportunities are expected to close this month?',
+          '本月预计成交哪些商机？',
+        ],
+        risk: ['Which opportunities are at risk?', '哪些商机有风险？'],
+      },
+      accounts: {
+        quiet: [
+          "Which accounts haven't been contacted lately?",
+          '哪些客户最近没有联系？',
+        ],
+      },
+      contacts: {
+        quiet: [
+          "Who haven't I been in touch with lately?",
+          '最近有哪些联系人没有联系？',
+        ],
+      },
+      tasks: {
+        overdue: ["What's overdue?", '有哪些逾期的任务？'],
+        week: ["What's on my plate this week?", '我这周有哪些任务？'],
+      },
+      approvals: {
+        waiting: ['Which approvals are waiting on me?', '哪些审批在等我处理？'],
+      },
+      lead: {
+        next: [
+          "Is this lead worth pursuing, and what's the next step?",
+          '这条线索值得跟进吗？下一步做什么？',
+        ],
+        summary: ['Summarize this lead', '总结一下这条线索'],
+        email: ['Draft a follow-up email', '起草一封跟进邮件'],
+      },
+      opportunity: {
+        missing: [
+          "What's missing to move this opportunity forward?",
+          '推进这个商机还缺什么？',
+        ],
+        risk: [
+          'What are the risks in this opportunity?',
+          '这个商机有哪些风险？',
+        ],
+        progress: ['Summarize recent progress', '总结最近的进展'],
+      },
+      account: {
+        latest: [
+          "What's the latest with this account?",
+          '这个客户最近有什么进展？',
+        ],
+        contacts: ['Who are the key contacts?', '主要联系人是谁？'],
+        deals: ['Which opportunities are open?', '有哪些进行中的商机？'],
+      },
+      contact: {
+        exchanges: [
+          'Summarize my exchanges with this person',
+          '总结我和这位联系人的往来',
+        ],
+        deals: [
+          'Which opportunities is this person involved in?',
+          '这位联系人参与了哪些商机？',
+        ],
+        email: ['Draft a follow-up email', '起草一封跟进邮件'],
+      },
+      task: {
+        prepare: ['Help me prepare for this task', '帮我为这个任务做准备'],
+      },
+      approval: {
+        decide: ['Should this request be approved?', '这个审批该批准吗？'],
+      },
+    },
+  },
   assistantEmployeeName: ['Noco', 'Noco'],
   // The line under the chat's header naming what a conversation began from.
   assistantStart: ['Started from', '起点'],
@@ -188,6 +296,19 @@ const wording = {
     searchPeople: ['Search colleagues…', '搜索同事…'],
     searchContacts: ['Search contacts…', '搜索联系人…'],
     add: ['Add', '添加'],
+  },
+  // A new approval's quick dialog, laid out as a new task's.
+  approvalQuick: {
+    titlePlaceholder: ['What is the approval for', '审批主题'],
+    descriptionPlaceholder: [
+      'The condition asked for and why, or attach files…',
+      '说明申请的条件和理由，或上传附件…',
+    ],
+    searchTopics: ['Search types…', '搜索类型…'],
+    searchDeals: ['Search opportunities…', '搜索商机…'],
+    saveDraft: ['Save draft', '保存草稿'],
+    submit: ['Submit', '提交审批'],
+    approverFirst: ['Choose an approver to submit', '选择审批人后才能提交'],
   },
   // The opportunity page's particulars, grouped as the lead's.
   // The account, contact and approval pages' particulars, likewise.
@@ -536,7 +657,10 @@ const wording = {
   all: ['All', '全部'],
   mine: ['Mine', '我负责的'],
   participating: ['Participating', '我参与的'],
-  taskScope: ['Whose tasks', '谁的任务'],
+  // An approval the reader decides.
+  approving: ['To decide', '我审批的'],
+  // The header's control choosing whose records a list page shows.
+  listScope: ['Whose records', '谁的记录'],
   team: ['Team', '团队'],
   search: ['Search records…', '搜索记录…'],
   list: ['List', '列表'],
@@ -1021,15 +1145,15 @@ const wording = {
   demoImport: ['Import demo data', '导入演示数据'],
   demoImportTitle: ['Import the demo data?', '导入演示数据？'],
   demoImportHint: [
-    'The records are added to the current database and belong to the demo accounts. Nothing existing is changed, and the import can be removed again from here.',
-    '演示记录将加入当前数据库，负责人为演示账号；现有数据不会被修改，之后可以在此清除。',
+    'The records are added to the current database and belong to the demo accounts and to you: you become a sales manager as well, keeping your administrator role, and own a share of them. Nothing existing is changed, and the import can be removed again from here.',
+    '演示记录将加入当前数据库，负责人为演示账号和你：你会同时成为销售经理（管理员身份不变），负责其中一部分记录；现有数据不会被修改，之后可以在此清除。',
   ],
   demoImported: ['Demo data imported', '演示数据已导入'],
   demoReset: ['Remove demo data', '清除演示数据'],
   demoResetTitle: ['Remove the demo data?', '清除演示数据？'],
   demoResetHint: [
-    'Every record the import created is deleted, including changes made to them since, and the demo accounts it created are disabled: they no longer sign in or appear as owners, and importing again enables them. Records created by hand stay.',
-    '导入创建的全部记录（含之后对它们的修改）都会被删除，导入时新建的演示账号会被停用：不能再登录，也不会出现在负责人等选项里，再次导入时会重新启用。手工创建的记录保留。',
+    'Every record the import created is deleted, including changes made to them since, and the demo accounts it created are disabled: they no longer sign in or appear as owners, and importing again enables them. The sales manager role the import gave you is removed. Records created by hand stay.',
+    '导入创建的全部记录（含之后对它们的修改）都会被删除，导入时新建的演示账号会被停用：不能再登录，也不会出现在负责人等选项里，再次导入时会重新启用；导入时给你加上的销售经理角色会被移除。手工创建的记录保留。',
   ],
   demoRemoved: ['Demo data removed', '演示数据已清除'],
   demoBanner: [

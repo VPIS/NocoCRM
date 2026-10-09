@@ -36,9 +36,11 @@ export interface DemoAccount {
 }
 
 // The people the dataset belongs to, each language its own. The
-// administrator importing it owns nothing, as administrators do; the manager
-// and the two sellers own the records, and the other manager decides the
-// manager's approvals. The password is the username followed by 123
+// administrator importing it sells too: a sales manager besides (granted for
+// the import's lifetime unless already held), owning a share of the records
+// beside the manager and the two sellers, so signing in as the administrator
+// shows work of one's own; the other manager decides the manager's
+// approvals. The password is the username followed by 123
 // (liming123): the users plugin wants eight characters, and the platform's
 // own administrator is admin123.
 const demoSeats: readonly (readonly [DemoSeat, DemoAccount['role']])[] = [
@@ -105,6 +107,9 @@ interface Manifest {
   createdAt: string;
   businessDate: string;
   ownerId: string;
+  // The importer was made a sales manager by the import, which removal
+  // undoes; absent when they already were one.
+  importerManager?: boolean;
   records: { entity: string; id: string; name: string }[];
 }
 
@@ -242,6 +247,17 @@ export async function populateDemo(
     });
     userIds[account.seat] = id;
   }
+  // The importer becomes a sales manager too, keeping every set they hold.
+  const managerSet = roleKey('sales-manager');
+  const importerManager = !(
+    await authz.permissionSets.listAssignments(managerSet)
+  ).some((a) => a.subject.type === 'user' && a.subject.id === actor.id);
+  if (importerManager)
+    await authz.permissionSets.replaceSubjectAssignments({
+      subject: { type: 'user', id: actor.id },
+      managedPermissionSets: [managerSet],
+      permissionSets: [managerSet],
+    });
   const actorFor = (id: string): Actor => ({
     id,
     locale: language,
@@ -283,6 +299,7 @@ export async function populateDemo(
     createdAt: started,
     businessDate: calendarDay,
     ownerId: actor.id,
+    ...(importerManager ? { importerManager } : {}),
     records: [],
   };
   const track = (entity: string, record: Row): Row => {
@@ -332,16 +349,18 @@ export async function populateDemo(
     };
 
   // Who owns which account (by index): the first seller 0,1,4 · the second
-  // seller 2,5,7 · the manager 3,6.
-  // Leads rotate the same way by position; tasks follow their record.
+  // seller 2,5 · the manager 3 · the importing administrator 6,7.
+  // Leads rotate among the four by position; tasks follow their record.
   const accountOwner = (i: number): Actor =>
     [0, 1, 4].includes(i)
       ? sellerActors[0]
-      : [2, 5, 7].includes(i)
+      : [2, 5].includes(i)
         ? sellerActors[1]
-        : managerActor;
+        : i === 3
+          ? managerActor
+          : owner;
   const leadOwner = (i: number): Actor =>
-    [sellerActors[0], sellerActors[1], managerActor][i % 3];
+    [sellerActors[0], sellerActors[1], managerActor, owner][i % 4];
   const accounts_: Row[] = [];
   const contacts: Row[][] = [];
   const opportunities: Row[] = [];
@@ -1039,6 +1058,13 @@ export async function resetDemo(
     await q.deleteFrom('crmSettings').where('id', '=', DEMO_MARKER).execute();
   });
   if (accounts) await disableDemoAccounts(service, actor, accounts);
+  // The sales manager role the import gave its importer goes with it.
+  if (manifest.importerManager)
+    await service.authz.permissionSets.replaceSubjectAssignments({
+      subject: { type: 'user', id: manifest.ownerId },
+      managedPermissionSets: [roleKey('sales-manager')],
+      permissionSets: [],
+    });
   return demoStatus(service, actor);
 }
 

@@ -1,65 +1,23 @@
-import { useQuery } from '@tanstack/react-query';
 import { Building2, Handshake, Link2, Radar, Users } from 'lucide-react';
-import { useEffect, useState, type ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 import {
   toText,
-  useCrmApi,
-  useCrmScopeKey,
   useCrmText,
   useMetadata,
   type CrmRecord,
   type Data,
   type Entity,
-  type ListData,
 } from './api.js';
 import { recordTitle } from './lookups.js';
+import { useDebounced, useMatches } from './record-search.js';
 import { TaskSearchChip, type SearchOption } from './task-quick.js';
 
 // A new task's chips that search (RecordForm's quick mode): the record it
 // concerns, one lead, account or opportunity found by one search across the
 // three, as Clarify's record chip does; and the colleagues taking part.
 
-// The first matches of each kind, before anything is typed and after.
-const RESULTS = 5;
 // The colleagues listed before a name is typed.
 const PEOPLE = 8;
-
-function useDebounced(value: string, delay = 250): string {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debounced;
-}
-
-// The first matches of one kind of record, through the list endpoint.
-function useMatches(
-  entity: Entity,
-  search: string,
-  enabled: boolean,
-  extra: Record<string, string> = {},
-): { rows: CrmRecord[]; titles: Record<string, string> } {
-  const api = useCrmApi();
-  const scopeKey = useCrmScopeKey();
-  const params = new URLSearchParams({ pageSize: String(RESULTS) });
-  if (search) params.set('search', search);
-  for (const [key, value] of Object.entries(extra))
-    if (value) params.set(key, value);
-  const path = `${toText(entity)}?${params.toString()}`;
-  const query = useQuery({
-    queryKey: [...scopeKey, 'task-links', path],
-    queryFn: () => api<ListData>(path),
-    enabled,
-    staleTime: 20000,
-  });
-  const rows = query.data?.data;
-  return {
-    rows: Array.isArray(rows) ? rows : [],
-    // The names of the records they refer to (a deal's account).
-    titles: query.data?.titles ?? {},
-  };
-}
 
 const arrayOf = (value: unknown): string[] =>
   Array.isArray(value) ? value.map(toText) : [];

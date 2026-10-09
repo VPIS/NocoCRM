@@ -27,6 +27,14 @@ const state = vi.hoisted(() => ({
   refresh: vi.fn(),
   locale: 'en',
   assistant: false,
+  // Further people, such as an approver, for the tests that need them.
+  extraUsers: [] as {
+    id: string;
+    name: string;
+    roles: string[];
+    disabled: boolean;
+    canApprove: boolean;
+  }[],
 }));
 vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
   const actual =
@@ -77,6 +85,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
             disabled: false,
             canApprove: false,
           },
+          ...state.extraUsers,
         ],
         permissions: Object.fromEntries(
           Object.keys(definitions).map((entity) => [
@@ -98,6 +107,7 @@ beforeEach(() => {
   state.refresh.mockReset();
   state.locale = 'en';
   state.assistant = false;
+  state.extraUsers = [];
 });
 describe('CRM forms and file interchange', () => {
   it('lets the AI follow a new lead up at once, unless unticked', async () => {
@@ -246,6 +256,67 @@ describe('CRM forms and file interchange', () => {
       ),
     );
     expect(onClose).toHaveBeenCalled();
+  });
+  // A new approval opens as a new task does: a title and a description
+  // over chips, saved as a draft or submitted to its approver at once.
+  it('creates an approval from a title and chips, submitting it once an approver is picked', async () => {
+    state.extraUsers = [
+      {
+        id: 'mgr',
+        name: 'Manager',
+        roles: ['sales-manager'],
+        disabled: false,
+        canApprove: true,
+      },
+    ];
+    state.api.mockResolvedValue({ data: { id: 'ap-1', name: 'Discount' } });
+    const run = vi.fn().mockResolvedValue(undefined);
+    render(
+      <RecordForm
+        entity='approvals'
+        initial={{ opportunityId: 'deal-1' }}
+        titles={{ 'deal-1': 'Big deal' }}
+        andThen={{ label: 'Save and submit', run }}
+        onClose={vi.fn()}
+      />,
+      { wrapper: withQueries },
+    );
+    const draft = screen.getByRole('button', { name: 'Save draft' });
+    const submit = screen.getByRole('button', { name: 'Submit' });
+    expect(draft).toBeDisabled();
+    // Opened from the deal: the deal is that one.
+    expect(screen.getByRole('button', { name: 'Big deal' })).toBeDisabled();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Subject' }), {
+      target: { value: '15% discount' },
+    });
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Approval topic' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Discount' }),
+    );
+    expect(draft).toBeEnabled();
+    // Submitting needs an approver.
+    expect(submit).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Approver' }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Manager' }),
+    );
+    expect(submit).toBeEnabled();
+    await userEvent.click(submit);
+    await waitFor(() =>
+      expect(state.api).toHaveBeenCalledWith(
+        'approvals',
+        'POST',
+        expect.objectContaining({
+          name: '15% discount',
+          topic: 'discount',
+          opportunityId: 'deal-1',
+          approverId: 'mgr',
+        }),
+      ),
+    );
+    await waitFor(() => expect(run).toHaveBeenCalled());
   });
   it('shows a task time as a date and a 24-hour time of day, with no end', async () => {
     state.locale = 'en';

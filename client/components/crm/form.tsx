@@ -29,6 +29,7 @@ import {
   User,
 } from 'lucide-react';
 import { TaskSearchChip } from './task-quick.js';
+import { ApprovalChips } from './approval-quick.js';
 import { TaskLinkChips } from './task-links.js';
 import { TaskTimeField } from './task-time-field.js';
 import { Button } from '../ui/button.js';
@@ -389,8 +390,14 @@ export function RecordForm({
   // them, or the user did), or the AI marked or changed them.
   const [showMore, setShowMore] = useState(false);
   // A new task opens quick, laid out like Clarify's task dialog: a title and
-  // a description over chips (task-quick.tsx). Editing keeps the whole form.
-  const quick = entity === 'tasks' && !id && !embedded && !onSubmit;
+  // a description over chips (task-quick.tsx); so does a new approval, its
+  // chips the topic, the deal and the approver (approval-quick.tsx).
+  // Editing keeps the whole form.
+  const quick =
+    (entity === 'tasks' || entity === 'approvals') &&
+    !id &&
+    !embedded &&
+    !onSubmit;
   // The quick form's description grows with what is written, and the dialog
   // with it, up to half the screen; past that it scrolls.
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
@@ -1073,6 +1080,12 @@ export function RecordForm({
     const title = field('name');
     const description = field('description');
     const ownerField = field('ownerId');
+    const topicField = field('topic');
+    // What the save needs: a title, and for an approval its topic and deal.
+    const complete =
+      Boolean(toText(input.name ?? '').trim()) &&
+      (entity !== 'approvals' ||
+        (Boolean(input.topic) && Boolean(input.opportunityId)));
     return (
       <Dialog
         open
@@ -1084,10 +1097,12 @@ export function RecordForm({
           showCloseButton={false}
           className='max-h-[90svh] overflow-y-auto sm:max-w-xl'
         >
-          {/* Named for screen readers; the task's own title leads. */}
+          {/* Named for screen readers; the record's own title leads. */}
           <DialogHeader className='sr-only'>
             <DialogTitle>
-              {text('newRecord', { entity: text('entity.tasks') })}
+              {entity === 'approvals'
+                ? text('newApproval')
+                : text('newRecord', { entity: text('entity.tasks') })}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={submit} className='space-y-4'>
@@ -1096,7 +1111,13 @@ export function RecordForm({
               <input
                 autoFocus
                 aria-label={toText(text(fieldLabelKey(entity, 'name')))}
-                placeholder={toText(text('taskQuick.titlePlaceholder'))}
+                placeholder={toText(
+                  text(
+                    entity === 'approvals'
+                      ? 'approvalQuick.titlePlaceholder'
+                      : 'taskQuick.titlePlaceholder',
+                  ),
+                )}
                 maxLength={title ? lengthLimit(title.type) : undefined}
                 className='w-full bg-transparent text-base font-medium outline-none placeholder:text-muted-foreground'
                 value={toText(input.name ?? '')}
@@ -1118,7 +1139,13 @@ export function RecordForm({
                   uploadFiles([...e.clipboardData.files]);
                 }}
                 aria-label={toText(text(fieldLabelKey(entity, 'description')))}
-                placeholder={toText(text('taskQuick.descriptionPlaceholder'))}
+                placeholder={toText(
+                  text(
+                    entity === 'approvals'
+                      ? 'approvalQuick.descriptionPlaceholder'
+                      : 'taskQuick.descriptionPlaceholder',
+                  ),
+                )}
                 maxLength={
                   description ? lengthLimit(description.type) : undefined
                 }
@@ -1143,42 +1170,56 @@ export function RecordForm({
               )}
             </div>
             <div className='flex flex-wrap items-center gap-1.5'>
-              <TaskTimeField
-                size='sm'
-                value={{
-                  dueAt: input.dueAt,
-                }}
-                onChange={(time) =>
-                  setInput((current) => ({ ...current, ...time }))
-                }
-              />
-              {ownerField && (
-                <TaskSearchChip
-                  icon={<User />}
-                  label={owner ?? text(fieldLabelKey(entity, 'ownerId'))}
-                  empty={!owner}
-                  placeholder={toText(text('taskQuick.searchPeople'))}
-                  groups={[
-                    {
-                      key: 'users',
-                      options: choices(ownerField).map((c) => ({
-                        id: c.value,
-                        label: c.label,
-                      })),
-                    },
-                  ]}
-                  selected={new Set([toText(input.ownerId ?? '')])}
-                  limit={8}
-                  onPick={(_group, option) => set('ownerId', option.id)}
+              {entity === 'approvals' ? (
+                <ApprovalChips
+                  input={input}
+                  names={{ ...names, ...pickedNames }}
+                  options={topicField ? choices(topicField) : []}
+                  locked={Boolean(initial.opportunityId)}
+                  onChange={(changes) =>
+                    setInput((current) => ({ ...current, ...changes }))
+                  }
                 />
+              ) : (
+                <>
+                  <TaskTimeField
+                    size='sm'
+                    value={{
+                      dueAt: input.dueAt,
+                    }}
+                    onChange={(time) =>
+                      setInput((current) => ({ ...current, ...time }))
+                    }
+                  />
+                  {ownerField && entity === 'tasks' && (
+                    <TaskSearchChip
+                      icon={<User />}
+                      label={owner ?? text(fieldLabelKey(entity, 'ownerId'))}
+                      empty={!owner}
+                      placeholder={toText(text('taskQuick.searchPeople'))}
+                      groups={[
+                        {
+                          key: 'users',
+                          options: choices(ownerField).map((c) => ({
+                            id: c.value,
+                            label: c.label,
+                          })),
+                        },
+                      ]}
+                      selected={new Set([toText(input.ownerId ?? '')])}
+                      limit={8}
+                      onPick={(_group, option) => set('ownerId', option.id)}
+                    />
+                  )}
+                  <TaskLinkChips
+                    input={input}
+                    names={{ ...names, ...pickedNames }}
+                    onChange={(changes) =>
+                      setInput((current) => ({ ...current, ...changes }))
+                    }
+                  />
+                </>
               )}
-              <TaskLinkChips
-                input={input}
-                names={{ ...names, ...pickedNames }}
-                onChange={(changes) =>
-                  setInput((current) => ({ ...current, ...changes }))
-                }
-              />
               <input
                 ref={fileInputRef}
                 type='file'
@@ -1211,12 +1252,42 @@ export function RecordForm({
               >
                 {text('cancel')}
               </Button>
-              <Button
-                type='submit'
-                disabled={busy || !toText(input.name ?? '').trim()}
-              >
-                {busy ? text('saving') : text('taskQuick.add')}
-              </Button>
+              {entity === 'approvals' ? (
+                <>
+                  {/* Saved as a draft, or saved and submitted to its
+                      approver at once. */}
+                  <Button
+                    type='submit'
+                    variant={andThen ? 'outline' : 'default'}
+                    disabled={busy || !complete}
+                    onClick={() => {
+                      thenRef.current = false;
+                    }}
+                  >
+                    {busy ? text('saving') : text('approvalQuick.saveDraft')}
+                  </Button>
+                  {andThen && (
+                    <Button
+                      type='submit'
+                      disabled={busy || !complete || !input.approverId}
+                      title={
+                        input.approverId
+                          ? undefined
+                          : toText(text('approvalQuick.approverFirst'))
+                      }
+                      onClick={() => {
+                        thenRef.current = true;
+                      }}
+                    >
+                      {busy ? text('saving') : text('approvalQuick.submit')}
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <Button type='submit' disabled={busy || !complete}>
+                  {busy ? text('saving') : text('taskQuick.add')}
+                </Button>
+              )}
             </DialogFooter>
           </form>
         </DialogContent>

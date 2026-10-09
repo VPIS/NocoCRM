@@ -6138,10 +6138,12 @@ describe('demo dataset', () => {
       pageSize: 500,
     });
     const starts = spread.data.map((a) => Date.parse(toText(a.dueAt)));
-    // Weekdays between thirty and twenty days back, whatever today is.
+    // Weekdays between thirty and twenty days back, whatever today is; most
+    // of what took place there with a customer is a note, not a task, so a
+    // few tasks are all the window is sure to hold.
     expect(
       starts.filter((t) => t < now - 20 * day).length,
-    ).toBeGreaterThanOrEqual(6);
+    ).toBeGreaterThanOrEqual(2);
     expect(starts.filter((t) => t > now + 60 * day).length).toBeGreaterThan(15);
     for (let ahead = 8; ahead <= 88; ahead += 7) {
       const from = now + ahead * day;
@@ -6156,12 +6158,20 @@ describe('demo dataset', () => {
       expect(user).toBeDefined();
       expect(user?.roles).toEqual([account.role]);
     }
-    // The manager owns records; the administrator who imported owns none.
-    const owned = await service.list(actor('admin'), 'opportunities', {
-      pageSize: 1,
-      ownerId: 'admin',
-    });
-    expect(owned.total).toBe(0);
+    // The administrator who imported sells too: a sales manager besides,
+    // owning a share of the accounts, deals and leads.
+    const adminRoles = (await service.users(actor('admin'))).find(
+      (u) => u.id === 'admin',
+    )?.roles;
+    expect(adminRoles).toContain('sales-manager');
+    expect(adminRoles).toContain('system-administrator');
+    for (const entity of ['accounts', 'opportunities', 'leads'] as const) {
+      const owned = await service.list(actor('admin'), entity, {
+        pageSize: 1,
+        ownerId: 'admin',
+      });
+      expect([entity, owned.total > 0]).toEqual([entity, true]);
+    }
     const again = await request('/demo/populate', 'admin', 'POST', {});
     expect(again.status).toBe(409);
     expect((await again.json()).code).toBe('demoExists');
@@ -6185,6 +6195,11 @@ describe('demo dataset', () => {
         .where('id', '=', DEMO_MARKER)
         .executeTakeFirst(),
     ).toBeUndefined();
+    // And so does the sales manager role it gave the administrator.
+    expect(
+      (await service.users(actor('admin'))).find((u) => u.id === 'admin')
+        ?.roles,
+    ).not.toContain('sales-manager');
     // The demo's accounts go with it: disabled, so they neither sign in nor
     // are offered as owners.
     expect(

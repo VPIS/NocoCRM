@@ -106,6 +106,18 @@ function shiftMonth(month: string, by: number): string {
   return d.toISOString().slice(0, 7);
 }
 
+// The choices of whose records a list page shows (the header's segmented
+// control); objects not listed have none.
+type Scope = 'all' | 'mine' | 'participating' | 'approving';
+const scopes: Partial<Record<string, readonly Scope[]>> = {
+  leads: ['all', 'mine'],
+  opportunities: ['all', 'mine'],
+  accounts: ['all', 'mine'],
+  contacts: ['all', 'mine'],
+  approvals: ['all', 'mine', 'approving'],
+  tasks: ['all', 'mine', 'participating'],
+};
+
 export default function CrmListPage(): ReactElement {
   const location = useLocation();
   // The segment after /crm: on the way to a record page or the action
@@ -148,8 +160,9 @@ function EntityList({
   const [source, setSource] = useState('');
   const [employed, setEmployed] = useState('');
   const [topic, setTopic] = useState('');
-  // Tasks only: everyone's, the ones I own, the ones I take part in.
-  const [scope, setScope] = useState<'all' | 'mine' | 'participating'>('all');
+  // Whose records: everyone's or the ones I own, and for tasks also the
+  // ones I take part in, for approvals the ones I decide.
+  const [scope, setScope] = useState<Scope>('all');
   const [approverId, setApproverId] = useState('');
   // The task list's tab: what is to do, or what is done or cancelled.
   const [taskTab, setTaskTab] = useState<TaskTab>('open');
@@ -323,15 +336,18 @@ function EntityList({
       setMoving(false);
     }
   };
+  // A choice this object does not offer (the page kept from another
+  // object's) reads as everyone's.
+  const whose = scopes[entity]?.includes(scope) ? scope : 'all';
   const params = new URLSearchParams({
     search,
     status,
-    ownerId: scope === 'mine' ? toText(meta?.userId) : ownerId,
+    ownerId: whose === 'mine' ? toText(meta?.userId) : ownerId,
     source,
     employed,
     topic,
-    approverId,
-    participantId: scope === 'participating' ? toText(meta?.userId) : '',
+    approverId: whose === 'approving' ? toText(meta?.userId) : approverId,
+    participantId: whose === 'participating' ? toText(meta?.userId) : '',
     page: toText(page),
     pageSize: String(PAGE_SIZE),
   });
@@ -467,7 +483,7 @@ function EntityList({
       key={r.id}
       className={`rounded-lg ${toText(
         large
-          ? 'border bg-card p-3 text-sm'
+          ? 'border border-border/60 bg-card p-3 text-sm shadow-xs'
           : `p-2 text-xs ${toText(onToday ? 'bg-card' : 'bg-muted')}`,
       )} ${
         // Done or cancelled: struck through and faded, marked by its kind,
@@ -632,18 +648,18 @@ function EntityList({
           </Button>
         </div>
       )}
-      {/* Whose tasks: everyone's, the ones I own, the ones I take part in,
-          for the list and the calendar alike. */}
-      {entity === 'tasks' && (
+      {/* Whose records: everyone's or the ones I own, and the tasks I take
+          part in or the approvals I decide, for every view alike. */}
+      {scopes[entity] && (
         <Tabs
-          value={scope}
+          value={whose}
           onValueChange={(next) => {
-            setScope(next as 'all' | 'mine' | 'participating');
+            setScope(next as Scope);
             setPage(1);
           }}
         >
-          <TabsList aria-label={text('taskScope')}>
-            {(['all', 'mine', 'participating'] as const).map((value) => (
+          <TabsList aria-label={text('listScope')}>
+            {scopes[entity].map((value) => (
               <TabsTrigger key={value} value={value}>
                 {text(value)}
               </TabsTrigger>
@@ -901,7 +917,8 @@ function EntityList({
           <Empty action={newButton} />
         ) : (
           <>
-            <div className='overflow-hidden rounded-xl border bg-card'>
+            {/* Framed as the task list's card is. */}
+            <div className='overflow-hidden rounded-xl border border-border/60 bg-card shadow-xs'>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1067,7 +1084,9 @@ function EntityList({
               renderCard={(record, titles, ai) => (
                 <Card
                   key={record.id}
-                  className={`gap-0 py-4 shadow-none transition-[opacity,box-shadow,background-color] duration-700 ${toText(
+                  // Framed as the task list's card: a faint border, not the
+                  // primitive's ring, and the lightest shadow.
+                  className={`gap-0 border border-border/60 py-4 shadow-xs ring-0 transition-[opacity,box-shadow,background-color] duration-700 ${toText(
                     dragging === record.id ? 'opacity-40' : '',
                   )} ${toText(
                     landed === record.id
@@ -1192,7 +1211,7 @@ function EntityList({
               it. */}
           <div className='space-y-4 lg:hidden'>
             <div
-              className='rounded-2xl border bg-card p-3 shadow-sm'
+              className='rounded-xl border border-border/60 bg-card p-3 shadow-xs'
               // A sideways swipe turns the month, the way a phone's own
               // calendar does.
               onTouchStart={(event) => {
@@ -1340,7 +1359,7 @@ function EntityList({
               )}
             </div>
           </div>
-          <div className='hidden gap-px overflow-hidden rounded-xl border bg-border lg:grid lg:grid-cols-7'>
+          <div className='hidden gap-px overflow-hidden rounded-xl border border-border/60 bg-border/60 shadow-xs lg:grid lg:grid-cols-7'>
             {Array.from({ length: 7 }, (_, i) => (
               <div
                 key={i + 1}
@@ -1588,7 +1607,9 @@ function BoardColumn({
     // board scrolls sideways when they do not fit) and at most 24rem.
     <section
       className={`flex max-w-sm min-w-72 flex-1 basis-0 flex-col rounded-xl border p-3 transition-colors ${toText(
-        over ? 'border-dashed border-primary bg-primary/5' : 'bg-muted/40',
+        over
+          ? 'border-dashed border-primary bg-primary/5'
+          : 'border-border/60 bg-muted/40',
       )}`}
       // A non-droppable column (converted, reached only through the
       // conversion flow) never calls preventDefault, so the cursor says no
@@ -1624,8 +1645,9 @@ function BoardColumn({
         </span>
       </div>
       {/* The cards scroll inside the column; the padding keeps a landed
-          card's ring from being clipped at the edges. */}
-      <div className='-m-1 min-h-0 flex-1 space-y-3 overflow-y-auto p-1'>
+          card's ring from being clipped at the edges, and lets the last card
+          scroll above the assistant's dock (pb-24). */}
+      <div className='-m-1 min-h-0 flex-1 space-y-3 overflow-y-auto p-1 pb-24'>
         {items.map((record) =>
           renderCard(record, titles, ai[toText(record.id)]),
         )}
