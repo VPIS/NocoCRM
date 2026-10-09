@@ -1533,9 +1533,9 @@ export class LeadEvaluator {
               verdict.reviewInDays ?? settings.nurtureReviewDays;
             if (reviewInDays)
               taskId = await planTask(this.service, prepared, query, {
-                name: `${toText(lead.company || lead.name)} ${
-                  nurtureReviewName[lang(zh)]
-                }`,
+                // What is to be done, without the lead's name: the task
+                // is linked to it.
+                name: nurtureReviewName[lang(zh)],
                 inDays: reviewInDays,
                 edited,
                 timeZone: settings.timeZone,

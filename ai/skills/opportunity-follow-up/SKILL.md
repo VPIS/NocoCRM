@@ -143,7 +143,7 @@ When giving a follow-up in the conversation, write it in the structure below, wi
 
 ## Task and note conventions
 
-- Task title: the account's short name + what to do, for example "Huace Precision solution demo". A task has no type.
+- Task title: what to do, without the account's name (the task is linked to the deal, which shows beside it), for example "Solution demo". A task has no type.
 - A task's result, and a note of a call or meeting, record the gist of what the customer said and the facts confirmed, with speculation marked separately, plus the next step and who owns it.
 
 ## Boundaries

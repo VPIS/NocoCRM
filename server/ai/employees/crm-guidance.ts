@@ -42,7 +42,7 @@ const chineseGuidance = (days: GuidanceDays): string => `# 公司定位
 - 线索或商机超过 ${days.stale} 天没有联系（没有完成的任务、备注或邮件往来），建议安排下一步沟通。
 - 预计成交日期 ${days.closing} 天内到达但仍未关闭，建议确认进展或调整日期。
 - 客户要的条件超出审批标准（见「跟进商机」和「审批辅助」技能）时，建议发起审批，审批通过前不答应客户。
-- 任务标题：客户简称 + 要做的事，例如"华策精密 方案演示"。
+- 任务标题：只写要做的事，不带客户名称（任务关联了记录，列表里会显示），例如"方案演示"。
 - 沟通过的内容写成备注，任务完成时写结果：记客户的原话要点和已确认的事实，推测单独标出，并写下一步和负责人。
 
 # 记录边界
@@ -72,7 +72,7 @@ const englishGuidance = (days: GuidanceDays): string => `# Company profile
 - A lead or opportunity with no contact (no task done, note or mail) for more than ${days.stale} days: suggest scheduling the next conversation.
 - An expected close date within ${days.closing} days while the opportunity is still open: suggest confirming progress or moving the date.
 - When a customer asks for conditions beyond the approval standards (see the opportunity follow-up and approval review skills), suggest submitting an approval, and promise the customer nothing until it is approved.
-- Task titles: the account's short name + what to do, e.g. "Huace Precision solution demo".
+- Task titles: what to do, without the account's name (the task is linked to its record, which shows beside it), e.g. "Solution demo".
 - What was discussed is written as a note, and a task's result when it is done: the key points in the customer's own words and the facts confirmed; inferences are marked separately; it ends with the next step and who owns it.
 
 # Record boundaries

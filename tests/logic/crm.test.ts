@@ -4612,7 +4612,7 @@ describe('CRM opportunity follow-up', () => {
       expect(toText(pausedNow.resumeAt)).not.toBe('');
       expect(
         await service.get(actor('rep'), 'tasks', toText(decided.ai.taskId)),
-      ).toMatchObject({ name: '暂停的商机 resume' });
+      ).toMatchObject({ name: 'resume' });
 
       const { opportunity: lost } = await deal('输掉的商机');
       const lose = following({
@@ -4654,7 +4654,7 @@ describe('CRM opportunity follow-up', () => {
           'tasks',
           toText(lostDecision.ai.taskId),
         ),
-      ).toMatchObject({ name: '输掉的商机 revisit' });
+      ).toMatchObject({ name: 'revisit' });
       // A closed deal has nothing to follow up.
       await expect(
         lose.evaluator.request(actor('rep'), lost.id),

@@ -1853,7 +1853,7 @@ export class OpportunityEvaluator {
             });
           else if (verdict.recommendation === 'pause')
             taskId = await planTask(this.service, prepared, query, {
-              name: `${toText(opportunity.name)} ${dealTaskNames.resume[lang(zh)]}`,
+              name: dealTaskNames.resume[lang(zh)],
               inDays: verdict.resumeInDays ?? 30,
               edited,
               timeZone: settings.timeZone,
@@ -1862,7 +1862,7 @@ export class OpportunityEvaluator {
             });
           else if (verdict.recommendation === 'lose' && verdict.revisitInDays)
             taskId = await planTask(this.service, prepared, query, {
-              name: `${toText(opportunity.name)} ${dealTaskNames.revisit[lang(zh)]}`,
+              name: dealTaskNames.revisit[lang(zh)],
               inDays: verdict.revisitInDays,
               edited,
               timeZone: settings.timeZone,

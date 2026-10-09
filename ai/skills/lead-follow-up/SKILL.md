@@ -139,7 +139,7 @@ When you give a follow-up recommendation in the conversation, write it in the st
 
 ## Task and note conventions
 
-- Task title: the company's short name + what to do, for example "Huace Precision needs-discovery call". A task has no type.
+- Task title: what to do, without the company's name (the task is linked to the lead, which shows beside it), for example "Needs-discovery call". A task has no type.
 - A task's result, and a note of a call or meeting, record the key points of what the customer said and the confirmed facts, mark guesses separately, and state the next step and its owner.
 
 ## Boundaries

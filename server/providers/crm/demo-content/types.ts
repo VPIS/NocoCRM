@@ -37,8 +37,6 @@ export type DemoCity =
 export interface DemoCompany {
   // The account's name.
   readonly name: string;
-  // How a task name refers to the account.
-  readonly taskSubject: string;
   // The website's and the email addresses' domain, before .example.
   readonly domain: string;
   readonly description: string;
@@ -77,8 +75,6 @@ export interface DemoContent {
   readonly leads: readonly DemoLead[];
   // A lead's job title: even positions, then odd ones.
   readonly leadJobTitles: readonly [string, string];
-  // A task's name: who it concerns and the matter.
-  readonly taskName: (subject: string, matter: string) => string;
   // The description every demo task carries.
   readonly taskDescription: string;
   // The two tasks placed on the first leads.

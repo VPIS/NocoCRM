@@ -21,56 +21,48 @@ export const enUS: DemoContent = {
   companies: [
     {
       name: 'Northfield Precision Manufacturing',
-      taskSubject: 'Northfield Precision',
       domain: 'northfield-precision',
       description:
         'Three factories track production reporting and equipment inspections in Excel and an old OA system; plans a unified production management system on NocoBase, deployed privately.',
     },
     {
       name: 'Brightway Retail Group',
-      taskSubject: 'Brightway Retail',
       domain: 'brightway-retail',
       description:
         'Built a store inspection app on Community and plans to extend it to membership and supplier collaboration; needs SSO and approval workflows.',
     },
     {
       name: 'Stonebridge Medical Group',
-      taskSubject: 'Stonebridge Medical',
       domain: 'stonebridge-medical',
       description:
         'The IT department is choosing an in-hospital workflow platform, focused on permissions, audit logs and Kingbase database support.',
     },
     {
       name: 'Bluecrest Information Technology',
-      taskSubject: 'Bluecrest IT',
       domain: 'bluecrest-it',
       description:
         'A system integrator delivering custom applications to its end customers on NocoBase, buying Professional licences per project.',
     },
     {
       name: 'Clearpath Education Group',
-      taskSubject: 'Clearpath Education',
       domain: 'clearpath-education',
       description:
         'The education group wants to move admissions, scheduling and parent communication from several SaaS tools to a platform of its own.',
     },
     {
       name: 'Silverline Data Services',
-      taskSubject: 'Silverline Data',
       domain: 'silverline-data',
       description:
         'A data consulting team building its delivery workspace on NocoBase, starting with Standard.',
     },
     {
       name: 'Sunridge Energy',
-      taskSubject: 'Sunridge Energy',
       domain: 'sunridge-energy',
       description:
         'The energy company has finished evaluating an inspection and project collaboration platform; budget approval is postponed.',
     },
     {
       name: 'Goldleaf Foods',
-      taskSubject: 'Goldleaf Foods',
       domain: 'goldleaf-foods',
       description:
         'Evaluated a dealer management system; the group finally standardised on another low-code platform.',
@@ -262,16 +254,15 @@ export const enUS: DemoContent = {
     },
   ],
   leadJobTitles: ['IT Manager', 'Head of IT'],
-  taskName: (subject, matter) => `${subject} ${matter}`,
   taskDescription:
     'Review the latest progress, confirm the requirements and agree on the next steps.',
   discoveryCall: {
-    name: 'Northfield Precision discovery call',
+    name: 'Discovery call',
     feedback:
       'Confirmed about 200 people reporting production across three factories; leaning towards Enterprise deployed privately, with an initial budget of RMB 300,000.',
   },
   productDemo: {
-    name: 'Clearpath Education product demo',
+    name: 'Product demo',
     feedback:
       'Demonstrated the admissions and scheduling prototype; the team confirmed its interest and introduced the director of academic affairs.',
   },
@@ -298,8 +289,8 @@ export const enUS: DemoContent = {
     'technical integration workshop',
     'product demo',
   ],
-  eveningCall: 'Northfield Precision evening follow-up call',
-  ssoConfirmation: 'Brightway Retail SSO plan confirmation',
+  eveningCall: 'Evening follow-up call',
+  ssoConfirmation: 'SSO plan confirmation',
   leadTaskMatters: {
     completed: 'requirements notes',
     cancelled: 'rescheduled first conversation',

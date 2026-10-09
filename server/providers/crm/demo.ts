@@ -601,6 +601,8 @@ export async function populateDemo(
         ),
       );
     }
+    // A task is named by what is to be done, without the customer's name:
+    // the record it is linked to shows beside it wherever it is listed.
     const task = async (
       name: string,
       links: Row,
@@ -622,7 +624,8 @@ export async function populateDemo(
         Math.min(day - 2, -1),
       );
     // A call or a meeting that took place is a note on the record it was
-    // about, written by whoever held it, at the time it ended.
+    // about, written by whoever held it, at the time it ended, headed by
+    // what it was without the customer's name.
     const note = async (
       entity: 'leads' | 'opportunities' | 'accounts' | 'contacts',
       recordId: unknown,
@@ -731,14 +734,14 @@ export async function populateDemo(
         'opportunities',
         links.opportunityId,
         links.ownerId,
-        text.taskName(text.companies[a].taskSubject, text.completedMatters[i]),
+        text.completedMatters[i],
         text.completedFeedback[i],
         -6 - i,
         10,
       );
       if (i < 5)
         await task(
-          text.taskName(text.companies[a].taskSubject, text.plannedMatters[i]),
+          text.plannedMatters[i],
           links,
           [0, 0, -2, 2, 5][i],
           [10, 15, 11, 14, 10][i],
@@ -800,19 +803,12 @@ export async function populateDemo(
           'leads',
           leads[i].id,
           leadOwner(i).id,
-          text.taskName(text.leads[i].company, taskLabel(status)),
+          taskLabel(status),
           text.leadTaskFeedback,
           day,
           hour,
         );
-      else
-        await task(
-          text.taskName(text.leads[i].company, taskLabel(status)),
-          leadLinks(i),
-          day,
-          hour,
-          status,
-        );
+      else await task(taskLabel(status), leadLinks(i), day, hour, status);
     // A steady cadence beyond the hand-placed fortnight, so the calendar
     // and the day's agenda have something on every working day from a
     // month back to three months ahead, whichever day the demo is opened
@@ -861,36 +857,33 @@ export async function populateDemo(
             : null;
         if (n % 3 === 2 && openLeads.length) {
           const { lead, index } = openLeads[n % openLeads.length];
-          const subject = text.taskName(toText(lead.company), name);
           if (status === 'completed' && exchange && feedback)
             await note(
               'leads',
               lead.id,
               leadOwner(index).id,
-              subject,
+              name,
               feedback,
               day,
               hour,
             );
-          else
-            await task(subject, leadLinks(index), day, hour, status, feedback);
+          else await task(name, leadLinks(index), day, hour, status, feedback);
         } else {
           const { deal, index } = activeDeals[n % activeDeals.length];
           const a = deals[index][0];
-          const subject = text.taskName(text.companies[a].taskSubject, name);
           if (status === 'completed' && exchange && feedback)
             await note(
               'opportunities',
               deal.id,
               accountOwner(a).id,
-              subject,
+              name,
               feedback,
               day,
               hour,
             );
           else
             await task(
-              subject,
+              name,
               {
                 accountId: accounts_[a].id,
                 opportunityId: deal.id,
