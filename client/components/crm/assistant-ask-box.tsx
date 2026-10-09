@@ -54,7 +54,7 @@ export function AssistantAskBox(): ReactElement | null {
 
   return (
     <TooltipProvider>
-      <div className='flex flex-col gap-2.5'>
+      <div className='flex flex-col gap-4'>
         {unavailable ? (
           // Disabled controls take no pointer events, so the reason's
           // tooltip hangs on a wrapper around the box.
