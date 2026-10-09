@@ -85,6 +85,7 @@ import {
 } from '../components/crm/common.js';
 import { InlineField } from '../components/crm/inline.js';
 import { useAnnounceRecord } from '../components/crm/current-record.js';
+import { useRecordBreadcrumb } from '../components/crm/record-breadcrumb.js';
 import {
   EvaluateButton,
   EvaluationStatus,
@@ -218,6 +219,7 @@ export default function EntityDetail({
       ? { entity, recordId: id, name: contextName }
       : undefined,
   );
+  useRecordBreadcrumb(entity, !drawer?.inDrawer);
   if (isLoading || !meta) return <Loading />;
   if (!detail)
     return (

@@ -120,6 +120,7 @@ import {
 } from '../components/ui/dropdown-menu.js';
 import { InlineField } from '../components/crm/inline.js';
 import { useAnnounceRecord } from '../components/crm/current-record.js';
+import { useRecordBreadcrumb } from '../components/crm/record-breadcrumb.js';
 import { ConvertDialog } from '../components/crm/conversion.js';
 import { LeadDuplicates } from '../components/crm/lead-merge.js';
 import { RecordMailPanel } from '../components/crm/record-mail.js';
@@ -322,6 +323,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       ? { entity: 'leads', recordId: id, name: contextName }
       : undefined,
   );
+  useRecordBreadcrumb('leads', !drawer?.inDrawer);
   if (isLoading || !meta) return <Loading />;
   if (!detail)
     return (
