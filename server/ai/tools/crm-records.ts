@@ -99,7 +99,8 @@ export function crmActor(
 const filterProperties = {
   search: {
     type: 'string',
-    description: 'Free text matched against name, company, email and phone.',
+    description:
+      'Free text: every word must appear in the name, company, email, phone or website; words in any order.',
   },
   status: {
     type: 'string',

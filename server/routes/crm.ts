@@ -95,6 +95,7 @@ import {
   saveAgentSwitch,
 } from '../providers/crm/agents.js';
 import { resolveTitles } from '../providers/crm/titles.js';
+import { searchAll } from '../providers/crm/search.js';
 import type { Row } from '@nocobase/db';
 
 type CrmEnv = { Variables: AuthorizationEnv['Variables'] & { actor: Actor } };
@@ -614,6 +615,13 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       const timeline = app.container.resolve(mailTimelineToken);
       const written = await timeline.syncUser(c.get('actor').id);
       return c.json({ data: { written } });
+    });
+    // The global search: the typed text in every kind of record the reader
+    // may read, grouped by kind (server/providers/crm/search.ts).
+    routes.get('/search', async (c) => {
+      const text = (c.req.query('q') ?? '').trim();
+      if (!text || text.length > 100) throw new CrmError('invalidInput');
+      return c.json({ data: await searchAll(service, c.get('actor'), text) });
     });
     routes.get('/decisions/count', async (c) => {
       const decisions = await pendingDecisions(service, c.get('actor'), {

@@ -1,6 +1,12 @@
 import { useTranslation } from '@nocobase/i18n/client';
 import { ChevronRight } from 'lucide-react';
-import { useRef, useState, type ReactElement } from 'react';
+import {
+  Fragment,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { Link } from 'react-router';
 
 import {
@@ -50,6 +56,7 @@ export function NavigationMenu({
   label,
   selectedKey,
   sections = false,
+  after,
 }: {
   readonly items: readonly RouteNavigationItem[];
   readonly label: string;
@@ -63,6 +70,11 @@ export function NavigationMenu({
   // heading (the primitive's own behaviour) and keeps the entries' icons.
   // Settings keeps the template's groups.
   readonly sections?: boolean;
+  // Application change: something drawn right after the entry of the route
+  // so named, among the plain entries: the CRM's Search, under the overview,
+  // which opens a dialog rather than a page, so no route's `navigation` can
+  // express it (client/components/crm/search-dialog.tsx).
+  readonly after?: Readonly<Record<string, ReactNode>>;
 }): ReactElement {
   const isSection = (item: RouteNavigationItem): boolean =>
     sections && item.children.length > 0 && !item.route.componentLoader;
@@ -82,11 +94,10 @@ export function NavigationMenu({
             <SidebarGroupContent>
               <SidebarMenu>
                 {run.map((item) => (
-                  <NavigationItem
-                    key={routeKey(item.route)}
-                    item={item}
-                    selectedKey={selectedKey}
-                  />
+                  <Fragment key={routeKey(item.route)}>
+                    <NavigationItem item={item} selectedKey={selectedKey} />
+                    {after?.[item.route.name]}
+                  </Fragment>
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>

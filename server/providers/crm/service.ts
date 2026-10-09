@@ -96,6 +96,21 @@ export interface ListOptions {
   page?: number;
   pageSize?: number;
 }
+// The fields a search looks in, where the kind of record has them.
+const SEARCH_FIELDS = ['name', 'company', 'email', 'phone', 'website'];
+
+// A search's words: split on spaces and the punctuation people put between
+// terms, at most eight. The LIKE wildcards split words too, since the query
+// layer has no way to escape them: a typed "%" or "_" never matches
+// everything.
+export function searchWords(text: string): string[] {
+  return text
+    .split(/[\s,，、;；/|()（）[\]【】%_\\]+/u)
+    .map((word) => word.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
 // A detail page's related lists and history come this many at a time.
 export const RELATED_PAGE = 20;
 export interface ListResult {
@@ -528,22 +543,30 @@ export class CrmService {
     if (options.to) select = select.where('createdAt', '<=', options.to);
     if (options.search) {
       const term = toText(options.search.slice(0, 200));
-      const searchFields = ['name', 'company', 'email', 'phone'].filter((f) =>
-        fields.includes(f),
-      );
+      const searchFields = SEARCH_FIELDS.filter((f) => fields.includes(f));
       // A number typed as people write it (138 0000 5217, +86 …) finds the
-      // number as it is kept.
+      // number as it is kept, as one term.
       const phone = /^[\d\s+().-]{5,}$/.test(term.trim())
         ? normalizePhone(term)
         : '';
-      select = select.where((eb) =>
-        eb.or([
-          ...searchFields.map((f) => eb(f, 'like', `%${term}%`)),
-          ...(phone && phone !== term && searchFields.includes('phone')
-            ? [eb('phone', 'like', `%${phone}%`)]
-            : []),
-        ]),
-      );
+      if (phone && searchFields.includes('phone'))
+        select = select.where((eb) =>
+          eb.or([
+            eb('phone', 'like', `%${phone}%`),
+            ...searchFields.map((f) => eb(f, 'like', `%${term.trim()}%`)),
+          ]),
+        );
+      else {
+        // Otherwise word by word, in any order: every word matches one of
+        // the search fields.
+        const words = searchWords(term);
+        if (!words.length || !searchFields.length)
+          select = select.where('id', '=', '');
+        for (const word of words)
+          select = select.where((eb) =>
+            eb.or(searchFields.map((f) => eb(f, 'like', `%${word}%`))),
+          );
+      }
     }
     return { select, fields };
   }

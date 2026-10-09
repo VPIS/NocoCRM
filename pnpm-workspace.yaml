@@ -210,6 +210,15 @@ minimumReleaseAgeExclude:
   - '@nocobase/db@1.0.0-beta.18'
   - '@nocobase/dev-config@0.1.0-beta.18'
   - '@nocobase/secrets@0.1.0-beta.0'
+  - '@nocobase/ai-employee@0.2.0-beta.8'
+  - '@nocobase/app-plugin-i18n@1.0.0-beta.13'
+  - '@nocobase/app-plugin-notification-providers@0.2.0-beta.10'
+  - '@nocobase/caching@0.1.0-beta.2'
+  - '@nocobase/db-sqlite@0.1.0-beta.4'
+  - '@nocobase/hub-cli@1.0.0-beta.1'
+  - '@nocobase/i18n@1.0.0-beta.5'
+  - '@nocobase/jobs@0.1.0-beta.2'
+  - '@nocobase/queue@0.1.0-beta.8'
 
 # One SQLite binding for the whole tree: the NocoBase packages accept 12 or 13,
 # and loading two builds of the native addon in one process crashes it.

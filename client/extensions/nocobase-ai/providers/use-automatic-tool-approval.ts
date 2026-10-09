@@ -38,9 +38,26 @@ export function useAutomaticToolApproval({
         do {
           rerunRef.current.delete(conversationId);
           const pending = getChatToolParts(targetChat.messages)
-            .filter(
-              ({ part }) => getNocoBaseToolMetadata(part)?.autoApprove === true,
-            )
+            .filter(({ part }) => {
+              const metadata = getNocoBaseToolMetadata(part) as
+                { autoApprove?: unknown; invokeStatus?: unknown } | undefined;
+              if (metadata?.autoApprove === true) return true;
+              // Application change (as in NocoITAM's copy): the server
+              // decides a page tool's auto-run from the conversation's
+              // frontend tools, but this plugin version never hands it that
+              // list, so every executeFrontendTool call arrived as needing
+              // approval (the global search's presentRecords waited for
+              // ever). It is offered to `decide` here, whose
+              // `canAutoApproveToolCall` runs it only when the page
+              // registered it ALLOW and it is in this conversation's context;
+              // otherwise it asks as before.
+              return (
+                metadata?.invokeStatus === 'interrupted' &&
+                (part.type === 'dynamic-tool'
+                  ? part.toolName
+                  : part.type.slice(5)) === 'executeFrontendTool'
+              );
+            })
             .flatMap(({ message, part }) => {
               const key = `${conversationId}:${message.id}:${part.toolCallId}`;
               return approvedRef.current.has(key)

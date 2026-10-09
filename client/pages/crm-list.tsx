@@ -140,12 +140,27 @@ export default function CrmListPage(): ReactElement {
   const params = new URLSearchParams(location.search);
   const initialMetric = params.get('metric') ?? undefined;
   const initialStatus = params.get('status') ?? undefined;
+  // From the global search: "?search=" fills the search box, and the
+  // records its AI answer found ("?ids=a,b&found=title") narrow the list.
+  const initialSearch = params.get('search') ?? undefined;
+  const foundIds = params.get('ids');
+  const initialFound = foundIds
+    ? {
+        ids: foundIds.split(',').filter(Boolean),
+        // Plain text from the address, cut as the search cuts it.
+        title: (params.get('found') ?? '').slice(0, 60),
+      }
+    : undefined;
   return (
     <EntityList
-      key={entity}
+      // A new search from the global search opens the list afresh, even on
+      // the list already shown.
+      key={`${entity}|${initialSearch ?? ''}|${foundIds ?? ''}`}
       entity={entity}
       initialMetric={initialMetric}
       initialStatus={initialStatus}
+      initialSearch={initialSearch}
+      initialFound={initialFound}
     />
   );
 }
@@ -153,16 +168,20 @@ function EntityList({
   entity,
   initialMetric,
   initialStatus,
+  initialSearch,
+  initialFound,
 }: {
   entity: Entity;
   initialMetric?: string;
   initialStatus?: string;
+  initialSearch?: string;
+  initialFound?: { ids: string[]; title: string };
 }): ReactElement {
   const { text, language } = useCrmText();
   const { data: meta, error: metadataError } = useMetadata();
   const api = useCrmApi();
   const scopeKey = useCrmScopeKey();
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(initialSearch ?? '');
   // Every list opens on every status (tasks list what is still to do above
   // what is done), unless a workspace card opened it on a set of its own.
   const defaultStatus = initialStatus ?? '';
@@ -184,7 +203,7 @@ function EntityList({
   const [view, setView] = useState(
     ['leads', 'opportunities'].includes(entity)
       ? 'board'
-      : entity === 'tasks' && !initialMetric && !initialStatus
+      : entity === 'tasks' && !initialMetric && !initialStatus && !initialFound
         ? 'calendar'
         : 'list',
   );
@@ -200,7 +219,10 @@ function EntityList({
   // are what the server restricts the list to.
   // A metric filter: undefined until the reader touches it, null once
   // cleared, so a workspace card's opening filter applies until dismissed.
-  const [metric, setMetric] = useState<{ key: string; ids: string[] } | null>();
+  // The AI's found records come in as one, named by the AI (`title`).
+  const [metric, setMetric] = useState<
+    { key: string; ids: string[]; title?: string } | null | undefined
+  >(() => (initialFound ? { key: 'found', ...initialFound } : undefined));
   // Unfiltered on purpose: the title shows how many leads exist, not how
   // many match the current filters. One row is enough to learn the total.
   const totals = useQuery({
@@ -799,10 +821,12 @@ function EntityList({
         <div className='flex items-center gap-2 text-sm'>
           <span className='text-muted-foreground'>{text('showing')}</span>
           <Button variant='secondary' size='sm' onClick={() => setMetric(null)}>
-            {text(
-              METRIC_TITLES[`${toText(entity)}.${activeMetric.key}`] ??
-                activeMetric.key,
-            )}
+            {activeMetric.title !== undefined
+              ? text('globalSearch.foundChip', { title: activeMetric.title })
+              : text(
+                  METRIC_TITLES[`${toText(entity)}.${activeMetric.key}`] ??
+                    activeMetric.key,
+                )}
             <X className='size-3.5' />
           </Button>
         </div>

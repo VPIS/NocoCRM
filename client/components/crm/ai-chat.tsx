@@ -30,6 +30,7 @@ import {
   useAIChat,
   useAIChatBase,
   useAIChatMessages,
+  useAIChatStatus,
   useAIChatController,
   useAIChatControllerState,
   type AIChatAttachment,
@@ -50,6 +51,9 @@ import {
   type Data,
 } from './api.js';
 import { crmToolRenderers } from './ai-tool-renderers.js';
+import { GlobalSearchProvider } from './global-search.js';
+import { isSearchConversation, searchChat } from './search-chat.js';
+import { IDLE_SEARCH_CHAT } from './search-turn.js';
 import {
   CRM_ASSISTANT,
   clearConversationRequest,
@@ -141,9 +145,16 @@ function localizedService(
         ? { ...employee, ...texts }
         : employee,
     );
+  // The global search's own conversations stay out of every list: the
+  // sidebar's, the panel's history (search-chat.ts).
+  const listConversations: AIService['listConversations'] = async (keyword) =>
+    (await base.listConversations(keyword)).filter(
+      (conversation) => !isSearchConversation(conversation.title),
+    );
   return new Proxy(base, {
     get(target, property, receiver) {
       if (property === 'listEmployees') return listEmployees;
+      if (property === 'listConversations') return listConversations;
       const value = Reflect.get(target, property, receiver) as unknown;
       return typeof value === 'function'
         ? (value as (...args: unknown[]) => unknown).bind(target)
@@ -169,17 +180,38 @@ export function CrmAssistantProvider({
   // no model until a refresh.
   const api = useApiClient();
   const userId = useLiveSessionUserId();
-  const service = useMemo(
-    () =>
-      localizedService(new NocoBaseAIService(api), {
-        nickname,
-        position,
-        bio,
-        greeting,
-      }),
+  const base = useMemo(
+    () => new NocoBaseAIService(api),
     // eslint-disable-next-line react-hooks/exhaustive-deps, @eslint-react/exhaustive-deps -- userId only re-keys the service
-    [api, nickname, position, bio, greeting, userId],
+    [api, userId],
   );
+  const service = useMemo(
+    () => localizedService(base, { nickname, position, bio, greeting }),
+    [base, nickname, position, bio, greeting],
+  );
+  // The global search's conversations a reload or a closed tab left behind
+  // mid-answer: deleted once there is a signed-in user, those untouched for
+  // ten minutes (a search may be running in another tab) and never the one
+  // this page's search is running.
+  useEffect(() => {
+    if (!userId) return;
+    const stale = Date.now() - 10 * 60_000;
+    void base
+      .listConversations()
+      .then((conversations) =>
+        Promise.all(
+          conversations
+            .filter(
+              (conversation) =>
+                isSearchConversation(conversation.title) &&
+                conversation.id !== searchChat.getState().conversationId &&
+                new Date(conversation.updatedAt).getTime() < stale,
+            )
+            .map((conversation) => base.destroyConversation(conversation.id)),
+        ),
+      )
+      .catch(() => undefined);
+  }, [base, userId]);
   return (
     // The registry's root provider discovers employees and models once for
     // the whole application; the panel below mounts the chat when both are
@@ -191,7 +223,9 @@ export function CrmAssistantProvider({
       contextFailurePolicy='omit'
       toolRenderers={crmToolRenderers}
     >
-      {children}
+      {/* The global search's state and its AI tool, for the whole
+          application (its dialog is in the application layout). */}
+      <GlobalSearchProvider>{children}</GlobalSearchProvider>
       <CrmAssistantPanel />
     </NocoBaseAIRootProvider>
   );
@@ -375,8 +409,53 @@ function CrmAssistantPanel(): ReactElement | null {
           </div>
         </div>
       </ChatSurface>
+      <SearchChat />
     </>
   );
+}
+
+// The global search's conversation, which no window shows (search-chat.ts):
+// mounted on the same conditions as the panel's chat, and always, so a
+// question asked from the search runs whether or not the panel is open. Its
+// progress reaches the search through the bridge.
+function SearchChat(): ReactElement | null {
+  const readiness = useAssistantReadiness();
+  if (readiness.state !== 'ready') return null;
+  return (
+    <AIChatProvider
+      id='crm-search'
+      controller={searchChat.controller}
+      defaultEmployee={CRM_ASSISTANT}
+    >
+      <SearchChatBridge />
+    </AIChatProvider>
+  );
+}
+
+function SearchChatBridge(): null {
+  const { messages } = useAIChatMessages();
+  const { status, error } = useAIChatStatus();
+  const { activeConversationId, removeConversation, renameConversation } =
+    useAIChatBase();
+  useEffect(() => {
+    searchChat.setState({
+      status,
+      messages,
+      error,
+      conversationId: activeConversationId,
+      removeConversation,
+      renameConversation,
+    });
+  }, [
+    status,
+    messages,
+    error,
+    activeConversationId,
+    removeConversation,
+    renameConversation,
+  ]);
+  useEffect(() => () => searchChat.setState(IDLE_SEARCH_CHAT), []);
+  return null;
 }
 
 // The chat mounts only once the plugin has found an employee and a usable

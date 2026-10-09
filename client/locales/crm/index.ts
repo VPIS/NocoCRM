@@ -184,6 +184,69 @@ const wording = {
       },
     },
   },
+  // The global search (client/components/crm/global-search.tsx): the
+  // dialog ⌘K opens, its keyword results and its AI answer.
+  globalSearch: {
+    label: ['Search', '搜索'],
+    dialogTitle: ['Search the CRM', '搜索 CRM'],
+    placeholder: [
+      'Search leads, opportunities, accounts, contacts, tasks, approvals…',
+      '搜索线索、商机、客户、联系人、任务、审批…',
+    ],
+    askPlaceholder: [
+      'Describe what you are looking for, or ask a question…',
+      '用一句话描述要找的记录或问题…',
+    ],
+    searchTab: ['Search', '搜索'],
+    askTab: ['Ask AI', '问 AI'],
+    hint: [
+      'Type a name, company, email, phone or website; words in any order',
+      '输入名称、公司、邮箱、电话或网址，几个词顺序不限',
+    ],
+    askHint: [
+      'For example: new leads Wang Lei owns; opportunities created this month',
+      '例如：王磊负责的新线索；本月新建的商机',
+    ],
+    hintAsk: [
+      'Or switch to Ask AI to describe what you are looking for',
+      '也可以切换到“问 AI”，用一句话描述要找的记录',
+    ],
+    searching: ['Searching…', '正在搜索…'],
+    noResults: ['No matching records', '没有找到匹配的记录'],
+    failed: ['The search failed', '搜索失败'],
+    retry: ['Try again', '重试'],
+    showAllIn: [
+      'All {{count}} in {{list}}',
+      '在{{list}}中查看全部 {{count}} 条',
+    ],
+    askAbout: ['Ask AI: {{text}}', '问 AI：{{text}}'],
+    answerTitle: ['AI answer', 'AI 回答'],
+    closeAnswer: ['Close the answer', '关闭回答'],
+    working: ['Thinking…', '正在思考…'],
+    steps: {
+      search_records: ['Looking up records…', '正在查找记录…'],
+      summarize_records: ['Counting…', '正在统计…'],
+      get_record: ['Reading a record…', '正在读取记录…'],
+      list_users: ['Looking up colleagues…', '正在查找同事…'],
+      frontend: ['Gathering the results…', '正在整理结果…'],
+    },
+    foundTitle: ['{{title}} · {{count}}', '{{title}} · {{count}} 条'],
+    firstOf: ['(the first 200 only)', '（仅显示前 200 条）'],
+    showAll: ['All {{count}}', '查看全部 {{count}} 条'],
+    followUp: ['Ask a follow-up', '继续追问'],
+    followUpDraft: [
+      'About my search "{{question}}": ',
+      '关于我刚才搜索的“{{question}}”：',
+    ],
+    needsDecision: [
+      'Noco proposed a change for you to confirm in the conversation.',
+      'Noco 提出了需要你确认的修改，请在对话中处理。',
+    ],
+    answerFailed: ['Could not answer this.', '没能回答这个问题。'],
+    openConversation: ['Open the conversation', '打开对话'],
+    foundChip: ['Found by AI: {{title}}', 'AI 找到的：{{title}}'],
+    context: ['Global search', '全局搜索'],
+  },
   assistantEmployeeName: ['Noco', 'Noco'],
   // The line under the chat's header naming what a conversation began from.
   assistantStart: ['Started from', '起点'],

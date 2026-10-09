@@ -33,6 +33,10 @@ import { useCrmText } from '../components/crm/api.js';
 import { useMailUnreadCount } from '../components/crm/mail-unread.js';
 import { DemoBanner } from '../components/crm/demo-banner.js';
 import { AssistantDock } from '../components/crm/assistant-dock.js';
+import {
+  GlobalSearchDialog,
+  SearchNavButton,
+} from '../components/crm/search-dialog.js';
 import { SidebarChats } from './components/sidebar-chats.js';
 import { AppBrand } from './components/app-brand.js';
 import { HeaderActions } from './components/header-actions.js';
@@ -116,6 +120,9 @@ export function AppLayout({
                 label={navigationLabel}
                 selectedKey={selectedKey}
                 sections
+                // Application change: Search under the overview, which opens
+                // the global search's dialog (search-dialog.tsx).
+                after={{ home: <SearchNavButton /> }}
               />
             </NavigationBadgesContext>
             {/* Application change: the user's conversations with the
@@ -143,6 +150,9 @@ export function AppLayout({
             {/* Application change: the CRM's demo banner, under the header
                 and above every page, for whoever may import the dataset. */}
             <DemoBanner />
+            {/* Application change: the global search's dialog, which ⌘K or
+                the menu's Search opens (search-dialog.tsx). */}
+            <GlobalSearchDialog />
             <main className='relative min-w-0 flex-1 overflow-hidden'>
               {/* main only positions; the page scrolls in here, so a child page layer laid over main is neither
             moved by the page's scrolling nor stretched by its height. */}

@@ -116,6 +116,13 @@ export class NocoBaseChatTransport implements ChatTransport<AIChatMessage> {
       ...(context.task?.workContext ?? []),
       ...(lastMessage?.metadata?.workContext ?? []),
     ];
+    // Application change (as in NocoITAM's copy): the server takes a page's
+    // frontend tools only from `frontendTools` on the request, and this
+    // Registry version sent them inside the work context alone, so a page
+    // tool (the global search's presentRecords) never reached the model.
+    const frontendTools = workContext.flatMap((item) =>
+      Array.isArray(item.frontendTools) ? item.frontendTools : [],
+    );
     const stream = await this.options.service.sendMessagesStream(
       {
         sessionId,
@@ -128,6 +135,7 @@ export class NocoBaseChatTransport implements ChatTransport<AIChatMessage> {
         skillSettings: context.task?.skillSettings,
         webSearch: context.task?.webSearch,
         editingMessageId: lastMessage?.metadata?.editingMessageId,
+        frontendTools: frontendTools.length ? frontendTools : undefined,
         messages: [
           {
             key: lastMessage?.id ?? crypto.randomUUID(),

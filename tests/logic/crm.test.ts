@@ -1470,6 +1470,53 @@ describe('CRM API security and domain rules', () => {
       });
   });
 
+  it('searches every kind the reader may read, word by word, in the global search', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Zhou Searchable',
+      company: 'Orbit Kitchen Supplies',
+      email: 'zhou@orbit-kitchen.test',
+    });
+    const account = await service.save(actor('rep'), 'accounts', {
+      name: 'Orbit Kitchen Group',
+      ownerId: 'rep',
+    });
+    expect((await request('/search?q=orbit')).status).toBe(401);
+    expect((await request('/search?q=', 'rep')).status).toBe(400);
+    const body = (await (
+      await request('/search?q=kitchen%20orbit', 'rep')
+    ).json()) as {
+      data: { entity: string; total: number; rows: { id: string }[] }[];
+    };
+    // Words in any order; grouped by kind in the search's order.
+    expect(body.data.map((group) => group.entity)).toEqual([
+      'leads',
+      'accounts',
+    ]);
+    expect(body.data[0]?.rows.map((row) => row.id)).toEqual([lead.id]);
+    expect(body.data[1]?.rows.map((row) => row.id)).toEqual([account.id]);
+    // A word must match: one that matches nothing empties the result.
+    expect(
+      (
+        (await (await request('/search?q=orbit%20nowhere', 'rep')).json()) as {
+          data: unknown[];
+        }
+      ).data,
+    ).toEqual([]);
+    // The LIKE wildcards are no wildcards: "%" matches nothing by itself.
+    expect(
+      (
+        (await (await request('/search?q=%25', 'rep')).json()) as {
+          data: unknown[];
+        }
+      ).data,
+    ).toEqual([]);
+    // A reader without the CRM's lists is refused nothing and finds nothing.
+    const outsider = await request('/search?q=orbit', 'outsider');
+    if (outsider.status === 200)
+      expect(((await outsider.json()) as { data: unknown[] }).data).toEqual([]);
+    else expect(outsider.status).toBe(403);
+  });
+
   it('enforces field permissions in records, history, export, search and updates', async () => {
     const readable = fieldsFor('leads').filter(
       (field) => !['email', 'message', 'attachments'].includes(field),
