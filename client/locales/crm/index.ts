@@ -882,6 +882,10 @@ const wording = {
     acceptConvert: ['Accept and convert', '采纳并转化'],
     acceptUpdate: ['Accept and update the task', '采纳并更新任务'],
     acceptOnly: ['Accept', '采纳'],
+    acceptEmailed: [
+      'Accept: I will send the email myself',
+      '采纳（自行发送邮件）',
+    ],
     acceptReschedule: ['Accept and move it', '采纳并改期'],
     acceptReport: ['Record the outcome', '记录结果'],
     acceptInvalid: ['Accept and mark invalid', '采纳并标记无效'],

@@ -720,7 +720,15 @@ export function VerdictPanel({
                               : verdict.recommendation === 'advance'
                                 ? 'evaluation.deal.acceptAdvance'
                                 : 'evaluation.acceptUpdate'
-                        : acceptLabel(verdict),
+                        : // An email to send, with no mailbox here to send it
+                          // from: accepting plans nothing; the person sends
+                          // the copied draft themselves.
+                          emailsNext(verdict) &&
+                            ['follow', 'continue'].includes(
+                              verdict.recommendation,
+                            )
+                          ? 'evaluation.acceptEmailed'
+                          : acceptLabel(verdict),
                     )}
                   </Button>
                 )}
@@ -1674,7 +1682,9 @@ function Findings({
           <Button
             size='xs'
             variant='outline'
-            className='-my-1 ml-auto font-normal text-ai hover:text-ai'
+            // Plainly a button on the card's tint: the AI's colour on its
+            // border and text, on the card's white.
+            className='-my-1 ml-auto border-ai/40 bg-card font-medium text-ai hover:bg-ai/10 hover:text-ai'
             disabled={busy || chosen.length === 0}
             onClick={() => {
               setBusy(true);

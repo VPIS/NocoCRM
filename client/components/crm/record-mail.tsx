@@ -6,7 +6,8 @@ import {
 } from '@nocobase/app-plugin-mail/client';
 import { MailConversationView } from '@nocobase/app-plugin-mail/client/components';
 import { useTranslation } from '@nocobase/i18n/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useToaster } from '@nocobase/app-client';
 import { AtSign, Mail, Paperclip, PenLine } from 'lucide-react';
 import {
   useEffect,
@@ -119,6 +120,49 @@ export function RecordMailPanel({
     },
     enabled: Boolean(selectedMessage),
   });
+  // A change to one of the conversation's messages, as the Mail plugin's
+  // workspace makes it: the message the API returns replaces the one shown
+  // (a fetch right after can still read the mailbox as it was), and the
+  // record's list, with its unread marks, is read again.
+  const queryClient = useQueryClient();
+  const toaster = useToaster();
+  const refreshList = (): Promise<void> =>
+    queryClient.invalidateQueries({
+      predicate: (query) =>
+        query.queryKey[0] === 'mail' && query.queryKey[1] !== 'conversation',
+    });
+  const failed = (cause: unknown): void => {
+    toaster.show({
+      type: 'error',
+      title: mailErrorMessage(
+        cause,
+        t('workspace.updateFailed', {
+          defaultValue: 'Unable to update the message.',
+        }),
+      ),
+    });
+  };
+  const replaced = (updated: MailMessage): void => {
+    queryClient.setQueryData<readonly MailMessage[]>(
+      ['mail', 'conversation', selected],
+      (current) =>
+        current?.map((message) =>
+          message.id === updated.id ? updated : message,
+        ),
+    );
+    void refreshList();
+  };
+  // Deleting moves a message to the mailbox's trash, where its provider can
+  // move messages; it is never deleted outright from here.
+  const canMove = (message: MailMessage): boolean => {
+    const account = setup.accounts.find((a) => a.id === message.accountId);
+    const provider = setup.providers.find(
+      (p) => p.name === account?.provider.name,
+    );
+    return Boolean(
+      !message.scheduledSend && provider?.capabilities.moveMessage,
+    );
+  };
   const timeZone = toText(meta?.settings.timeZone ?? 'UTC');
   const labels = useMemo(
     () => ({
@@ -289,8 +333,27 @@ export function RecordMailPanel({
                                   },
                                   log,
                                 ),
-                              delete: () => undefined,
-                              canDelete: () => false,
+                              delete: (source) =>
+                                void mail
+                                  .deleteMessage(
+                                    source.accountId,
+                                    source.id,
+                                    false,
+                                  )
+                                  .then(() => {
+                                    queryClient.setQueryData<
+                                      readonly MailMessage[]
+                                    >(
+                                      ['mail', 'conversation', selected],
+                                      (current) =>
+                                        current?.filter(
+                                          (m) => m.id !== source.id,
+                                        ),
+                                    );
+                                    return refreshList();
+                                  })
+                                  .catch(failed),
+                              canDelete: canMove,
                               toggleRead: (source) =>
                                 void mail
                                   .updateMessage({
@@ -298,7 +361,8 @@ export function RecordMailPanel({
                                     messageId: source.id,
                                     read: !source.read,
                                   })
-                                  .then(() => conversation.refetch()),
+                                  .then(replaced)
+                                  .catch(failed),
                               toggleStarred: (source) =>
                                 void mail
                                   .updateMessage({
@@ -306,7 +370,8 @@ export function RecordMailPanel({
                                     messageId: source.id,
                                     starred: !source.starred,
                                   })
-                                  .then(() => conversation.refetch()),
+                                  .then(replaced)
+                                  .catch(failed),
                             }
                           : undefined
                       }

@@ -10,6 +10,10 @@ import { crmZh } from '../../client/locales/crm/index.js';
 const state = vi.hoisted(() => ({ api: vi.fn(), assign: true }));
 // No mail here: the Mail plugin needs the application root, which these
 // tests do not mount.
+// The email step has tests of its own (email-step.test.tsx).
+vi.mock('../../client/components/crm/email-step.js', () => ({
+  EmailStep: () => null,
+}));
 vi.mock('../../client/components/crm/mail.js', async (importOriginal) => ({
   ...(await importOriginal<
     typeof import('../../client/components/crm/mail.js')
@@ -637,5 +641,34 @@ describe("a deal's follow-up card", () => {
       'POST',
       { decision: 'accept', fields: [], task: {} },
     );
+  });
+});
+
+// An email as the next step plans no task: without a mailbox to send it
+// from here, accepting says the person sends it themselves.
+describe('a follow-up whose next step is an email', () => {
+  it('accepts without planning a contact, for a reader with no mailbox', () => {
+    render(
+      <VerdictPanel
+        entry={{
+          ...entry,
+          ai: {
+            result: {
+              ...entry.ai.result,
+              nextStep: { type: 'email', subject: '方案沟通', inDays: 0 },
+              email: { subject: '方案沟通', body: '周晓，您好：' },
+            },
+          },
+        }}
+        recordId='lead-1'
+        editable
+        onChanged={() => Promise.resolve()}
+      />,
+    );
+    expect(
+      screen.getByRole('button', { name: '采纳（自行发送邮件）' }),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '采纳并安排联系' })).toBeNull();
+    expect(screen.queryByText('将创建的任务')).toBeNull();
   });
 });
