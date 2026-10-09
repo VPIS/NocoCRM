@@ -2225,11 +2225,11 @@ export function HistoryFeed({
               className='grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4'
             >
               <ol className='relative'>
-                {/* The rail behind the icons: a slim one a shade deeper than
-                    the page's tint, borderless. */}
+                {/* The rail behind the icons: a slim one in the menu's
+                    colour, a shade deeper than the page's tint, borderless. */}
                 <span
                   aria-hidden
-                  className='absolute inset-y-0 left-0 w-5 rounded-full bg-foreground/[0.04]'
+                  className='absolute inset-y-0 left-0 w-5 rounded-full bg-sidebar'
                 />
                 {events.map((event, index) => {
                   const key = toText(event.id);
