@@ -543,6 +543,32 @@ const wording = {
       '近 90 天提交给你的审批的分析',
     ],
   },
+  // An email follow-up step, changed and sent on its card (email-step.tsx).
+  emailStep: {
+    from: ['From', '发件人'],
+    to: ['To', '收件人'],
+    cc: ['Cc', '抄送'],
+    subject: ['Subject', '主题'],
+    body: ['Message', '正文'],
+    toPlaceholder: [
+      'Name <address>, separated by commas',
+      '姓名 <邮箱>，多个用逗号分隔',
+    ],
+    send: ['Send email', '发送邮件'],
+    sent: [
+      'Email sent; the suggestion is accepted.',
+      '邮件已发送，建议已采纳。',
+    ],
+    openComposer: ['Edit in the mail composer', '在邮件窗口中编辑'],
+    noMailbox: [
+      'Connect a mailbox to send it from here; for now, copy the draft.',
+      '连接邮箱后可直接在这里发送；现在可以先复制草稿。',
+    ],
+    noIdentity: [
+      'This mailbox has no address it may send from.',
+      '这个邮箱没有可用于发送的地址。',
+    ],
+  },
   // A new approval's quick dialog, laid out as a new task's.
   approvalQuick: {
     titlePlaceholder: ['What is the approval for', '审批主题'],
@@ -709,7 +735,6 @@ const wording = {
     nextStep: ['Next step', '下一步'],
     stepTask: ['Task', '任务'],
     stepEmail: ['Email', '邮件'],
-    writeEmail: ['Write the email', '写邮件'],
     today: ['today', '今天'],
     inDays: ['in {{count}} days', '{{count}} 天后'],
     questions: ['To ask', '要问的问题'],

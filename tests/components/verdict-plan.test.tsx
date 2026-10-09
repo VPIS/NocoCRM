@@ -14,6 +14,13 @@ vi.mock('../../client/components/crm/mail.js', async (importOriginal) => ({
   ...(await importOriginal<
     typeof import('../../client/components/crm/mail.js')
   >()),
+  useMailSetup: () => ({
+    can: false,
+    accounts: [],
+    providers: [],
+    senders: [],
+    loading: false,
+  }),
   useMailComposer: () => ({
     available: false,
     compose: () => undefined,

@@ -13,7 +13,6 @@ import {
   Copy,
   ExternalLink,
   Globe,
-  Mail,
   PencilLine,
   Sparkles,
   TriangleAlert,
@@ -36,8 +35,8 @@ import {
   DialogTitle,
 } from '../ui/dialog.js';
 import { OutcomeBox } from './outcome.js';
-import { useMailComposer } from './mail.js';
-import { plainTextToMailHtml } from '@nocobase/app-plugin-mail/client';
+import { useMailSetup } from './mail.js';
+import { EmailStep } from './email-step.js';
 import { Choice } from './form.js';
 import { Input } from '../ui/input.js';
 import { DateTimeInput } from './datetime-input.js';
@@ -61,7 +60,6 @@ import {
   useRecord,
   useRefresh,
   type CrmRecord,
-  type Data,
 } from './api.js';
 
 // The AI's follow-up recommendation for a lead, as the server keeps it in the lead's
@@ -456,11 +454,10 @@ export function VerdictPanel({
     (field) => !(entry.ai.enrichedAt && found.has(field)),
   );
   const base = `${entity}/${recordId}/evaluation`;
-  // An email as the next step is written from the card, in the Mail
-  // plugin's composer filled with the draft; once it is sent the card is
-  // accepted. Without a mailbox to send from, the draft is copied instead
-  // and the card accepted as any other.
-  const mailer = useMailComposer();
+  // An email as the next step is changed and sent on the card (EmailStep),
+  // which accepts it once sent; without a mailbox to send from, the draft is
+  // copied instead and the card accepted as any other.
+  const canMail = useMailSetup().senders.length > 0;
   // The proposed approvals kept, all to start with, each with its approver
   // (a sales manager by default), submitted with the accept.
   const [approvalPicks, setApprovalPicks] = useState<
@@ -501,44 +498,6 @@ export function VerdictPanel({
       setBusy(undefined);
     }
   };
-  // The email the next step proposes, opened in the composer to the
-  // record's people (a lead's address, a deal's contacts'), its draft
-  // filled in; sending it accepts the card.
-  const writeEmail = (): Promise<void> =>
-    act('accept', async () => {
-      const record = (
-        await api<{ data: { record: Data } }>(`${entity}/${recordId}`)
-      ).data.record;
-      const contactIds =
-        entity === 'opportunities'
-          ? (Array.isArray(record.contacts) ? record.contacts : []).map((c) =>
-              toText((c as Data).contactId),
-            )
-          : [];
-      const people = await Promise.allSettled(
-        contactIds.map((id) =>
-          api<{ data: { record: Data } }>(`contacts/${id}`),
-        ),
-      );
-      const to = [
-        ...(entity === 'leads' ? [toText(record.email)] : []),
-        ...people.flatMap((p) =>
-          p.status === 'fulfilled' ? [toText(p.value.data.record.email)] : [],
-        ),
-      ].filter(Boolean);
-      const draft = verdict?.email;
-      mailer.compose(
-        {
-          to: [...new Set(to)].join(', '),
-          subject: draft?.subject ?? toText(verdict?.nextStep?.subject),
-          text: draft?.body ?? '',
-          html: draft?.body ? plainTextToMailHtml(draft.body) : '',
-        },
-        async (sent) => {
-          if (sent) await decide('accept');
-        },
-      );
-    });
   // Accepting writes the findings still ticked with it.
   const decide = (decision: 'accept' | 'dismiss'): Promise<void> =>
     act(decision, () =>
@@ -728,28 +687,27 @@ export function VerdictPanel({
             </Button>
             {editable && (
               <>
-                <Button
-                  size='sm'
-                  className='bg-ai text-ai-foreground hover:bg-ai/90'
-                  disabled={
-                    Boolean(busy) || (reporting && !toText(plan.outcome).trim())
-                  }
-                  onClick={() =>
-                    verdict.recommendation === 'convert'
-                      ? void convert()
-                      : submitting.length
-                        ? setConfirmingApprovals(true)
-                        : emailsNext(verdict) && mailer.available
-                          ? void writeEmail()
+                {/* An email to send accepts the card by being sent, from
+                    the draft below; only dismissing stays up here. */}
+                {emailsNext(verdict) && canMail ? null : (
+                  <Button
+                    size='sm'
+                    className='bg-ai text-ai-foreground hover:bg-ai/90'
+                    disabled={
+                      Boolean(busy) ||
+                      (reporting && !toText(plan.outcome).trim())
+                    }
+                    onClick={() =>
+                      verdict.recommendation === 'convert'
+                        ? void convert()
+                        : submitting.length
+                          ? setConfirmingApprovals(true)
                           : void decide('accept')
-                  }
-                >
-                  {busy === 'accept' && <Spinner />}
-                  {emailsNext(verdict) && mailer.available && !busy && <Mail />}
-                  {text(
-                    emailsNext(verdict) && mailer.available
-                      ? 'evaluation.writeEmail'
-                      : existing
+                    }
+                  >
+                    {busy === 'accept' && <Spinner />}
+                    {text(
+                      existing
                         ? reporting
                           ? 'evaluation.acceptReport'
                           : overdue
@@ -760,8 +718,9 @@ export function VerdictPanel({
                                 ? 'evaluation.deal.acceptAdvance'
                                 : 'evaluation.acceptUpdate'
                         : acceptLabel(verdict),
-                  )}
-                </Button>
+                    )}
+                  </Button>
+                )}
                 <Button
                   size='sm'
                   variant='outline'
@@ -824,6 +783,17 @@ export function VerdictPanel({
           verdict={verdict}
           full={full ?? entry.status === 'pending'}
           planned={planning}
+          emailStep={
+            verdict.email && emailsNext(verdict) ? (
+              <EmailStep
+                entity={entity}
+                recordId={recordId}
+                draft={verdict.email}
+                editable={entry.status === 'pending' && editable}
+                onSent={() => decide('accept')}
+              />
+            ) : undefined
+          }
           conversion={
             entry.status === 'pending' &&
             verdict.recommendation === 'convert' ? (
@@ -955,7 +925,6 @@ export function VerdictPanel({
           )}
         </div>
       )}
-      {mailer.composer}
       {converting && verdict && !isDeal(verdict) && (
         <ConvertFromVerdict
           leadId={recordId}
@@ -1981,9 +1950,12 @@ function VerdictList({
   full,
   planned = false,
   conversion,
+  emailStep,
 }: {
   verdict: AnyVerdict;
   full: boolean;
+  // An email to send as the next step, laid out to be changed and sent.
+  emailStep?: ReactNode;
   // The next step or the review is laid out apart, to be changed there.
   planned?: boolean;
   // A waiting conversion: what it would create, in place of the opportunity.
@@ -2105,7 +2077,7 @@ function VerdictList({
           )}
           {!planned && verdict.email && (
             <Row label={text('evaluation.email')}>
-              <EmailDraft draft={verdict.email} />
+              {emailStep ?? <EmailDraft draft={verdict.email} />}
             </Row>
           )}
         </>
