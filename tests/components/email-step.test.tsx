@@ -11,6 +11,7 @@ import { crmZh } from '../../client/locales/crm/index.js';
 const state = vi.hoisted(() => ({
   api: vi.fn(),
   sendMessage: vi.fn(),
+  compose: vi.fn(),
   senders: [{ id: 'acc-1', address: 'me@example.com' }] as {
     id: string;
     address: string;
@@ -32,7 +33,7 @@ vi.mock('@nocobase/app-client', async (importOriginal) => ({
 }));
 vi.mock('../../client/components/crm/mail.js', () => ({
   useMailSetup: () => ({ senders: state.senders }),
-  useMailComposer: () => ({ compose: vi.fn(), composer: null }),
+  useMailComposer: () => ({ compose: state.compose, composer: null }),
 }));
 vi.mock('../../client/components/crm/common.js', () => ({
   ErrorNotice: ({ error }: { error?: unknown }) =>
@@ -64,6 +65,7 @@ const { EmailStep } = await import('../../client/components/crm/email-step.js');
 beforeEach(() => {
   state.api.mockReset();
   state.sendMessage.mockReset();
+  state.compose.mockReset();
   state.senders = [{ id: 'acc-1', address: 'me@example.com' }];
   state.sendMessage.mockResolvedValue({ id: 's1', status: 'pending' });
   state.api.mockImplementation(async (path: string) => {
@@ -148,6 +150,33 @@ describe('EmailStep', () => {
     await userEvent.click(screen.getByRole('button', { name: '发送邮件' }));
     expect(await screen.findByRole('alert')).toBeTruthy();
     expect(onSent).not.toHaveBeenCalled();
+  });
+
+  // The plugin's composer takes bare addresses: a name sent with one ends
+  // up in the address, which the provider refuses.
+  it('opens the composer with bare addresses', async () => {
+    render(
+      <EmailStep
+        entity='opportunities'
+        recordId='deal-1'
+        draft={{ subject: '方案沟通', body: '……' }}
+        editable
+        onSent={vi.fn()}
+      />,
+    );
+    await waitFor(() =>
+      expect(
+        (screen.getByRole('textbox', { name: '收件人' }) as HTMLInputElement)
+          .value,
+      ).toBe('王芳 <wang@acme.cn>'),
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: '在邮件窗口中编辑' }),
+    );
+    expect(state.compose.mock.calls[0][0]).toMatchObject({
+      to: 'wang@acme.cn',
+      cc: 'li@acme.cn',
+    });
   });
 
   it('offers only to copy the draft without a mailbox', () => {

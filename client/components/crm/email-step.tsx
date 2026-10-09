@@ -311,18 +311,11 @@ export function EmailStep({
               onClick={() =>
                 composer.compose(
                   {
-                    to: format(
-                      toList.map((p) => ({
-                        name: p.name ?? '',
-                        address: p.address,
-                      })),
-                    ),
-                    cc: format(
-                      ccList.map((p) => ({
-                        name: p.name ?? '',
-                        address: p.address,
-                      })),
-                    ),
+                    // The composer takes bare addresses; a name with one
+                    // would be sent as part of the address, which the
+                    // provider refuses.
+                    to: toList.map((p) => p.address).join(', '),
+                    cc: ccList.map((p) => p.address).join(', '),
                     subject,
                     text: body,
                     html: plainTextToMailHtml(body),
