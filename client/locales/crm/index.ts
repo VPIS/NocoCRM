@@ -420,6 +420,7 @@ const wording = {
     runsOnItsOwn: ['Runs on its own', '自动运行'],
     // The menu's badge: runs under way.
     runningHint: ['{{count}} running', '{{count}} 个正在运行'],
+    enabledTag: ['On', '已启用'],
     off: ['Off', '已停用'],
     triggersTitle: ['When it runs', '触发方式'],
     adminOnly: [

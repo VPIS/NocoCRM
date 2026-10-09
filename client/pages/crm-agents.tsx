@@ -115,9 +115,11 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
       title={
         <span className='flex items-center gap-3'>
           {text(`agents.${agent}.title`)}
-          {/* Only when it is off: on is the usual state, and "running"
-              means a run under way, which the menu counts. */}
-          {enabled ? null : <Badge variant='muted'>{text('agents.off')}</Badge>}
+          {/* Whether it runs on its own: on or off. "Running" is a run
+              under way, which the menu counts. */}
+          <Badge variant={enabled ? 'success' : 'muted'}>
+            {text(enabled ? 'agents.enabledTag' : 'agents.off')}
+          </Badge>
         </span>
       }
     >
