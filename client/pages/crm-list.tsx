@@ -167,10 +167,15 @@ function EntityList({
   // The task list's tab: what is to do, or what is done or cancelled.
   const [taskTab, setTaskTab] = useState<TaskTab>('open');
   // Leads and opportunities are worked as funnels, so they open on the
-  // board; the rest, tasks included, open on the list (tasks by when they
-  // are due, the calendar beside it).
+  // board; tasks on the calendar, the list beside it, unless a card or a
+  // link opens them on a metric or a status (today's, the overdue), which
+  // the list shows; the rest on the list.
   const [view, setView] = useState(
-    ['leads', 'opportunities'].includes(entity) ? 'board' : 'list',
+    ['leads', 'opportunities'].includes(entity)
+      ? 'board'
+      : entity === 'tasks' && !initialMetric && !initialStatus
+        ? 'calendar'
+        : 'list',
   );
   const [page, setPage] = useState(1);
   // The column the list is sorted by, from a header click; unset, the server
