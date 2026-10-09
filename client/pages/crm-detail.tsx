@@ -971,8 +971,8 @@ export function DetailTabBar({
   const { text } = useCrmText();
   return (
     // Pills on the page's tint: the open tab a white one, as the
-    // particulars' card is, the others plain until hovered; a count in a
-    // small badge where a tab has one. No rule under them.
+    // particulars' card is, the others plain until hovered; a count in
+    // muted figures where a tab has one. No rule under them.
     // Side by side, pulled left by a pill's padding, so the first tab's
     // icon and label, not its fill, line up with the content under the tabs;
     // stacked (a drawer, a phone), the fill lines up with the card above.
@@ -1002,12 +1002,10 @@ export function DetailTabBar({
   );
 }
 
-// A tab's count, in a small badge.
+// A tab's count: plain muted figures after its label.
 function TabCount({ value }: { value: number }): ReactElement {
   return (
-    <span className='rounded-md bg-muted px-1.5 text-xs text-muted-foreground tabular-nums'>
-      {value}
-    </span>
+    <span className='text-xs text-muted-foreground tabular-nums'>{value}</span>
   );
 }
 
@@ -2753,9 +2751,11 @@ function NoteComposer({
           maxLength={LONG_TEXT_LIMIT}
           // One line until more is written, as tall as the avatar beside
           // it, then as tall as the text (the primitive sizes to its
-          // content), up to half the screen.
+          // content), up to half the screen; the line centred in that
+          // height. White with the card's faint border and shadow, and a
+          // soft ring when focused rather than the primitive's grey one.
           rows={1}
-          className='max-h-[50vh] min-h-10 flex-1 resize-none py-1.5 text-sm'
+          className='max-h-[50vh] min-h-10 flex-1 resize-none text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border/60 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 dark:bg-card'
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
@@ -2911,7 +2911,7 @@ function NoteEditor({
         aria-label={text('notes.label')}
         value={draft}
         maxLength={LONG_TEXT_LIMIT}
-        className='max-h-[50vh] min-h-10 resize-none py-1.5 text-sm'
+        className='max-h-[50vh] min-h-10 resize-none text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border/60 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 dark:bg-card'
         onChange={(event) => setDraft(event.target.value)}
       />
       <div className='flex justify-end gap-2'>

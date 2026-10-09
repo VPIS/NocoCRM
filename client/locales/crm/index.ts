@@ -186,30 +186,17 @@ const wording = {
     searchContacts: ['Search contacts…', '搜索联系人…'],
     add: ['Add', '添加'],
   },
-  taskGroups: {
-    general: ['General', '概况'],
-    related: ['Related to', '关联'],
-  },
   // The opportunity page's particulars, grouped as the lead's.
-  opportunityGroups: {
-    general: ['General', '概况'],
-    details: ['Details', '详情'],
-  },
   // The account, contact and approval pages' particulars, likewise.
   accountGroups: {
     general: ['General', '概况'],
     company: ['Company', '公司'],
   },
-  contactGroups: {
-    general: ['General', '概况'],
-    reach: ['Contact details', '联系方式'],
-  },
-  approvalGroups: {
-    general: ['General', '概况'],
-  },
   region: ['Region', '地区'],
   loadMore: ['Load more', '加载更多'],
   justNow: ['just now', '刚刚'],
+  // The heading over a record page's particulars when they are one list.
+  detailsGroup: ['Details', '详情'],
   requiredField: ['This field is required', '此字段必填'],
   openWebsite: ['Open website in a new tab', '在新窗口打开网站'],
   noTasks: ['No tasks yet', '暂无任务'],

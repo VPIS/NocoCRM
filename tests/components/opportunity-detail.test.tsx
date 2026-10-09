@@ -187,15 +187,17 @@ beforeEach(() => {
 });
 
 describe('the opportunity page', () => {
-  it('heads the column with the account and the name, and groups the particulars', () => {
+  it('heads the column with the account and the name, the particulars in one card', () => {
     renderPage();
     for (const heading of screen.getAllByRole('heading', { level: 1 })) {
       expect(heading.textContent).toContain('沃格光电');
       expect(heading.textContent).toContain('供应链集成系统');
     }
     expect(screen.queryByText(/ID: opp-1/)).toBeNull();
-    for (const group of ['概况', '详情'])
-      expect(screen.getByRole('heading', { name: group })).toBeTruthy();
+    // One list headed Details.
+    expect(screen.getByRole('heading', { name: '详情' })).toBeTruthy();
+    for (const group of ['概况'])
+      expect(screen.queryByRole('heading', { name: group })).toBeNull();
     // No stepper: the stage is a row among the particulars.
     expect(screen.getByRole('button', { name: '阶段' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /赢单/ })).toBeNull();

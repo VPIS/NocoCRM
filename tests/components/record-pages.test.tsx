@@ -303,8 +303,10 @@ describe('the contact page', () => {
       expect(heading.textContent).toContain('周晓');
       expect(heading.textContent).toContain('沃格光电');
     }
+    // One list headed Details.
+    expect(screen.getByRole('heading', { name: '详情' })).toBeTruthy();
     for (const group of ['概况', '联系方式'])
-      expect(screen.getByRole('heading', { name: group })).toBeTruthy();
+      expect(screen.queryByRole('heading', { name: group })).toBeNull();
     expect(screen.queryByRole('tab', { name: /附件/ })).toBeNull();
     expect(screen.getAllByRole('tab', { name: /商机/ })).toHaveLength(1);
   });

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
@@ -183,21 +183,20 @@ beforeEach(() => {
 });
 
 describe('the task page', () => {
-  it('heads the page with the name and groups the particulars', () => {
+  it('heads the page with the name, the particulars in one card', () => {
     renderPage();
     expect(screen.getByRole('heading', { level: 1 }).textContent).toContain(
       '新域零售 培训计划沟通',
     );
     // No generic header line with the record's id.
     expect(screen.queryByText(/ID: act-1/)).toBeNull();
+    // One list headed Details; the links among its rows.
+    expect(screen.getByRole('heading', { name: '详情' })).toBeTruthy();
     for (const group of ['概况', '关联'])
-      expect(screen.getByRole('heading', { name: group })).toBeTruthy();
-    const related = screen
-      .getByRole('heading', { name: '关联' })
-      .closest('section') as HTMLElement;
-    expect(within(related).getByText('关联线索')).toBeTruthy();
+      expect(screen.queryByRole('heading', { name: group })).toBeNull();
+    expect(screen.getByText('关联线索')).toBeTruthy();
     expect(
-      within(related).getByRole('link', { name: '罗雨萱 / 新域零售' }),
+      screen.getByRole('link', { name: '罗雨萱 / 新域零售' }),
     ).toBeTruthy();
     // A planned task has no completion time yet.
     expect(screen.queryByText('完成时间')).toBeNull();

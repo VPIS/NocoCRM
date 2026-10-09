@@ -907,7 +907,7 @@ export default function EntityDetail({
     <DetailTabBar
       active={activeTab}
       onSelect={setTab}
-      // Counts on the tasks, opportunities, mail and attachments only.
+      // Every tab counts what it holds but the timeline, which only grows.
       tabs={tabs.map(([name, label, count]) => ({
         name,
         label,
@@ -915,9 +915,9 @@ export default function EntityDetail({
         count:
           name === 'mail' ? (
             <MailCount target={mailTarget} />
-          ) : ['tasks', 'opportunities', 'attachments'].includes(name) ? (
+          ) : name === 'historyTab' ? undefined : (
             count
-          ) : undefined,
+          ),
       }))}
     />
   );
@@ -965,7 +965,7 @@ export default function EntityDetail({
           <div className='min-w-0 py-0.5 text-sm'>{inline('description')}</div>
         </InfoGroup>
         {/* Who has it and who takes part, where it stands, and when. */}
-        <InfoGroup title={text('taskGroups.general')}>
+        <InfoGroup title={text('detailsGroup')}>
           {row('ownerId')}
           {row('internalParticipants')}
           {statusKey && (
@@ -990,8 +990,6 @@ export default function EntityDetail({
           )}
           {/* When it is, if it is. */}
           {row('dueAt')}
-        </InfoGroup>
-        <InfoGroup title={text('taskGroups.related')}>
           {['leadId', 'accountId', 'opportunityId'].map(row)}
         </InfoGroup>
       </>,
@@ -1030,8 +1028,9 @@ export default function EntityDetail({
         <InfoGroup>
           <div className='min-w-0 py-0.5 text-sm'>{inline('description')}</div>
         </InfoGroup>
-        {/* Who has it, where it stands and what it is worth. */}
-        <InfoGroup title={text('opportunityGroups.general')}>
+        {/* One list: who has it and where it stands, what it is worth
+            and when it should close, then the account and how it came. */}
+        <InfoGroup title={text('detailsGroup')}>
           {row('ownerId')}
           <InfoRow label={text('fields.stage')}>
             <StageField
@@ -1053,6 +1052,9 @@ export default function EntityDetail({
               }
             />
           </InfoRow>
+          {stage === 'paused' && row('resumeAt')}
+          {/* What it is worth and when it should close, then the account
+            and how it came. */}
           {/* Currency, then the bare number: both edit in place, and the
               sign is not repeated. */}
           <InfoRow label={text('fields.amount')}>
@@ -1072,9 +1074,6 @@ export default function EntityDetail({
             </div>
           </InfoRow>
           {row('expectedCloseAt')}
-          {stage === 'paused' && row('resumeAt')}
-        </InfoGroup>
-        <InfoGroup title={text('opportunityGroups.details')}>
           {['accountId', 'businessType', 'source'].map(row)}
           {convertedRow}
         </InfoGroup>
@@ -1139,7 +1138,7 @@ export default function EntityDetail({
         </>,
       ),
       <>
-        <InfoGroup title={text('contactGroups.general')}>
+        <InfoGroup title={text('detailsGroup')}>
           {[
             'ownerId',
             'accountId',
@@ -1149,8 +1148,6 @@ export default function EntityDetail({
             'source',
           ].map(row)}
           {convertedRow}
-        </InfoGroup>
-        <InfoGroup title={text('contactGroups.reach')}>
           {['jobTitle', 'phone', 'email'].map(row)}
         </InfoGroup>
       </>,
@@ -1185,7 +1182,7 @@ export default function EntityDetail({
       <InfoGroup>
         <div className='min-w-0 py-0.5 text-sm'>{inline('description')}</div>
       </InfoGroup>
-      <InfoGroup title={text('approvalGroups.general')}>
+      <InfoGroup title={text('detailsGroup')}>
         {row('ownerId')}
         {statusKey && (
           <InfoRow label={text(`fields.${statusKey}`)}>
