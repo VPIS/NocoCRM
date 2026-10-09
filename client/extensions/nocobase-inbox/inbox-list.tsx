@@ -35,9 +35,9 @@ import type { InboxAction } from './inbox-actions.js';
 import { InboxItemCard } from './inbox-item.js';
 import {
   categoriesOf,
-  INBOX_VIEWS,
   kindsOf,
   shownGroups,
+  viewsOf,
   type InboxEntry,
   type InboxFilter,
   type InboxGroups,
@@ -126,6 +126,7 @@ export function InboxList({
   const { t } = useInboxFrameText();
   const categories = categoriesOfRegistry(useInboxRegistry());
   const { view, kind } = filter;
+  const views = viewsOf(categories);
   const shown = shownGroups(filter, groups, categories);
   const selectedCollection = categories.find(
     (category) => category.type === 'collection' && category.id === kind,
@@ -311,79 +312,93 @@ export function InboxList({
 
   return (
     <>
-      <div className='shrink-0 space-y-2 border-b px-3 py-2.5'>
-        <Tabs
-          value={view}
-          onValueChange={(value) => {
-            const next = value as InboxView;
-            onFilter({
-              view: next,
-              kind: kindsOf(next, categories).includes(kind) ? kind : 'all',
-            });
-          }}
-        >
-          <TabsList variant='line' className='w-full'>
-            {INBOX_VIEWS.map((value) => {
-              const count = value === 'todo' ? pending : unread;
-              return (
-                <TabsTrigger key={value} value={value}>
-                  {value === 'todo'
-                    ? t('inbox.views.todo', { defaultValue: 'To do' })
-                    : t('inbox.views.all', { defaultValue: 'All' })}
-                  {count > 0 ? (
-                    <Badge
-                      variant={value === 'todo' ? 'outline' : 'secondary'}
-                      className={cn(
-                        'h-4 px-1.5 tabular-nums',
-                        value === 'todo' &&
-                          'border-transparent bg-amber-500/15 text-amber-700 dark:text-amber-300',
-                      )}
-                      aria-label={
-                        value === 'todo'
-                          ? t('inbox.pendingDecisions', {
-                              count,
-                              defaultValue: '{{count}} waiting',
-                            })
-                          : t('inbox.unreadCount', {
-                              count,
-                              defaultValue: '{{count}} unread',
-                            })
-                      }
-                    >
-                      {count}
-                    </Badge>
-                  ) : null}
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-        </Tabs>
-        <div className='flex flex-wrap items-center justify-between gap-2'>
-          <Select
-            items={kinds}
-            value={kind}
-            onValueChange={(next: string | null) => {
-              if (next) onFilter({ view, kind: next });
-            }}
-          >
-            <SelectTrigger
-              size='sm'
-              className='w-40'
-              aria-label={t('inbox.kinds.label', { defaultValue: 'Type' })}
+      {/* Application change: the views offered (`viewsOf`), tabs only when there are two. */}
+      {views.length > 1 || kinds.length > 2 || footer ? (
+        <div className='shrink-0 space-y-2 border-b px-3 py-2.5'>
+          {views.length > 1 ? (
+            <Tabs
+              value={view}
+              onValueChange={(value) => {
+                const next = value as InboxView;
+                onFilter({
+                  view: next,
+                  kind: kindsOf(next, categories).includes(kind) ? kind : 'all',
+                });
+              }}
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className='w-auto max-w-[min(var(--container-sm),var(--available-width))] min-w-(--anchor-width) [&_[data-slot=select-item]>:first-child]:whitespace-normal'>
-              {kinds.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {footer}
+              <TabsList variant='line' className='w-full'>
+                {views.map((value) => {
+                  const count = value === 'todo' ? pending : unread;
+                  return (
+                    <TabsTrigger key={value} value={value}>
+                      {value === 'todo'
+                        ? t('inbox.views.todo', { defaultValue: 'To do' })
+                        : t('inbox.views.all', { defaultValue: 'All' })}
+                      {count > 0 ? (
+                        <Badge
+                          variant={value === 'todo' ? 'outline' : 'secondary'}
+                          className={cn(
+                            'h-4 px-1.5 tabular-nums',
+                            value === 'todo' &&
+                              'border-transparent bg-amber-500/15 text-amber-700 dark:text-amber-300',
+                          )}
+                          aria-label={
+                            value === 'todo'
+                              ? t('inbox.pendingDecisions', {
+                                  count,
+                                  defaultValue: '{{count}} waiting',
+                                })
+                              : t('inbox.unreadCount', {
+                                  count,
+                                  defaultValue: '{{count}} unread',
+                                })
+                          }
+                        >
+                          {count}
+                        </Badge>
+                      ) : null}
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+            </Tabs>
+          ) : null}
+          {/* Application change: the type filter only where a view offers more than one kind to choose between. */}
+          {kinds.length > 2 || footer ? (
+            <div className='flex flex-wrap items-center justify-between gap-2'>
+              {kinds.length > 2 ? (
+                <Select
+                  items={kinds}
+                  value={kind}
+                  onValueChange={(next: string | null) => {
+                    if (next) onFilter({ view, kind: next });
+                  }}
+                >
+                  <SelectTrigger
+                    size='sm'
+                    className='w-40'
+                    aria-label={t('inbox.kinds.label', {
+                      defaultValue: 'Type',
+                    })}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className='w-auto max-w-[min(var(--container-sm),var(--available-width))] min-w-(--anchor-width) [&_[data-slot=select-item]>:first-child]:whitespace-normal'>
+                    {kinds.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span />
+              )}
+              {footer}
+            </div>
+          ) : null}
         </div>
-      </div>
+      ) : null}
       <div className='min-h-0 flex-1 overflow-y-auto px-2 py-3'>{content}</div>
       <p className='hidden shrink-0 items-center gap-3 border-t px-4 py-2 text-xs text-muted-foreground lg:flex'>
         <span className='inline-flex items-center gap-1'>

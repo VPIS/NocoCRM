@@ -757,10 +757,7 @@ function EntityList({
           text(`entities.${toText(entity)}`)
         )
       }
-      // Tasks need no line under the heading.
-      description={
-        entity === 'tasks' ? undefined : text(`descriptions.${toText(entity)}`)
-      }
+      // No line under the heading: the menu and the records say what the page holds.
       actions={
         <>
           {toolbar}

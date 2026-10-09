@@ -209,9 +209,6 @@ function InboxPageContent({
     0,
   );
   const waitingCounts = waitingByCategory(groups, categories, pending.data);
-  const pendingTotal =
-    Object.values(waitingCounts).reduce((sum, count) => sum + count, 0) +
-    feedCount;
   const visible = shownEntries(filter, groups, categories);
 
   function replaceParams(next: URLSearchParams): void {
@@ -249,6 +246,14 @@ function InboxPageContent({
       params,
       onParams: replaceParams,
     });
+  // Application change: what a collection says waits is counted on To do too (`InboxCollectionState.waiting`).
+  const pendingTotal =
+    Object.values(waitingCounts).reduce((sum, count) => sum + count, 0) +
+    feedCount +
+    Object.values(collectionStates).reduce(
+      (sum, state) => sum + (state.waiting ?? 0),
+      0,
+    );
   const listCollections: Record<string, InboxListCollection> = {};
   for (const [id, state] of Object.entries(collectionStates))
     listCollections[id] = {

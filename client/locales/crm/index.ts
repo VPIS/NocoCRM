@@ -890,23 +890,24 @@ const wording = {
     pages: {
       home: ['Overview', '工作台'],
       record: ['Record pages', '记录详情页'],
-      decisions: ['Waiting on me', '待我处理'],
+      decisions: ['AI suggestions in the inbox', '收件箱的 AI 建议'],
     },
   },
   aiLanguages: {
     'zh-CN': ['Chinese', '中文'],
     'en-US': ['English', 'English'],
   },
+  // The AI's suggestions in the inbox's To do view.
+  inbox: {
+    suggestions: ['AI suggestions', 'AI 建议'],
+    showHandled: ['Show handled suggestions', '查看已处理的建议'],
+    hideHandled: ['Hide', '收起'],
+    noHandled: ['No handled suggestions yet.', '还没有已处理的建议。'],
+  },
   decisions: {
-    title: ['Waiting on me', '待我处理'],
-    description: [
-      'What the AI suggests and waits for you to handle: its follow-up recommendations for your leads and opportunities.',
-      'AI 提出、等你处理的建议：线索和商机的跟进建议。',
-    ],
     empty: ['Nothing is waiting on you.', '没有等你处理的事。'],
     openRecord: ['Open', '打开'],
     evaluatedAt: ['Suggested', '建议时间'],
-    waiting: ['Waiting', '待处理'],
     handled: ['Handled', '已处理'],
   },
   settings: ['System settings', '系统设置'],
@@ -1233,6 +1234,7 @@ const wording = {
     approvals: ['approval', '审批'],
   },
   navigation: {
+    inbox: ['Inbox', '收件箱'],
     action: ['Action', '行动'],
     records: ['Records', '记录'],
     mail: ['Mail', '邮件'],
@@ -1247,28 +1249,7 @@ const wording = {
     tasks: ['Tasks', '任务'],
     approvals: ['Approvals', '审批'],
   },
-  descriptions: {
-    leads: [
-      'Capture interest. Qualify the fit. Start a relationship.',
-      '收集意向、甄别需求、开启客户关系',
-    ],
-    accounts: [
-      'A shared view of every company you work with.',
-      '集中管理客户档案与合作历程',
-    ],
-    contacts: [
-      'Know the people behind every opportunity.',
-      '了解每个商机背后的关键人物',
-    ],
-    opportunities: [
-      'Move every deal forward with a clear next step.',
-      '以清晰的下一步行动推动每个商机',
-    ],
-    approvals: [
-      'Keep commercial decisions clear and accountable.',
-      '让商务决策透明、可追溯',
-    ],
-  },
+
   fields: {
     id: ['Record ID', '记录 ID'],
     name: ['Name', '名称'],

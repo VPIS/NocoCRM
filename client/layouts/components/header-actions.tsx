@@ -11,7 +11,6 @@ import {
 
 import { ThemeSettings } from '../../theme/index.js';
 import { UserMenu } from './user-menu.js';
-import { InboxHeaderButton } from '@/components/inbox-header-button';
 // Application change to the template's header: the AI assistant's entry, just
 // left of the account menu on every surface (client/components/crm/ai-chat.tsx).
 import { AssistantButton } from '../../components/crm/ai-chat.js';
@@ -21,8 +20,8 @@ const ACTION_LINK_CLASS =
 
 /**
  * Keep header entries visible on their destination pages so navigation stays consistent across surfaces. Application
- * changes: the settings link is marked while the settings surface is shown, and the AI assistant's button sits just
- * left of the account menu.
+ * changes: the settings link is marked while the settings surface is shown, the AI assistant's button sits just left
+ * of the account menu, and the inbox has no button here: it leads the menu's Action section (`client/routes.ts`).
  */
 export function HeaderActions({
   showSettings,
@@ -35,8 +34,6 @@ export function HeaderActions({
   return (
     <TooltipProvider>
       <div className='flex shrink-0 items-center gap-2'>
-        {/* The inbox's entry, from the UI Library; keep its unread shortcut on every authenticated surface. */}
-        <InboxHeaderButton />
         {showSettings ? (
           <Tooltip>
             <TooltipTrigger

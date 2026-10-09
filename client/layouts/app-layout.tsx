@@ -20,11 +20,11 @@ import {
   AppSidebarToggle,
 } from './components/app-sidebar.js';
 import { NavigationMenu } from './components/navigation-menu.js';
-// Application changes: the counts beside "Waiting on me" and "Mailbox"
+// Application changes: the counts beside "Inbox" and "Mailbox"
 // (navigation-badges.ts, waiting-count.ts, mail-unread.ts) and the banner
 // offering the demo dataset.
 import { NavigationBadgesContext } from './components/navigation-badges.js';
-import { useWaitingCount } from '../components/crm/waiting-count.js';
+import { useInboxCount } from '../components/crm/waiting-count.js';
 import { useMailUnreadCount } from '../components/crm/mail-unread.js';
 import { DemoBanner } from '../components/crm/demo-banner.js';
 import { AppBrand } from './components/app-brand.js';
@@ -67,9 +67,9 @@ export function AppLayout({
   const navigationLabel = t('navigation.label', {
     defaultValue: 'Application navigation',
   });
-  // Application change: the count beside "Waiting on me" in the menu and in
-  // the tab's title.
-  const waiting = useWaitingCount();
+  // Application change: the count beside the inbox in the menu and in the
+  // tab's title.
+  const inbox = useInboxCount();
   const unreadMail = useMailUnreadCount();
 
   return (
@@ -79,9 +79,7 @@ export function AppLayout({
         <AppSidebarProvider>
           <AppSidebar label={navigationLabel} footer={<AppSidebarFooter />}>
             {/* Application change: the CRM's menu-only groups are headed sections (navigation-menu.tsx). */}
-            <NavigationBadgesContext
-              value={{ 'crm-decisions': waiting, 'crm-mail': unreadMail }}
-            >
+            <NavigationBadgesContext value={{ inbox, 'crm-mail': unreadMail }}>
               <NavigationMenu
                 items={menuItems}
                 label={navigationLabel}

@@ -9,8 +9,8 @@ import {
   ContactRound,
   Handshake,
   LayoutDashboard,
+  Inbox,
   ListChecks,
-  ListTodo,
   Mail,
   Radar,
   Settings2,
@@ -48,13 +48,19 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     name: 'crm-action',
     navigation: { title: 'crm.navigation.action' },
     children: [
+      // Application change: the template reaches the inbox from a header
+      // button and declares it without navigation; here it leads the Action
+      // section instead, with the AI's suggestions in its To do view
+      // (client/components/crm/inbox-decisions.tsx). The plugin's API answers
+      // each person's own messages only, and the suggestions are gated by
+      // the crm-decisions page grant, so the page needs no check of its own.
       {
-        name: 'crm-decisions',
-        path: '/crm/decisions',
+        authz: 'skip',
         auth: 'required',
-        authz: page('crm-decisions'),
-        navigation: { title: 'crm.decisions.title', icon: ListTodo },
-        componentLoader: () => import('./pages/crm-decisions.js'),
+        componentLoader: () => import('./pages/inbox.js'),
+        name: 'inbox',
+        path: '/inbox',
+        navigation: { title: 'crm.navigation.inbox', icon: Inbox },
       },
       ...[
         ['tasks', SquareCheckBig],
@@ -135,15 +141,15 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       },
     ],
   },
+  // Waiting on me became the inbox's AI suggestions: its old address, from
+  // links and bookmarks, opens them there. The route keeps the page grant
+  // that shows them.
   {
-    // The header's inbox button is where a user looks for messages, so this page is reached from there. Declaring no
-    // navigation keeps a second menu entry from pointing at the one destination the button already owns. The plugin's
-    // API answers each person's own messages only, so the page needs no authorization of its own.
-    authz: 'skip',
+    name: 'crm-decisions',
+    path: '/crm/decisions',
     auth: 'required',
-    componentLoader: () => import('./pages/inbox.js'),
-    name: 'inbox',
-    path: '/inbox',
+    authz: page('crm-decisions'),
+    componentLoader: () => import('./pages/crm-decisions.js'),
   },
   {
     auth: 'guest',
