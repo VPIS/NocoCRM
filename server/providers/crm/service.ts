@@ -132,6 +132,14 @@ export function deletionChecks(entity: Entity): [Entity, string][] {
 const sellerRoles = ['sales-representative', 'sales-manager'];
 
 // A note's text: something to say, within a long text's length.
+// A note's stored changes: its text and, when it has any, the colleagues it
+// mentions.
+function noteChanges(
+  text: string,
+  mentions: readonly string[],
+): { text: string; mentions?: string[] } {
+  return mentions.length ? { text, mentions: [...mentions] } : { text };
+}
 function noteText(value: unknown): string {
   const text = typeof value === 'string' ? value.trim() : '';
   if (!text || text.length > LONG_TEXT_LIMIT)
@@ -1799,9 +1807,13 @@ export class CrmService {
     entity: Entity,
     id: string,
     text: unknown,
+    // The colleagues the note @-mentions, by id; each is told once the note
+    // is saved (mentioned()).
+    mentions?: unknown,
   ): Promise<Row> {
     const body = noteText(text);
     await this.get(actor, entity, id);
+    const mentioned = await this.mentionIds(actor, mentions);
     const note = {
       id: randomUUID(),
       entity,
@@ -1810,7 +1822,7 @@ export class CrmService {
       action: 'note',
       fromValue: null,
       toValue: null,
-      changes: JSON.stringify({ text: body }),
+      changes: JSON.stringify(noteChanges(body, mentioned)),
       previous: null,
       source: actor.via ?? null,
       createdAt: new Date().toISOString(),
@@ -1821,7 +1833,61 @@ export class CrmService {
       if (entity === 'leads')
         await this.leadWorked(query, actor, id, note.createdAt);
     });
-    return { ...note, changes: { text: body }, editedAt: null };
+    this.mentioned(actor, entity, id, note.id, mentioned, note.createdAt);
+    return {
+      ...note,
+      changes: noteChanges(body, mentioned),
+      editedAt: null,
+    };
+  }
+  // The colleagues a note may mention: active accounts other than the
+  // writer, each once, at most twenty. Whether one may read the record is
+  // not asked here: a message to someone who may not is never delivered
+  // (deliverNotifications reads the record as its recipient).
+  private async mentionIds(actor: Actor, raw: unknown): Promise<string[]> {
+    const ids = [
+      ...new Set(
+        (Array.isArray(raw) ? raw : [])
+          .map((id) => toText(id))
+          .filter((id) => id && id !== actor.id),
+      ),
+    ].slice(0, 20);
+    if (!ids.length) return [];
+    const rows = await this.database
+      .query()
+      .selectFrom('user')
+      .select(['id', 'disabledAt'])
+      .where('id', 'in', ids)
+      .execute();
+    const active = new Set(
+      rows.filter((row) => row.disabledAt == null).map((row) => toText(row.id)),
+    );
+    return ids.filter((id) => active.has(id));
+  }
+  // Tells each colleague a note newly mentions, through the
+  // record-notification workflow once the note is saved; the note's id and
+  // time key the message, so one mention is one message.
+  private mentioned(
+    actor: Actor,
+    entity: Entity,
+    recordId: string,
+    noteId: string,
+    recipients: readonly string[],
+    at: string,
+  ): void {
+    for (const recipientId of recipients)
+      void this.trigger(
+        'record-notification',
+        {
+          entity,
+          recordId,
+          recipientId,
+          actorId: actor.id,
+          event: 'mentioned',
+          at,
+        },
+        `record-notification:${entity}:${recordId}:mentioned:${recipientId}:${noteId}`,
+      ).catch(() => undefined);
   }
   // A new lead turns working once something has been done with it: a task
   // of it completed, a note written, mail exchanged (mail-timeline.ts).
@@ -1853,18 +1919,29 @@ export class CrmService {
       'working',
     );
   }
-  async editNote(actor: Actor, noteId: string, text: unknown): Promise<Row> {
+  async editNote(
+    actor: Actor,
+    noteId: string,
+    text: unknown,
+    mentions?: unknown,
+  ): Promise<Row> {
     const body = noteText(text);
     const note = await this.ownNote(actor, noteId);
     const editedAt = new Date().toISOString();
     const previous = object(jsonValue(note.changes) ?? {});
+    const mentioned = await this.mentionIds(actor, mentions);
+    // Only those the edit adds are told; who was mentioned already was told
+    // when they were.
+    const before = new Set(
+      (Array.isArray(previous.mentions) ? previous.mentions : []).map(toText),
+    );
     // The note changes in place; the feed also says, at the time of the
     // edit, who changed a note and to what.
     await this.database.transaction(async ({ query }) => {
       await query
         .updateTable('crmHistory')
         .set({
-          changes: JSON.stringify({ text: body }),
+          changes: JSON.stringify(noteChanges(body, mentioned)),
           previous: JSON.stringify({ text: toText(previous.text ?? '') }),
           editedAt,
         })
@@ -1888,7 +1965,15 @@ export class CrmService {
         })
         .execute();
     });
-    return { ...note, changes: { text: body }, editedAt };
+    this.mentioned(
+      actor,
+      asEntity(toText(note.entity)),
+      toText(note.recordId),
+      noteId,
+      mentioned.filter((id) => !before.has(id)),
+      editedAt,
+    );
+    return { ...note, changes: noteChanges(body, mentioned), editedAt };
   }
   // Removing a note leaves its place in the feed to say one was removed,
   // by whom and when, without the text its author took back.

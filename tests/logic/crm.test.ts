@@ -7187,6 +7187,57 @@ describe('approval-notification workflow', () => {
 });
 
 describe('record-notification workflow', () => {
+  it('tells the colleagues a note mentions, each once', async () => {
+    const inline = inlineWorkflows(() => crm);
+    const crm = new CrmService(database, authorization, () => inline.workflows);
+    const lead = await crm.save(actor('rep'), 'leads', {
+      name: 'Mentioned lead',
+      ownerId: 'rep',
+    });
+    inline.triggers.length = 0;
+    // The writer and an unknown account are dropped; the manager is kept.
+    const note = await crm.addNote(
+      actor('rep'),
+      'leads',
+      toText(lead.id),
+      '@Manager please look',
+      ['manager', 'rep', 'nobody', 'manager'],
+    );
+    expect(note.changes).toEqual({
+      text: '@Manager please look',
+      mentions: ['manager'],
+    });
+    await vi.waitFor(() => expect(inline.triggers).toHaveLength(1));
+    expect(inline.triggers[0]).toMatchObject({
+      key: 'record-notification',
+      input: {
+        entity: 'leads',
+        recordId: lead.id,
+        recipientId: 'manager',
+        actorId: 'rep',
+        event: 'mentioned',
+      },
+      eventKey: `record-notification:leads:${toText(lead.id)}:mentioned:manager:${toText(note.id)}`,
+    });
+    // An edit tells only whom it adds.
+    inline.triggers.length = 0;
+    const edited = await crm.editNote(
+      actor('rep'),
+      toText(note.id),
+      '@Manager @Other please look',
+      ['manager', 'other'],
+    );
+    expect(edited.changes).toEqual({
+      text: '@Manager @Other please look',
+      mentions: ['manager', 'other'],
+    });
+    await vi.waitFor(() => expect(inline.triggers).toHaveLength(1));
+    expect(inline.triggers[0].input).toMatchObject({
+      recipientId: 'other',
+      event: 'mentioned',
+    });
+  });
+
   it('starts a run for a change of hands and for participant changes, once committed', async () => {
     const inline = inlineWorkflows(() => crm);
     const crm = new CrmService(database, authorization, () => inline.workflows);

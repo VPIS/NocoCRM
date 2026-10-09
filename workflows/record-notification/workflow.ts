@@ -7,8 +7,9 @@ import {
 } from '@nocobase/app-plugin-workflow';
 
 // The message a record change sends: to the new owner when a record
-// changes hands, and to a task's internal participants when they are
-// invited, removed, rescheduled or told of a cancellation. The CRM service
+// changes hands, to a task's internal participants when they are invited,
+// removed, rescheduled or told of a cancellation, and to a colleague a note
+// on the record @-mentions. The CRM service
 // commits the change and starts this workflow with the event and its
 // recipient; the workflow is the only sender.
 const notify = (key: string, title: string, description: string) =>
@@ -38,7 +39,7 @@ const notify = (key: string, title: string, description: string) =>
 const workflow: WorkflowSourceAst = defineWorkflow({
   title: 'Record change notifications',
   description:
-    "Notifies the new owner when a record changes hands, and a task's internal participants when they are invited or removed, or the task is rescheduled or cancelled. Administrators can switch notifications off in the parameters.",
+    "Notifies the new owner when a record changes hands, a task's internal participants when they are invited or removed, or the task is rescheduled or cancelled, and a colleague a note mentions. Administrators can switch notifications off in the parameters.",
   inputSchema: {
     type: 'object',
     required: ['entity', 'recordId', 'recipientId', 'actorId', 'event', 'at'],
@@ -59,7 +60,14 @@ const workflow: WorkflowSourceAst = defineWorkflow({
       actorId: { type: 'string', minLength: 1 },
       event: {
         type: 'string',
-        enum: ['assigned', 'invited', 'removed', 'rescheduled', 'cancelled'],
+        enum: [
+          'assigned',
+          'invited',
+          'removed',
+          'rescheduled',
+          'cancelled',
+          'mentioned',
+        ],
       },
       at: { type: 'string', minLength: 1 },
     },
@@ -70,7 +78,7 @@ const workflow: WorkflowSourceAst = defineWorkflow({
       type: 'boolean',
       title: 'Send notifications',
       description:
-        "When off, no in-app notification is sent for a change of owner or of a task's participants.",
+        "When off, no in-app notification is sent for a change of owner, of a task's participants, or for a mention in a note.",
       default: true,
     },
   },
@@ -97,7 +105,7 @@ const workflow: WorkflowSourceAst = defineWorkflow({
       key: 'handoff',
       title: 'A change of owner?',
       description:
-        "A change of owner goes to the new owner; every other event goes to the task's participants.",
+        "A change of owner goes to the new owner; every other event goes to the colleague it concerns: a task's participant, or the one a note mentions.",
       config: { module: './server/is-handoff' },
     }).branch({
       yes: [
@@ -110,8 +118,8 @@ const workflow: WorkflowSourceAst = defineWorkflow({
       no: [
         notify(
           'notifyParticipant',
-          "Tell the task's participants",
-          'Sends the participants an invitation, removal, rescheduling or cancellation message through the CRM notification queue.',
+          'Tell the colleague concerned',
+          "Sends a task's participant an invitation, removal, rescheduling or cancellation message, or a mentioned colleague a mention, through the CRM notification queue.",
         ),
       ],
     }),

@@ -32,6 +32,8 @@ import {
   type LucideIcon,
   SquareCheckBig,
   Check,
+  ShieldCheck,
+  User,
 } from 'lucide-react';
 import { KindTag } from '../components/crm/kind-tag.js';
 import { Badge } from '../components/ui/badge.js';
@@ -1827,16 +1829,24 @@ function ApprovalItem({ approval }: { approval: Data }): ReactElement {
           )}
           <Status value={approval.status} />
         </div>
-        {/* Who asks and who decides, then when it last moved. */}
+        {/* Who asks and who decides, each by an icon (the label on hover,
+            as the dashboard's approval cards show them), then when it last
+            moved. */}
         <p className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground'>
-          {[
-            ['fields.applicant', approval.ownerId],
-            ['fields.approverId', approval.approverId],
-          ].map(([label, id]) =>
+          {(
+            [
+              ['fields.applicant', approval.ownerId, User],
+              ['fields.approverId', approval.approverId, ShieldCheck],
+            ] as const
+          ).map(([label, id, Icon]) =>
             id ? (
-              <span key={toText(label)}>
-                {text(toText(label))}{' '}
-                <span className='text-foreground'>{nameOf(id)}</span>
+              <span
+                key={label}
+                className='inline-flex items-center gap-1'
+                title={text(label)}
+              >
+                <Icon className='size-3 shrink-0' aria-label={text(label)} />
+                {nameOf(id)}
               </span>
             ) : null,
           )}

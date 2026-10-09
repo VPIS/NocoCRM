@@ -139,7 +139,10 @@ const wording = {
   },
   notes: {
     label: ['Note', '备注'],
-    placeholder: ['Write a note…', '写备注…'],
+    placeholder: [
+      'Write a note, type @ to mention a colleague…',
+      '写备注，输入 @ 提到同事…',
+    ],
     add: ['Add note', '添加备注'],
     shortcut: ['⌘/Ctrl + Enter to add', '⌘/Ctrl + Enter 添加'],
     edited: ['Edited', '已编辑'],

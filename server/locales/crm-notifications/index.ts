@@ -5,6 +5,11 @@ const labels: Record<string, [string, string]> = {
   removed: ['You were removed from a task', '你被移出任务'],
   cancelled: ['Task cancelled', '任务已取消'],
   rescheduled: ['Task rescheduled', '任务时间已变更'],
+  // A colleague's note on a record named the reader.
+  mentioned: [
+    '{{entity}} note mentions you',
+    '有人在{{entity}}的备注里提到了你',
+  ],
   starting: ['Task coming up', '任务时间快到了'],
   pending: ['Approval requested', '待审批申请'],
   withdrawn: ['Request withdrawn', '审批已撤回'],

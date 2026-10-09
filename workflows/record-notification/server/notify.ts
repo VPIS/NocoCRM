@@ -14,7 +14,7 @@ export const run: WorkflowRunFunction = async (
   options.signal.throwIfAborted();
   const message = messageArgs(
     rawArgs,
-    ['assigned', 'invited', 'removed', 'rescheduled', 'cancelled'],
+    ['assigned', 'invited', 'removed', 'rescheduled', 'cancelled', 'mentioned'],
     (args) =>
       `record-notification:${args.entity}:${args.recordId}:${args.event}:${args.recipientId}:${args.at}`,
   );

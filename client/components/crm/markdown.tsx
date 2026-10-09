@@ -3,6 +3,7 @@ import remarkGfm from 'remark-gfm';
 import type { ReactElement } from 'react';
 import { SafeImage } from '../safe-image.js';
 import { keepLineBreaks } from './line-breaks.js';
+import { MENTION_CLASS } from './mentions.js';
 
 // Markdown rendered with the application's typography: the assistant's
 // replies and Markdown attachments. HTML inside the text is escaped rather
@@ -34,6 +35,16 @@ export function Markdown({
         remarkPlugins={[remarkGfm]}
         components={{
           img: ({ node: _node, ...props }) => <SafeImage {...props} />,
+          // A note's @-mention (markdownMentions) is a link to #mention:
+          // drawn as a mention, not followed.
+          a: ({ node: _node, href, children: label, ...props }) =>
+            href === '#mention' ? (
+              <span className={MENTION_CLASS}>{label}</span>
+            ) : (
+              <a href={href} {...props}>
+                {label}
+              </a>
+            ),
         }}
       >
         {isCompact ? keepLineBreaks(children) : children}

@@ -1,6 +1,12 @@
 import { fieldLabelKey, linkOf, toText } from '../components/crm/api.js';
 import { TaskCards } from '../components/crm/task-list.js';
 import { AutoLoadMore } from '../components/crm/auto-load.js';
+import { MentionTextarea } from '../components/crm/mention-textarea.js';
+import {
+  markdownMentions,
+  mentionsIn,
+  withMentions,
+} from '../components/crm/mentions.js';
 import { markdownLine } from '../components/crm/line-breaks.js';
 import {
   useEffect,
@@ -54,7 +60,6 @@ import {
 } from 'lucide-react';
 import { Button, buttonVariants } from '../components/ui/button.js';
 import { Spinner } from '../components/ui/spinner.js';
-import { Textarea } from '../components/ui/textarea.js';
 import { LONG_TEXT_LIMIT } from '../../server/providers/crm/limits.js';
 import { Badge } from '../components/ui/badge.js';
 import {
@@ -2462,6 +2467,9 @@ export function HistoryFeed({
                             {note ? (
                               <NoteExcerpt
                                 value={noteText(event)}
+                                mentions={
+                                  (event.changes as Data | undefined)?.mentions
+                                }
                                 long={longNotes.has(key)}
                                 onLong={(long) => markLong(key, long)}
                                 tight={language.startsWith('zh')}
@@ -2571,7 +2579,13 @@ export function HistoryFeed({
                           />
                         ) : note && longNotes.has(key) ? (
                           <div className='mt-0.5 text-sm'>
-                            <LongText value={noteText(event)} />
+                            <LongText
+                              value={markdownMentions(
+                                noteText(event),
+                                (event.changes as Data | undefined)?.mentions,
+                                meta?.users ?? [],
+                              )}
+                            />
                           </div>
                         ) : null}
                         {/* A waiting verdict is handled here, open; any other
@@ -2714,6 +2728,8 @@ function NoteComposer({
   const api = useCrmApi();
   const refresh = useRefresh();
   const [draft, setDraft] = useState('');
+  // The colleagues picked with @ while writing.
+  const [mentions, setMentions] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   const add = async (): Promise<void> => {
@@ -2723,8 +2739,10 @@ function NoteComposer({
     try {
       await api(`${toText(entity)}/${toText(id)}/notes`, 'POST', {
         text: draft,
+        mentions: mentionsIn(draft, mentions, meta?.users ?? []),
       });
       setDraft('');
+      setMentions([]);
       await refresh();
     } catch (cause) {
       setError(cause);
@@ -2744,9 +2762,12 @@ function NoteComposer({
         >
           {initials(me)}
         </span>
-        <Textarea
+        {/* @ and a name mentions a colleague, who is told. */}
+        <MentionTextarea
           aria-label={text('notes.label')}
           value={draft}
+          mentions={mentions}
+          onMentionsChange={setMentions}
           placeholder={text('notes.placeholder')}
           maxLength={LONG_TEXT_LIMIT}
           // One line until more is written, as tall as the avatar beside
@@ -2755,8 +2776,8 @@ function NoteComposer({
           // height. White with the card's faint border and shadow, and a
           // soft ring when focused rather than the primitive's grey one.
           rows={1}
-          className='max-h-[50vh] min-h-10 flex-1 resize-none text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border/60 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 dark:bg-card'
-          onChange={(event) => setDraft(event.target.value)}
+          className='max-h-[50vh] min-h-10 resize-none text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border/60 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 dark:bg-card'
+          onChange={setDraft}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
               event.preventDefault();
@@ -2789,14 +2810,18 @@ function NoteExcerpt({
   long,
   onLong,
   tight,
+  mentions,
 }: {
   value: string;
+  // The colleagues the note mentions, picked out in bold.
+  mentions?: unknown;
   long: boolean;
   onLong: (long: boolean) => void;
   // Right after a Chinese full-width colon, which carries its own space;
   // the line's gap stays after an English one.
   tight: boolean;
 }): ReactElement {
+  const { data: meta } = useMetadata();
   const ref = useRef<HTMLSpanElement>(null);
   const reportRef = useRef(onLong);
   useEffect(() => {
@@ -2822,7 +2847,7 @@ function NoteExcerpt({
         long ? 'invisible' : ''
       }`}
     >
-      {markdownLine(value)}
+      {withMentions(markdownLine(value), mentions, meta?.users ?? [])}
     </span>
   );
 }
@@ -2901,18 +2926,25 @@ function NoteEditor({
   const { text } = useCrmText();
   const api = useCrmApi();
   const refresh = useRefresh();
+  const { data: meta } = useMetadata();
   const [draft, setDraft] = useState(() => noteText(note));
+  const [mentions, setMentions] = useState<string[]>(() => {
+    const kept = (note.changes as Data | undefined)?.mentions;
+    return Array.isArray(kept) ? kept.map(toText) : [];
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   return (
     <div className='mt-1 grid gap-2'>
-      <Textarea
+      <MentionTextarea
         autoFocus
         aria-label={text('notes.label')}
         value={draft}
         maxLength={LONG_TEXT_LIMIT}
         className='max-h-[50vh] min-h-10 resize-none text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border/60 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 dark:bg-card'
-        onChange={(event) => setDraft(event.target.value)}
+        onChange={setDraft}
+        mentions={mentions}
+        onMentionsChange={setMentions}
       />
       <div className='flex justify-end gap-2'>
         <Button size='sm' variant='ghost' onClick={onDone}>
@@ -2924,7 +2956,10 @@ function NoteEditor({
           onClick={() => {
             setBusy(true);
             setError(undefined);
-            api(`notes/${toText(note.id)}`, 'PATCH', { text: draft })
+            api(`notes/${toText(note.id)}`, 'PATCH', {
+              text: draft,
+              mentions: mentionsIn(draft, mentions, meta?.users ?? []),
+            })
               .then(() => refresh())
               .then(onDone)
               .catch(setError)

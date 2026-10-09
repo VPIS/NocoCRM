@@ -929,25 +929,30 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
     // Notes in a record's activity feed: added by anyone who may read the
     // record, changed or removed by their author (CrmService.addNote).
     // Registered before the record routes, which would take /notes/:id.
-    routes.post('/:entity/:id/notes', async (c) =>
-      c.json({
+    // A note's body is its text and the colleagues it @-mentions.
+    routes.post('/:entity/:id/notes', async (c) => {
+      const body = object(await c.req.json());
+      return c.json({
         data: await service.addNote(
           c.get('actor'),
           asEntity(c.req.param('entity')),
           c.req.param('id'),
-          object(await c.req.json()).text,
+          body.text,
+          body.mentions,
         ),
-      }),
-    );
-    routes.patch('/notes/:noteId', async (c) =>
-      c.json({
+      });
+    });
+    routes.patch('/notes/:noteId', async (c) => {
+      const body = object(await c.req.json());
+      return c.json({
         data: await service.editNote(
           c.get('actor'),
           c.req.param('noteId'),
-          object(await c.req.json()).text,
+          body.text,
+          body.mentions,
         ),
-      }),
-    );
+      });
+    });
     routes.delete('/notes/:noteId', async (c) => {
       await service.removeNote(c.get('actor'), c.req.param('noteId'));
       return c.json({ data: { deleted: true } });
