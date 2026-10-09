@@ -41,7 +41,14 @@ import {
 import { AI_DRAFT_CONVERSATION_ID } from '@/extensions/nocobase-ai/providers/types.js';
 import { UserPromptEditor } from '@/extensions/nocobase-ai/components/chat/user-prompt-editor.js';
 import { Button } from '../ui/button.js';
-import { sentence, toText, useCrmText, useMetadata, type Data } from './api.js';
+import {
+  sentence,
+  toText,
+  useCrmText,
+  useMetadata,
+  useSessionUserId,
+  type Data,
+} from './api.js';
 import { crmToolRenderers } from './ai-tool-renderers.js';
 import {
   CRM_ASSISTANT,
@@ -155,9 +162,13 @@ export function CrmAssistantProvider({
   const greeting = toText(text('assistantEmployeeGreeting'));
   // The plugin's service over the application's API client, as the root
   // provider builds it when given none. A new service identity makes the
-  // root provider list employees again, so this changes with the language
-  // (and the client) and nothing else.
+  // root provider list employees and models again, so this changes with the
+  // language, the client and the signed-in user: the provider is mounted
+  // above the sign-in page, where those requests answer 401, and signing in
+  // does not reload the page, so without the user the panel kept reporting
+  // no model until a refresh.
   const api = useApiClient();
+  const userId = useSessionUserId();
   const service = useMemo(
     () =>
       localizedService(new NocoBaseAIService(api), {
@@ -166,7 +177,8 @@ export function CrmAssistantProvider({
         bio,
         greeting,
       }),
-    [api, nickname, position, bio, greeting],
+    // eslint-disable-next-line react-hooks/exhaustive-deps, @eslint-react/exhaustive-deps -- userId only re-keys the service
+    [api, nickname, position, bio, greeting, userId],
   );
   return (
     // The registry's root provider discovers employees and models once for
