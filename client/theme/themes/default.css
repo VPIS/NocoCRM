@@ -47,7 +47,9 @@
     0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
   --radius: 0.5rem;
-  --background: oklch(0.985 0 0);
+  /* Application change: the pages sit on a faint cool tint rather than a
+     grey, the menu a shade deeper (--sidebar), cards white on both. */
+  --background: oklch(0.988 0.004 255);
   --foreground: oklch(0.16 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.16 0 0);
@@ -80,11 +82,12 @@
   --success: oklch(0.52 0.14 150);
   --warning: oklch(0.56 0.14 65);
   --info: oklch(0.52 0.15 250);
-  --sidebar: var(--card);
+  --sidebar: oklch(0.972 0.007 255);
   --sidebar-foreground: var(--card-foreground);
   --sidebar-primary: color-mix(in oklch, var(--primary) 8%, var(--sidebar));
   --sidebar-primary-foreground: var(--primary);
-  --sidebar-accent: var(--muted);
+  /* A hovered entry, a shade darker than the menu it is on. */
+  --sidebar-accent: color-mix(in oklch, var(--foreground) 6%, var(--sidebar));
   --sidebar-accent-foreground: var(--foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);

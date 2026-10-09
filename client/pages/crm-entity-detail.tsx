@@ -96,6 +96,7 @@ import {
   ConfirmDialog,
   DetailColumns,
   DetailTabBar,
+  MailCount,
   HistoryFeed,
   InfoGroup,
   InfoRow,
@@ -906,11 +907,17 @@ export default function EntityDetail({
     <DetailTabBar
       active={activeTab}
       onSelect={setTab}
+      // Counts on the tasks, opportunities, mail and attachments only.
       tabs={tabs.map(([name, label, count]) => ({
         name,
         label,
         icon: tabIcons[name] ?? History,
-        count: name === 'historyTab' || name === 'mail' ? undefined : count,
+        count:
+          name === 'mail' ? (
+            <MailCount target={mailTarget} />
+          ) : ['tasks', 'opportunities', 'attachments'].includes(name) ? (
+            count
+          ) : undefined,
       }))}
     />
   );

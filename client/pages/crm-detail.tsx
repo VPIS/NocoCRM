@@ -118,7 +118,12 @@ import { AskAIButton } from '../components/crm/ask-ai.js';
 import { ConvertDialog } from '../components/crm/conversion.js';
 import { LeadDuplicates } from '../components/crm/lead-merge.js';
 import { RecordMailPanel } from '../components/crm/record-mail.js';
-import { emailsOf, useMailSetup } from '../components/crm/mail.js';
+import {
+  emailsOf,
+  useMailSetup,
+  useRecordMessages,
+} from '../components/crm/mail.js';
+import type { MailTarget } from '../../server/providers/crm/mail-target.js';
 import {
   ReviewFeedEntry,
   ReviewPanel,
@@ -179,8 +184,11 @@ export function RecordDrawer({
         side='right'
         showCloseButton={false}
         // The primitive sizes a right sheet with side-scoped classes, so the
-        // wider drawer has to override them at the same specificity.
-        className='crm-record-drawer gap-0 overflow-y-auto p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-none data-[side=right]:md:w-[72vw] data-[side=right]:lg:w-[64vw] data-[side=right]:xl:w-[56vw] data-[side=right]:2xl:max-w-[1100px]'
+        // wider drawer has to override them at the same specificity. Its body
+        // is on the page's tint, so a record reads the same here as on its
+        // page: the particulars' white card, the tabs on the tint; its bar
+        // stays white.
+        className='crm-record-drawer gap-0 overflow-y-auto bg-background p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-none data-[side=right]:md:w-[72vw] data-[side=right]:lg:w-[64vw] data-[side=right]:xl:w-[56vw] data-[side=right]:2xl:max-w-[1100px]'
       >
         {valid && (
           <RecordDrawerContext.Provider value={{ open, close, inDrawer: true }}>
@@ -321,17 +329,14 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   };
   const field = (key: string): Field =>
     definition.fields.find((f) => f.key === key) ?? { key, type: 'text' };
-  // Newest first by when the task happens, not when the row was written:
-  // a call logged today for last week belongs below tomorrow's meeting.
-  // slice() first — sorting in place would mutate the cached query data.
-  // Same de-duplication the attachments tab uses, so the count matches the list.
+  // The attachments tab's count, de-duplicated as the tab lists them.
   const attachmentCount = new Set([
     ...arrayValues(record.attachments).map(toText),
     ...rows(detail.related.tasks).flatMap((task) =>
       arrayValues(task.attachments).map(toText),
     ),
   ]).size;
-  // Newest first by when they happen, in the server's order so pages join.
+  // Soonest first, in the server's order so pages join.
   const tasks = moreTasks.records;
   const converted = record.status === 'converted';
   const patch = async (values: Data): Promise<void> => {
@@ -386,9 +391,9 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       )}
     </InfoRow>
   );
-  // The timeline first, where the lead opens, without a count: its entries
-  // only grow and the number says nothing. The tasks' icon is their
-  // menu entry's. The notes also show in the timeline among its entries.
+  // The timeline first, where the lead opens, without a count; the tasks,
+  // mail and attachments with theirs. The tasks' icon is their menu
+  // entry's.
   const tabBar = (
     <DetailTabBar
       active={tab}
@@ -403,7 +408,14 @@ function LeadDetail({ id }: { id: string }): ReactElement {
         },
         // The reader's own mail with the lead, for whoever has mail.
         ...(mailSetup.can
-          ? [{ name: 'mail', label: 'mail.tab', icon: Mail }]
+          ? [
+              {
+                name: 'mail',
+                label: 'mail.tab',
+                icon: Mail,
+                count: <MailCount target={{ addresses: emailsOf([record]) }} />,
+              },
+            ]
           : []),
         // Attachments last, as on every record.
         {
@@ -804,12 +816,12 @@ export function DetailColumns({
           area without changing the viewport, and a viewport breakpoint would
           keep both columns in a box too small for them. */}
       <div className='@container min-h-0 flex-1'>
-        {/* White (the card colour) out to the screen's edges, stacked or side
-            by side: the block reaches past the frame's padding and the parts
-            inside give it back. */}
+        {/* Out to the screen's edges, stacked or side by side, on the page's
+            own background: the block reaches past the frame's padding and
+            the parts inside give it back. */}
         <div
           className={`flex h-full flex-col @3xl:-mx-4 md:@3xl:-mx-8 ${
-            inDrawer ? '' : '-mx-4 bg-card md:-mx-8'
+            inDrawer ? '' : '-mx-4 md:-mx-8'
           }`}
         >
           {/* Stacked, the header, the particulars and the tabs scroll as one;
@@ -826,7 +838,7 @@ export function DetailColumns({
             {/* In a drawer the frame's own padding already sets it off from
                 the drawer's bar, so the header adds none above. */}
             <header
-              className={`@3xl:border-b @3xl:pr-4 @3xl:pb-3 @3xl:pl-4 md:@3xl:pr-8 md:@3xl:pl-6 ${
+              className={`@3xl:pr-4 @3xl:pb-3 @3xl:pl-4 md:@3xl:pr-8 md:@3xl:pl-6 ${
                 inDrawer ? 'pt-0' : 'pt-5 @3xl:pt-4'
               }`}
             >
@@ -851,24 +863,28 @@ export function DetailColumns({
                   and the other tabs taking the rest, the way record pages
                   commonly lay them out. Stacked, the particulars come first
                   (a phone number before the history). */}
-              {/* Its rows keep 8px of their own on each side for an inline
-                  editor's hover fill, so the column starts that much further
-                  out: the text lines up with the heading's. */}
+              {/* A long white card on the page's tint, with the open tab's
+                  faint border and shadow, set apart by itself rather than by
+                  a rule; side by side it runs the height of
+                  the page and scrolls inside. Its rows keep 8px of their own
+                  on each side for an inline editor's hover fill. */}
               <section
-                className='-mx-2 min-w-0 @3xl:mx-0 @3xl:overflow-y-auto @3xl:pt-4 @3xl:pr-6 @3xl:pb-8 @3xl:pl-2 md:@3xl:pl-4 scroll-quiet'
+                className='min-w-0 rounded-xl border border-border/60 bg-card px-2 py-3 shadow-xs @3xl:mb-4 @3xl:ml-4 @3xl:overflow-y-auto @3xl:pb-6 md:@3xl:ml-6 scroll-quiet'
                 onScroll={revealScrollbar}
               >
                 {left}
               </section>
               {/* The tabs head the right column: stacked, they stay in view as
                   the page scrolls; side by side, their content scrolls below
-                  them. Their own rule is the divide. */}
-              <section className='flex min-w-0 flex-col @3xl:min-h-0 @3xl:border-l'>
-                <div className='sticky top-0 z-10 mb-4 flex flex-wrap items-center border-b bg-card @3xl:static @3xl:mb-0 @3xl:pt-2 @3xl:pr-4 @3xl:pl-6 md:@3xl:pr-8'>
+                  them. */}
+              <section className='flex min-w-0 flex-col @3xl:min-h-0'>
+                {/* The gap under the pills is the bar's own, so content scrolling
+                    up stops short of them rather than meeting their edge. */}
+                <div className='sticky top-0 z-10 flex flex-wrap items-center bg-background pt-1 pb-4 @3xl:static @3xl:pt-0 @3xl:pr-4 @3xl:pl-6 md:@3xl:pr-8'>
                   {tabBar}
                 </div>
                 <div
-                  className='min-w-0 @3xl:min-h-0 @3xl:flex-1 @3xl:overflow-y-auto @3xl:pt-4 @3xl:pr-4 @3xl:pb-24 @3xl:pl-6 md:@3xl:pr-8 scroll-quiet'
+                  className='min-w-0 @3xl:min-h-0 @3xl:flex-1 @3xl:overflow-y-auto @3xl:pr-4 @3xl:pb-24 @3xl:pl-6 md:@3xl:pr-8 scroll-quiet'
                   onScroll={revealScrollbar}
                 >
                   {right}
@@ -945,38 +961,67 @@ export function DetailTabBar({
     name: string;
     label: string;
     icon: LucideIcon;
-    count?: number;
+    // How many it holds (tasks, attachments), or what counts them (the
+    // mail's MailCount); none on the others.
+    count?: ReactNode;
   }[];
   active: string;
   onSelect: (name: string) => void;
 }): ReactElement {
   const { text } = useCrmText();
   return (
-    <div role='tablist' className='flex flex-wrap gap-x-6'>
-      {tabs.map(({ name, label, icon: Icon, count }) => (
-        <button
-          key={name}
-          type='button'
-          role='tab'
-          aria-selected={name === active}
-          onClick={() => onSelect(name)}
-          className={`-mb-px flex items-center gap-1.5 rounded-t-sm border-b-2 py-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
-            name === active
-              ? 'border-foreground text-foreground'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Icon className='size-4' />
-          {text(label)}
-          {count !== undefined && (
-            <span className='text-xs text-muted-foreground tabular-nums'>
-              {count}
-            </span>
-          )}
-        </button>
-      ))}
+    // Pills on the page's tint: the open tab a white one, as the
+    // particulars' card is, the others plain until hovered; a count in a
+    // small badge where a tab has one. No rule under them.
+    // Side by side, pulled left by a pill's padding, so the first tab's
+    // icon and label, not its fill, line up with the content under the tabs;
+    // stacked (a drawer, a phone), the fill lines up with the card above.
+    <div role='tablist' className='flex flex-wrap gap-1 @3xl:-ml-3'>
+      {tabs.map(({ name, label, icon: Icon, count }) => {
+        const selected = name === active;
+        return (
+          <button
+            key={name}
+            type='button'
+            role='tab'
+            aria-selected={selected}
+            onClick={() => onSelect(name)}
+            className={`flex h-8 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
+              selected
+                ? 'border-border/60 bg-card text-foreground shadow-xs'
+                : 'border-transparent text-muted-foreground hover:bg-card/70 hover:text-foreground'
+            }`}
+          >
+            <Icon className='size-4' />
+            {text(label)}
+            {typeof count === 'number' ? <TabCount value={count} /> : count}
+          </button>
+        );
+      })}
     </div>
   );
+}
+
+// A tab's count, in a small badge.
+function TabCount({ value }: { value: number }): ReactElement {
+  return (
+    <span className='rounded-md bg-muted px-1.5 text-xs text-muted-foreground tabular-nums'>
+      {value}
+    </span>
+  );
+}
+
+// The Mail tab's count: the conversations with the record in the reader's
+// own mailboxes, from the same query the tab lists them with, once the
+// record has loaded and the reader has a mailbox connected.
+export function MailCount({
+  target,
+}: {
+  target: MailTarget;
+}): ReactElement | null {
+  const setup = useMailSetup();
+  const { data } = useRecordMessages(target, setup.accounts.length > 0);
+  return data ? <TabCount value={data.length} /> : null;
 }
 
 // Status and its invalid reason are one decision: the server refuses an invalid
@@ -1830,12 +1875,18 @@ function TaskEvent({
   onToggle,
   names,
   fileNames,
+  resultLong = false,
+  onResultLong,
 }: {
   event: Data;
   open: boolean;
   onToggle: () => void;
   names: Record<string, string>;
   fileNames: Record<string, string>;
+  // Whether a completed task's result is too long for the line, which the
+  // timeline then shows whole below it, as a note's text.
+  resultLong?: boolean;
+  onResultLong?: (long: boolean) => void;
 }): ReactElement {
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
@@ -1903,21 +1954,31 @@ function TaskEvent({
         />
       ) : null}
       {/* When it is, as planned or moved; for one done, its outcome. */}
-      {event.action === 'created' || verb === 'moved' ? (
+      {verb === 'moved' ? (
+        // The new time, which is what a move says; planning one says only
+        // that it was planned. Always whole; the name gives way.
         changes.dueAt ? (
-          // Always whole, the tags right after it; the name gives way.
           <span className='shrink-0 text-muted-foreground tabular-nums'>
-            {verb === 'moved'
-              ? text('feed.task.to', { time: when(changes.dueAt) })
-              : `· ${when(changes.dueAt)}`}
+            {text('feed.task.to', { time: when(changes.dueAt) })}
           </span>
         ) : null
       ) : toText(event.toValue) === 'completed' && task.result ? (
-        // Only the room the name leaves (no basis of its own), so a long
-        // outcome is what gets cut, never the name.
-        <span className='min-w-0 flex-1 basis-0 truncate text-muted-foreground'>
-          · {markdownLine(toText(task.result))}
-        </span>
+        // Only the room the name leaves, so a long result never cuts the
+        // name: one that fits reads on the line, as a note's text does; one
+        // of several lines, or longer than the line, reads whole below it.
+        <>
+          {resultLong ? null : (
+            <span aria-hidden className='shrink-0 text-muted-foreground'>
+              ·
+            </span>
+          )}
+          <NoteExcerpt
+            value={toText(task.result)}
+            long={resultLong}
+            onLong={(long) => onResultLong?.(long)}
+            tight={false}
+          />
+        </>
       ) : null}
     </>
   );
@@ -2165,10 +2226,11 @@ export function HistoryFeed({
               className='grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4'
             >
               <ol className='relative'>
-                {/* The rail behind the icons, slim and borderless. */}
+                {/* The rail behind the icons: a slim one a shade deeper than
+                    the page's tint, borderless. */}
                 <span
                   aria-hidden
-                  className='absolute inset-y-0 left-0 w-5 rounded-full bg-muted/30'
+                  className='absolute inset-y-0 left-0 w-5 rounded-full bg-foreground/[0.04]'
                 />
                 {events.map((event, index) => {
                   const key = toText(event.id);
@@ -2283,6 +2345,8 @@ export function HistoryFeed({
                                 onToggle={() => toggle(key)}
                                 names={allNames}
                                 fileNames={fileNames}
+                                resultLong={longNotes.has(key)}
+                                onResultLong={(long) => markLong(key, long)}
                               />
                             ) : approvalEvent ? (
                               <ApprovalEvent event={event} />
@@ -2489,6 +2553,17 @@ export function HistoryFeed({
                         {comment ? (
                           <div className='mt-0.5 text-sm'>
                             <LongText value={comment} />
+                          </div>
+                        ) : null}
+                        {/* A task's result too long for its line, whole
+                            below it as a note's text is. */}
+                        {taskEvent &&
+                        longNotes.has(key) &&
+                        toText((event.task as Data | undefined)?.result) ? (
+                          <div className='mt-0.5 text-sm'>
+                            <LongText
+                              value={toText((event.task as Data).result)}
+                            />
                           </div>
                         ) : null}
                         {note && editingNote === key ? (

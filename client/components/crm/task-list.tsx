@@ -195,7 +195,7 @@ export function TaskCards({
     // Rows lay their particulars beside the title once the card is wide
     // enough, whatever the page beside it takes.
     <div className='@container'>
-      <div className='divide-y overflow-hidden rounded-xl border bg-card'>
+      <div className='divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60 bg-card shadow-xs'>
         {rows.map((task) => (
           <TaskRow
             key={task.id}
@@ -286,13 +286,18 @@ function TaskRow({
           {status === 'cancelled' ? (
             // A cancelled task is not ticked off; it is set aside.
             <span
-              className='flex size-4 items-center justify-center text-muted-foreground'
+              className='flex size-4 items-center justify-center text-destructive/70'
               title={text('options.cancelled', { defaultValue: 'cancelled' })}
             >
               <Ban className='size-3.5' />
             </span>
           ) : (
+            // Coloured as the statuses are: done in the success colour, the
+            // box to tick a shade firmer, turning green on hover. Sized in
+            // whole pixels: the compact scale's 14.4px put its 1px border on
+            // half pixels, drawn thicker on some sides than others.
             <Checkbox
+              className='size-[14px] border-muted-foreground/40 hover:border-success data-checked:border-success data-checked:bg-success data-checked:text-background'
               checked={status === 'completed'}
               disabled={!editable || busy}
               aria-label={toText(
@@ -302,7 +307,10 @@ function TaskRow({
             />
           )}
         </span>
-        <div className='flex min-w-0 flex-1 flex-col gap-1 @2xl:flex-row @2xl:items-center @2xl:gap-4'>
+        {/* One line from 32rem (the title cut short, whole on hover, its
+            particulars at the right), as a record's Tasks tab is wide;
+            narrower, the particulars go under the title. */}
+        <div className='flex min-w-0 flex-1 flex-col gap-1 @lg:flex-row @lg:items-center @lg:gap-4'>
           <span
             className={`min-w-0 flex-1 text-sm ${finished ? 'text-muted-foreground line-through' : ''}`}
           >
