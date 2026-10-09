@@ -1,4 +1,11 @@
 import { TrendChart } from '../components/crm/trend-chart.js';
+import { SectionNav } from '../components/crm/section-nav.js';
+import {
+  ActivityReport,
+  CycleReport,
+  ReasonsReport,
+  RevenueReport,
+} from '../components/crm/dashboard-reports.js';
 import { AutoLoadMore } from '../components/crm/auto-load.js';
 import { SortableTable } from '../components/crm/sortable-table.js';
 import { dueText, toText } from '../components/crm/api.js';
@@ -185,12 +192,27 @@ export default function DashboardPage(): ReactElement {
     />
   );
 
-  const section = (title: string, children: ReactNode): ReactElement => (
-    <section className='space-y-3'>
-      <h2 className='text-sm font-medium text-muted-foreground'>{title}</h2>
+  // A section of the page, by its title's key, which also gives the id the
+  // page's own navigation (SectionNav) scrolls to; its top clears that
+  // navigation.
+  const sectionId = (key: string): string =>
+    `overview-${key.replace(/\W+/g, '-')}`;
+  const section = (key: string, children: ReactNode): ReactElement => (
+    <section id={sectionId(key)} className='scroll-mt-16 space-y-3'>
+      <h2 className='text-sm font-medium text-muted-foreground'>{text(key)}</h2>
       {children}
     </section>
   );
+  const sectionKeys = [
+    'todaysWork',
+    'overall',
+    'reports.revenueSection',
+    'risks',
+    'monthBusiness',
+    'reports.lossSection',
+    'sourcesSection',
+    ...(scope === 'team' ? ['teamSection'] : []),
+  ];
 
   // The value a cell shows and the value its column sorts by: an amount by
   // its total, a source by its label, a rate or a count as a number.
@@ -288,8 +310,15 @@ export default function DashboardPage(): ReactElement {
           <Loading />
         ) : (
           <>
+            <SectionNav
+              label={text('overviewSections')}
+              sections={sectionKeys.map((key) => ({
+                id: sectionId(key),
+                label: text(key),
+              }))}
+            />
             {section(
-              text('todaysWork'),
+              'todaysWork',
               <div className='grid gap-4 lg:grid-cols-3'>
                 {agenda(
                   'today',
@@ -311,7 +340,7 @@ export default function DashboardPage(): ReactElement {
               </div>,
             )}
             {section(
-              text('overall'),
+              'overall',
               <>
                 <div className='grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))]'>
                   <Metric
@@ -410,7 +439,42 @@ export default function DashboardPage(): ReactElement {
               </>,
             )}
             {section(
-              text('risks'),
+              'reports.revenueSection',
+              <div className='space-y-4'>
+                <RevenueReport revenue={data.revenue as Data | undefined} />
+                <TrendChart
+                  title={text('trends')}
+                  rows={rows(data.trends)}
+                  language={language}
+                  table={
+                    <SortableTable
+                      rows={rows(data.trends)}
+                      rowKey={(row) => toText(row.month)}
+                      columns={(
+                        [
+                          ['month', 'month'],
+                          ['won', 'options.won'],
+                          ['lost', 'options.lost'],
+                        ] as const
+                      ).map(([key, label]) => ({
+                        id: key,
+                        title: text(label),
+                        sortValue: (row: Data) =>
+                          key === 'month'
+                            ? toText(row.month)
+                            : Number(row[key] ?? 0),
+                        cell: (row: Data) =>
+                          key === 'month'
+                            ? toText(row.month)
+                            : Number(row[key] ?? 0),
+                      }))}
+                    />
+                  }
+                />
+              </div>,
+            )}
+            {section(
+              'risks',
               // The same grid as the other sections, so every group of figures
               // lays out alike: two to a row on a phone, as many as fit wider.
               <div className='grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))]'>
@@ -435,7 +499,7 @@ export default function DashboardPage(): ReactElement {
               </div>,
             )}
             {section(
-              text('monthBusiness'),
+              'monthBusiness',
               <>
                 <div className='grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))]'>
                   <Metric
@@ -502,9 +566,31 @@ export default function DashboardPage(): ReactElement {
                 </div>
               </>,
             )}
+            {section(
+              'reports.lossSection',
+              <div className='space-y-4'>
+                <ReasonsReport reasons={data.reasons as Data | undefined} />
+                <CycleReport cycle={data.cycle as Data | undefined} />
+              </div>,
+            )}
+            {section(
+              'sourcesSection',
+              table(
+                'sources',
+                rows(data.sources),
+                [
+                  ['source', 'fields.source'],
+                  ['leads', 'entities.leads'],
+                  ['converted', 'converted'],
+                  ['conversionRate', 'conversionRate'],
+                  ['won', 'won'],
+                ],
+                (row) => toText(row.source),
+              ),
+            )}
             {scope === 'team' &&
               section(
-                text('teamSection'),
+                'teamSection',
                 <div className='space-y-4'>
                   {table(
                     'sellers',
@@ -520,54 +606,9 @@ export default function DashboardPage(): ReactElement {
                     ],
                     (row) => toText(row.id),
                   )}
-                  {/* Side by side only when the section itself is wide enough (72rem),
-                    not the screen, and the source table takes the larger share:
-                    its five sortable columns need about 690px. */}
-                  <div className='@container'>
-                    <div className='grid gap-4 @6xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]'>
-                      {table(
-                        'sources',
-                        rows(data.sources),
-                        [
-                          ['source', 'fields.source'],
-                          ['leads', 'entities.leads'],
-                          ['converted', 'converted'],
-                          ['conversionRate', 'conversionRate'],
-                          ['won', 'won'],
-                        ],
-                        (row) => toText(row.source),
-                      )}
-                      <TrendChart
-                        title={text('trends')}
-                        rows={rows(data.trends)}
-                        language={language}
-                        table={
-                          <SortableTable
-                            rows={rows(data.trends)}
-                            rowKey={(row) => toText(row.month)}
-                            columns={(
-                              [
-                                ['month', 'month'],
-                                ['won', 'options.won'],
-                                ['lost', 'options.lost'],
-                              ] as const
-                            ).map(([key, label]) => ({
-                              id: key,
-                              title: text(label),
-                              sortValue: (row: Data) =>
-                                key === 'month'
-                                  ? toText(row.month)
-                                  : Number(row[key] ?? 0),
-                              cell: (row: Data) =>
-                                key === 'month'
-                                  ? toText(row.month)
-                                  : Number(row[key] ?? 0),
-                            }))}
-                          />
-                        }
-                      />
-                    </div>
-                  </div>
+                  <ActivityReport
+                    activity={data.activity as Data | undefined}
+                  />
                 </div>,
               )}
           </>

@@ -5,6 +5,7 @@ import { notificationServiceToken } from '@nocobase/app-plugin-notification/serv
 import { notificationLocales } from '../../server/locales/crm-notifications/index.js';
 import { statistics } from '../../server/providers/crm/statistics.js';
 import { dashboard } from '../../server/providers/crm/dashboard.js';
+import { reports } from '../../server/providers/crm/reports.js';
 import {
   definitions,
   fieldsFor,
@@ -1738,7 +1739,8 @@ describe('CRM API security and domain rules', () => {
       (board.funnel as { stage: string; count: number }[])[0],
     ).toMatchObject({ stage: 'contact' });
     // Each source's conversion rate follows the overall one: converted over
-    // that source's leads that are not invalid.
+    // that source's leads that are not invalid; in the reader's own scope,
+    // of the reader's own leads.
     for (const row of board.sources as {
       source: string;
       converted: number;
@@ -1746,6 +1748,7 @@ describe('CRM API security and domain rules', () => {
     }[]) {
       const { data: fromSource } = await service.list(actor('rep'), 'leads', {
         source: row.source,
+        ownerId: 'rep',
         pageSize: 500,
       });
       const eligible = fromSource.filter((r) => r.status !== 'invalid').length;
@@ -8488,5 +8491,175 @@ describe('tasks', () => {
     expect(
       (await lastExchanges(database.query(), 'leads')).get(id),
     ).toBeGreaterThan(Date.now() - 60_000);
+  });
+});
+
+// The overview's reports beyond its counts (reports.ts), on deals laid out
+// around a fixed day: what was won, what is likely to close, why deals
+// were lost, how long they stay in each stage, and the team's work.
+describe('overview reports', () => {
+  it('reads won amounts, the forecast, loss reasons and stage stays', async () => {
+    const now = new Date('2026-08-20T04:00:00.000Z');
+    const deal = (values: Record<string, unknown>) =>
+      ({
+        id: `report-${String(values.name)}`,
+        currency: 'CNY',
+        ownerId: 'rep',
+        createdAt: '2026-08-01T04:00:00.000Z',
+        ...values,
+      }) as unknown as CrmRecord;
+    const deals = [
+      // Won this month and two months ago.
+      deal({
+        name: 'won-aug',
+        stage: 'won',
+        amount: 300,
+        closedAt: '2026-08-05T04:00:00.000Z',
+        createdAt: '2026-07-06T04:00:00.000Z',
+      }),
+      deal({
+        name: 'won-jun',
+        stage: 'won',
+        amount: 100,
+        closedAt: '2026-06-10T04:00:00.000Z',
+        createdAt: '2026-05-31T04:00:00.000Z',
+      }),
+      // Expected this month: one likely (proposal), one early.
+      deal({
+        name: 'likely',
+        stage: 'proposal',
+        amount: 1000,
+        expectedCloseAt: '2026-08-28',
+      }),
+      deal({
+        name: 'early',
+        stage: 'contact',
+        amount: 500,
+        expectedCloseAt: '2026-08-30',
+      }),
+      // Expected next month, in the quarter but not the month.
+      deal({
+        name: 'september',
+        stage: 'negotiation',
+        amount: 2000,
+        expectedCloseAt: '2026-09-15',
+      }),
+      deal({
+        name: 'lost',
+        stage: 'lost',
+        amount: 50,
+        lostReason: 'price',
+        closedAt: '2026-08-10T04:00:00.000Z',
+      }),
+      deal({
+        name: 'paused',
+        stage: 'paused',
+        amount: 70,
+        pauseReason: 'budgetDeferred',
+      }),
+    ];
+    // The likely deal entered proposal on 8 August after six days in
+    // contact.
+    await database
+      .query()
+      .insertInto('crmHistory')
+      .values({
+        id: 'report-stage-1',
+        entity: 'opportunities',
+        recordId: 'report-likely',
+        actorId: 'rep',
+        action: 'stage',
+        fromValue: 'contact',
+        toValue: 'proposal',
+        createdAt: '2026-08-07T04:00:00.000Z',
+      })
+      .execute();
+    const result = await reports(service, actor('manager'), {
+      team: false,
+      timeZone: 'Asia/Shanghai',
+      deals,
+      sellers: [],
+      now,
+    });
+    const revenue = result.revenue as {
+      months: { month: string; won: Record<string, number> }[];
+      forecast: Record<string, Record<string, unknown>>;
+    };
+    expect(revenue.months.map((m) => m.month)).toEqual([
+      '2026-03',
+      '2026-04',
+      '2026-05',
+      '2026-06',
+      '2026-07',
+      '2026-08',
+    ]);
+    expect(revenue.months.at(-1)?.won).toEqual({ CNY: 300 });
+    expect(revenue.months[3].won).toEqual({ CNY: 100 });
+    expect(revenue.forecast.month).toMatchObject({
+      won: { CNY: 300 },
+      commit: { CNY: 1000 },
+      commitCount: 1,
+      bestCase: { CNY: 1500 },
+      bestCaseCount: 2,
+      weighted: { CNY: 1000 * 0.6 + 500 * 0.1 },
+    });
+    // The quarter (July to September) adds September's deal.
+    expect(revenue.forecast.quarter).toMatchObject({
+      from: '2026-07',
+      to: '2026-09',
+      commit: { CNY: 3000 },
+      bestCase: { CNY: 3500 },
+    });
+    expect(result.reasons).toMatchObject({
+      lost: [{ reason: 'price', count: 1, amount: { CNY: 50 } }],
+      paused: [{ reason: 'budgetDeferred', count: 1 }],
+    });
+    const cycle = result.cycle as {
+      wonDays: number;
+      wonCount: number;
+      stages: { stage: string; averageDays: number | null; open: number }[];
+    };
+    // Won after 30 and 10 days.
+    expect(cycle.wonCount).toBe(2);
+    expect(cycle.wonDays).toBeCloseTo(20);
+    expect(cycle.stages.find((s) => s.stage === 'contact')).toMatchObject({
+      averageDays: 6,
+      open: 1,
+    });
+    expect(result).not.toHaveProperty('activity');
+  });
+
+  it("counts each seller's completed tasks and notes by week, for the team", async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Activity lead',
+      company: 'Activity Co',
+      source: 'website',
+    });
+    await service.addNote(actor('rep'), 'leads', toText(lead.id), 'Called');
+    await service.save(actor('rep'), 'tasks', {
+      name: 'Done this week',
+      leadId: lead.id,
+      status: 'completed',
+    });
+    const result = await reports(service, actor('manager'), {
+      team: true,
+      timeZone: 'Asia/Shanghai',
+      deals: [],
+      sellers: [{ id: 'rep', name: 'Rep' }],
+    });
+    const activity = result.activity as {
+      weeks: string[];
+      rows: {
+        id: string;
+        weeks: { tasks: number; notes: number }[];
+        total: { tasks: number; notes: number };
+      }[];
+    };
+    expect(activity.weeks).toHaveLength(4);
+    const rep = activity.rows[0];
+    expect(rep.id).toBe('rep');
+    expect(rep.weeks.at(-1)?.tasks).toBeGreaterThanOrEqual(1);
+    expect(rep.weeks.at(-1)?.notes).toBeGreaterThanOrEqual(1);
+    expect(rep.total.notes).toBeGreaterThanOrEqual(1);
   });
 });

@@ -4,6 +4,7 @@ import type { Actor } from './authorization.js';
 import { probabilities, stages, type CrmRecord } from './schema.js';
 import { array, type CrmService, type ListResult } from './service.js';
 import { allRecords, statistics } from './statistics.js';
+import { reports } from './reports.js';
 import { zoneOffsetMinutes } from './zone-time.js';
 
 export { allRecords };
@@ -172,7 +173,10 @@ export async function dashboard(
       };
     }),
   );
-  const allLeads = await allRecords(service, actor, 'leads');
+  // The reader's own leads, or the team's, as the deals are.
+  const allLeads = (await allRecords(service, actor, 'leads')).filter(
+    (r) => !ownerId || r.ownerId === ownerId,
+  );
   const wonDeals = deals.filter((r) => r.stage === 'won');
   const sources = [...new Set(allLeads.map((r) => toText(r.source)))].map(
     (source) => {
@@ -213,7 +217,18 @@ export async function dashboard(
     };
   });
 
+  // The reports beyond the counts (reports.ts): won and forecast amounts,
+  // lost and paused reasons, the sales cycle and, for the team, its work.
+  const more = await reports(service, actor, {
+    team,
+    timeZone: settings.timeZone,
+    deals,
+    sellers: users,
+    now,
+  });
+
   return {
+    ...more,
     scope: team ? 'team' : 'mine',
     today: todayList,
     overdue: overdueList,

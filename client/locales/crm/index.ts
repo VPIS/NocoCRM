@@ -22,6 +22,9 @@ const wording = {
   opportunityName: ['{{name}} opportunity', '{{name}}商机'],
   workspace: ['Sales workspace', '销售工作台'],
   dashboard: ['Overview', '工作台'],
+  sourcesSection: ['Lead sources', '线索来源'],
+  // The overview's own navigation, a row of its sections.
+  overviewSections: ['Sections of the overview', '工作台导航'],
   // The user's conversations with the assistant, under the menu
   // (sidebar-chats.tsx); "conversation" as the panel's own list says it.
   chats: {
@@ -321,6 +324,64 @@ const wording = {
     searchPeople: ['Search colleagues…', '搜索同事…'],
     searchContacts: ['Search contacts…', '搜索联系人…'],
     add: ['Add', '添加'],
+  },
+  // The overview's reports beyond its counts (dashboard-reports.tsx).
+  reports: {
+    revenueSection: ['Revenue and forecast', '业绩与预测'],
+    wonByMonth: ['Won in the last six months', '近 6 个月成交金额'],
+    dealsCount: ['{{count}} deals', '{{count}} 个商机'],
+    forecast: ['Forecast', '成交预测'],
+    thisMonth: ['This month', '本月'],
+    thisQuarter: ['This quarter', '本季度'],
+    won: ['Won', '已成交'],
+    commit: ['Commit', '较有把握'],
+    commitHint: [
+      'Open deals from proposal on, expected to close in the period',
+      '提案及以后阶段、预计本期成交的进行中商机',
+    ],
+    weighted: ['Weighted', '加权预测'],
+    weightedHint: ['Amount × stage probability', '金额 × 阶段赢率'],
+    bestCase: ['Best case', '全部可能'],
+    bestCaseHint: [
+      'Every open deal expected to close in the period',
+      '预计本期成交的全部进行中商机',
+    ],
+    forecastHint: [
+      "By each open deal's expected close date; won by the date it was won.",
+      '按进行中商机的预计成交日期统计；已成交按成交日期。',
+    ],
+    lossSection: ['Losses and pace', '输单与销售周期'],
+    lostReasons: ['Lost in the last 90 days', '近 90 天输单原因'],
+    pausedReasons: ['Paused now', '当前暂停原因'],
+    noLost: ['No deals lost in the last 90 days.', '近 90 天没有输单。'],
+    noPaused: ['No paused deals.', '没有暂停的商机。'],
+    unspecified: ['Not given', '未填写'],
+    cycle: ['Sales cycle', '销售周期'],
+    days: ['{{days}} days', '{{days}} 天'],
+    cycleNote: [
+      'Average from creation to won, over {{count}} deals won in the last year',
+      '近一年 {{count}} 个赢单从创建到成交的平均天数',
+    ],
+    noCycle: ['No deals won in the last year.', '近一年没有赢单。'],
+    stage: ['Stage', '阶段'],
+    averageStay: ['Average stay', '平均停留'],
+    openNow: ['Open now', '当前数量'],
+    waitingLong: ['Waiting too long', '停留过久'],
+    waitingDeals: ['Waiting longest', '停留最久的商机'],
+    waitingHint: [
+      'In their stage over 1.5 times its average stay, and at least 14 days',
+      '在当前阶段超过平均停留的 1.5 倍，且至少 14 天',
+    ],
+    noWaiting: ['No deal is waiting too long.', '没有停留过久的商机。'],
+    activity: ['Team activity', '团队活动量'],
+    activityHint: [
+      'The last four weeks and this week, Monday to Sunday',
+      '近四周合计及本周，按周一至周日统计',
+    ],
+    tasksDone: ['Tasks completed', '完成任务'],
+    notesWritten: ['Notes', '备注'],
+    mailThreads: ['Mail conversations', '邮件会话'],
+    thisWeekCount: ['{{count}} this week', '本周 {{count}}'],
   },
   // A new approval's quick dialog, laid out as a new task's.
   approvalQuick: {
