@@ -1,7 +1,7 @@
 import { useState, type ReactElement, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, CircleAlert, LoaderCircle, Sparkles } from 'lucide-react';
-import type { AIToolRendererProps } from '@/extensions/nocobase-ai';
+import type { AIToolRendererProps } from '#extensions/nocobase-ai';
 import { useTranslation } from '@nocobase/i18n/client';
 import { Button } from '../ui/button.js';
 import { Textarea } from '../ui/textarea.js';

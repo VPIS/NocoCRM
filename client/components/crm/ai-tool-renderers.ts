@@ -1,4 +1,4 @@
-import type { AIToolRendererMap } from '@/extensions/nocobase-ai';
+import type { AIToolRendererMap } from '#extensions/nocobase-ai';
 import { CrmWriteCard } from './ai-tool-cards.js';
 
 const writeTools = [

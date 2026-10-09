@@ -6,8 +6,8 @@ import {
   type ReactElement,
   type RefObject,
 } from 'react';
-import { getAIModelKey, groupAIModels } from '@/extensions/nocobase-ai';
-import { ChatAttachment } from '@/extensions/nocobase-ai/components/chat/chat-attachment.js';
+import { getAIModelKey, groupAIModels } from '#extensions/nocobase-ai';
+import { ChatAttachment } from '#extensions/nocobase-ai/components/chat/chat-attachment';
 import {
   InputGroup,
   InputGroupAddon,

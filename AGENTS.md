@@ -123,6 +123,8 @@ Declare `authz` on the first page of every path: `{ resource: { type: 'page', id
 
 ### Components and styling
 
+Use package-local imports such as `#components/ui/button` and `#extensions/nocobase-auth-forms/form-parts`. `package.json#imports` declares their targets, and `components.json` uses the same prefixes for shadcn generation. Keep directory entry points explicitly mapped to their index files: this application maps `#extensions/nocobase-ai` and `#extensions/nocobase-file-component-ui`, the Registry copies it imports as a whole. An import names the module without its `.js` suffix, which the map adds. Do not add a Vite alias or TypeScript `paths` mapping for these imports.
+
 Use shadcn/ui for UI. The template ships only the primitives its shell and compositions use: `button`, `dialog`, `dropdown-menu`, `input`, `label`, `popover`, `spinner`, `toast` and `tooltip`. Check `client/components/ui/` first; if the primitive is not there, add it from the shadcn registry rather than writing your own. `yes n |` answers "no" when the CLI offers to overwrite a primitive that is already installed; without an answer, a non-interactive run stops at that question. Format the files it created and translate the English a few primitives carry, as `.agents/skills/nocobase-app-development/references/frontend/references/shadcn.md` lists; otherwise keep them as the CLI writes them:
 
 ```bash
@@ -363,6 +365,14 @@ await import(`${name}/index.js`); // invisible to the check
 ```
 
 Declare such a package in `dependencies` when you write the code; nothing will remind you later.
+
+### CDN assets at build time
+
+`CDN_BASE_URL` sets Vite's `base` only during a production build: `CDN_BASE_URL=https://cdn.example.com/my-app/v1/ pnpm build`. Use a full HTTPS URL ending in `/`; unset, empty or whitespace-only values keep the default `./`. `pnpm build` reads it from the process environment, then `.env.local`, then `.env`; development ignores it and continues using `APP_BASE_PATH`. It is a build parameter, absent from `config variables` and `dist/variables.json`, with no `config.yml` setting. Changing it requires rebuilding.
+
+Upload the static files from `dist/client/` to that CDN prefix with their directory structure preserved, and enable CORS for the application's origin. Keep `index.html` and the complete client tree on the application server so it can inject runtime configuration into HTML and serve files still addressed there. Use `resolveAssetUrl('/assets/logo.png')` from `@nocobase/app-client` for a file shipped as `dist/client/assets/logo.png`; the NocoCRM wordmark and the sign-in logo use this helper. Keep API paths, page links and runtime-generated files such as workflow artifacts on `resolveAppUrl`, and the AI employee's avatar, which the Registry copy resolves from a stored root-relative path, stays there too. Vite does not rewrite arbitrary URL strings.
+
+This application's own `Dockerfile` accepts the same value as a build argument: `docker build --build-arg CDN_BASE_URL=https://cdn.example.com/crm/v1/ .`. `docker run -e CDN_BASE_URL=...` cannot change compiled asset URLs.
 
 ### Packing the build for a deployment
 

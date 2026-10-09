@@ -1,7 +1,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-import { SafeImage } from '@/components/safe-image';
+import { SafeImage } from '#components/safe-image';
 
 export type BusinessReportChart = {
   title?: string;

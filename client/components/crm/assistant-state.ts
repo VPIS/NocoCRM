@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { useAI } from '@/extensions/nocobase-ai';
+import { useAI } from '#extensions/nocobase-ai';
 import { toText, useCrmText } from './api.js';
 
 // The assistant panel's state for what lives outside it (the dock,

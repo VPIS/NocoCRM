@@ -1,9 +1,9 @@
-import { resolveAppUrl } from '@nocobase/app-client';
+import { resolveAssetUrl } from '@nocobase/app-client';
 import { useTranslation } from '@nocobase/i18n/client';
 import { Blocks, ShieldCheck, Sparkles } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 
-import { AuthSplitLayout } from '@/extensions/nocobase-auth-split-layout/auth-split-layout';
+import { AuthSplitLayout } from '#extensions/nocobase-auth-split-layout/auth-split-layout';
 
 export interface AuthPageProps {
   readonly title: ReactNode;
@@ -32,12 +32,12 @@ export function AuthPage({
           <img
             alt=''
             className='dark:hidden'
-            src={resolveAppUrl('/assets/logo-mark.png')}
+            src={resolveAssetUrl('/assets/logo-mark.png')}
           />
           <img
             alt=''
             className='hidden dark:block'
-            src={resolveAppUrl('/assets/logo-mark-dark.png')}
+            src={resolveAssetUrl('/assets/logo-mark-dark.png')}
           />
         </>
       }

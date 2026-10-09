@@ -1,7 +1,7 @@
 import { Sparkles } from 'lucide-react';
 import { useRef, useState, type ReactElement } from 'react';
 import { useLocation } from 'react-router';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '#hooks/use-mobile';
 import { Button } from '../ui/button.js';
 import {
   Tooltip,

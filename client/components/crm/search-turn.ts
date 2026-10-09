@@ -1,5 +1,5 @@
-import type { AIChatMessage } from '@/extensions/nocobase-ai';
-import { AI_DRAFT_CONVERSATION_ID } from '@/extensions/nocobase-ai/providers/types.js';
+import type { AIChatMessage } from '#extensions/nocobase-ai';
+import { AI_DRAFT_CONVERSATION_ID } from '#extensions/nocobase-ai/providers/types';
 
 // Where a question asked from the global search stands in the hidden chat
 // that answers it (global-search.tsx), read from the chat's messages as its

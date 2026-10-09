@@ -6,14 +6,14 @@ import { useEffect, useRef, useState, type ReactElement } from 'react';
 // (the same component as the assistant's replies) rather than the Registry
 // copy's `prose` classes, which need the Tailwind typography plugin this
 // application does not carry and otherwise show a plain wall of text.
-import { Markdown } from '@/components/crm/markdown';
+import { Markdown } from '#components/crm/markdown';
 
 import {
   resolveOfficeEmbedUrl,
   resolveOfficeOpenXmlFormat,
   type FilePreviewKind,
 } from '../../lib/file-preview';
-import { Button } from '@/components/ui/button';
+import { Button } from '#components/ui/button';
 import { FileThumbnail } from '../file-thumbnail';
 
 import { OfficeOpenXmlPreview } from './office-open-xml-preview';

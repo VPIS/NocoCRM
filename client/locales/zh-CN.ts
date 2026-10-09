@@ -1,7 +1,7 @@
 import type { AppResource } from './en-US.js';
 import { crmZh } from './crm/index.js';
-import deviceApprovalZhCN from '@/extensions/nocobase-device-approval/locales/zh-CN';
-import inboxZhCN from '@/extensions/nocobase-inbox/locales/zh-CN';
+import deviceApprovalZhCN from '#extensions/nocobase-device-approval/locales/zh-CN';
+import inboxZhCN from '#extensions/nocobase-inbox/locales/zh-CN';
 
 const zhCN: AppResource = {
   crm: crmZh,

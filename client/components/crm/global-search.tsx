@@ -1,7 +1,7 @@
 import {
   useAIPageElementHandle,
   type AIFrontendToolRegistration,
-} from '@/extensions/nocobase-ai';
+} from '#extensions/nocobase-ai';
 import {
   useEffect,
   useMemo,

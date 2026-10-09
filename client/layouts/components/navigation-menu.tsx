@@ -13,13 +13,13 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+} from '#components/ui/collapsible';
 import {
   Popover,
   PopoverContent,
   PopoverTitle,
   PopoverTrigger,
-} from '@/components/ui/popover';
+} from '#components/ui/popover';
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -33,7 +33,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   useSidebar,
-} from '@/components/ui/sidebar';
+} from '#components/ui/sidebar';
 
 import {
   routeKey,

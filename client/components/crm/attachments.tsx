@@ -1,7 +1,7 @@
 import type { FileRecord } from '@nocobase/app-plugin-file/client';
 import { Download, Paperclip, Trash2, Upload } from 'lucide-react';
 import { useRef, useState, type ReactElement, type ReactNode } from 'react';
-import { FilePreviewDialog } from '@/extensions/nocobase-file-component-ui';
+import { FilePreviewDialog } from '#extensions/nocobase-file-component-ui';
 import { Button } from '../ui/button.js';
 import {
   PAGE_SIZE,

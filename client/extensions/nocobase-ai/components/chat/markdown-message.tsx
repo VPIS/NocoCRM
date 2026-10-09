@@ -2,7 +2,7 @@ import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-import { SafeImage } from '@/components/safe-image';
+import { SafeImage } from '#components/safe-image';
 
 import { cn } from 'cn';
 

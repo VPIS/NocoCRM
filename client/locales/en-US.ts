@@ -1,7 +1,7 @@
 import type { LocaleResource } from '@nocobase/i18n';
 import { crmEn } from './crm/index.js';
-import deviceApprovalEnUS from '@/extensions/nocobase-device-approval/locales/en-US';
-import inboxEnUS from '@/extensions/nocobase-inbox/locales/en-US';
+import deviceApprovalEnUS from '#extensions/nocobase-device-approval/locales/en-US';
+import inboxEnUS from '#extensions/nocobase-inbox/locales/en-US';
 
 const enUS = {
   crm: crmEn,

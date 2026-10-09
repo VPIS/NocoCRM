@@ -38,9 +38,9 @@ import {
   type AIEmployee,
   type AIService,
   type AIWorkContextItem,
-} from '@/extensions/nocobase-ai';
-import { AI_DRAFT_CONVERSATION_ID } from '@/extensions/nocobase-ai/providers/types.js';
-import { UserPromptEditor } from '@/extensions/nocobase-ai/components/chat/user-prompt-editor.js';
+} from '#extensions/nocobase-ai';
+import { AI_DRAFT_CONVERSATION_ID } from '#extensions/nocobase-ai/providers/types';
+import { UserPromptEditor } from '#extensions/nocobase-ai/components/chat/user-prompt-editor';
 import { Button } from '../ui/button.js';
 import {
   sentence,

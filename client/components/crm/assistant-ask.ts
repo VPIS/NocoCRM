@@ -4,8 +4,8 @@ import {
   useAI,
   type AIChatAttachment,
   type AIModel,
-} from '@/extensions/nocobase-ai';
-import { getEmployeeModels } from '@/extensions/nocobase-ai/providers/model.js';
+} from '#extensions/nocobase-ai';
+import { getEmployeeModels } from '#extensions/nocobase-ai/providers/model';
 import { CRM_ASSISTANT, usePanelOpen } from './assistant-state.js';
 import type { CurrentRecord } from './current-record.js';
 

@@ -3,7 +3,7 @@ import {
   createAIChatController,
   type AIEmployeeTask,
   type AIWorkContextItem,
-} from '@/extensions/nocobase-ai';
+} from '#extensions/nocobase-ai';
 import { CRM_ASSISTANT } from './assistant-state.js';
 import { IDLE_SEARCH_CHAT, type SearchChatState } from './search-turn.js';
 

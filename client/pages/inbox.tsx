@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 
-import { InboxPage as InboxBlock } from '@/extensions/nocobase-inbox/inbox-page';
+import { InboxPage as InboxBlock } from '#extensions/nocobase-inbox/inbox-page';
 import { useCrmInboxRegistry } from '../components/crm/inbox-decisions.js';
 
 /**

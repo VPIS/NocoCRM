@@ -1,22 +1,22 @@
-import { useAI } from '@/extensions/nocobase-ai';
+import { useAI } from '#extensions/nocobase-ai';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToaster } from '@nocobase/app-client';
 import { Ellipsis, MessagesSquare, SquarePen, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '#components/ui/alert';
+import { Button } from '#components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '#components/ui/dropdown-menu';
 import {
   Popover,
   PopoverContent,
   PopoverTitle,
   PopoverTrigger,
-} from '@/components/ui/popover';
+} from '#components/ui/popover';
 import {
   SidebarGroup,
   SidebarGroupAction,
@@ -28,12 +28,12 @@ import {
   SidebarMenuItem,
   SidebarMenuSkeleton,
   useSidebar,
-} from '@/components/ui/sidebar';
+} from '#components/ui/sidebar';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from '#components/ui/tooltip';
 import { AutoLoadMore } from '../../components/crm/auto-load.js';
 import { ConfirmDialog } from '../../components/crm/confirm-dialog.js';
 import {

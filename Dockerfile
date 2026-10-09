@@ -16,6 +16,9 @@ COPY . .
 # The client is not tied to a mount path (a relocatable build): the container
 # chooses it at run time with -e APP_BASE_PATH=<path>.
 # The existing build installs and verifies dist/node_modules, including native modules.
+# CDN_BASE_URL, when given (--build-arg CDN_BASE_URL=https://cdn.example.com/crm/v1/),
+# makes the built client load its assets from that prefix; unset, they load from the app.
+ARG CDN_BASE_URL
 RUN --mount=type=cache,target=/pnpm/store pnpm build \
     && node scripts/utils/prepare-container-dist.mjs
 
