@@ -20,6 +20,7 @@ import {
   useMetadata,
   useRefresh,
   type CrmRecord,
+  agentRuns,
 } from './api.js';
 
 // What came of a task, as the person tells it, with the AI writing up
@@ -128,7 +129,12 @@ export function RecordOutcomeDialog({
   const [followUp, setFollowUp] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
-  const followable = Boolean(task.opportunityId || task.leadId);
+  const { data: meta } = useMetadata();
+  // Offered only while the agent of the task's deal, else its lead, runs
+  // after a task is done (the Agents pages switch it).
+  const followable =
+    Boolean(task.opportunityId || task.leadId) &&
+    agentRuns(meta, task.opportunityId ? 'opportunities' : 'leads', 'taskDone');
   return (
     <Dialog
       open

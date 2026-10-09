@@ -1342,8 +1342,12 @@ export function RecordForm({
                   onChange={setFollowUp}
                   disabled={busy}
                   {...(entity === 'opportunities'
-                    ? { label: 'dealFollowUpNow' }
-                    : {})}
+                    ? {
+                        label: 'dealFollowUpNow',
+                        agent: 'opportunities' as const,
+                        trigger: 'opened',
+                      }
+                    : { agent: 'leads' as const, trigger: 'created' })}
                 />
               ) : null}
               <Button

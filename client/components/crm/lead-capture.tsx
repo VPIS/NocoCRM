@@ -894,6 +894,8 @@ function CaptureReview({
           checked={followUp}
           onChange={setFollowUp}
           disabled={busy}
+          agent='leads'
+          trigger='created'
         />
         <Button variant='outline' disabled={busy} onClick={onDone}>
           {text('cancel')}

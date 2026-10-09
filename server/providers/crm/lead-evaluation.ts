@@ -596,6 +596,8 @@ export async function notesOf(
 // quiet, a nurtured lead's review falling due, its company changed by a
 // person, or one of its tasks marked done.
 export type FollowUpTrigger =
+  // A lead just created (the create route, the assistant's create tool).
+  | 'created'
   | 'uncontacted'
   | 'silent'
   | 'nurtureDue'

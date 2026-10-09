@@ -87,6 +87,13 @@ import {
   dashboard,
   type AgendaName,
 } from '../providers/crm/dashboard.js';
+import {
+  agentOn,
+  agentOverview,
+  agentSwitches,
+  runningAgents,
+  saveAgentSwitch,
+} from '../providers/crm/agents.js';
 import { resolveTitles } from '../providers/crm/titles.js';
 import type { Row } from '@nocobase/db';
 
@@ -187,9 +194,43 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
             : {}),
           // Whether the pages offer the assistant at all.
           assistant: await service.assistantEnabled(),
+          // Which of the agents' triggers are on, so a form offers "AI
+          // follows up at once" only while that would happen (agents.ts).
+          agents: await agentSwitches(service),
         },
       });
     });
+    // How many runs each agent has under way, for the menu's badges.
+    routes.get('/agents/running', async (c) =>
+      c.json({ data: await runningAgents(service, c.get('actor')) }),
+    );
+    // The Agents section: one agent's switches, figures and runs, and an
+    // administrator's change to its switches.
+    routes.get('/agents/:agent', async (c) =>
+      c.json({
+        data: await agentOverview(
+          service,
+          c.get('actor'),
+          c.req.param('agent'),
+          {
+            page: Number(c.req.query('page') ?? 1) || 1,
+            pageSize: Number(c.req.query('pageSize') ?? 20) || 20,
+            trigger: c.req.query('trigger') || undefined,
+            status: c.req.query('status') || undefined,
+          },
+        ),
+      }),
+    );
+    routes.put('/agents/:agent', async (c) =>
+      c.json({
+        data: await saveAgentSwitch(
+          service,
+          c.get('actor'),
+          c.req.param('agent'),
+          object(await c.req.json()) as never,
+        ),
+      }),
+    );
     routes.get('/geography', (c) => {
       const chinese = c.get('actor').locale.startsWith('zh');
       return c.json({
@@ -850,7 +891,10 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         c.req.param('id'),
         body,
       );
-      if (body.followUp !== false)
+      if (
+        body.followUp !== false &&
+        (await agentOn(service, 'leads', 'merged'))
+      )
         await evaluator()
           ?.request(c.get('actor'), toText(lead.id), undefined, 'merged')
           .catch(() => null);
@@ -1040,13 +1084,22 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       // A new lead or opportunity is followed up by the AI in the
       // background, unless the person creating it unticked that
       // (`followUp=0`); the record is created whether or not that can start.
-      if (entity === 'leads' && c.req.query('followUp') !== '0')
+      // Only while its agent runs on that trigger (agents.ts).
+      if (
+        entity === 'leads' &&
+        c.req.query('followUp') !== '0' &&
+        (await agentOn(service, 'leads', 'created'))
+      )
         await evaluator()
-          ?.request(actor, toText(record.id))
+          ?.request(actor, toText(record.id), undefined, 'created')
           .catch(() => undefined);
-      if (entity === 'opportunities' && c.req.query('followUp') !== '0')
+      if (
+        entity === 'opportunities' &&
+        c.req.query('followUp') !== '0' &&
+        (await agentOn(service, 'opportunities', 'opened'))
+      )
         await dealEvaluator()
-          ?.request(actor, toText(record.id))
+          ?.request(actor, toText(record.id), undefined, 'opened')
           .catch(() => undefined);
       return c.json({ data: record }, 201);
     });

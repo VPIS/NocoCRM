@@ -385,6 +385,161 @@ const wording = {
     mailThreads: ['Mail conversations', '邮件会话'],
     thisWeekCount: ['{{count}} this week', '本周 {{count}}'],
   },
+  // The Agents section (pages/crm-agents.tsx, server/providers/crm/agents.ts).
+  agents: {
+    leads: {
+      title: ['Lead follow-up', '线索跟进'],
+      description: [
+        'Reads a lead with its tasks, notes and mail, looks the company up on the web when it is new or out of date, and recommends following up, nurturing, converting or closing it as invalid, with a grade and the next step.',
+        '读取线索及其任务、备注和邮件，公司信息缺失或过期时联网调研，给出继续跟进、放入培育、转化或无效的建议，附等级和下一步。',
+      ],
+      skill: ['Skill: Follow up a lead', '技能：跟进线索'],
+    },
+    opportunities: {
+      title: ['Opportunity follow-up', '商机跟进'],
+      description: [
+        'Reads a deal with its account, contacts, tasks, notes, approvals and mail, checks its terms against the approval standards, and recommends advancing, keeping at it, pausing or losing it, with the approvals to submit and the next step.',
+        '读取商机及其客户、联系人、任务、备注、审批和邮件，按审批标准核对商务条款，给出推进、继续、暂停或输单的建议，以及需要提交的审批和下一步。',
+      ],
+      skill: ['Skill: Follow up an opportunity', '技能：跟进商机'],
+    },
+    approvals: {
+      title: ['Approval review', '审批助手'],
+      description: [
+        'Reviews an approval for its approver: the terms asked for against the standard and their cost, the deal, earlier decisions of the same kind and the risks, with a recommendation and a drafted comment. Only the approver sees it.',
+        '为审批人分析审批申请：申请条件与标准的差距和代价、商机情况、以往同类审批的结果和风险，给出建议和审批意见草稿。只有审批人能看到。',
+      ],
+      skill: ['Skill: Review an approval', '技能：审批辅助'],
+    },
+    duty: ['What it does', '职责'],
+    // Who runs it and who decides, on every agent's page.
+    byNoco: [
+      'Run by the AI employee Noco. It only suggests: the owner decides in the inbox whether to accept.',
+      '由 AI 员工 Noco 执行；它只提出建议，由负责人在收件箱里决定是否采纳。',
+    ],
+    runsOnItsOwn: ['Runs on its own', '自动运行'],
+    // The menu's badge: runs under way.
+    runningHint: ['{{count}} running', '{{count}} 个正在运行'],
+    off: ['Off', '已停用'],
+    triggersTitle: ['When it runs', '触发方式'],
+    adminOnly: [
+      'Only an administrator may switch these.',
+      '只有管理员可以修改开关。',
+    ],
+    manualNote: [
+      'A person can always ask for a follow-up on a record, whatever is switched off.',
+      '在记录上点「跟进」随时可以手动发起，不受这些开关影响。',
+    ],
+    triggers: {
+      created: {
+        label: ['A lead is created', '新建线索时'],
+        hint: [
+          'From the form, the AI capture or the assistant; not imports or demo data.',
+          '通过表单、AI 整理或 AI 助手新建；导入和演示数据不触发。',
+        ],
+      },
+      opened: {
+        label: ['An opportunity is opened', '新开商机时'],
+        hint: [
+          'Created, or a lead converted into it.',
+          '新建商机或线索转化开出商机。',
+        ],
+      },
+      daily: {
+        label: ['The daily check', '每日巡检'],
+        hint: [
+          'Every day at 09:00 in the business time zone ({{zone}}), at most 20 a day.',
+          '每天 09:00（业务时区 {{zone}}）巡检，每天最多 20 条。',
+        ],
+      },
+      dailyLeads: {
+        hint: [
+          'A new lead not contacted in time, a lead gone quiet, a nurtured lead due for review.',
+          '新线索超时未联系、跟进中的线索停滞、培育中的线索复查到期。',
+        ],
+      },
+      dailyOpportunities: {
+        hint: [
+          'A deal gone quiet, an expected close date near or past, a paused deal due to resume.',
+          '商机停滞、预计成交日期临近或已过、暂停的商机到期恢复。',
+        ],
+      },
+      taskDone: {
+        label: ['A task is completed', '任务完成后'],
+        hint: [
+          'Its outcome recorded, or the task marked done.',
+          '记录了任务结果或把任务标为完成。',
+        ],
+      },
+      customerReplied: {
+        label: ['The customer writes', '客户来信时'],
+        hint: [
+          'A message from one of its people reaches the timeline.',
+          '客户方联系人的邮件同步到动态时。',
+        ],
+      },
+      companyChanged: {
+        label: ['The company changes', '公司信息变化时'],
+        hint: [
+          'Someone changes its company or website; the AI looks it up again.',
+          '有人修改了公司名称或网站，AI 重新调研。',
+        ],
+      },
+      merged: {
+        label: ['Leads are merged', '合并线索后'],
+        hint: ['The lead kept is followed up anew.', '对保留的线索重新跟进。'],
+      },
+      approvalDecided: {
+        label: ['Its approvals are decided', '审批有结果后'],
+        hint: [
+          'Once the approvals submitted together have all been decided.',
+          '一起提交的审批全部有了结果后。',
+        ],
+      },
+      submitted: {
+        label: ['An approval is submitted', '提交审批时'],
+        hint: ['Reviewed for its approver right away.', '立即为审批人分析。'],
+      },
+    },
+    // How a run started, in the runs list.
+    started: {
+      asked: ['Asked by a person', '手动发起'],
+      revised: ['Redone as instructed', '按意见重做'],
+    },
+    statsTitle: ['How it did', '运行情况'],
+    lastWeek: ['Last 7 days', '近 7 天'],
+    lastMonth: ['Last 30 days', '近 30 天'],
+    runs: ['Runs', '运行次数'],
+    acceptance: ['Accepted', '采纳率'],
+    acceptanceNote: [
+      'Of the suggestions someone decided',
+      '在已处理的建议中被采纳的比例',
+    ],
+    statuses: {
+      running: ['Working', '运行中'],
+      pending: ['Waiting', '待处理'],
+      accepted: ['Accepted', '已采纳'],
+      dismissed: ['Dismissed', '已忽略'],
+      failed: ['Failed', '失败'],
+      retired: ['Settled elsewhere', '已在别处处理'],
+    },
+    all: ['All', '全部'],
+    runsTitle: ['Runs', '运行记录'],
+    when: ['When', '时间'],
+    record: ['Record', '记录'],
+    trigger: ['Started by', '触发'],
+    outcome: ['Suggestion', '建议'],
+    status: ['Status', '状态'],
+    noRuns: ['No runs yet.', '还没有运行记录。'],
+    runsScope: [
+      'Runs on the records you may read, over the last 90 days',
+      '近 90 天、你有权查看的记录上的运行',
+    ],
+    runsScopeApprovals: [
+      'Reviews of the approvals submitted to you, over the last 90 days',
+      '近 90 天提交给你的审批的分析',
+    ],
+  },
   // A new approval's quick dialog, laid out as a new task's.
   approvalQuick: {
     titlePlaceholder: ['What is the approval for', '审批主题'],
@@ -582,6 +737,11 @@ const wording = {
     // What started a follow-up the system ran on its own (lead-signals.ts,
     // a task marked done, a company changed).
     trigger: {
+      created: ['New lead: the AI followed it up.', '新线索，AI 自动跟进。'],
+      opened: [
+        'New opportunity: the AI followed it up.',
+        '新商机，AI 自动跟进。',
+      ],
       uncontacted: [
         'New lead not contacted in 2 days: the AI followed it up.',
         '新线索 2 天还没联系，AI 自动跟进。',
@@ -1103,6 +1263,7 @@ const wording = {
       home: ['Overview', '工作台'],
       record: ['Record pages', '记录详情页'],
       decisions: ['AI suggestions in the inbox', '收件箱的 AI 建议'],
+      agents: ['Agents', 'Agents'],
     },
   },
   aiLanguages: {
@@ -1447,6 +1608,7 @@ const wording = {
   },
   navigation: {
     inbox: ['Inbox', '收件箱'],
+    agents: ['Agents', 'Agents'],
     action: ['Action', '行动'],
     records: ['Records', '记录'],
     // Where the user's connected services sit: mail now, other channels

@@ -5,6 +5,7 @@ import type { OpportunityEvaluator } from './opportunity-evaluation.js';
 import { toText } from './schema.js';
 import { lastExchanges } from './exchanges.js';
 import type { CrmService } from './service.js';
+import { agentOn } from './agents.js';
 
 // The daily look over the open deals for what should have happened and has
 // not, as lead-signals.ts does for leads: a deal gone quiet for fourteen
@@ -71,6 +72,8 @@ export async function scanDealSignals(
 ): Promise<DealSignalPass> {
   const pass: DealSignalPass = { checked: 0, started: {} };
   if (!(await evaluator.available())) return pass;
+  // Switched off on the opportunity agent's page (agents.ts).
+  if (!(await agentOn(service, 'opportunities', 'daily'))) return pass;
   const settings = await service.settings();
   const days = {
     stale: settings.leadStaleDays,

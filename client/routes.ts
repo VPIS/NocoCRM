@@ -12,6 +12,9 @@ import {
   ListChecks,
   Mail,
   Radar,
+  ScanSearch,
+  ShieldCheck,
+  TrendingUp,
   Settings2,
   SquareCheckBig,
 } from 'lucide-react';
@@ -76,6 +79,29 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         componentLoader: () => import('./pages/crm-list.js'),
       })),
     ],
+  },
+  // The agents: the AI's work the system starts on its own, one page per
+  // agent (pages/crm-agents.tsx, which reads the agent from the path). The
+  // three share the page grant crm-agents, an exception to "the page id is
+  // the route name": they are one feature, granted together.
+  {
+    name: 'crm-agent-group',
+    navigation: { title: 'crm.navigation.agents' },
+    children: [
+      ['leads', ScanSearch],
+      ['opportunities', TrendingUp],
+      ['approvals', ShieldCheck],
+    ].map(([agent, icon]) => ({
+      name: `crm-agents-${String(agent)}`,
+      path: `/crm/agents/${String(agent)}`,
+      auth: 'required' as const,
+      authz: page('crm-agents'),
+      navigation: {
+        title: `crm.agents.${String(agent)}.title`,
+        icon: icon as typeof Radar,
+      },
+      componentLoader: () => import('./pages/crm-agents.js'),
+    })),
   },
   // The records: leads and deals, then the accounts and their people.
   {

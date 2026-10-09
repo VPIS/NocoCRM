@@ -1219,6 +1219,8 @@ export class OpportunityEvaluator {
     // marked done, one of its approvals decided); shown on the card.
     // A daily check's signal too (deal-signals.ts).
     trigger?:
+      // A deal just opened (created, or a lead converted into it).
+      | 'opened'
       | 'taskDone'
       | 'approvalDecided'
       | 'customerReplied'

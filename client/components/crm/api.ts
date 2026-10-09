@@ -51,6 +51,11 @@ export interface Metadata {
   // Whether the CRM's AI employee is switched on (its Enabled switch on the
   // AI Employee plugin's settings page): every assistant entry follows it.
   assistant: boolean;
+  // Which of the agents' triggers are on (server/providers/crm/agents.ts).
+  agents?: Record<
+    string,
+    { enabled: boolean; triggers: Record<string, boolean> }
+  >;
 }
 // Display names for every record a response refers to, resolved by the
 // server: `titles` are composed ("account / deal"), `names` bare.
@@ -466,4 +471,16 @@ export function linkOf(value: unknown): string | undefined {
   return /^[\w-]+(\.[\w-]+)+(:\d+)?(\/\S*)?$/.test(raw)
     ? `https://${raw}`
     : undefined;
+}
+
+// Whether an agent runs on a trigger now (server/providers/crm/agents.ts):
+// a form offers "AI follows up at once" only while that would happen.
+export function agentRuns(
+  meta: Metadata | undefined,
+  agent: 'leads' | 'opportunities',
+  trigger: string,
+): boolean {
+  const switches = meta?.agents?.[agent];
+  if (!switches) return true;
+  return switches.enabled && switches.triggers[trigger] !== false;
 }

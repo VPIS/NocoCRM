@@ -60,3 +60,24 @@ export function useApprovalsToDecide(): number {
   });
   return decides ? (data?.total ?? 0) : 0;
 }
+
+// How many runs each agent has under way, for the Agents entries in the
+// menu: read every few seconds while any runs, every half minute otherwise,
+// and only for whoever sees the Agents pages while the assistant is on.
+export function useRunningAgents(): Record<string, number> {
+  const { data: meta } = useMetadata();
+  const { can } = useCan({
+    resource: { type: 'page', id: 'crm-agents' },
+    action: 'access',
+  });
+  const shown = meta?.assistant === true && can;
+  const { data } = useCrmQuery<Record<string, number>>(
+    'agents/running',
+    shown,
+    {
+      refetchInterval: (latest) =>
+        latest && Object.values(latest).some((n) => n > 0) ? 4000 : 30000,
+    },
+  );
+  return shown ? (data ?? {}) : {};
+}

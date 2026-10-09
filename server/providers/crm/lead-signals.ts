@@ -2,6 +2,7 @@ import type { Row } from '@nocobase/db';
 import { crmActor } from '../../ai/tools/crm-records.js';
 import { readEntry } from './ai-entries.js';
 import type { FollowUpTrigger, LeadEvaluator } from './lead-evaluation.js';
+import { agentOn } from './agents.js';
 import { toText } from './schema.js';
 import { lastExchanges } from './exchanges.js';
 import type { CrmService } from './service.js';
@@ -74,6 +75,8 @@ export async function scanLeadSignals(
 ): Promise<LeadSignalPass> {
   const pass: LeadSignalPass = { checked: 0, started: {} };
   if (!(await evaluator.available())) return pass;
+  // Switched off on the lead agent's page (agents.ts).
+  if (!(await agentOn(service, 'leads', 'daily'))) return pass;
   const settings = await service.settings();
   const days = {
     uncontacted: settings.uncontactedDays,

@@ -30,6 +30,7 @@ import {
   followUpOpportunity,
   approvalsSettled,
 } from './feedback.js';
+import { agentOn } from './agents.js';
 import { crmActor } from '../../ai/tools/crm-records.js';
 import {
   provisionCrm,
@@ -263,8 +264,14 @@ export default class CrmProvider extends ServiceProvider<Application> {
   }
   public override async start(): Promise<void> {
     const evaluator = this.app.container.resolve(leadEvaluatorToken);
-    this.app.container.resolve(crmToken).leadCreated = (by, leadId) =>
-      void evaluator.request(by, leadId).catch(() => undefined);
+    // Each automatic start runs only while its agent runs on that trigger
+    // (agents.ts); a person asking is never switched off.
+    const crmService = this.app.container.resolve(crmToken);
+    crmService.leadCreated = (by, leadId) =>
+      void (async () => {
+        if (await agentOn(crmService, 'leads', 'created'))
+          await evaluator.request(by, leadId, undefined, 'created');
+      })().catch(() => undefined);
     const deals = this.app.container.resolve(opportunityEvaluatorToken);
     const reviewer = this.app.container.resolve(approvalReviewerToken);
     const service = this.app.container.resolve(crmToken);
@@ -294,7 +301,10 @@ export default class CrmProvider extends ServiceProvider<Application> {
       reviewer.useJobs(dispatch);
     }
     service.opportunityOpened = (by, id) =>
-      void deals.request(by, id).catch(() => undefined);
+      void (async () => {
+        if (await agentOn(service, 'opportunities', 'opened'))
+          await deals.request(by, id, undefined, 'opened');
+      })().catch(() => undefined);
     // A task marked done its deal's, or else its lead's, follow-up;
     // a lead's company changed by a person, a follow-up that looks it up.
     service.taskCompleted = (by, task) =>
@@ -306,7 +316,10 @@ export default class CrmProvider extends ServiceProvider<Application> {
       ).catch(() => undefined);
     // An approval submitted, reviewed by the AI for its approver.
     service.approvalSubmitted = (by, approval) =>
-      void reviewer.request(by, toText(approval.id)).catch(() => undefined);
+      void (async () => {
+        if (await agentOn(service, 'approvals', 'submitted'))
+          await reviewer.request(by, toText(approval.id));
+      })().catch(() => undefined);
     // An approval decided (or withdrawn), its deal followed up again as its
     // owner, who acts on the decision: once, when the last of the approvals
     // submitted with it leaves the queue, and only if one of them was
@@ -337,9 +350,10 @@ export default class CrmProvider extends ServiceProvider<Application> {
         );
       })().catch(() => undefined);
     service.leadCompanyChanged = (by, leadId) =>
-      void evaluator
-        .request(by, leadId, undefined, 'companyChanged')
-        .catch(() => undefined);
+      void (async () => {
+        if (await agentOn(service, 'leads', 'companyChanged'))
+          await evaluator.request(by, leadId, undefined, 'companyChanged');
+      })().catch(() => undefined);
     // A customer wrote: the lead or the deal is followed up as its owner,
     // unless a card on it is waiting or being worked on.
     const timeline = this.app.container.resolve(mailTimelineToken);

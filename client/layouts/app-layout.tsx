@@ -27,7 +27,9 @@ import { NavigationBadgesContext } from './components/navigation-badges.js';
 import {
   useApprovalsToDecide,
   useInboxCount,
+  useRunningAgents,
 } from '../components/crm/waiting-count.js';
+import { useCrmText } from '../components/crm/api.js';
 import { useMailUnreadCount } from '../components/crm/mail-unread.js';
 import { DemoBanner } from '../components/crm/demo-banner.js';
 import { AssistantDock } from '../components/crm/assistant-dock.js';
@@ -77,6 +79,21 @@ export function AppLayout({
   const inbox = useInboxCount();
   // And beside Approvals, those waiting on the reader's decision.
   const toDecide = useApprovalsToDecide();
+  // And beside each agent, its runs under way, as a live badge.
+  const running = useRunningAgents();
+  const { text: crmText } = useCrmText();
+  const runningBadges = Object.fromEntries(
+    Object.entries(running)
+      .filter(([, count]) => count > 0)
+      .map(([agent, count]) => [
+        `crm-agents-${agent}`,
+        {
+          count,
+          live: true as const,
+          hint: crmText('agents.runningHint', { count }),
+        },
+      ]),
+  );
   const unreadMail = useMailUnreadCount();
 
   return (
@@ -90,6 +107,7 @@ export function AppLayout({
               value={{
                 inbox,
                 'crm-approvals': toDecide,
+                ...runningBadges,
                 'crm-mail': unreadMail,
               }}
             >

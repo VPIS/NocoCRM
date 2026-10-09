@@ -13,6 +13,7 @@ import {
 } from '../../locales/crm-ai/feedback.js';
 import type { Actor } from './authorization.js';
 import type { FollowUpTrigger, LeadEvaluator } from './lead-evaluation.js';
+import { agentOn } from './agents.js';
 import type { OpportunityEvaluator } from './opportunity-evaluation.js';
 import { LONG_TEXT_LIMIT } from './limits.js';
 import { CrmError, object, toText, type CrmRecord } from './schema.js';
@@ -229,6 +230,9 @@ export async function followUpLead(
   trigger?: FollowUpTrigger,
 ): Promise<boolean> {
   try {
+    // A follow-up something other than a person asking started runs only
+    // while its agent runs on that trigger (agents.ts).
+    if (trigger && !(await agentOn(service, 'leads', trigger))) return false;
     const lead = await service.get(actor, 'leads', leadId, undefined, 'update');
     if (lead.status === 'converted') return false;
     return Boolean(await evaluator.request(actor, leadId, undefined, trigger));
@@ -295,6 +299,8 @@ export async function followUpOpportunity(
   decidedApprovals?: { id: string; name: string; status: string }[],
 ): Promise<boolean> {
   try {
+    if (trigger && !(await agentOn(service, 'opportunities', trigger)))
+      return false;
     const opportunity = await service.get(
       actor,
       'opportunities',

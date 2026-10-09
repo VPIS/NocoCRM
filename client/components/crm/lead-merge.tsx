@@ -443,6 +443,8 @@ export function MergeDialog({
             onChange={setFollowUp}
             disabled={busy}
             label='merge.followUp'
+            agent='leads'
+            trigger='merged'
           />
           <Button variant='outline' disabled={busy} onClick={onClose}>
             {text('cancel')}

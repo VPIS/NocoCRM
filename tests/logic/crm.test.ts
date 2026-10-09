@@ -7,6 +7,11 @@ import { statistics } from '../../server/providers/crm/statistics.js';
 import { dashboard } from '../../server/providers/crm/dashboard.js';
 import { reports } from '../../server/providers/crm/reports.js';
 import {
+  agentOn,
+  agentOverview,
+  saveAgentSwitch,
+} from '../../server/providers/crm/agents.js';
+import {
   definitions,
   fieldsFor,
   lostReasons,
@@ -105,6 +110,7 @@ import {
 import {
   approvalsSettled,
   followUpAfterTask,
+  followUpLead,
   organiseFeedback,
   recordOutcome,
 } from '../../server/providers/crm/feedback.js';
@@ -8661,5 +8667,130 @@ describe('overview reports', () => {
     expect(rep.weeks.at(-1)?.tasks).toBeGreaterThanOrEqual(1);
     expect(rep.weeks.at(-1)?.notes).toBeGreaterThanOrEqual(1);
     expect(rep.total.notes).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// The Agents section (agents.ts): an administrator switches an agent or one
+// of its triggers off, an automatic start then does nothing while a person
+// asking still does, and an agent's page lists its runs on the records the
+// reader may read.
+describe('agents', () => {
+  it('switches agents and their triggers, for administrators only', async () => {
+    expect(
+      (
+        await request('/agents/leads', 'rep', 'PUT', {
+          triggers: { daily: false },
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await request('/agents/leads', 'admin', 'PUT', {
+          triggers: { nonsense: false },
+        })
+      ).status,
+    ).toBe(400);
+    expect((await request('/agents/robots', 'admin', 'GET')).status).toBe(404);
+    const saved = await request('/agents/leads', 'admin', 'PUT', {
+      triggers: { taskDone: false },
+    });
+    expect(saved.status).toBe(200);
+    expect(await agentOn(service, 'leads', 'taskDone')).toBe(false);
+    expect(await agentOn(service, 'leads', 'created')).toBe(true);
+    // The daily check's signals fall under its daily switch.
+    expect(await agentOn(service, 'leads', 'uncontacted')).toBe(true);
+    await saveAgentSwitch(service, actor('admin'), 'leads', { enabled: false });
+    expect(await agentOn(service, 'leads', 'created')).toBe(false);
+    // The metadata tells the forms, which then offer no follow-up.
+    const meta = (await (await request('/metadata', 'rep')).json()).data as {
+      agents: Record<string, { enabled: boolean }>;
+    };
+    expect(meta.agents.leads.enabled).toBe(false);
+    expect(meta.agents.opportunities.enabled).toBe(true);
+    // A follow-up something started on its own does not run; the evaluator
+    // is never asked.
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Switched off',
+      source: 'website',
+    });
+    const request_ = vi.fn();
+    expect(
+      await followUpLead(
+        service,
+        { request: request_ } as unknown as LeadEvaluator,
+        actor('rep'),
+        toText(lead.id),
+        'customerReplied',
+      ),
+    ).toBe(false);
+    expect(request_).not.toHaveBeenCalled();
+    await saveAgentSwitch(service, actor('admin'), 'leads', {
+      enabled: true,
+      triggers: { taskDone: true },
+    });
+    expect(await agentOn(service, 'leads', 'taskDone')).toBe(true);
+  });
+
+  it("lists an agent's runs on readable records, with how they fared", async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Agent run lead',
+      source: 'website',
+    });
+    const entry = (id: string, status: string, ai: Record<string, unknown>) =>
+      database
+        .query()
+        .insertInto('crmHistory')
+        .values({
+          id,
+          entity: 'leads',
+          recordId: lead.id,
+          actorId: 'rep',
+          action: 'ai',
+          changes: '{}',
+          source: 'ai',
+          aiStatus: status,
+          ai: JSON.stringify({
+            kind: 'evaluation',
+            result: { recommendation: 'follow', grade: 'B', summary: 'Go' },
+            ...ai,
+          }),
+          createdAt: new Date().toISOString(),
+        })
+        .execute();
+    await entry('agent-run-1', 'accepted', { trigger: 'silent' });
+    await entry('agent-run-2', 'dismissed', {});
+    const overview = await agentOverview(service, actor('rep'), 'leads', {});
+    const runs = overview.runs as {
+      id: string;
+      trigger: string;
+      status: string;
+    }[];
+    expect(runs.find((r) => r.id === 'agent-run-1')).toMatchObject({
+      trigger: 'daily',
+      status: 'accepted',
+    });
+    expect(runs.find((r) => r.id === 'agent-run-2')).toMatchObject({
+      trigger: 'asked',
+      status: 'dismissed',
+    });
+    expect((overview.week as { runs: number }).runs).toBeGreaterThanOrEqual(2);
+    const filtered = await agentOverview(service, actor('rep'), 'leads', {
+      status: 'accepted',
+    });
+    expect(
+      (filtered.runs as { status: string }[]).every(
+        (r) => r.status === 'accepted',
+      ),
+    ).toBe(true);
+    // An outsider who may read no lead sees none of its runs.
+    const outsider = await agentOverview(
+      service,
+      actor('outsider'),
+      'leads',
+      {},
+    ).catch(() => ({ runs: [] }));
+    expect(
+      (outsider.runs as { id: string }[]).some((r) => r.id === 'agent-run-1'),
+    ).toBe(false);
   });
 });

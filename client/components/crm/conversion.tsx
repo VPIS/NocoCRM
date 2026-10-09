@@ -801,6 +801,8 @@ export function ConvertDialog({
                 onChange={setFollowUp}
                 disabled={busy}
                 label='dealFollowUpNow'
+                agent='opportunities'
+                trigger='opened'
               />
             )}
             <Button

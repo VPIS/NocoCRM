@@ -169,7 +169,12 @@ function NavigationItem({
   const disclosure = useDisclosure(item, selectedKey);
   // Application change: a count beside the entry, keyed by route name
   // (navigation-badges.ts), such as the CRM's Waiting on me.
-  const badge = useNavigationBadge(item.route.name);
+  const {
+    count: badge,
+    live,
+    hint: badgeHint,
+  } = useNavigationBadge(item.route.name);
+  const badgeText = badgeHint ?? String(badge);
   const tooltip = inPopover
     ? undefined
     : { children: label, role: 'tooltip', sideOffset: 8 };
@@ -203,7 +208,7 @@ function NavigationItem({
           isActive={isSelected}
           tooltip={
             tooltip && badge > 0
-              ? { ...tooltip, children: `${label} · ${String(badge)}` }
+              ? { ...tooltip, children: `${label} · ${badgeText}` }
               : tooltip
           }
           className={SELECTED}
@@ -211,21 +216,31 @@ function NavigationItem({
           {Icon ? <Icon /> : null}
           <span>
             {label}
-            {badge > 0 && (
-              <span className='sr-only'>{` · ${String(badge)}`}</span>
-            )}
+            {badge > 0 && <span className='sr-only'>{` · ${badgeText}`}</span>}
           </span>
         </SidebarMenuButton>
         {badge > 0 && (
           <>
-            <SidebarMenuBadge aria-hidden>
+            <SidebarMenuBadge
+              aria-hidden
+              title={live ? badgeText : undefined}
+              className={live ? 'gap-1 text-ai' : undefined}
+            >
+              {/* Work going on: a pulsing dot in the AI's colour. */}
+              {live && (
+                <span className='size-1.5 animate-pulse rounded-full bg-ai motion-reduce:animate-none' />
+              )}
               {badge > 99 ? '99+' : badge}
             </SidebarMenuBadge>
             {/* In the icon mode the badge hides; a dot on the icon's corner keeps the count noticed. */}
             {state === 'collapsed' && !isMobile && (
               <span
                 aria-hidden
-                className='pointer-events-none absolute top-1 right-1 size-2 rounded-full bg-primary'
+                className={`pointer-events-none absolute top-1 right-1 size-2 rounded-full ${
+                  live
+                    ? 'animate-pulse bg-ai motion-reduce:animate-none'
+                    : 'bg-primary'
+                }`}
               />
             )}
           </>

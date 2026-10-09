@@ -1,6 +1,6 @@
 import { useId, type ReactElement } from 'react';
 import { Checkbox } from '../ui/checkbox.js';
-import { useCrmText, useMetadata } from './api.js';
+import { agentRuns, useCrmText, useMetadata } from './api.js';
 
 // "Let the AI follow up at once", beside the button that creates a lead (the
 // lead form, the review of leads the AI organised) and under the deal a
@@ -12,17 +12,23 @@ export function FollowUpOption({
   disabled,
   label = 'leadFollowUpNow',
   className = 'mr-auto self-center',
+  agent,
+  trigger,
 }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
   label?: string;
   className?: string;
+  // The agent and trigger the follow-up would start: offered only while
+  // that agent runs on it (the Agents pages switch them).
+  agent: 'leads' | 'opportunities';
+  trigger: string;
 }): ReactElement | null {
   const { data: meta } = useMetadata();
   const { text } = useCrmText();
   const id = useId();
-  if (!meta?.assistant) return null;
+  if (!meta?.assistant || !agentRuns(meta, agent, trigger)) return null;
   return (
     <label
       htmlFor={id}

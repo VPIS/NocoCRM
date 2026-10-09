@@ -518,6 +518,8 @@ export function OpportunityCaptureDialog({
                 onChange={setFollowUp}
                 disabled={Boolean(busy)}
                 label='dealFollowUpNow'
+                agent='opportunities'
+                trigger='opened'
               />
               <Button
                 variant='outline'
