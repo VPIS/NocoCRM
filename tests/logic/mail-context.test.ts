@@ -166,13 +166,11 @@ describe('mail with a record, for an AI follow-up', () => {
     expect(calls).toEqual([{ actor: 'user-1', query: 'zhang@wg.example' }]);
     expect(rows.map((r) => r.subject)).toEqual(['Budget', 'Proposal']);
     expect(rows[0]).toMatchObject({
-      ref: 'M1',
       at: '2026-10-01 10:00',
       direction: 'fromCustomer',
       text: 'We can spend 300,000 yuan.',
     });
     expect(rows[1]).toMatchObject({
-      ref: 'M2',
       direction: 'toCustomer',
       text: 'Our proposal & prices',
     });

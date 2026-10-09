@@ -161,7 +161,7 @@ export async function mailOf(
       minute: '2-digit',
     });
     return await Promise.all(
-      recent.map(async ({ actorId, message }, index) => {
+      recent.map(async ({ actorId, message }) => {
         const full = await mail
           .getMessage(
             { actorId, signal: options.signal },
@@ -171,8 +171,9 @@ export async function mailOf(
           .catch(() => undefined);
         const body = full?.text ?? (full?.html ? plain(full.html) : '');
         const when = whenOf(message);
+        // No ref: a model given one cites it ("email M1") in text written
+        // for people; a message is named by its date instead.
         return {
-          ref: `M${index + 1}`,
           at: when ? time.format(new Date(when)) : null,
           // Who wrote it: the customer, or the owner to the customer.
           direction: concerns(target, message.from?.address)
