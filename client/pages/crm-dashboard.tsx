@@ -48,6 +48,13 @@ import {
   XCircle,
   ListChecks,
   SquareCheckBig,
+  Gauge,
+  ChartLine,
+  TriangleAlert,
+  CalendarDays,
+  TrendingDown,
+  Radar,
+  Users,
 } from 'lucide-react';
 import { Button } from '../components/ui/button.js';
 import {
@@ -345,6 +352,7 @@ export default function DashboardPage(): ReactElement {
               sections={sectionKeys.map((key) => ({
                 id: sectionId(key),
                 label: text(key),
+                icon: SECTION_ICONS[key],
               }))}
             />
             {section(
@@ -684,6 +692,18 @@ function GreetingFace({ className }: { className?: string }): ReactElement {
     </svg>
   );
 }
+
+// The icon each section carries in the page's navigation: the lead
+// sources take the leads' menu icon.
+const SECTION_ICONS: Record<string, LucideIcon> = {
+  overall: Gauge,
+  'reports.revenueSection': ChartLine,
+  risks: TriangleAlert,
+  monthBusiness: CalendarDays,
+  'reports.lossSection': TrendingDown,
+  sourcesSection: Radar,
+  teamSection: Users,
+};
 
 // Each card's colour, from the theme's status tokens: today's tasks in the
 // info colour, the overdue ones in the destructive, the approvals waiting in

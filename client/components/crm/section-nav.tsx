@@ -1,3 +1,4 @@
+import type { LucideIcon } from 'lucide-react';
 import { useEffect, useState, type ReactElement } from 'react';
 
 // A long page's own navigation (the overview): a row of its sections that
@@ -8,6 +9,8 @@ import { useEffect, useState, type ReactElement } from 'react';
 export interface PageSection {
   readonly id: string;
   readonly label: string;
+  // Drawn before the label.
+  readonly icon?: LucideIcon;
 }
 
 export function SectionNav({
@@ -59,12 +62,15 @@ export function SectionNav({
               .getElementById(section.id)
               ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }}
-          className={`shrink-0 rounded-lg border px-3 py-1 text-sm whitespace-nowrap transition-colors ${
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1 text-sm whitespace-nowrap transition-colors ${
             active === section.id
-              ? 'border-border/60 bg-card font-medium text-foreground shadow-xs'
+              ? 'border-transparent bg-card font-medium text-foreground shadow-xs'
               : 'border-transparent text-muted-foreground hover:bg-card/60 hover:text-foreground'
           }`}
         >
+          {section.icon && (
+            <section.icon aria-hidden className='size-3.5 shrink-0' />
+          )}
           {section.label}
         </a>
       ))}
