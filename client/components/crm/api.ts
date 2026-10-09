@@ -10,7 +10,7 @@ import {
 } from '@nocobase/app-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from '@nocobase/i18n/client';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useSyncExternalStore } from 'react';
 import type {
   CrmRecord,
   Entity,
@@ -120,6 +120,19 @@ export const PAGE_SIZE = 20;
 // resolver, so Refine's useGetIdentity never resolves here.
 export function useSessionUserId(): string | undefined {
   return useSessionUser()?.id;
+}
+
+// The signed-in user's id as the authentication client holds it: Better Auth's
+// session store, which it updates itself on sign-in and sign-out, so a
+// component mounted above the sign-in page (the assistant's provider) sees
+// the change without a reload, where the cached query above is refetched only
+// when something asks for it again.
+export function useLiveSessionUserId(): string | undefined {
+  const client = useService(authenticationClientToken) as AuthClient;
+  return useSyncExternalStore(
+    (listener) => client.useSession.subscribe(listener),
+    () => client.useSession.get().data?.user.id,
+  );
 }
 
 // The signed-in user (id and display name), from the same query.

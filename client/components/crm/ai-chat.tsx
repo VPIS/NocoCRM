@@ -46,7 +46,7 @@ import {
   toText,
   useCrmText,
   useMetadata,
-  useSessionUserId,
+  useLiveSessionUserId,
   type Data,
 } from './api.js';
 import { crmToolRenderers } from './ai-tool-renderers.js';
@@ -168,7 +168,7 @@ export function CrmAssistantProvider({
   // does not reload the page, so without the user the panel kept reporting
   // no model until a refresh.
   const api = useApiClient();
-  const userId = useSessionUserId();
+  const userId = useLiveSessionUserId();
   const service = useMemo(
     () =>
       localizedService(new NocoBaseAIService(api), {
