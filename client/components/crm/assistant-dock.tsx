@@ -1,14 +1,8 @@
-import { ArrowUp, Sparkles } from 'lucide-react';
-import { useRef, useState, type KeyboardEvent, type ReactElement } from 'react';
+import { Sparkles } from 'lucide-react';
+import { useRef, useState, type ReactElement } from 'react';
 import { useLocation } from 'react-router';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '../ui/button.js';
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-} from '../ui/input-group.js';
 import {
   Tooltip,
   TooltipContent,
@@ -16,7 +10,8 @@ import {
   TooltipTrigger,
 } from '../ui/tooltip.js';
 import { toText, useCrmText, useMetadata } from './api.js';
-import { ask, focusComposer, useFocusReturn } from './assistant-ask.js';
+import { ask, useAskDraft, useFocusReturn } from './assistant-ask.js';
+import { AskComposer } from './assistant-ask-composer.js';
 import { useAssistantReadiness, usePanelOpen } from './assistant-state.js';
 import { useCurrentRecord, type CurrentRecord } from './current-record.js';
 
@@ -29,8 +24,11 @@ import { useCurrentRecord, type CurrentRecord } from './current-record.js';
 // record page's "Ask AI"; the AI cards keep their own "Ask AI", which asks
 // about the card. Pages keep 6rem empty at the bottom of what scrolls under
 // it (CrmFrame's pb-24, the record page's columns, the board's columns), so
-// their last row can be scrolled above it. On a phone it is a round button
-// in the corner that opens the panel. It hides while the panel is open, and
+// their last row can be scrolled above it. One line until it is clicked, it
+// then opens into the ask boxes' composer (assistant-ask-composer.tsx) with
+// its files and its model, and closes to one line again once focus leaves an
+// empty box. On a phone it is a round button in the corner that opens the
+// panel. It hides while the panel is open, and
 // on pages filled by panes of their own that cannot leave room for it.
 
 // Pages the dock is not shown on: the overview, which opens on an ask box of
@@ -85,17 +83,21 @@ export function AssistantDock(): ReactElement | null {
   const record = useCurrentRecord();
   const { pathname } = useLocation();
   const isMobile = useIsMobile();
-  const [value, setValue] = useState('');
+  const unavailable =
+    readiness.state === 'unavailable' ? readiness.reason : undefined;
+  const draft = useAskDraft(record, readiness.state !== 'ready');
+  // Focus is in the dock, or its model menu (which lies outside it) is open.
+  const [focused, setFocused] = useState(false);
+  const [modelMenu, setModelMenu] = useState(false);
+  // The suggestions show while the box is focused and empty, until Esc.
   const [listOpen, setListOpen] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const phoneRef = useRef<HTMLButtonElement>(null);
   const dockRef = useRef<HTMLDivElement>(null);
   useFocusReturn(() => (isMobile ? phoneRef.current : inputRef.current));
 
   if (!meta?.assistant || readiness.state === 'loading' || hiddenOn(pathname))
     return null;
-  const unavailable =
-    readiness.state === 'unavailable' ? readiness.reason : undefined;
   const questions = questionsFor(pathname, record);
   const placeholder =
     unavailable ??
@@ -104,66 +106,34 @@ export function AssistantDock(): ReactElement | null {
         ? text(`dock.placeholderFor.${record.entity}`)
         : text('dock.placeholder'),
     );
-
+  // Open while it is being used or holds something; one line otherwise.
+  const expanded =
+    !unavailable &&
+    (focused ||
+      modelMenu ||
+      Boolean(draft.value) ||
+      draft.files.attachments.length > 0);
   const send = (prompt: string): void => {
-    const question = prompt.trim();
-    if (!question || unavailable) return;
-    ask(question, record);
-    setValue('');
-    setListOpen(false);
-    focusComposer();
-  };
-  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
-    // Enter while an input method is composing only confirms the
-    // composition.
-    if (event.nativeEvent.isComposing || event.keyCode === 229) return;
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      send(value);
-    }
+    if (draft.send(prompt)) setFocused(false);
   };
 
   const box = (
-    <InputGroup
-      // The primitive fades the whole group while any control in it is
-      // disabled, and the send button is whenever the box is empty: only an
-      // unavailable chat fades the box here. On the card colour in both
-      // themes, so the page does not show through.
-      className={`crm-ai-border h-11 rounded-full [--crm-ai-lift:var(--shadow-lg)] has-disabled:bg-card dark:bg-card dark:has-disabled:bg-card ${
-        unavailable ? 'opacity-60' : 'has-disabled:opacity-100'
+    <AskComposer
+      draft={draft}
+      placeholder={placeholder}
+      disabled={Boolean(unavailable)}
+      expanded={expanded}
+      inputRef={inputRef}
+      // Lifted off the page as well as framed.
+      className={`[--crm-ai-lift:var(--shadow-lg)] ${
+        expanded ? 'rounded-3xl' : 'h-11 rounded-full'
       }`}
-    >
-      <InputGroupAddon className='pl-4'>
-        <Sparkles className='text-ai' />
-      </InputGroupAddon>
-      <InputGroupInput
-        ref={inputRef}
-        value={value}
-        disabled={Boolean(unavailable)}
-        placeholder={placeholder}
-        aria-label={placeholder}
-        onChange={(event) => setValue(event.target.value)}
-        onKeyDown={onKeyDown}
-      />
-      <InputGroupAddon align='inline-end' className='pr-1.5'>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <InputGroupButton
-                size='icon-sm'
-                aria-label={toText(text('send'))}
-                disabled={!value.trim() || Boolean(unavailable)}
-                className='rounded-full bg-ai text-ai-foreground hover:bg-ai/90 hover:text-ai-foreground disabled:bg-muted disabled:text-muted-foreground'
-                onClick={() => send(value)}
-              />
-            }
-          >
-            <ArrowUp />
-          </TooltipTrigger>
-          <TooltipContent>{toText(text('send'))}</TooltipContent>
-        </Tooltip>
-      </InputGroupAddon>
-    </InputGroup>
+      inputClassName='px-4 pt-3 pb-1 text-sm'
+      onModelMenu={setModelMenu}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') setListOpen(false);
+      }}
+    />
   );
 
   return (
@@ -197,17 +167,29 @@ export function AssistantDock(): ReactElement | null {
         ) : (
           <div
             ref={dockRef}
-            className='pointer-events-auto relative w-full max-w-md'
-            onFocus={() => setListOpen(true)}
-            onBlur={(event) => {
-              if (!dockRef.current?.contains(event.relatedTarget))
-                setListOpen(false);
+            className={`pointer-events-auto relative w-full ${
+              expanded ? 'max-w-xl' : 'max-w-md'
+            }`}
+            onFocus={() => {
+              if (!focused) setListOpen(true);
+              setFocused(true);
             }}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') {
-                setListOpen(false);
-                inputRef.current?.focus();
+            onBlur={(event) => {
+              const next = event.relatedTarget;
+              if (next) {
+                if (!dockRef.current?.contains(next)) setFocused(false);
+                return;
               }
+              // Focus went to no element: a click on the page, or another
+              // window (the file picker), which keeps the dock's element
+              // active and so does not close it.
+              window.setTimeout(() => {
+                if (
+                  document.hasFocus() &&
+                  !dockRef.current?.contains(document.activeElement)
+                )
+                  setFocused(false);
+              });
             }}
           >
             {unavailable ? (
@@ -222,33 +204,39 @@ export function AssistantDock(): ReactElement | null {
             ) : (
               box
             )}
-            {/* After the box in the document, so Tab moves from the input to
-                the suggestions; drawn above it. */}
-            {listOpen && !value && questions.length > 0 && !unavailable && (
-              <ul
-                aria-label={toText(text('dock.suggestions'))}
-                className='absolute bottom-full mb-2 flex w-full flex-col gap-0.5 rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg'
-              >
-                {questions.map((key) => {
-                  const question = toText(text(`dock.q.${key}`));
-                  return (
-                    <li key={key}>
-                      <Button
-                        variant='ghost'
-                        size='sm'
-                        className='w-full justify-start font-normal'
-                        // A click lands before the input's blur hides the list.
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => send(question)}
-                      >
-                        <Sparkles className='text-ai' />
-                        <span className='truncate'>{question}</span>
-                      </Button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+            {/* After the box in the document, so Tab moves from the box to
+                the suggestions; drawn above it. They send with the files
+                attached, on the model picked. */}
+            {focused &&
+              listOpen &&
+              !draft.value &&
+              !draft.files.attachments.length &&
+              questions.length > 0 &&
+              !unavailable && (
+                <ul
+                  aria-label={toText(text('dock.suggestions'))}
+                  className='absolute bottom-full mb-2 flex w-full flex-col gap-0.5 rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg'
+                >
+                  {questions.map((key) => {
+                    const question = toText(text(`dock.q.${key}`));
+                    return (
+                      <li key={key}>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          className='w-full justify-start font-normal'
+                          // A click lands before the box's blur hides the list.
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => send(question)}
+                        >
+                          <Sparkles className='text-ai' />
+                          <span className='truncate'>{question}</span>
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
           </div>
         )}
       </div>

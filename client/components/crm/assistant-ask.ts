@@ -225,3 +225,50 @@ export function useAskModel(): {
   }, []);
   return { models, model: findAIModel(models, key) ?? models[0], select };
 }
+
+// A question being written in one of the ask boxes: its text, its files and
+// the model picked, and sending it, which asks the panel for a new
+// conversation (from the page's record, when given) and empties the box.
+export interface AskDraft {
+  value: string;
+  setValue: (value: string) => void;
+  files: ReturnType<typeof useAskAttachments>;
+  models: readonly AIModel[];
+  model: AIModel | undefined;
+  selectModel: (key: string) => void;
+  canSend: boolean;
+  // Sends the text given (a suggested question) or else the box's own;
+  // false when there is nothing to send or the box cannot send yet.
+  send: (prompt?: string) => boolean;
+}
+
+export function useAskDraft(
+  record: CurrentRecord | undefined,
+  disabled: boolean,
+): AskDraft {
+  const files = useAskAttachments();
+  const { models, model, select } = useAskModel();
+  const [value, setValue] = useState('');
+  const ready = files.attachments.filter((item) => item.status === 'done');
+  const send = (prompt?: string): boolean => {
+    const question = (prompt ?? value).trim();
+    if (disabled || files.uploading || (!question && !ready.length))
+      return false;
+    ask(question, record, { attachments: ready, model });
+    setValue('');
+    files.clear();
+    focusComposer();
+    return true;
+  };
+  return {
+    value,
+    setValue,
+    files,
+    models,
+    model,
+    selectModel: select,
+    canSend:
+      !disabled && !files.uploading && Boolean(value.trim() || ready.length),
+    send,
+  };
+}

@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -38,9 +44,40 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
   };
 });
 vi.mock('../../client/components/crm/assistant-state.js', () => ({
+  CRM_ASSISTANT: 'crm-assistant',
   useAssistantReadiness: () => state.readiness,
   usePanelOpen: () => state.panelOpen,
 }));
+// The AI Employee plugin's service: the CRM employee with two models, and an
+// upload that answers with the stored file.
+vi.mock(
+  '../../client/extensions/nocobase-ai/index.js',
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import('../../client/extensions/nocobase-ai/index.js')
+      >();
+    return {
+      ...actual,
+      useAI: () => ({
+        employees: [{ username: 'crm-assistant', nickname: 'Noco' }],
+        models: [
+          { llmService: 'qwen', value: 'qwen-max', label: 'Qwen Max' },
+          { llmService: 'openai', value: 'gpt-5', label: 'GPT 5' },
+        ],
+        uploadFile: (file: File) =>
+          Promise.resolve({
+            id: `f-${file.name}`,
+            filename: file.name,
+            mimetype: file.type,
+            size: file.size,
+            url: `/files/${file.name}`,
+          }),
+      }),
+    };
+  },
+);
+const MODEL = { llmService: 'qwen', model: 'qwen-max' };
 vi.mock('../../client/hooks/use-mobile.js', () => ({
   useIsMobile: () => state.mobile,
 }));
@@ -76,6 +113,7 @@ describe('the assistant dock', () => {
     state.panelOpen = false;
     state.mobile = false;
     events.length = 0;
+    localStorage.clear();
     window.addEventListener('crm-assistant', listen);
   });
   afterEach(() => window.removeEventListener('crm-assistant', listen));
@@ -100,6 +138,7 @@ describe('the assistant dock', () => {
         prompt: english('dock.q.leads.first'),
         send: true,
         newConversation: true,
+        model: MODEL,
       },
     ]);
   });
@@ -126,6 +165,7 @@ describe('the assistant dock', () => {
         prompt: 'Who decides?',
         send: true,
         newConversation: true,
+        model: MODEL,
         entity: 'leads',
         recordId: 'l1',
         name: 'Tang Rui',
@@ -146,16 +186,64 @@ describe('the assistant dock', () => {
     expect(events[0]?.prompt).toBe('逾期');
   });
 
-  it('moves from the input to the suggestions with Tab', async () => {
+  it('opens into the composer when clicked, and Tab goes through its tools to the suggestions', async () => {
     const user = userEvent.setup();
     renderDock('/crm/leads');
-    await user.click(screen.getByRole('textbox'));
+    // One line: no files or model until it is used.
+    expect(
+      screen.queryByRole('button', { name: english('dock.attach') }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('combobox', { name: english('dock.model') }),
+    ).toBeNull();
+    const input = screen.getByRole('textbox');
+    await user.click(input);
+    expect(input).toHaveFocus();
     // The send button is disabled while the box is empty, so Tab skips it.
+    await user.tab();
+    expect(
+      screen.getByRole('button', { name: english('dock.attach') }),
+    ).toHaveFocus();
+    await user.tab();
+    expect(
+      screen.getByRole('combobox', { name: english('dock.model') }),
+    ).toHaveFocus();
     await user.tab();
     expect(
       screen.getByRole('button', { name: english('dock.q.leads.first') }),
     ).toHaveFocus();
     expect(screen.getByRole('list')).toBeTruthy();
+    // Leaving an empty box closes it to one line again.
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    act(() => outside.focus());
+    outside.remove();
+    expect(
+      screen.queryByRole('button', { name: english('dock.attach') }),
+    ).toBeNull();
+  });
+
+  it('keeps itself open while it holds a file, and sends the file with the record', async () => {
+    const user = userEvent.setup();
+    renderDock('/crm/leads/l1', { name: 'Tang Rui' });
+    await user.click(screen.getByRole('textbox'));
+    await user.upload(
+      screen.getByTestId('ask-files'),
+      new File(['x'], 'quote.pdf', { type: 'application/pdf' }),
+    );
+    expect(await screen.findByText('quote.pdf')).toBeTruthy();
+    const send = screen.getByRole('button', { name: english('send') });
+    await waitFor(() => expect(send).toBeEnabled());
+    await user.click(send);
+    expect(events[0]).toMatchObject({
+      prompt: '',
+      send: true,
+      newConversation: true,
+      entity: 'leads',
+      recordId: 'l1',
+      attachments: [{ filename: 'quote.pdf', status: 'done' }],
+      model: MODEL,
+    });
   });
 
   it('keeps the text when Esc closes the suggestions', async () => {
