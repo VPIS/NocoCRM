@@ -22,10 +22,6 @@ const wording = {
   opportunityName: ['{{name}} opportunity', '{{name}}商机'],
   workspace: ['Sales workspace', '销售工作台'],
   dashboard: ['Overview', '工作台'],
-  dashboardDescription: [
-    'Your pipeline, priorities, and next conversations — in one place.',
-    '客户、商机和下一步行动，尽在掌握',
-  ],
   // The assistant's dock at the bottom of the page (assistant-dock.tsx) and
   // the questions it suggests, by page.
   dock: {

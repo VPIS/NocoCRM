@@ -276,7 +276,9 @@ export function Metric({
       )}
     </CardContent>
   );
-  const frame = `gap-0 py-4 shadow-none ${toText(
+  // Framed as the list pages' cards are: a faint border, not the Card
+  // primitive's ring, and the lightest shadow; chosen, the primary's.
+  const frame = `gap-0 border border-border/60 py-4 shadow-xs ring-0 ${toText(
     active ? 'border-primary ring-1 ring-primary' : '',
   )}`;
   return onClick ? (

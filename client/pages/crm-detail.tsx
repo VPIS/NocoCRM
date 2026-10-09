@@ -40,7 +40,7 @@ import {
   ArrowRightLeft,
   Mail,
   Merge,
-  ClipboardCheck,
+  ListChecks,
   ContactRound,
   CirclePlus,
   ChevronDown,
@@ -2330,7 +2330,7 @@ export function HistoryFeed({
                   const Icon = taskEvent
                     ? SquareCheckBig
                     : approvalEvent
-                      ? ClipboardCheck
+                      ? ListChecks
                       : contactsOnly(event)
                         ? ContactRound
                         : filesOnly(event)

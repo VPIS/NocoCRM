@@ -17,7 +17,6 @@ import {
 } from '../components/crm/record-drawer.js';
 import {
   ArrowUpRight,
-  ClipboardCheck,
   Clock,
   ContactRound,
   History,
@@ -25,8 +24,10 @@ import {
   Paperclip,
   Plus,
   Star,
-  Target,
   Trash2,
+  Handshake,
+  ListChecks,
+  Radar,
   Ellipsis,
   X,
   type LucideIcon,
@@ -914,13 +915,15 @@ export default function EntityDetail({
     buttons,
     status,
   });
+  // Each object's tab carries its icon in the menu (client/routes.ts).
   const tabIcons: Record<string, LucideIcon> = {
     historyTab: History,
     tasks: SquareCheckBig,
     opportunityContacts: ContactRound,
     contacts: ContactRound,
-    opportunities: Target,
-    approvals: ClipboardCheck,
+    leads: Radar,
+    opportunities: Handshake,
+    approvals: ListChecks,
     attachments: Paperclip,
     mail: Mail,
   };

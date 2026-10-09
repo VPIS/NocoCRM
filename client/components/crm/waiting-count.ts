@@ -3,8 +3,15 @@ import {
   useInboxRefresh,
   useInboxUnreadCount,
 } from '@nocobase/app-plugin-notification-in-app/client/inbox';
+import { useQuery } from '@tanstack/react-query';
 import { inboxBadgeText, useDocumentTitleBadge } from '../inbox-badge.js';
-import { useCrmQuery, useMetadata } from './api.js';
+import {
+  useCrmApi,
+  useCrmQuery,
+  useCrmScopeKey,
+  useMetadata,
+  type ListData,
+} from './api.js';
 
 // The count beside the inbox in the menu and leading the browser tab's title,
 // "(3) NocoCRM": the AI's suggestions waiting on the reader (the inbox's To do,
@@ -32,4 +39,24 @@ export function useInboxCount(): number {
   const count = (shown ? (data?.count ?? 0) : 0) + unread;
   useDocumentTitleBadge(inboxBadgeText(count));
   return count;
+}
+
+// How many approvals wait on the reader's decision, for the count beside
+// Approvals in the menu: submitted to them and not yet decided. Only for
+// whoever may decide approvals; read again every half minute and at once
+// whenever the CRM's data refreshes (a decision taken, one submitted here).
+export function useApprovalsToDecide(): number {
+  const { data: meta } = useMetadata();
+  const api = useCrmApi();
+  const scopeKey = useCrmScopeKey();
+  const me = meta?.users.find((u) => u.id === meta.userId);
+  const decides = Boolean(me?.canApprove);
+  const path = `approvals?approverId=${meta?.userId ?? ''}&status=pending&pageSize=1`;
+  const { data } = useQuery({
+    queryKey: [...scopeKey, path],
+    queryFn: () => api<ListData>(path),
+    enabled: decides,
+    refetchInterval: 30000,
+  });
+  return decides ? (data?.total ?? 0) : 0;
 }

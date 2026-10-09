@@ -135,6 +135,10 @@ const RecordDrawer = lazy(() =>
   })),
 );
 
+// Framed as the list pages' cards and the task list are: a faint border, not
+// the Card primitive's ring, and the lightest shadow.
+const FRAME = 'border border-border/60 shadow-xs ring-0';
+
 export default function DashboardPage(): ReactElement {
   const drawer = useRecordDrawerState();
   // Loaded on the first open and kept mounted after, so closing animates.
@@ -225,7 +229,7 @@ export default function DashboardPage(): ReactElement {
     columns: [string, string][],
     keyOf: (row: Data) => string,
   ): ReactElement => (
-    <Card className='shadow-none'>
+    <Card className={FRAME}>
       <CardHeader>
         <CardTitle className='text-base'>{text(title)}</CardTitle>
       </CardHeader>
@@ -250,7 +254,6 @@ export default function DashboardPage(): ReactElement {
     >
       <CrmFrame
         title={text('dashboard')}
-        description={text('dashboardDescription')}
         titleAside={
           <div className='flex rounded-lg border p-0.5'>
             {(['mine', 'team'] as const).map((value) => (
@@ -365,7 +368,7 @@ export default function DashboardPage(): ReactElement {
                     onClick={() => openList('accounts', 'customers')}
                   />
                 </div>
-                <Card className='shadow-none'>
+                <Card className={FRAME}>
                   <CardHeader className='flex flex-row items-center justify-between'>
                     <CardTitle className='text-base'>
                       {text('funnel')}
@@ -626,7 +629,7 @@ function AgendaCard({
     }
   };
   return (
-    <Card className='shadow-none'>
+    <Card className={FRAME}>
       <CardHeader className='flex flex-row items-center justify-between'>
         <CardTitle className='text-base'>
           {text(
