@@ -208,8 +208,9 @@ export function RecordMailPanel({
   else if (threads.length === 0)
     body = <Empty icon={<Mail />} title={toText(text('mail.empty'))} />;
   else
+    // A white card, as the Tasks tab's list is.
     body = (
-      <ul className='divide-y divide-border rounded-lg border border-border'>
+      <ul className='divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60 bg-card shadow-xs'>
         {threads.map(({ key, latest: message, unread }) => {
           const open = key === selected;
           return (

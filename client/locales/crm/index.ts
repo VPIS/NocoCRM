@@ -198,6 +198,22 @@ const wording = {
   region: ['Region', '地区'],
   loadMore: ['Load more', '加载更多'],
   justNow: ['just now', '刚刚'],
+  // The line heading a record's tab, as the Mail tab's does: what the tab
+  // lists, by the record's kind.
+  tabScope: {
+    tasks: ['Tasks linked to this {{entity}}', '关联到此{{entity}}的任务'],
+    approvals: ['Approvals for this {{entity}}', '此{{entity}}的审批'],
+    contacts: ['Contacts at this {{entity}}', '此{{entity}}的联系人'],
+    opportunities: [
+      'Opportunities with this {{entity}}',
+      '关联到此{{entity}}的商机',
+    ],
+    leads: ['Leads converted into this {{entity}}', '转化为此{{entity}}的线索'],
+    dealContacts: [
+      'The people on this opportunity and the others at its account',
+      '参与此商机的人，以及其客户的其他联系人',
+    ],
+  },
   // The heading over a record page's particulars when they are one list.
   detailsGroup: ['Details', '详情'],
   requiredField: ['This field is required', '此字段必填'],

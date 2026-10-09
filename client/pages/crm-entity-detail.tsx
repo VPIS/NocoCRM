@@ -100,6 +100,7 @@ import {
   DetailTabBar,
   MailCount,
   HistoryFeed,
+  TabHeading,
   InfoGroup,
   InfoRow,
   RecordAttachments,
@@ -458,21 +459,27 @@ export default function EntityDetail({
         />
       ) : activeTab === 'approvals' ? (
         <div className='space-y-3'>
-          {editable && Boolean(meta.permissions.approvals.create) && (
-            <Button
-              size='sm'
-              variant='outline'
-              onClick={() =>
-                setForm({
-                  entity: 'approvals',
-                  initial: { opportunityId: id },
-                })
-              }
-            >
-              <Plus />
-              {text('newApproval')}
-            </Button>
-          )}
+          <TabHeading
+            scope={text('tabScope.approvals', {
+              entity: text('entity.opportunities'),
+            })}
+          >
+            {editable && Boolean(meta.permissions.approvals.create) && (
+              <Button
+                size='sm'
+                variant='outline'
+                onClick={() =>
+                  setForm({
+                    entity: 'approvals',
+                    initial: { opportunityId: id },
+                  })
+                }
+              >
+                <Plus />
+                {text('newApproval')}
+              </Button>
+            )}
+          </TabHeading>
           {!approvals.length ? (
             <p className='text-sm text-muted-foreground'>{text('noRecords')}</p>
           ) : (
@@ -492,24 +499,30 @@ export default function EntityDetail({
         </div>
       ) : activeTab === 'tasks' ? (
         <div className='space-y-3'>
-          {entity !== 'tasks' && Boolean(meta.permissions.tasks.create) && (
-            <Button
-              size='sm'
-              variant='outline'
-              onClick={() =>
-                setForm({
-                  entity: 'tasks',
-                  initial: relatedInput,
-                  // The record's name and its account's, so the record
-                  // chip names what the task starts linked to.
-                  titles: { ...names, [id]: contextName ?? '' },
-                })
-              }
-            >
-              <Plus />
-              {text('newTask')}
-            </Button>
-          )}
+          <TabHeading
+            scope={text('tabScope.tasks', {
+              entity: text(`entity.${toText(entity)}`),
+            })}
+          >
+            {entity !== 'tasks' && Boolean(meta.permissions.tasks.create) && (
+              <Button
+                size='sm'
+                variant='outline'
+                onClick={() =>
+                  setForm({
+                    entity: 'tasks',
+                    initial: relatedInput,
+                    // The record's name and its account's, so the record
+                    // chip names what the task starts linked to.
+                    titles: { ...names, [id]: contextName ?? '' },
+                  })
+                }
+              >
+                <Plus />
+                {text('newTask')}
+              </Button>
+            )}
+          </TabHeading>
           {/* Drawn as the task list draws them. */}
           <TaskCards
             rows={tasks}
@@ -573,6 +586,7 @@ export default function EntityDetail({
         // button where this object can start one of them.
         <RelatedList
           entity={activeTab as Entity}
+          from={entity}
           records={rows(detail.related[activeTab as Entity]) as CrmRecord[]}
           total={detail.relatedTotals?.[activeTab as Entity]}
           base={`${activeTab}?${linkParam}`}
@@ -1213,6 +1227,7 @@ export default function EntityDetail({
 
 function RelatedList({
   entity,
+  from,
   records: firstPage,
   total,
   base,
@@ -1220,6 +1235,8 @@ function RelatedList({
   onCreate,
 }: {
   entity: Entity;
+  // The kind of the record whose tab it is, which its heading names.
+  from: Entity;
   // The first page, with the server's total and the path for the rest.
   records: CrmRecord[];
   total?: number;
@@ -1283,12 +1300,18 @@ function RelatedList({
   const departed = entity === 'contacts' ? records.filter(left) : [];
   return (
     <div className='space-y-3'>
-      {onCreate && (
-        <Button size='sm' variant='outline' onClick={onCreate}>
-          <Plus />
-          {text('newRecord', { entity: text(`entity.${toText(entity)}`) })}
-        </Button>
-      )}
+      <TabHeading
+        scope={text(`tabScope.${entity}`, {
+          entity: text(`entity.${from}`),
+        })}
+      >
+        {onCreate && (
+          <Button size='sm' variant='outline' onClick={onCreate}>
+            <Plus />
+            {text('newRecord', { entity: text(`entity.${toText(entity)}`) })}
+          </Button>
+        )}
+      </TabHeading>
       {!records.length ? (
         <p className='text-sm text-muted-foreground'>{text('noRecords')}</p>
       ) : (
@@ -1518,12 +1541,14 @@ function OpportunityContacts({
   return (
     <div className='space-y-4'>
       <ErrorNotice error={error} />
-      {onCreate && (
-        <Button size='sm' variant='outline' onClick={onCreate}>
-          <Plus />
-          {text('newRecord', { entity: text('entity.contacts') })}
-        </Button>
-      )}
+      <TabHeading scope={text('tabScope.dealContacts')}>
+        {onCreate && (
+          <Button size='sm' variant='outline' onClick={onCreate}>
+            <Plus />
+            {text('newRecord', { entity: text('entity.contacts') })}
+          </Button>
+        )}
+      </TabHeading>
       <div className='space-y-2'>
         <h4 className='text-xs font-medium text-muted-foreground'>
           {text('onThisOpportunity')}

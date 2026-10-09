@@ -618,25 +618,31 @@ function LeadDetail({ id }: { id: string }): ReactElement {
         <div>
           {tab === 'tasks' ? (
             <div className='space-y-3'>
-              {/* Scheduling lives inside its tab, the way upload lives in
-                    attachments. A converted lead rejects it server-side. */}
-              {!converted && Boolean(meta.permissions.tasks.create) && (
-                <Button
-                  size='sm'
-                  variant='outline'
-                  onClick={() =>
-                    setForm({
-                      entity: 'tasks',
-                      initial: { leadId: id },
-                      // The lead's name, so its chip names it.
-                      titles: { ...names, [id]: contextName ?? '' },
-                    })
-                  }
-                >
-                  <Plus />
-                  {text('newTask')}
-                </Button>
-              )}
+              {/* A converted lead rejects a new task server-side, so it
+                  offers none. */}
+              <TabHeading
+                scope={text('tabScope.tasks', {
+                  entity: text('entity.leads'),
+                })}
+              >
+                {!converted && Boolean(meta.permissions.tasks.create) && (
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    onClick={() =>
+                      setForm({
+                        entity: 'tasks',
+                        initial: { leadId: id },
+                        // The lead's name, so its chip names it.
+                        titles: { ...names, [id]: contextName ?? '' },
+                      })
+                    }
+                  >
+                    <Plus />
+                    {text('newTask')}
+                  </Button>
+                )}
+              </TabHeading>
               {/* Drawn as the task list draws them. */}
               <TaskCards
                 rows={tasks}
@@ -950,6 +956,25 @@ function DetailBack({ entity }: { entity: Entity }): ReactElement | null {
         ·
       </span>
       <span>{sentence(text(`entity.${toText(entity)}`))}</span>
+    </div>
+  );
+}
+
+// The line heading a record's tab, as the Mail tab's does: what the tab
+// lists on the left, the way to add one (when there is one) on the right.
+export function TabHeading({
+  scope,
+  children,
+}: {
+  scope: string;
+  children?: ReactNode;
+}): ReactElement {
+  return (
+    <div className='flex items-center gap-2'>
+      <p className='min-w-0 flex-1 truncate text-xs text-muted-foreground'>
+        {scope}
+      </p>
+      {children}
     </div>
   );
 }
