@@ -7,7 +7,8 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react';
-import { useApiClient } from '@nocobase/app-client';
+import { useApiClient, useToaster } from '@nocobase/app-client';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Flag,
   Maximize2,
@@ -25,6 +26,7 @@ import {
   NocoBaseAIRootProvider,
   NocoBaseAIService,
   getAIEmployeeAvatar,
+  useAI,
   useAIChat,
   useAIChatBase,
   useAIChatMessages,
@@ -42,8 +44,14 @@ import { sentence, toText, useCrmText, useMetadata, type Data } from './api.js';
 import { crmToolRenderers } from './ai-tool-renderers.js';
 import {
   CRM_ASSISTANT,
+  clearConversationRequest,
+  publishPanelChat,
+  setChatMounted,
+  takeDeleteRequest,
+  useDeleteRequest,
   publishPanelOpen,
   useAssistantReadiness,
+  useConversationRequest,
 } from './assistant-state.js';
 
 // The CRM assistant: the AI Employee plugin's chat, mounted in a side panel,
@@ -213,6 +221,9 @@ function CrmAssistantPanel(): ReactElement | null {
     // over it.
     document.body.classList.toggle('crm-assistant-open', open && !expanded);
     publishPanelOpen(open);
+    // A request the chat had no time to carry out does not wait for the
+    // next opening.
+    if (!open) clearConversationRequest();
     try {
       sessionStorage.setItem(openKey, open ? '1' : '0');
     } catch {
@@ -269,9 +280,23 @@ function CrmAssistantPanel(): ReactElement | null {
         reuseConversation: data.newConversation !== true,
       });
     };
+    // The sidebar's conversation list asks for a conversation, or a new one
+    // (assistant-state.ts): the panel opens, and its chat carries the
+    // request out once mounted (OpenRequestedConversation). Opened by the
+    // request, it does not restore the remembered conversation over it.
+    const showConversation = (): void => {
+      if (controller.getSnapshot().open) return;
+      shortcutOpensPanel = true;
+      controller.open();
+    };
     window.addEventListener('crm-assistant', show);
+    window.addEventListener('crm-assistant-conversation', showConversation);
     return () => {
       window.removeEventListener('crm-assistant', show);
+      window.removeEventListener(
+        'crm-assistant-conversation',
+        showConversation,
+      );
     };
   }, [controller]);
   // Expand and close, as the plugin's ChatSurfaceActions offers them but
@@ -365,6 +390,8 @@ function ConfiguredChat({
         defaultEmployee={CRM_ASSISTANT}
       >
         <RememberConversation />
+        <OpenRequestedConversation />
+        <DeleteRequestedConversation />
         <AIChatWindow
           className='h-full'
           showEmployeeSelector={false}
@@ -520,6 +547,26 @@ function RememberConversation(): null {
   } = useAIChat();
   // Once per mount: a ref, since nothing renders from it.
   const restoredRef = useRef(false);
+  // What the chat shows and holds, for the sidebar's conversation list:
+  // the conversation it marks, and when to refresh its copy of the list
+  // (read state included, so a conversation opened here loses its dot there).
+  const signature = conversations
+    .map(
+      (item) =>
+        `${item.id}:${item.title}:${item.updatedAt}:${item.unread ? 1 : 0}`,
+    )
+    .join('|');
+  useEffect(() => {
+    publishPanelChat({
+      active:
+        activeConversationId === AI_DRAFT_CONVERSATION_ID
+          ? undefined
+          : activeConversationId,
+      signature,
+    });
+  }, [activeConversationId, signature]);
+  // The chat unmounts when the panel closes: nothing is shown then.
+  useEffect(() => () => publishPanelChat({}), []);
   useEffect(() => {
     try {
       if (activeConversationId !== AI_DRAFT_CONVERSATION_ID)
@@ -563,5 +610,97 @@ function RememberConversation(): null {
     conversationsLoading,
     selectConversation,
   ]);
+  return null;
+}
+
+// Carries out what the sidebar asked the panel for (assistant-state.ts): a
+// new conversation, at once, or an existing one once the conversation list
+// has loaded. One the list does not hold (deleted elsewhere, or the list
+// failed to load) leaves a new conversation, with an error toast, and the
+// sidebar's list refreshed so its row goes.
+function OpenRequestedConversation(): null {
+  const request = useConversationRequest();
+  const {
+    conversations,
+    conversationsLoading,
+    selectConversation,
+    startNewConversation,
+  } = useAIChat();
+  const { listConversations } = useAI();
+  const toaster = useToaster();
+  const queryClient = useQueryClient();
+  const { text } = useCrmText();
+  // The list has loaded once this mount (a load ran, or it was there).
+  const loadedRef = useRef(false);
+  useEffect(() => {
+    if (conversationsLoading) loadedRef.current = true;
+    if (!request) return;
+    if (request === 'new') {
+      clearConversationRequest();
+      // A reload before its first message starts fresh too.
+      try {
+        localStorage.removeItem(conversationKey);
+      } catch {
+        // Storage may be unavailable; nothing was remembered then.
+      }
+      startNewConversation();
+      return;
+    }
+    if (conversationsLoading) return;
+    if (!loadedRef.current && !conversations.length) return;
+    clearConversationRequest();
+    if (conversations.some((item) => item.id === request)) {
+      selectConversation(request);
+      return;
+    }
+    // Not in this chat's list, which loads once per opening and narrows to
+    // its search: the server says whether the conversation still exists.
+    void listConversations()
+      .then((all) => all.some((item) => item.id === request))
+      .catch(() => false)
+      .then((exists) => {
+        if (exists) {
+          selectConversation(request);
+          return;
+        }
+        startNewConversation();
+        toaster.show({ type: 'error', title: toText(text('chats.missing')) });
+        void queryClient.invalidateQueries({
+          queryKey: ['ai', 'conversations'],
+        });
+      });
+  }, [
+    request,
+    conversations,
+    conversationsLoading,
+    listConversations,
+    selectConversation,
+    startNewConversation,
+    toaster,
+    queryClient,
+    text,
+  ]);
+  return null;
+}
+
+// Deletes what the sidebar asks to delete while this chat is mounted
+// (assistant-state.ts), through the plugin's own removal, which also starts
+// a new conversation when the deleted one is on screen.
+function DeleteRequestedConversation(): null {
+  const request = useDeleteRequest();
+  const { removeConversation } = useAIChat();
+  useEffect(() => {
+    setChatMounted(true);
+    return () => setChatMounted(false);
+  }, []);
+  useEffect(() => {
+    if (!request) return;
+    const taken = takeDeleteRequest();
+    if (!taken) return;
+    removeConversation(taken.id).then(
+      () => taken.settle(),
+      (error: unknown) => taken.settle(error ?? new Error('delete failed')),
+    );
+  }, [request, removeConversation]);
   return null;
 }

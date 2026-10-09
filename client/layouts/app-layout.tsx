@@ -31,6 +31,7 @@ import {
 import { useMailUnreadCount } from '../components/crm/mail-unread.js';
 import { DemoBanner } from '../components/crm/demo-banner.js';
 import { AssistantDock } from '../components/crm/assistant-dock.js';
+import { SidebarChats } from './components/sidebar-chats.js';
 import { AppBrand } from './components/app-brand.js';
 import { HeaderActions } from './components/header-actions.js';
 import { AppSidebarFooter } from './components/sidebar-footer.js';
@@ -99,6 +100,9 @@ export function AppLayout({
                 sections
               />
             </NavigationBadgesContext>
+            {/* Application change: the user's conversations with the
+                assistant, under the menu (sidebar-chats.tsx). */}
+            <SidebarChats />
           </AppSidebar>
           {/* Application change: crm-page-main lets the assistant panel push header and page aside (styles.css). */}
           <div className='crm-page-main flex min-w-0 flex-1 flex-col'>

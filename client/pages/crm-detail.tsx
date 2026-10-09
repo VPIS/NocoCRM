@@ -120,6 +120,7 @@ import {
 } from '../components/ui/dropdown-menu.js';
 import { InlineField } from '../components/crm/inline.js';
 import { useAnnounceRecord } from '../components/crm/current-record.js';
+import { ConfirmDialog } from '../components/crm/confirm-dialog.js';
 import { useRecordBreadcrumb } from '../components/crm/record-breadcrumb.js';
 import { ConvertDialog } from '../components/crm/conversion.js';
 import { LeadDuplicates } from '../components/crm/lead-merge.js';
@@ -1492,51 +1493,10 @@ export function RecordAttachments({
   );
 }
 
-export function ConfirmDialog({
-  title,
-  description,
-  busy,
-  confirmDisabled = false,
-  onCancel,
-  onConfirm,
-}: {
-  title: string;
-  description: ReactNode;
-  busy: boolean;
-  // The description explains why; the confirm button simply cannot proceed.
-  confirmDisabled?: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-}): ReactElement {
-  const { text } = useCrmText();
-  return (
-    <Dialog
-      open
-      onOpenChange={(next) => {
-        if (!next && !busy) onCancel();
-      }}
-    >
-      <DialogContent showCloseButton={false}>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button variant='outline' disabled={busy} onClick={onCancel}>
-            {text('cancel')}
-          </Button>
-          <Button
-            variant='destructive'
-            disabled={busy || confirmDisabled}
-            onClick={onConfirm}
-          >
-            {busy ? text('saving') : text('confirm')}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
+// Moved to client/components/crm/confirm-dialog.tsx, where the layout's
+// sidebar takes it too without loading this page; re-exported for the
+// pages that import it from here.
+export { ConfirmDialog };
 
 // "Updated" on its own says nothing, so each changed field is listed with the
 // value it was given, after the value it replaced where the entry kept one

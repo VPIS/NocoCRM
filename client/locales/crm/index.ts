@@ -22,6 +22,35 @@ const wording = {
   opportunityName: ['{{name}} opportunity', '{{name}}商机'],
   workspace: ['Sales workspace', '销售工作台'],
   dashboard: ['Overview', '工作台'],
+  // The user's conversations with the assistant, under the menu
+  // (sidebar-chats.tsx); "conversation" as the panel's own list says it.
+  chats: {
+    title: ['Conversations', '对话'],
+    new: ['New conversation', '新对话'],
+    untitled: ['New conversation', '新对话'],
+    empty: [
+      'No conversations yet. Ask anything at the bottom of the page to start one.',
+      '还没有对话。在页面底部输入问题即可开始。',
+    ],
+    failed: ['Conversations could not be loaded.', '对话加载失败。'],
+    retry: ['Retry', '重试'],
+    unread: ['Unread', '未读'],
+    loading: ['Loading…', '正在加载…'],
+    missing: ['This conversation no longer exists', '这段对话已不存在'],
+    actions: ['Actions for "{{title}}"', '“{{title}}”的操作'],
+    delete: ['Delete', '删除'],
+    deleting: ['Deleting…', '正在删除…'],
+    deleteTitle: ['Delete conversation "{{title}}"?', '删除对话“{{title}}”？'],
+    deleteHint: [
+      'Its messages are deleted with it. This cannot be undone.',
+      '其中的消息会一并删除，此操作无法撤销。',
+    ],
+    deleteFailed: [
+      'The conversation could not be deleted. Try again.',
+      '对话删除失败，请重试。',
+    ],
+    deleted: ['Deleted conversation "{{title}}"', '已删除对话“{{title}}”'],
+  },
   // The assistant's dock at the bottom of the page (assistant-dock.tsx) and
   // the questions it suggests, by page.
   dock: {
