@@ -158,12 +158,21 @@
   animation: crm-flash 1.6s ease-out;
 }
 
-/* A scroller whose bar shows only while it scrolls (revealScrollbar in
-   client/components/crm/common.tsx marks it so): a thin bar, transparent
-   while still, so showing it moves nothing. */
+/* A scroller whose bar shows only while it is pointed at or scrolls
+   (revealScrollbar in client/components/crm/common.tsx marks the latter):
+   a thin bar on no track, faint under the pointer and firmer while it
+   moves, transparent while still, so showing it moves nothing. */
 @utility scroll-quiet {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
+  &:hover {
+    scrollbar-color: color-mix(
+        in oklab,
+        var(--muted-foreground) 25%,
+        transparent
+      )
+      transparent;
+  }
   &[data-scrolling] {
     scrollbar-color: color-mix(
         in oklab,

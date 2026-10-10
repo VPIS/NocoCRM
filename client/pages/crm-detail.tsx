@@ -16,6 +16,7 @@ import {
   useState,
   type ReactElement,
   type ReactNode,
+  type UIEvent,
 } from 'react';
 import { useTranslation } from '@nocobase/i18n/client';
 import {
@@ -883,6 +884,24 @@ export function DetailColumns({
   // In the drawer the page is already on the popover's white, with its own
   // padding: nothing to reach past.
   const inDrawer = useRecordDrawer()?.inDrawer ?? false;
+  // Side by side, the intro folds away once the tab's content is scrolled
+  // down and comes back at its top, as if it had scrolled away with it.
+  // Apart, so the content's own height change cannot undo it: it folds past
+  // 40px down, and only where the content is long enough to stay scrolled
+  // once the intro's room is added; it returns at the very top.
+  const [introAway, setIntroAway] = useState(false);
+  const introRef = useRef<HTMLDivElement>(null);
+  const scrollTab = (event: UIEvent<HTMLElement>): void => {
+    revealScrollbar(event);
+    const box = event.currentTarget;
+    if (box.scrollTop <= 0) setIntroAway(false);
+    else if (
+      box.scrollTop > 40 &&
+      box.scrollHeight - box.clientHeight >
+        (introRef.current?.offsetHeight ?? 0) + 40
+    )
+      setIntroAway(true);
+  };
   return (
     <CrmFrame
       // The page is the window's height; side by side its two columns scroll
@@ -958,34 +977,46 @@ export function DetailColumns({
               {/* The tabs head the left column: stacked, they stay in view as
                   the page scrolls; side by side, their content scrolls below
                   them. */}
-              {/* Side by side the column scrolls as one: the intro goes up
-                  and away, and the tabs stop under the header and stay, the
-                  content passing beneath them. Stacked, the page scrolls and
-                  the tabs stick to its top just the same. Its scrollbar's room
-                  is kept whether or not a tab scrolls, so switching tabs never
-                  narrows the column and re-wraps the intro. */}
-              <section
-                className='flex min-w-0 flex-col @3xl:min-h-0 @3xl:overflow-y-auto @3xl:[scrollbar-gutter:stable] scroll-quiet'
-                onScroll={revealScrollbar}
-              >
+              {/* Side by side only the tab's content scrolls, its scrollbar
+                  beside it alone; the tabs stay, and the intro folds away as
+                  the content scrolls down (a long intro, unfolded, scrolls
+                  within a part of the column of its own). Stacked, the page
+                  scrolls and the tabs stick to its top. */}
+              <section className='flex min-w-0 flex-col @3xl:min-h-0 @3xl:overflow-hidden'>
                 {intro ? (
-                  <div className='pb-7 @3xl:pr-12 @3xl:pl-10 md:@3xl:pr-16 md:@3xl:pl-16'>
-                    {intro}
+                  <div
+                    className={`grid shrink-0 transition-[grid-template-rows,opacity] duration-200 ease-out ${
+                      introAway
+                        ? '@3xl:grid-rows-[0fr] @3xl:opacity-0'
+                        : 'grid-rows-[1fr]'
+                    }`}
+                  >
+                    <div className='min-h-0 overflow-hidden'>
+                      <div
+                        ref={introRef}
+                        className='pb-7 @3xl:max-h-[40vh] @3xl:overflow-y-auto @3xl:pr-12 @3xl:pl-10 md:@3xl:pr-16 md:@3xl:pl-16 scroll-quiet'
+                        onScroll={revealScrollbar}
+                      >
+                        {intro}
+                      </div>
+                    </div>
                   </div>
                 ) : null}
                 {/* The gap under the tabs is the bar's own, on the page's
                     background, so content scrolling up passes under it
                     rather than meeting the tabs' edge. */}
-                <div className='sticky top-0 z-10 flex flex-wrap items-center bg-background pt-1 pb-4 @3xl:pt-0 @3xl:pr-12 @3xl:pl-10 md:@3xl:pr-16 md:@3xl:pl-16'>
+                <div className='sticky top-0 z-10 flex shrink-0 flex-wrap items-center bg-background pt-1 pb-4 @3xl:pt-0 @3xl:pr-12 @3xl:pl-10 md:@3xl:pr-16 md:@3xl:pl-16'>
                   {tabBar}
                 </div>
-                {/* At least the column's height, so a short tab leaves the
-                    column where it was scrolled to rather than snapping the
-                    intro back into view; its foot keeps room for the
-                    assistant's box over the page, open as well as closed, so
-                    the last entry scrolls clear of it. It never shrinks to the
-                    column, or its minimum would cut its own end off. */}
-                <div className='min-w-0 shrink-0 @3xl:min-h-full @3xl:pr-12 @3xl:pl-10 @3xl:pb-36 md:@3xl:pr-16 md:@3xl:pl-16'>
+                {/* The tab's content, which alone scrolls side by side; its
+                    foot keeps room for the assistant's box over the page,
+                    open as well as closed, so the last entry scrolls clear of
+                    it, and its scrollbar's room is kept whether or not a tab
+                    scrolls, so switching tabs never re-wraps it. */}
+                <div
+                  className='min-w-0 @3xl:min-h-0 @3xl:flex-1 @3xl:overflow-y-auto @3xl:[scrollbar-gutter:stable] @3xl:pr-12 @3xl:pl-10 @3xl:pb-36 md:@3xl:pr-16 md:@3xl:pl-16 scroll-quiet'
+                  onScroll={scrollTab}
+                >
                   {right}
                 </div>
               </section>
@@ -2458,14 +2489,14 @@ function ThreadLine({
   // `box` above the reply box's avatar, in the middle of its taller line.
   part?: 'below' | 'above' | 'after' | 'through' | 'box';
 }): ReactElement {
-  // Clear of the avatar by 3px, as the timeline's line is of its icons:
+  // Clear of the avatar by 6px, as the timeline's line is of its icons:
   // the avatar's middle is 13px down its line, its half spacing * 2.5.
   const place = {
-    below: 'top-[calc(13px+var(--spacing)*2.5+3px)] bottom-0',
-    above: 'top-0 h-[calc(13px-var(--spacing)*0.5-3px)]',
-    after: 'top-[calc(var(--spacing)*4.5+16px)] bottom-0',
+    below: 'top-[calc(13px+var(--spacing)*2.5+6px)] bottom-0',
+    above: 'top-0 h-[calc(13px-var(--spacing)*0.5-6px)]',
+    after: 'top-[calc(var(--spacing)*4.5+19px)] bottom-0',
     through: 'inset-y-0',
-    box: 'top-0 h-[calc(var(--spacing)*4-3px)]',
+    box: 'top-0 h-[calc(var(--spacing)*4-6px)]',
   }[part];
   return (
     <span
@@ -3447,7 +3478,7 @@ function CommentComposer({
     // Stays under the tabs as the timeline scrolls (the tab bar is 3.5rem
     // side by side, 3.75rem stacked), on the page's background, its gap
     // below its own so entries pass under it.
-    <div className='sticky top-[3.75rem] z-[9] grid gap-2 bg-background pb-5 @3xl:top-14'>
+    <div className='sticky top-[3.75rem] z-[9] grid gap-2 bg-background pb-5 @3xl:top-0'>
       {/* The writer's avatar before the box, drawn as the account menu's:
           the first letter of each of the name's first two words. */}
       <div className='flex items-start gap-3'>
