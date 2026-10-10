@@ -11,12 +11,14 @@ import { serverFileRepositoryManagerToken } from '@nocobase/app-plugin-file/serv
 import { driveManagerToken } from '@nocobase/app-server/drive';
 import type { Application } from '@nocobase/app-server/application';
 import {
+  ApiError,
+  apiErrorHandler,
   defineApiRoutes,
   type AppApiRouteContribution,
 } from '@nocobase/app-server/router';
+import { CRM_ERROR_DOMAIN, toApiError } from './errors.js';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
-import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { crmToken } from '../providers/crm/index.js';
 import { mailTimelineToken } from '../providers/crm/mail-timeline.js';
 import { mailServiceToken } from '@nocobase/app-plugin-mail/server';
@@ -120,18 +122,23 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       '*',
       bodyLimit({
         maxSize: 21 * 1024 * 1024,
-        onError: (c) => c.json({ code: 'fileTooLarge' }, 413),
+        onError: (c) =>
+          apiErrorHandler(
+            new ApiError({
+              status: 'INVALID_ARGUMENT',
+              reason: 'FILE_TOO_LARGE',
+              domain: CRM_ERROR_DOMAIN,
+              message: 'The request body exceeds 21 MiB.',
+              httpStatus: 413,
+            }),
+            c,
+          ),
       }),
     );
     routes.use('*', async (c, next) => {
       const scope = c.get('authz');
       const id = scope.identity.principal?.id;
-      if (!id) return c.json({ code: 'unauthorized' }, 401);
-      if (
-        !['GET', 'HEAD'].includes(c.req.method) &&
-        c.req.header('x-crm-request') !== '1'
-      )
-        return c.json({ code: 'forbidden' }, 403);
+      if (!id) throw new CrmError('unauthorized', 401);
       c.set('actor', {
         id,
         scope,
@@ -141,17 +148,9 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       });
       await next();
     });
-    routes.onError((error, c) => {
-      if (error instanceof CrmError)
-        return c.json(
-          { code: error.code, field: error.field, detail: error.detail },
-          error.status as ContentfulStatusCode,
-        );
-      if (error instanceof SyntaxError)
-        return c.json({ code: 'invalidInput' }, 400);
-      console.error('[crm]', error);
-      return c.json({ code: 'serverError' }, 500);
-    });
+    // The CRM's errors in the standard body (errors.ts); anything else is
+    // the application's to answer.
+    routes.onError((error, c) => apiErrorHandler(toApiError(error), c));
     routes.get('/metadata', async (c) => {
       const actor = c.get('actor');
       await service.rememberLocale(actor);
