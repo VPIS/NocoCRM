@@ -572,7 +572,7 @@ const wording = {
         label: ['The company changes', '公司信息变化时'],
         hint: [
           'Someone changes its company or website; the AI looks it up again.',
-          '有人修改了公司名称或网站，AI 重新调研。',
+          '有人修改了公司名称或官网，AI 重新调研。',
         ],
       },
       merged: {
@@ -705,7 +705,7 @@ const wording = {
   // The heading over a record page's particulars when they are one list.
   detailsGroup: ['Details', '详情'],
   requiredField: ['This field is required', '此字段必填'],
-  openWebsite: ['Open website in a new tab', '在新窗口打开网站'],
+  openWebsite: ['Open website in a new tab', '在新窗口打开官网'],
   noTasks: ['No tasks yet', '暂无任务'],
   noTasksOnDay: ['No tasks on this day', '这一天没有任务'],
   dayTotal: ['Total {{count}}', '共 {{count}} 项'],
@@ -725,9 +725,9 @@ const wording = {
     aiCaptured: ['Organised by AI', 'AI 整理'],
     addedFiles: ['added', '添加了附件'],
     removedFiles: ['removed', '删除了附件'],
-    evaluated: ['recommended a follow-up', '给出了跟进建议'],
+    evaluated: ['recommended a follow-up', '给出跟进建议'],
     // An approval's review for its approver.
-    reviewed: ['reviewed the request', '给出了审批建议'],
+    reviewed: ['reviewed the request', '给出审批建议'],
     reviewing: ['is reviewing the request…', '正在分析这个申请…'],
     reviewFailed: ['could not review the request', '没能给出审批建议'],
     evaluating: ['is preparing a follow-up…', '正在准备跟进建议…'],
@@ -1720,6 +1720,9 @@ const wording = {
   updatedSuffix: ['updated', '更新'],
   more: ['View all', '查看全部'],
   showMore: ['Show more', '展开'],
+  // A record's particular, copied as it reads from the button on its row.
+  copyValue: ['Copy', '复制'],
+  copiedValue: ['Copied', '已复制'],
   moreFields: ['More: {{fields}}', '更多：{{fields}}'],
   fewerFields: ['Fewer fields', '收起'],
   showLess: ['Show less', '收起'],
@@ -1802,7 +1805,7 @@ const wording = {
     country: ['Country / region', '国家 / 地区'],
     state: ['State / province', '省份'],
     city: ['City', '城市'],
-    website: ['Website', '网站'],
+    website: ['Website', '官网'],
     description: ['Description', '描述'],
     // The enquiry as it arrived, kept as it is.
     message: ['Original message', '原始信息'],
@@ -1811,7 +1814,8 @@ const wording = {
     churnReason: ['Churn reason', '流失原因'],
     type: ['Type', '类型'],
     employees: ['Employees', '员工数'],
-    address: ['Address', '地址'],
+    // The street part of a location, under its heading 地址.
+    address: ['Address', '详细地址'],
     notes: ['Notes', '备注'],
     companyId: ['Company', '所属公司'],
     related: {

@@ -1,7 +1,7 @@
 import { useRef, useState, type ReactElement } from 'react';
 import { Search } from 'lucide-react';
-import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
+import { Textarea } from '../ui/textarea.js';
 import { Label } from '../ui/label.js';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover.js';
 import {
@@ -10,6 +10,7 @@ import {
   SubdivisionChoice,
   SubdivisionLabel,
 } from './geography.js';
+import { FadePreview } from './long-text-field.js';
 import { useDebounced } from './record-search.js';
 import { TEXT_LIMIT } from '../../../server/providers/crm/limits.js';
 import {
@@ -85,11 +86,23 @@ export function LocationField({
     <>
       {region.length ? <span className='block'>{region}</span> : null}
       {address ? (
-        <span className='block text-muted-foreground'>{address}</span>
+        // As the column's other long texts read: three lines, fading out
+        // while there is more, the whole in the pop-up.
+        <FadePreview className='whitespace-pre-line text-muted-foreground'>
+          {address}
+        </FadePreview>
       ) : null}
     </>
   );
-  const save = async (): Promise<void> => {
+  // Whether the location now stands as written (saved, or unchanged).
+  const save = async (): Promise<boolean> => {
+    if (
+      draft.country === country &&
+      draft.state === state &&
+      draft.city === city &&
+      draft.address === address
+    )
+      return true;
     setSaving(true);
     try {
       await api(`${toText(entity)}/${toText(record.id)}`, 'PATCH', {
@@ -100,49 +113,74 @@ export function LocationField({
       });
       await refresh();
       setError('');
-      setOpen(false);
+      return true;
     } catch (cause) {
       setError(text(`errors.${errorCode(cause).code}`, { defaultValue: '' }));
+      return false;
     } finally {
       setSaving(false);
     }
   };
+  // Saves, and closes once saved.
+  const finish = async (): Promise<void> => {
+    if (saving) return;
+    if (await save()) setOpen(false);
+  };
   if (!editable)
     return (
       <div className='px-2 py-1.5 text-sm'>
-        {blank ? <span className='text-muted-foreground'>—</span> : line}
+        {blank ? (
+          <span data-placeholder className='text-muted-foreground'>
+            —
+          </span>
+        ) : (
+          line
+        )}
       </div>
     );
   return (
     <Popover
       open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
+      onOpenChange={(next, details) => {
         if (next) {
           setDraft({ country, state, city, address });
           setQuery('');
           setError('');
+          setOpen(true);
+          return;
         }
+        // As an inline field: Escape leaves it as it was, any other way out
+        // saves it, staying open while it cannot be saved.
+        if (details.reason === 'escape-key') {
+          setOpen(false);
+          return;
+        }
+        void finish();
       }}
     >
       <PopoverTrigger
         nativeButton={false}
         aria-label={label}
         render={<div />}
-        className='w-full cursor-pointer rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
+        className='w-full cursor-pointer rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
       >
         {blank ? (
-          <span className='text-muted-foreground'>
+          <span data-placeholder className='text-muted-foreground'>
             {text('emptyFill', { field: label })}
           </span>
         ) : (
           line
         )}
       </PopoverTrigger>
-      {/* Opening, the search takes the keys. */}
+      {/* Opening, the search takes the keys; its controls show focus as
+          lightly as the inline editor does. */}
       <PopoverContent
+        // Beside the column, toward the page's middle, as a long text's
+        // pop-up opens (LongTextField).
+        side='left'
         align='start'
-        className='w-80 gap-3 p-3'
+        sideOffset={8}
+        className='w-80 gap-3 p-3 [&_:focus-visible]:border-ring/50! [&_:focus-visible]:ring-2! [&_:focus-visible]:ring-ring/10!'
         initialFocus={searchRef}
       >
         {/* A province or a country found by name fills both. */}
@@ -167,7 +205,7 @@ export function LocationField({
                 <li key={`${match.country}:${match.state ?? ''}`}>
                   <button
                     type='button'
-                    className='w-full truncate rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted'
+                    className='w-full truncate rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted/60'
                     onClick={() => {
                       setDraft((current) => ({
                         ...current,
@@ -227,17 +265,21 @@ export function LocationField({
             onKeyDown={(event) => {
               if (event.key === 'Enter') {
                 event.preventDefault();
-                void save();
+                void finish();
               }
             }}
           />
         </div>
         <div className='grid gap-1.5'>
           <Label>{text('fields.address')}</Label>
-          <Input
+          {/* Of several lines if need be (a building, a floor): Enter
+              breaks the line, Cmd/Ctrl+Enter saves. */}
+          <Textarea
             aria-label={toText(text('fields.address'))}
+            rows={2}
             value={draft.address}
             maxLength={TEXT_LIMIT}
+            className='min-h-0 resize-none'
             onChange={(event) =>
               setDraft((current) => ({
                 ...current,
@@ -245,27 +287,14 @@ export function LocationField({
               }))
             }
             onKeyDown={(event) => {
-              if (event.key === 'Enter') {
+              if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
                 event.preventDefault();
-                void save();
+                void finish();
               }
             }}
           />
         </div>
         {error ? <p className='text-xs text-destructive'>{error}</p> : null}
-        <div className='flex justify-end gap-2'>
-          <Button
-            size='sm'
-            variant='ghost'
-            disabled={saving}
-            onClick={() => setOpen(false)}
-          >
-            {text('cancel')}
-          </Button>
-          <Button size='sm' disabled={saving} onClick={() => void save()}>
-            {text('save')}
-          </Button>
-        </div>
       </PopoverContent>
     </Popover>
   );

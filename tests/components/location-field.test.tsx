@@ -108,8 +108,8 @@ describe('LocationField', () => {
     );
     const city = screen.getByRole('textbox', { name: 'fields.city' });
     await userEvent.clear(city);
-    await userEvent.type(city, 'Suzhou');
-    await userEvent.click(screen.getByRole('button', { name: 'save' }));
+    // Enter in the city saves, as an inline field does.
+    await userEvent.type(city, 'Suzhou{Enter}');
     expect(state.api).toHaveBeenCalledWith('leads/lead-1', 'PATCH', {
       country: 'CN',
       state: 'CN-32',

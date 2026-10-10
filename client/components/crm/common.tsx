@@ -419,7 +419,11 @@ export function Value({
   const { data: meta } = useMetadata();
   const value = record[field.key];
   if (value == null || value === '')
-    return <span className='text-muted-foreground'>—</span>;
+    return (
+      <span data-placeholder className='text-muted-foreground'>
+        —
+      </span>
+    );
   if (['status', 'stage'].includes(field.key))
     return plain ? (
       <>{text(`options.${toText(value)}`, { defaultValue: toText(value) })}</>

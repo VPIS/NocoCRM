@@ -12,7 +12,7 @@ import { RecordMultiPicker, RecordPicker } from './record-picker.js';
 import { CountryChoice, SubdivisionChoice } from './geography.js';
 import { Value } from './common.js';
 import { DateTimeInput } from './datetime-input.js';
-import { LongTextField } from './long-text-field.js';
+import { FoldingText, LongTextField } from './long-text-field.js';
 import {
   arrayValues,
   errorCode,
@@ -93,9 +93,10 @@ export function InlineField({
   startOpen?: boolean;
   onClose?: () => void;
   // A long text in a narrow column (a record's particulars) previews three
-  // lines and opens into a pop-up to read and edit (LongTextField), rather
-  // than unfolding and editing in place.
-  longText?: 'inline' | 'popover';
+  // lines and opens into a pop-up to read and edit (LongTextField); one with
+  // room (a lead's original message) previews five and unfolds in place on
+  // a click (`fold`, FoldingText), a double-click editing as ever.
+  longText?: 'inline' | 'popover' | 'fold';
 }): ReactElement {
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
@@ -218,17 +219,25 @@ export function InlineField({
         />
       </span>
     );
+  const folding =
+    longText === 'fold' &&
+    field.type === 'textarea' &&
+    !isBlank(record[field.key]);
   if (!editable)
     return (
       <div className={`px-2 py-1.5 ${readText}`}>
-        <Value
-          record={record}
-          field={field}
-          lookup={lookup}
-          bare={bare}
-          plain={plain}
-          wrap
-        />
+        {folding ? (
+          <FoldingText value={toText(record[field.key])} />
+        ) : (
+          <Value
+            record={record}
+            field={field}
+            lookup={lookup}
+            bare={bare}
+            plain={plain}
+            wrap
+          />
+        )}
       </div>
     );
 
@@ -251,7 +260,7 @@ export function InlineField({
         role='button'
         tabIndex={0}
         aria-label={label}
-        className={`${titled ? 'box-decoration-clone' : 'w-full'} cursor-text rounded-md px-2 py-1.5 text-left transition-colors select-text hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${readText}`}
+        className={`${titled ? 'box-decoration-clone' : 'w-full'} cursor-text rounded-md px-2 py-1.5 text-left transition-colors select-text hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${readText}`}
         onDoubleClick={() => {
           // The double-click also selected the word under it; left alone, that
           // selection lands on the new value once the editor closes, so a
@@ -267,7 +276,7 @@ export function InlineField({
         }}
       >
         {(placeholder ?? hint) && editable && isBlank(record[field.key]) ? (
-          <span className='text-muted-foreground'>
+          <span data-placeholder className='text-muted-foreground'>
             {placeholder ??
               toText(
                 text(PICKED.has(field.type) ? 'emptyChoose' : 'emptyFill', {
@@ -275,6 +284,8 @@ export function InlineField({
                 }),
               )}
           </span>
+        ) : folding ? (
+          <FoldingText value={toText(record[field.key])} />
         ) : (
           <Value
             record={record}

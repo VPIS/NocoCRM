@@ -1,6 +1,10 @@
-import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { Pencil } from 'lucide-react';
-import { Button } from '../ui/button.js';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover.js';
 import { Textarea } from '../ui/textarea.js';
 import { Markdown } from './markdown.js';
@@ -11,8 +15,11 @@ import { useCrmText } from './api.js';
 // A long text in the narrow column of a record's particulars (a company's
 // introduction, a description): three lines that fade out when there is
 // more, opening into a pop-up beside the field wide enough to read it
-// whole and to edit it there, so the column never jumps and editing has
-// room. An empty one the reader may fill opens straight into the editor.
+// whole and to edit it there (a double-click on the text, as every field
+// edits), so the column never jumps and editing has room. As an inline
+// field does, it saves when the pop-up closes, Escape leaving it as it
+// was, and Cmd/Ctrl+Enter saves at once. An empty one the reader may fill
+// opens straight into the editor.
 export function LongTextField({
   value,
   label,
@@ -30,98 +37,95 @@ export function LongTextField({
   // Saves the text; whether it was saved.
   onSave: (text: string) => Promise<boolean>;
 }): ReactElement {
-  const { text, language } = useCrmText();
+  const { language } = useCrmText();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
-  const previewRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLTextAreaElement>(null);
-  const [overflows, setOverflows] = useState(false);
   const blank = !value.trim();
-  useEffect(() => {
-    const element = previewRef.current;
-    if (!element) return;
-    const measure = (): void =>
-      setOverflows(element.scrollHeight > element.clientHeight + 1);
-    // The observer reports once when it starts, then on every resize.
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [value]);
   const edit = (): void => {
     setDraft(value);
     setEditing(true);
   };
-  const save = async (): Promise<void> => {
+  // Whether the text now stands as written (saved, or unchanged).
+  const save = async (): Promise<boolean> => {
+    if (draft === value) {
+      setEditing(false);
+      return true;
+    }
     setSaving(true);
     try {
-      if (await onSave(draft)) {
-        setEditing(false);
-        if (!draft.trim()) setOpen(false);
-      }
+      const saved = await onSave(draft);
+      if (saved) setEditing(false);
+      return saved;
     } finally {
       setSaving(false);
     }
   };
   if (blank && !editable)
-    return <div className='px-2 py-1.5 text-sm text-muted-foreground'>—</div>;
+    return (
+      <div
+        data-placeholder
+        className='px-2 py-1.5 text-sm text-muted-foreground'
+      >
+        —
+      </div>
+    );
   return (
     <Popover
       open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (!next) setEditing(false);
-        else if (blank) edit();
+      onOpenChange={(next, details) => {
+        if (next) {
+          setOpen(true);
+          if (blank) edit();
+          return;
+        }
+        // Escape leaves the text as it was; any other way out saves it,
+        // staying open on the editor while it cannot be saved.
+        if (!editing || details.reason === 'escape-key') {
+          setEditing(false);
+          setOpen(false);
+          return;
+        }
+        void save().then((saved) => {
+          if (saved) setOpen(false);
+        });
       }}
     >
       <PopoverTrigger
         nativeButton={false}
         aria-label={label}
         render={<div />}
-        className='w-full cursor-pointer rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
+        className='w-full cursor-pointer rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
       >
         {blank ? (
-          <span className='text-muted-foreground'>{placeholder}</span>
+          <span data-placeholder className='text-muted-foreground'>
+            {placeholder}
+          </span>
         ) : (
-          // Three lines, the last fading out while there is more.
-          <div
-            ref={previewRef}
-            className={`line-clamp-3 leading-relaxed break-words ${
-              overflows
-                ? '[mask-image:linear-gradient(to_bottom,black_55%,transparent)]'
-                : ''
-            }`}
-          >
+          <FadePreview>
             <Markdown compact>{value}</Markdown>
-          </div>
+          </FadePreview>
         )}
         {error ? (
           <span className='mt-1 block text-xs text-destructive'>{error}</span>
         ) : null}
       </PopoverTrigger>
       {/* Beside the column, toward the page's middle, twice the column's
-          width at most; a very long text scrolls inside. */}
+          width at most; a very long text scrolls inside. Its editor shows
+          focus as lightly as the inline editor does. */}
       <PopoverContent
         side='left'
         align='start'
         sideOffset={8}
         // An empty one opens on its editor, which takes the keys.
         initialFocus={blank ? editorRef : true}
-        className='max-h-[min(36rem,70vh)] w-[28rem] max-w-[calc(100vw-2rem)] gap-2 overflow-y-auto p-4'
+        className='max-h-[min(36rem,70vh)] w-[28rem] max-w-[calc(100vw-2rem)] gap-2 overflow-y-auto p-4 [&_:focus-visible]:border-ring/50! [&_:focus-visible]:ring-2! [&_:focus-visible]:ring-ring/10!'
       >
-        <div className='flex items-center gap-2'>
-          <span className='min-w-0 flex-1 truncate text-xs font-medium text-muted-foreground'>
-            {label}
-          </span>
-          {editable && !editing ? (
-            <Button size='xs' variant='ghost' onClick={edit}>
-              <Pencil />
-              {text('edit')}
-            </Button>
-          ) : null}
-        </div>
+        <span className='truncate text-xs font-medium text-muted-foreground'>
+          {label}
+        </span>
         {editing ? (
           <>
             <Textarea
@@ -145,19 +149,6 @@ export function LongTextField({
             {error ? (
               <span className='text-xs text-destructive'>{error}</span>
             ) : null}
-            <div className='flex justify-end gap-2'>
-              <Button
-                size='sm'
-                variant='ghost'
-                disabled={saving}
-                onClick={() => (blank ? setOpen(false) : setEditing(false))}
-              >
-                {text('cancel')}
-              </Button>
-              <Button size='sm' disabled={saving} onClick={() => void save()}>
-                {text('save')}
-              </Button>
-            </div>
           </>
         ) : (
           // A double-click edits it too, as it does every other field.
@@ -177,5 +168,97 @@ export function LongTextField({
         )}
       </PopoverContent>
     </Popover>
+  );
+}
+
+// A long text with room to unfold in place, across the left column (a
+// lead's original message under the record's title, a note, a task's
+// result or a decision's comment in the timeline): five lines that fade
+// out while there is more,
+// a click unfolding the whole and another folding it back; a double-click
+// is left to the field around it, which edits. A click waits a moment so a
+// double-click does not unfold and fold it too, and selecting text does not
+// count as a click.
+export function FoldingText({ value }: { value: string }): ReactElement {
+  const [open, setOpen] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const measure = (): void =>
+      setOverflows(element.scrollHeight > element.clientHeight + 1);
+    // The observer reports once when it starts, then on every resize.
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [value, open]);
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+  const foldable = overflows || open;
+  return (
+    <div
+      ref={ref}
+      aria-expanded={foldable ? open : undefined}
+      className={`leading-relaxed break-words ${foldable ? 'cursor-pointer' : ''} ${
+        open
+          ? ''
+          : `line-clamp-5 ${
+              overflows
+                ? '[mask-image:linear-gradient(to_bottom,black_55%,transparent)]'
+                : ''
+            }`
+      }`}
+      onClick={(event) => {
+        if (!foldable || event.detail > 1) return;
+        if (!window.getSelection()?.isCollapsed) return;
+        clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(
+          () => setOpen((current) => !current),
+          220,
+        );
+      }}
+      onDoubleClick={() => clearTimeout(timerRef.current)}
+    >
+      <Markdown compact>{value}</Markdown>
+    </div>
+  );
+}
+
+// A long text's preview in the narrow column of a record's particulars (a
+// description, an introduction, a street address): three lines, the last
+// fading out while there is more.
+export function FadePreview({
+  children,
+  className = '',
+}: {
+  children: ReactNode;
+  className?: string;
+}): ReactElement {
+  const ref = useRef<HTMLDivElement>(null);
+  const [overflows, setOverflows] = useState(false);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const measure = (): void =>
+      setOverflows(element.scrollHeight > element.clientHeight + 1);
+    // The observer reports once when it starts, then on every resize.
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [children]);
+  return (
+    <div
+      ref={ref}
+      className={`line-clamp-3 leading-relaxed break-words ${
+        overflows
+          ? '[mask-image:linear-gradient(to_bottom,black_55%,transparent)]'
+          : ''
+      } ${className}`}
+    >
+      {children}
+    </div>
   );
 }

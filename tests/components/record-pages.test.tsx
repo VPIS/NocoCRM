@@ -421,3 +421,37 @@ describe('the approval page', () => {
     expect(screen.getByText('你是审批人')).toBeTruthy();
   });
 });
+
+// A person's edits of one field, one after another, read as the last of
+// them, from the value before the first.
+describe('the timeline', () => {
+  it("keeps the last of one person's consecutive edits of the same field", () => {
+    state.entity = 'companies';
+    state.record = { id: 'rec-1', name: '杭州海康威视', ownerId: 'rep' };
+    const edit = (id: string, from: string | null, to: string, at: string) => ({
+      id,
+      entity: 'companies',
+      recordId: 'rec-1',
+      actorId: 'rep',
+      action: 'updated',
+      changes: { phone: to },
+      previous: { phone: from },
+      createdAt: at,
+    });
+    state.history = [
+      edit('third', '0571-2', '0571-3', '2026-10-03T03:00:00.000Z'),
+      edit('second', '0571-1', '0571-2', '2026-10-02T03:00:00.000Z'),
+      edit('first', null, '0571-1', '2026-10-01T03:00:00.000Z'),
+      {
+        ...edit('other', '0571-0', '0571-9', '2026-09-30T03:00:00.000Z'),
+        actorId: 'manager',
+      },
+    ];
+    renderPage();
+    expect(screen.getByText('0571-3')).toBeTruthy();
+    expect(screen.queryByText('0571-2')).toBeNull();
+    expect(screen.queryByText('0571-1')).toBeNull();
+    // Another person's edit stays its own.
+    expect(screen.getByText('0571-9')).toBeTruthy();
+  });
+});

@@ -39,29 +39,33 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowRightLeft,
-  Mail,
-  Merge,
-  ListChecks,
-  UserRound,
-  CirclePlus,
+  ArrowUpRight,
+  Check,
   ChevronDown,
+  CirclePlus,
+  Copy,
   Ellipsis,
   History,
-  Paperclip,
-  MessageCircle,
-  PencilLine,
-  MessageSquareText,
+  ListChecks,
+  Mail,
   Maximize2,
-  X,
+  Merge,
+  MessageCircle,
+  MessageSquareText,
+  Paperclip,
+  PencilLine,
   Plus,
   Sparkles,
-  Trash2,
-  type LucideIcon,
   SquareCheckBig,
+  Trash2,
+  UserRound,
+  X,
+  type LucideIcon,
 } from 'lucide-react';
 import { Button, buttonVariants } from '../components/ui/button.js';
 import { useFollowUpRequest } from '../components/crm/follow-up-request.js';
 import { FieldIcon } from '../components/crm/field-icons.js';
+import { FoldingText } from '../components/crm/long-text-field.js';
 import { LocationField } from '../components/crm/location-field.js';
 import { Spinner } from '../components/ui/spinner.js';
 import { LONG_TEXT_LIMIT } from '../../server/providers/crm/limits.js';
@@ -95,7 +99,6 @@ import {
 } from '../components/crm/api.js';
 import {
   CrmFrame,
-  LongText,
   Loading,
   ErrorNotice,
   RecordLink,
@@ -546,15 +549,19 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       intro={
         editable || toText(record.message).trim() ? (
           <div className='-mx-2 min-w-0 text-sm'>
-            <InlineField
-              entity='leads'
-              record={record}
-              field={field('message')}
-              editable={editable}
-              lookup={names}
-              label={text(fieldLabelKey('leads', 'message'))}
-              placeholder={toText(text('messagePlaceholder'))}
-            />
+            <Copyable>
+              <InlineField
+                entity='leads'
+                record={record}
+                field={field('message')}
+                editable={editable}
+                lookup={names}
+                label={text(fieldLabelKey('leads', 'message'))}
+                placeholder={toText(text('messagePlaceholder'))}
+                // Five lines unfolding in place on a click.
+                longText='fold'
+              />
+            </Copyable>
           </div>
         ) : undefined
       }
@@ -638,7 +645,12 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                             }}
                           />
                         ) : (
-                          <span className='text-muted-foreground'>—</span>
+                          <span
+                            data-placeholder
+                            className='text-muted-foreground'
+                          >
+                            —
+                          </span>
                         )}
                       </div>
                     </InfoRow>
@@ -1223,6 +1235,15 @@ export function WebsiteField({
   const [editing, setEditing] = useState(false);
   const url = toText(record.website);
   const href = linkOf(url);
+  // The site by its domain alone, as a person names it; the whole address
+  // on hover.
+  const host = (() => {
+    try {
+      return new URL(href ?? '').host.replace(/^www\./, '');
+    } catch {
+      return url;
+    }
+  })();
   if (editing || !href)
     return (
       <InlineField
@@ -1243,7 +1264,7 @@ export function WebsiteField({
       aria-label={editable ? label : undefined}
       className={`group/site relative flex items-center rounded-md px-2 py-1.5 ${toText(
         editable
-          ? 'cursor-text transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
+          ? 'cursor-text transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
           : '',
       )}`}
       onDoubleClick={editable ? () => setEditing(true) : undefined}
@@ -1256,33 +1277,39 @@ export function WebsiteField({
     >
       {/* The link is inline, so the rest of the row stays a plain surface a
           double-click can land on without opening the site. */}
-      {/* One line, cut with an ellipsis, whole on hover: an address has
-          nowhere to break and would otherwise run out of the column. */}
+      {/* A chip in the info colour, unlike any other value: the domain,
+          cut with an ellipsis when it must be, and the arrow of a link that
+          opens elsewhere. */}
       <a
-        className='min-w-0 truncate text-sm text-primary hover:underline'
+        // Its padding taken back from the line, so the row is as tall as
+        // any other.
+        className='-my-0.5 inline-flex min-w-0 items-center gap-1 rounded-md bg-info/10 px-1.5 py-0.5 text-sm font-medium text-info transition-colors hover:bg-info/20 dark:bg-info/20'
         href={href}
         target='_blank'
         rel='noopener noreferrer'
         title={url}
+        data-copy={url}
         aria-label={`${toText(label)}: ${toText(text('openWebsite'))}`}
         onDoubleClick={(e) => e.stopPropagation()}
       >
-        {url}
+        <span className='min-w-0 truncate'>{host}</span>
+        <ArrowUpRight aria-hidden className='size-3.5 shrink-0' />
       </a>
       {/* A long address leaves no row to double-click beside it: the pencil,
           shown on hover over the end of the row (taking no room from the
-          address, which fields need), opens the editor in one click. */}
+          address, which fields need), opens the editor in one click; it
+          sits left of the copy button the row shows at its right
+          (InfoRow), drawn as it is. */}
       {editable && (
-        <Button
-          size='icon-xs'
-          variant='ghost'
-          className='absolute top-1/2 right-1 -translate-y-1/2 bg-muted opacity-0 group-focus-within/site:opacity-100 group-hover/site:opacity-100 hover:bg-background focus-visible:opacity-100'
+        <button
+          type='button'
+          className={`absolute right-8 hidden group-focus-within/site:grid group-hover/site:grid ${ROW_ACTION}`}
           aria-label={`${toText(text('edit'))} ${toText(label)}`}
           onClick={() => setEditing(true)}
           onDoubleClick={(e) => e.stopPropagation()}
         >
-          <PencilLine />
-        </Button>
+          <PencilLine aria-hidden className='size-3.5' />
+        </button>
       )}
     </div>
   );
@@ -1801,6 +1828,40 @@ export function HistoryChanges({
       </Button>
     </>
   );
+}
+
+// One person's edits of the same fields, one after another on the
+// timeline, read as the last of them from the value before the first: the
+// timeline tells what a field became, not each attempt at getting it right.
+// Only the record's own updates and status moves, from the same source (an
+// AI proposal confirmed stays apart from a person's own edit).
+const editedKeys = (event: Data): string =>
+  Object.keys((event.changes as Data | undefined) ?? {})
+    .sort()
+    .join(',');
+const sameEdit = (newer: Data, older: Data): boolean =>
+  (newer.action === 'updated' || newer.action === 'status') &&
+  newer.action === older.action &&
+  newer.entity === older.entity &&
+  newer.recordId === older.recordId &&
+  newer.actorId === older.actorId &&
+  toText(newer.source) === toText(older.source) &&
+  editedKeys(newer) === editedKeys(older);
+function collapseEdits(events: Data[]): Data[] {
+  const kept: Data[] = [];
+  // The feed comes newest first: an older entry folds into the one kept
+  // above it, handing it what the field held before.
+  for (const event of events) {
+    const newer = kept[kept.length - 1];
+    if (newer && sameEdit(newer, event))
+      kept[kept.length - 1] = {
+        ...newer,
+        previous: event.previous ?? newer.previous,
+        fromValue: event.fromValue ?? newer.fromValue,
+      };
+    else kept.push(event);
+  }
+  return kept;
 }
 
 // What a task's entry says became of it: planned, moved (only its
@@ -2364,7 +2425,9 @@ export function HistoryFeed({
       )
     : '';
   // A note's edits show on the note itself, marked edited, not as entries.
-  const shown = more.records.filter((event) => event.action !== 'noteEdited');
+  const shown = collapseEdits(
+    more.records.filter((event) => event.action !== 'noteEdited'),
+  );
   return (
     <>
       {/* A note or a comment is written here, atop the timeline, and reads
@@ -2716,7 +2779,7 @@ export function HistoryFeed({
                         </div>
                         {comment ? (
                           <div className='mt-0.5 text-sm'>
-                            <LongText value={comment} />
+                            <FoldingText value={comment} />
                           </div>
                         ) : null}
                         {/* A task's result too long for its line, whole
@@ -2725,7 +2788,7 @@ export function HistoryFeed({
                         longNotes.has(key) &&
                         toText((event.task as Data | undefined)?.result) ? (
                           <div className='mt-0.5 text-sm'>
-                            <LongText
+                            <FoldingText
                               value={toText((event.task as Data).result)}
                             />
                           </div>
@@ -2737,7 +2800,9 @@ export function HistoryFeed({
                           />
                         ) : note && longNotes.has(key) ? (
                           <div className='mt-0.5 text-sm'>
-                            <LongText
+                            {/* As the original message: five lines fading
+                                out, a click unfolding them. */}
+                            <FoldingText
                               value={markdownMentions(
                                 noteText(event),
                                 (event.changes as Data | undefined)?.mentions,
@@ -3191,8 +3256,65 @@ export function InfoGroup({
   );
 }
 
+// A small action a particular's row shows on hover (copy; a website's
+// edit): a white square with the cards' faint border, its icon muted,
+// centred on the row's first line (the value's 1.5 of padding and half a
+// line, less half its own 6).
+const ROW_ACTION =
+  'top-[calc(var(--spacing)*1.5+0.5lh-var(--spacing)*3)] size-6 place-items-center rounded-md bg-card text-muted-foreground shadow-xs ring-1 ring-border/60 transition-colors hover:text-foreground';
+
+// A value a button on hover copies as it reads (a particular, a lead's
+// original message): not while it is empty (a placeholder or a dash,
+// marked data-placeholder) or being edited.
+function Copyable({ children }: { children: ReactNode }): ReactElement {
+  const { text } = useCrmText();
+  const valueRef = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 1500);
+    return () => clearTimeout(timer);
+  }, [copied]);
+  const copy = (): void => {
+    const element = valueRef.current;
+    // What the value says to copy (a website's whole address, where it
+    // reads as its domain), else it as it reads (innerText keeps its line
+    // breaks), else its text.
+    const value = (
+      element?.querySelector('[data-copy]')?.getAttribute('data-copy') ??
+      element?.innerText ??
+      element?.textContent ??
+      ''
+    ).trim();
+    if (!value) return;
+    void navigator.clipboard
+      ?.writeText(value)
+      .then(() => setCopied(true))
+      .catch(() => undefined);
+  };
+  return (
+    <div className='group/row relative min-w-0'>
+      <div ref={valueRef}>{children}</div>
+      <button
+        type='button'
+        aria-label={toText(text(copied ? 'copiedValue' : 'copyValue'))}
+        title={toText(text(copied ? 'copiedValue' : 'copyValue'))}
+        onClick={copy}
+        className={`absolute right-1 hidden group-focus-within/row:grid group-hover/row:grid group-has-[[data-placeholder]]/row:hidden! group-has-[input]/row:hidden! group-has-[textarea]/row:hidden! ${ROW_ACTION}`}
+      >
+        {copied ? (
+          <Check aria-hidden className='size-3.5' />
+        ) : (
+          <Copy aria-hidden className='size-3.5' />
+        )}
+      </button>
+    </div>
+  );
+}
+
 // A row of a record's particulars: the field's icon and label, then the
-// value (an inline editor, a status, a time).
+// value (an inline editor, a status, a time), copied from a button on
+// hover (Copyable).
 export function InfoRow({
   label,
   field,
@@ -3209,7 +3331,9 @@ export function InfoRow({
         <FieldIcon field={field} />
         <span className='min-w-0 leading-snug'>{label}</span>
       </dt>
-      <dd className='min-w-0 text-sm'>{children}</dd>
+      <dd className='min-w-0 text-sm'>
+        <Copyable>{children}</Copyable>
+      </dd>
     </div>
   );
 }
