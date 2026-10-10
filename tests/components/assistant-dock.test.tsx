@@ -274,7 +274,13 @@ describe('the assistant dock', () => {
 
     state.readiness = { state: 'ready' };
     // The overview has an ask box of its own.
-    for (const path of ['/', '/crm/mail', '/inbox']) {
+    for (const path of [
+      '/',
+      '/crm/mail',
+      '/inbox',
+      '/crm/agent-chat',
+      '/crm/agent-chat/c1',
+    ]) {
       const page = renderDock(path);
       expect(screen.queryByRole('textbox')).toBeNull();
       page.unmount();

@@ -4,6 +4,13 @@ import {
   type AppClientRouteContribution,
 } from '@nocobase/app-client/plugins';
 import {
+  agentsRoute,
+  modelsRoute,
+  skillsRoute,
+  usageRoute,
+} from '@nocobase/app-plugin-agents/client/routes';
+import {
+  Bot,
   Building2,
   ChartLine,
   UserRound,
@@ -164,6 +171,25 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       },
     ],
   },
+  // The conversations with the Agents plugin's agents (migration step 2):
+  // root only and out of the menu while the AI Employee assistant stays
+  // everyone's; opened by its address and from the plans' cards. The open
+  // conversation, or "new", is the child's segment; the page draws it, as a
+  // record page draws its tab (pages/crm-record-tab.tsx renders nothing).
+  {
+    name: 'crm-agent-chat',
+    path: '/crm/agent-chat',
+    auth: 'required',
+    authz: 'unrestricted',
+    componentLoader: () => import('./pages/crm-agent-chat/index.js'),
+    children: [
+      {
+        name: 'crm-agent-chat-conversation',
+        path: ':conversationId',
+        componentLoader: () => import('./pages/crm-record-tab.js'),
+      },
+    ],
+  },
   {
     name: 'crm-record',
     path: '/crm/:entity/:id',
@@ -255,6 +281,24 @@ const settingsRoutes: AppClientRouteContribution = defineSettingsRoutes([
       action: 'manage',
     },
     componentLoader: () => import('./pages/crm-settings.js'),
+  },
+  // The Agents plugin's pages, which it leaves to the application to route
+  // (migration step 2): the agents, their model services, the skill
+  // library and what runs used. Each keeps the page grant or settings item
+  // its definition declares; the coding-tool runtimes page is left out, the
+  // CRM's agents being online ones.
+  {
+    name: 'agents-settings',
+    navigation: { title: 'crm.navigation.agentsGroup', icon: Bot },
+    children: [
+      {
+        ...agentsRoute,
+        navigation: { title: 'crm.navigation.agentList' },
+      },
+      { ...modelsRoute, navigation: { title: 'crm.navigation.models' } },
+      { ...skillsRoute, navigation: { title: 'crm.navigation.skills' } },
+      { ...usageRoute, navigation: { title: 'crm.navigation.usage' } },
+    ],
   },
 ]);
 

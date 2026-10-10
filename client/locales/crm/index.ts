@@ -1865,6 +1865,137 @@ const wording = {
     ],
   },
   // Singular, for "New lead" / "Delete contact"; Chinese has no plural.
+  // The conversations with the Agents plugin's agents.
+  agentChat: {
+    description: [
+      'Talk to the CRM’s agents; the changes they propose wait for your decision.',
+      '与 CRM 的 Agent 对话；它提出的改动等你决定。',
+    ],
+    new: ['New conversation', '新建对话'],
+    list: ['Conversations', '对话'],
+    archivedList: ['Archived conversations', '已归档的对话'],
+    empty: ['No conversations yet', '还没有对话'],
+    emptyDescription: [
+      'Ask an agent about your records; the changes it proposes are made once you confirm them.',
+      '问 Agent 关于你的记录的问题，它提出的改动由你确认后执行。',
+    ],
+    nothingOpen: [
+      'Pick a conversation or start a new one',
+      '选择一个对话，或新建一个',
+    ],
+    noAgent: ['No agent yet', '还没有 Agent'],
+    noAgentDescription: [
+      'Create one from the CRM assistant preset in Settings → Agent team.',
+      '在 设置 → Agent 团队 里用“CRM 助手”预设新建一个。',
+    ],
+    manageAgents: ['Manage agents', '管理 Agent'],
+    agent: ['Agent', 'Agent'],
+    placeholder: ['Ask the agent…', '问问 Agent…'],
+    send: ['Send', '发送'],
+    sending: ['Sending…', '发送中…'],
+    notSent: ['Not sent', '未发送'],
+    sendAgain: ['Send again', '重新发送'],
+    archive: ['Archive', '归档'],
+    restore: ['Restore', '恢复'],
+    showArchived: ['Show archived', '显示已归档'],
+    hideArchived: ['Hide archived', '隐藏已归档'],
+    noArchived: ['No archived conversations', '没有已归档的对话'],
+    archivedNote: ['This conversation is archived.', '这个对话已归档。'],
+    unread: ['Unread', '未读'],
+    jumpToLatest: ['Jump to latest', '回到最新'],
+    untitled: ['New conversation', '新对话'],
+    you: ['You', '你'],
+    working: ['{{agent}}: {{step}}', '{{agent}}：{{step}}'],
+    notFound: ['This conversation does not exist.', '这个对话不存在。'],
+    backToList: ['Back to the conversations', '返回对话列表'],
+    retry: ['Retry', '重试'],
+    // Why an agent cannot answer now (the plugin's offline reasons).
+    offline: {
+      agentMissing: ['This agent no longer exists', '这个 Agent 已不存在'],
+      agentArchived: ['This agent is archived', '这个 Agent 已归档'],
+      forbidden: ['You may not use this agent', '你不能使用这个 Agent'],
+      noRunner: [
+        'No runner can run it for you now',
+        '现在没有能为你运行它的 Runner',
+      ],
+      modelUnavailable: [
+        'Its model is not available now',
+        '它的模型现在不可用',
+      ],
+    },
+  },
+  // The plans an agent proposes, decided by the person they were proposed to.
+  plans: {
+    category: ['Plans', '计划'],
+    agent: ['Agent', 'Agent'],
+    meta: ['Plan · {{agent}} · {{time}}', '计划 · {{agent}} · {{time}}'],
+    fromConversation: ['from a conversation', '来自对话'],
+    none: ['No plans', '没有计划'],
+    waitingOnYou: ['Waiting on you', '等你决定'],
+    viewInInbox: ['View in inbox', '在收件箱查看'],
+    status: {
+      pending: ['Waiting', '待决定'],
+      executing: ['Carrying out', '执行中'],
+      executed: ['Carried out', '已执行'],
+      failed: ['Failed', '执行失败'],
+      stale: ['Not carried out', '未执行'],
+      voided: ['Declined', '已拒绝'],
+      expired: ['Expired', '已过期'],
+    },
+    op: {
+      record: {
+        create: ['New {{entity}}', '新建{{entity}}'],
+        update: ['Update {{entity}}', '修改{{entity}}'],
+      },
+      lead: { convert: ['Convert lead', '转化线索'] },
+      comment: { create: ['Comment on {{entity}}', '评论{{entity}}'] },
+      task: { recordOutcome: ['Record the outcome of', '记录任务结果'] },
+      approval: {
+        submit: ['Submit approval', '提交审批'],
+        withdraw: ['Withdraw approval', '撤回审批'],
+      },
+    },
+    comment: ['Comment', '评论'],
+    keepStep: ['Keep step {{step}}', '保留第 {{step}} 步'],
+    execute_one: ['Carry out 1 change', '执行 1 项改动'],
+    execute_other: ['Carry out {{count}} changes', '执行 {{count}} 项改动'],
+    void: ['Decline', '拒绝'],
+    expiresIn_one: ['expires in 1 hour', '1 小时后过期'],
+    expiresIn_other: ['expires in {{count}} hours', '{{count}} 小时后过期'],
+    carryingOut: ['Carrying out…', '执行中…'],
+    gone: ['This plan no longer exists.', '这份计划已不存在。'],
+    executed: ['Carried out plan “{{title}}”', '已执行计划“{{title}}”'],
+    voided: ['Declined plan “{{title}}”', '已拒绝计划“{{title}}”'],
+    notExecuted: [
+      'Plan “{{title}}” was not carried out',
+      '计划“{{title}}”未执行',
+    ],
+    outcome: {
+      executed: [
+        'Carried out by {{name}} · {{time}}',
+        '{{name}} 已执行 · {{time}}',
+      ],
+      voided: [
+        '{{name}} declined this plan · {{time}}',
+        '{{name}} 拒绝了这份计划 · {{time}}',
+      ],
+      failed: [
+        'Step {{position}} was refused: {{reason}}. Nothing was changed.',
+        '第 {{position}} 步被拒：{{reason}}。没有任何改动。',
+      ],
+      stale: [
+        'Not carried out: the record of step {{position}} changed after the plan was made. Ask the agent again.',
+        '未执行：第 {{position}} 步的记录在计划提出后被改动过。请让 Agent 重新提出。',
+      ],
+      expired: ['Expired after a day undecided', '超过一天未处理，已过期'],
+    },
+    news: {
+      executed: ['Plan “{{title}}” carried out', '计划“{{title}}”已执行'],
+      voided: ['Plan “{{title}}” declined', '计划“{{title}}”已拒绝'],
+      failed: ['Plan “{{title}}” failed', '计划“{{title}}”执行失败'],
+      stale: ['Plan “{{title}}” not carried out', '计划“{{title}}”未执行'],
+    },
+  },
   entity: {
     leads: ['lead', '线索'],
     companies: ['company', '公司'],
@@ -1883,6 +2014,13 @@ const wording = {
     // (WhatsApp, LinkedIn) later.
     integrations: ['Integrations', '集成'],
     mailbox: ['Mailbox', '邮箱'],
+    // The Agents plugin's pages, in Settings (migration step 2).
+    agentsGroup: ['Agent team', 'Agent 团队'],
+    agentList: ['Agents', 'Agent'],
+    models: ['Models', '模型'],
+    skills: ['Skills', '技能'],
+    usage: ['Usage', '用量'],
+    agentChat: ['Agent conversations', 'Agent 对话'],
   },
   entities: {
     leads: ['Leads', '线索'],

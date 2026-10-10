@@ -20,6 +20,8 @@ import {
 
 const state = vi.hoisted(() => ({
   api: vi.fn(),
+  decisions: {} as unknown,
+  plans: [] as unknown[],
   can: true,
   wide: true,
   request: vi.fn(),
@@ -125,10 +127,16 @@ beforeEach(async () => {
   state.can = true;
   state.wide = true;
   state.api.mockReset();
-  state.api.mockResolvedValue({
+  state.decisions = {
     data: [entry('e1', '周晓'), entry('e2', '林悦', 'accepted')],
     meta: { page: 1, pageSize: 100, total: 2, pending: 1 },
-  });
+  };
+  state.api.mockImplementation(async (path: string) =>
+    path.startsWith('plans')
+      ? { data: state.plans, meta: { total: state.plans.length } }
+      : state.decisions,
+  );
+  state.plans = [];
   state.request.mockReset();
   state.request.mockImplementation(
     async ({ path }: { readonly path: string }) => {
@@ -221,7 +229,7 @@ describe("The inbox's AI suggestions", () => {
   // An approval's review handled says what became of it, as a lead's does:
   // here the applicant withdrew the approval, which voided the review.
   it("says an approval's review was withdrawn", async () => {
-    state.api.mockResolvedValue({
+    state.decisions = {
       data: [
         entry('e1', '周晓'),
         {
@@ -247,7 +255,7 @@ describe("The inbox's AI suggestions", () => {
         },
       ],
       meta: { page: 1, pageSize: 100, total: 2, pending: 1 },
-    });
+    };
     renderAt('/inbox?view=todo&kind=crm-decisions');
     const item = (await screen.findByText('源码交付条款')).closest('button')!;
     expect(item.textContent).toContain('已撤回');
@@ -259,7 +267,12 @@ describe("The inbox's AI suggestions", () => {
     renderAt('/inbox?view=todo');
     expect(await screen.findByText(/Nothing here/u)).toBeTruthy();
     expect(screen.queryByRole('tab')).toBeNull();
-    expect(state.api).not.toHaveBeenCalled();
+    // Only whether there are plans is asked, never the suggestions.
+    expect(
+      state.api.mock.calls.filter(
+        ([path]) => !String(path).startsWith('plans'),
+      ),
+    ).toEqual([]);
   });
 
   it("opens Waiting on me's old address in the inbox", async () => {
@@ -270,5 +283,92 @@ describe("The inbox's AI suggestions", () => {
       ),
     );
     expect(await screen.findByText('panel e2')).toBeTruthy();
+  });
+});
+
+// A plan an agent proposed is a category of To do beside the suggestions,
+// for the reader who has any; its card is decided in the detail pane.
+const plan = (status = 'pending') => ({
+  id: 'p1',
+  title: '新增展会线索周晓',
+  summary: null,
+  status,
+  revision: 1,
+  proposerUserId: 'rep',
+  agentId: 'a1',
+  agentName: 'Noco',
+  runId: 'r1',
+  conversationId: 'c1',
+  deciderUserId: status === 'pending' ? null : 'rep',
+  decidedAt: status === 'pending' ? null : '2026-10-03T06:00:00.000Z',
+  failure: null,
+  expiresAt: '2099-01-01T00:00:00.000Z',
+  createdAt: '2026-10-03T05:00:00.000Z',
+  steps: [
+    {
+      id: 's1',
+      position: 1,
+      op: 'record.update',
+      ref: null,
+      params: {},
+      check: {
+        entity: 'leads',
+        id: 'lead-1',
+        name: '周晓',
+        changes: [{ field: 'name', from: '周小', to: '周晓' }],
+      },
+      status: 'pending',
+      result: null,
+    },
+  ],
+});
+
+describe("The inbox's plans", () => {
+  it('lists a waiting plan under To do and decides it in the detail pane', async () => {
+    state.plans = [plan()];
+    renderAt('/inbox?view=todo');
+    // Listed with the suggestions.
+    expect(await screen.findByText('panel e1')).toBeTruthy();
+    await userEvent.click(
+      (await screen.findByText('新增展会线索周晓')).closest('button')!,
+    );
+    expect(screen.getByTestId('where').textContent).toContain('plan=p1');
+    const card = await screen.findByRole('region', {
+      name: '新增展会线索周晓',
+    });
+    // The old value is shown beside the new one, not only on hover.
+    expect(within(card).getByText('周小')).toBeTruthy();
+    expect(within(card).getAllByText('周晓')).toHaveLength(2);
+    state.api.mockImplementation(async (path: string, method?: string) => {
+      if (method === 'POST') return { data: plan('executed') };
+      return path.startsWith('plans')
+        ? { data: state.plans, meta: { total: state.plans.length } }
+        : state.decisions;
+    });
+    // The test's text looks keys up without plurals: the button reads its
+    // key here ("Carry out 1 change" in the application).
+    await userEvent.click(
+      within(card).getByRole('button', { name: 'plans.execute' }),
+    );
+    await waitFor(() =>
+      expect(state.api).toHaveBeenCalledWith('plans/p1/execute', 'POST', {
+        revision: 1,
+      }),
+    );
+  });
+
+  it('says a plan picked by its address is gone rather than showing another', async () => {
+    state.plans = [plan()];
+    renderAt('/inbox?view=todo&kind=crm-plans&plan=gone');
+    expect(await screen.findByText('这份计划已不存在。')).toBeTruthy();
+    expect(
+      screen.queryByRole('region', { name: '新增展会线索周晓' }),
+    ).toBeNull();
+  });
+
+  it('is absent for a reader without plans', async () => {
+    renderAt('/inbox?view=todo');
+    expect(await screen.findByText('panel e1')).toBeTruthy();
+    expect(screen.queryByText('计划')).toBeNull();
   });
 });

@@ -425,7 +425,9 @@ export function relativeTime(
   const at = new Date(toText(value));
   if (!Number.isFinite(+at)) return '';
   const seconds = Math.round((+at - now) / 1000);
-  if (Math.abs(seconds) < 60) return justNow;
+  // It is always how long ago: a moment after the page's clock (read when
+  // the page drew, before newer data arrived) is just now, never "in 1m".
+  if (seconds > -60) return justNow;
   // Compact, as a timeline reads: "3m ago", "2h ago", "1d ago" in English,
   // always in figures; Chinese keeps its words ("3分钟前", "昨天").
   const format = new Intl.RelativeTimeFormat(language, {

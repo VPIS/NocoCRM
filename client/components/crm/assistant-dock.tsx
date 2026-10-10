@@ -34,13 +34,17 @@ import { useCurrentRecord, type CurrentRecord } from './current-record.js';
 // Pages the dock is not shown on: the overview, which opens on an ask box of
 // its own (assistant-ask-box.tsx); the Mail plugin's workspace and the inbox,
 // which fill the window with fixed panes whose bottom (pagination, keyboard
-// hints) it would cover.
+// hints) it would cover; the agents' conversations, which have a composer
+// of their own.
 function hiddenOn(pathname: string): boolean {
   return (
     pathname === '/' ||
     pathname === '/crm/mail' ||
     pathname === '/inbox' ||
-    pathname.startsWith('/inbox/')
+    pathname.startsWith('/inbox/') ||
+    // The agents' conversations have a composer of their own.
+    pathname === '/crm/agent-chat' ||
+    pathname.startsWith('/crm/agent-chat/')
   );
 }
 

@@ -11,6 +11,10 @@ describe('relativeTime', () => {
     expect(relativeTime(ago(30), 'zh-CN', now, '刚刚')).toBe('刚刚');
   });
 
+  it('reads a moment after the clock it was given as just now', () => {
+    expect(relativeTime(ago(-90), 'en-US', now, 'just now')).toBe('just now');
+  });
+
   it('counts minutes, hours, days, weeks, months and years, compactly', () => {
     const say = (seconds: number): string =>
       relativeTime(ago(seconds), 'en-US', now, 'just now');

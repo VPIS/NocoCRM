@@ -176,7 +176,10 @@ const planned = {
 
 beforeEach(() => {
   state.api.mockReset();
-  state.api.mockResolvedValue({ data: {} });
+  // The plans agents proposed that would change the record: none.
+  state.api.mockImplementation(async (path: string) =>
+    path.startsWith('plans') ? { data: [], meta: { total: 0 } } : { data: {} },
+  );
   state.record = { ...planned };
   state.canDelete = true;
   state.history = [];

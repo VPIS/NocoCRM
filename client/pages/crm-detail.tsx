@@ -146,6 +146,7 @@ import { ConfirmDialog } from '../components/crm/confirm-dialog.js';
 import { useRecordBreadcrumb } from '../components/crm/record-breadcrumb.js';
 import { ConvertDialog } from '../components/crm/conversion.js';
 import { LeadDuplicates } from '../components/crm/lead-merge.js';
+import { WaitingPlans } from '../components/crm/plan-card.js';
 import { RecordMailPanel } from '../components/crm/record-mail.js';
 import {
   emailsOf,
@@ -552,6 +553,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   return (
     <DetailColumns
       entity='leads'
+      recordId={toText(id)}
       heading={heading}
       actions={leadActions}
       status={leadStatus}
@@ -853,6 +855,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
 // the rest. The lead and the task pages share it.
 export function DetailColumns({
   entity,
+  recordId,
   heading,
   actions,
   status,
@@ -865,6 +868,8 @@ export function DetailColumns({
 }: {
   // The kind of record, named over the heading on a phone.
   entity: Entity;
+  // The record, whose plans waiting on the reader lead its particulars.
+  recordId?: string;
   heading: ReactNode;
   // Everything the reader can do with the record, right of the heading.
   actions: ReactNode;
@@ -983,6 +988,9 @@ export function DetailColumns({
                 }`}
                 onScroll={revealScrollbar}
               >
+                {recordId ? (
+                  <WaitingPlans entity={entity} recordId={recordId} />
+                ) : null}
                 {left}
               </section>
               {/* The tabs head the left column: stacked, they stay in view as
