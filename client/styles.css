@@ -313,15 +313,17 @@
         var(--ai)
       )
       border-box;
+  /* A quiet glow: a thin halo and a short, light shadow, so the border's
+     colours lead rather than the light around them. */
   box-shadow:
-    0 0 0 3px color-mix(in oklch, var(--ai) 8%, transparent),
-    0 6px 22px -8px color-mix(in oklch, var(--ai) 40%, transparent),
+    0 0 0 2px color-mix(in oklch, var(--ai) 5%, transparent),
+    0 4px 14px -8px color-mix(in oklch, var(--ai) 24%, transparent),
     var(--crm-ai-lift, 0 0 #0000);
 }
 .crm-ai-border:focus-within {
   box-shadow:
-    0 0 0 3px color-mix(in oklch, var(--ai) 20%, transparent),
-    0 8px 28px -8px color-mix(in oklch, var(--ai) 50%, transparent),
+    0 0 0 2px color-mix(in oklch, var(--ai) 12%, transparent),
+    0 6px 18px -8px color-mix(in oklch, var(--ai) 32%, transparent),
     var(--crm-ai-lift, 0 0 #0000);
 }
 
