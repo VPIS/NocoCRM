@@ -9,10 +9,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip.js';
-import { toText, useCrmText, useMetadata } from './api.js';
-import { ask, useAskDraft, useFocusReturn } from './assistant-ask.js';
+import { toText, useCrmText, type Entity } from './api.js';
+import {
+  useAnyPanelOpen,
+  useAskDraft,
+  useFocusReturn,
+} from './assistant-ask.js';
+import { recordPin, useAgentReadiness, useDiscuss } from './agent-chat/ask.js';
 import { AskComposer } from './assistant-ask-composer.js';
-import { useAssistantReadiness, usePanelOpen } from './assistant-state.js';
 import { useCurrentRecord, type CurrentRecord } from './current-record.js';
 
 // The assistant's one general entry: a box floating at the bottom of the main
@@ -81,9 +85,9 @@ function questionsFor(
 
 export function AssistantDock(): ReactElement | null {
   const { text } = useCrmText();
-  const { data: meta } = useMetadata();
-  const readiness = useAssistantReadiness();
-  const panelOpen = usePanelOpen();
+  const readiness = useAgentReadiness();
+  const panelOpen = useAnyPanelOpen();
+  const discuss = useDiscuss();
   const record = useCurrentRecord();
   const { pathname } = useLocation();
   const isMobile = useIsMobile();
@@ -100,8 +104,7 @@ export function AssistantDock(): ReactElement | null {
   const dockRef = useRef<HTMLDivElement>(null);
   useFocusReturn(() => (isMobile ? phoneRef.current : inputRef.current));
 
-  if (!meta?.assistant || readiness.state === 'loading' || hiddenOn(pathname))
-    return null;
+  if (readiness.state === 'loading' || hiddenOn(pathname)) return null;
   const questions = questionsFor(pathname, record);
   const placeholder =
     unavailable ??
@@ -116,7 +119,7 @@ export function AssistantDock(): ReactElement | null {
     (focused ||
       modelMenu ||
       Boolean(draft.value) ||
-      draft.files.attachments.length > 0);
+      draft.files.files.length > 0);
   const send = (prompt: string): void => {
     if (draft.send(prompt)) setFocused(false);
   };
@@ -158,7 +161,21 @@ export function AssistantDock(): ReactElement | null {
                   aria-label={unavailable ?? toText(text('dock.open'))}
                   disabled={Boolean(unavailable)}
                   className='pointer-events-auto rounded-full bg-ai text-ai-foreground shadow-lg hover:bg-ai/90'
-                  onClick={() => ask('', record)}
+                  // A new conversation with the record pinned, nothing
+                  // sent: the person writes in the panel.
+                  onClick={() =>
+                    discuss(
+                      record
+                        ? [
+                            recordPin(
+                              record.entity as Entity,
+                              record.recordId,
+                              record.name ?? '',
+                            ),
+                          ]
+                        : [],
+                    )
+                  }
                 />
               }
             >
@@ -214,7 +231,7 @@ export function AssistantDock(): ReactElement | null {
             {focused &&
               listOpen &&
               !draft.value &&
-              !draft.files.attachments.length &&
+              !draft.files.files.length &&
               questions.length > 0 &&
               !unavailable && (
                 <ul

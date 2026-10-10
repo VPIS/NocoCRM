@@ -316,6 +316,26 @@ export async function provisionCrm(
     }
     await mark('crm-reports-v1');
   }
+  // The conversations with the CRM's agent, root-only while the AI Employee
+  // assistant was everyone's (migration step 2), opened to the sales roles
+  // once that assistant moved to the Agents plugin (step 3).
+  if (!(await marker('crm-agent-chat-v1'))) {
+    for (const role of salesRoles) {
+      const set = await authz.permissionSets.get(roleKey(role));
+      if (
+        set &&
+        !set.grants.some(
+          (g) =>
+            g.resource.type === 'page' && g.resource.id === 'crm-agent-chat',
+        )
+      )
+        await authz.permissionSets.update(set.key, {
+          ...set,
+          grants: [...set.grants, pageGrant('crm-agent-chat')],
+        });
+    }
+    await mark('crm-agent-chat-v1');
+  }
   // Mail arrived after the sets were provisioned, and the CRM's own
   // notification centre went with the move to the template's inbox: both
   // sales roles get the Mail plugin's workspace once, and lose the grant of

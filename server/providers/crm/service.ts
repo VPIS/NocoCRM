@@ -31,7 +31,10 @@ import type {
   Row,
   SqlBool,
 } from '@nocobase/db';
-import type { AppAuthorization } from '@nocobase/app-plugin-authorization/server';
+import type {
+  AppAuthorization,
+  DatabaseAuthorizationConditions,
+} from '@nocobase/app-plugin-authorization/server';
 import {
   assertFields,
   capability,
@@ -249,6 +252,34 @@ export class CrmService {
     } catch {
       return false;
     }
+  }
+  // What each person may read, as their last workspace load found it
+  // (server/routes/workspace.ts): the Agents plugin resolves the records a
+  // message names inside its own transaction, where the authorization
+  // service cannot read on SQLite, so the resolvers
+  // (crm-agents/context.ts) read this instead. Ten minutes old at most;
+  // missing or older, they resolve nothing (a message then names no
+  // record, never one the person may not read).
+  private readonly reads = new Map<
+    string,
+    {
+      at: number;
+      decisions: Record<string, DatabaseAuthorizationConditions | null>;
+    }
+  >();
+  rememberReads(
+    userId: string,
+    decisions: Record<string, DatabaseAuthorizationConditions | null>,
+  ): void {
+    this.reads.set(userId, { at: Date.now(), decisions });
+  }
+  readsOf(
+    userId: string,
+  ): Record<string, DatabaseAuthorizationConditions | null> | null {
+    const snapshot = this.reads.get(userId);
+    return snapshot && Date.now() - snapshot.at < 10 * 60_000
+      ? snapshot.decisions
+      : null;
   }
   async mutate<T>(
     actor: Actor,

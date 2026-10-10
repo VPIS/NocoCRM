@@ -6,8 +6,9 @@ import {
   type ReactElement,
   type RefObject,
 } from 'react';
-import { getAIModelKey, groupAIModels } from '#extensions/nocobase-ai';
-import { ChatAttachment } from '#extensions/nocobase-ai/components/chat/chat-attachment';
+import type { ChatModelChoice } from '@nocobase/app-plugin-agents/shared/conversations';
+import { modelKey } from './agent-chat/ask.js';
+import { FileChip } from './agent-chat/composer.js';
 import {
   InputGroup,
   InputGroupAddon,
@@ -66,6 +67,20 @@ export function AskComposer({
   const { text } = useCrmText();
   const fileRef = useRef<HTMLInputElement>(null);
   const { files, model } = draft;
+  // The models by service, as the select groups them.
+  const groups = [...draft.models].reduce<
+    { key: string; label: string; models: ChatModelChoice[] }[]
+  >((list, item) => {
+    const group = list.find((entry) => entry.key === item.modelService);
+    if (group) group.models.push(item);
+    else
+      list.push({
+        key: item.modelService,
+        label: item.serviceTitle,
+        models: [item],
+      });
+    return list;
+  }, []);
   const attachLabel = toText(text('dock.attach'));
   const sendLabel = toText(text('send'));
 
@@ -108,19 +123,17 @@ export function AskComposer({
           files.upload(Array.from(event.dataTransfer.files));
         }}
       >
-        {expanded && files.attachments.length > 0 ? (
-          <InputGroupAddon
-            align='block-start'
-            className='flex-wrap gap-1.5 px-4 pt-3'
-          >
-            {files.attachments.map((attachment) => (
-              <ChatAttachment
-                key={attachment.uid}
-                attachment={attachment}
-                removable
-                onRemove={() => files.remove(attachment.uid)}
-              />
-            ))}
+        {expanded && files.files.length > 0 ? (
+          <InputGroupAddon align='block-start' className='px-4 pt-3'>
+            <ul className='flex flex-wrap gap-1.5'>
+              {files.files.map((file) => (
+                <FileChip
+                  key={file.uid}
+                  file={file}
+                  onRemove={() => files.remove(file.uid)}
+                />
+              ))}
+            </ul>
           </InputGroupAddon>
         ) : null}
         {expanded ? null : (
@@ -192,9 +205,9 @@ export function AskComposer({
                 </TooltipTrigger>
                 <TooltipContent>{attachLabel}</TooltipContent>
               </Tooltip>
-              {model && (
+              {model && draft.models.length > 1 && (
                 <Select
-                  value={getAIModelKey(model)}
+                  value={modelKey(model)}
                   disabled={disabled}
                   onOpenChange={(open) => onModelMenu?.(open)}
                   onValueChange={(next) => {
@@ -204,26 +217,26 @@ export function AskComposer({
                   <SelectTrigger
                     size='sm'
                     aria-label={toText(text('dock.model'))}
-                    title={model.label}
+                    title={model.modelLabel}
                     className='max-w-48 min-w-0 rounded-full border-0 bg-muted/60 shadow-none'
                   >
                     <SelectValue>
-                      <span className='truncate'>{model.label}</span>
+                      <span className='truncate'>{model.modelLabel}</span>
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent className='max-h-96 min-w-56'>
-                    {groupAIModels([...draft.models]).map((group, index) => (
+                    {groups.map((group, index) => (
                       <Fragment key={group.key}>
                         {index > 0 && <SelectSeparator />}
                         <SelectGroup>
                           <SelectLabel>{group.label}</SelectLabel>
                           {group.models.map((item) => (
                             <SelectItem
-                              key={getAIModelKey(item)}
-                              value={getAIModelKey(item)}
+                              key={modelKey(item)}
+                              value={modelKey(item)}
                             >
                               <span className='block max-w-64 truncate'>
-                                {item.label}
+                                {item.modelLabel}
                               </span>
                             </SelectItem>
                           ))}

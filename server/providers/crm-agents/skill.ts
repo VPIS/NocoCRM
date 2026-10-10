@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import type { Agents } from '@nocobase/app-plugin-agents/server/tokens';
 
 // The skill every online run gets on the CRM: how its commands are found and
@@ -72,4 +74,44 @@ export function registerCrmSkill(agents: Agents): () => void {
     markdown: CRM_PLANS_SKILL,
     files: [],
   });
+}
+
+// The CRM's method skills (ai/skills: lead follow-up, opportunity
+// follow-up, approval review, task preparation), which the AI Employee plugin also loads for
+// the background runs, given to every online run as well, so a question in
+// the chat about a lead's or a deal's next step, or an approval, is
+// answered by the same method. Read from their SKILL.md files as shipped
+// (the build copies ai/skills into dist); a skill whose file cannot be read
+// is left out.
+export const METHOD_SKILLS = [
+  'lead-follow-up',
+  'opportunity-follow-up',
+  'approval-review',
+  'task-preparation',
+] as const;
+
+export async function registerMethodSkills(
+  agents: Agents,
+  dir: string,
+): Promise<(() => void)[]> {
+  const removals: (() => void)[] = [];
+  for (const slug of METHOD_SKILLS) {
+    const markdown = await readFile(join(dir, slug, 'SKILL.md'), 'utf8').catch(
+      () => null,
+    );
+    if (!markdown) continue;
+    const description =
+      /^description:\s*(.+)$/mu.exec(markdown)?.[1]?.trim() ?? slug;
+    removals.push(
+      agents.online.skills.register({
+        slug,
+        name: slug,
+        description,
+        hash: createHash('sha256').update(markdown).digest('hex'),
+        markdown,
+        files: [],
+      }),
+    );
+  }
+  return removals;
 }

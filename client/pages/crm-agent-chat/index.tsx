@@ -9,7 +9,6 @@ import {
 } from '#components/ui/empty';
 import { Skeleton } from '#components/ui/skeleton';
 import {
-  ChatProvider,
   useChatAgents,
   useConversationList,
 } from '@nocobase/app-plugin-agents/client/chat';
@@ -24,15 +23,15 @@ import {
   RecordDrawerContext,
   useRecordDrawerState,
 } from '../../components/crm/record-drawer.js';
-import { Conversation } from './conversation.js';
-import { ConversationList } from './conversation-list.js';
+import { Conversation } from '../../components/crm/agent-chat/conversation.js';
+import { ConversationList } from '../../components/crm/agent-chat/conversation-list.js';
 
-// The conversations with the Agents plugin's agents (migration step 2): the
-// reader's conversations beside the one open (frontend standard §3.5), a new
-// one at /new. Root only while the AI Employee assistant stays everyone's
-// (routes.ts); the plans an agent proposes are decided here, in the inbox and
-// on the records they change. A record a plan names opens in the drawer over
-// the conversation.
+// The conversations with the CRM's agents on a page of their own, the
+// assistant panel's full-page view (agent-chat/panel.tsx): the reader's
+// conversations beside the one open (frontend standard §3.5), a new one at
+// /new. The plans an agent proposes are decided here, in the panel, in the
+// inbox and on the records they change. A record a plan names opens in the
+// drawer over the conversation.
 
 // The records a plan step names open in the detail page's drawer; its code
 // loads only when one is first opened.
@@ -42,18 +41,9 @@ const RecordDrawer = lazy(() =>
   })),
 );
 
+// Under the application's ChatProvider (agent-chat/panel.tsx), whose panel
+// this page is the full-page view of.
 export default function AgentChatPage(): ReactElement {
-  return (
-    <ChatProvider
-      available
-      conversationPath={(id) => `/crm/agent-chat/${encodeURIComponent(id)}`}
-    >
-      <AgentChat />
-    </ChatProvider>
-  );
-}
-
-function AgentChat(): ReactElement {
   const { text } = useCrmText();
   const navigate = useNavigate();
   const params = useParams<{ conversationId?: string }>();

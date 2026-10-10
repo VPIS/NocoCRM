@@ -7,7 +7,12 @@ import { ServiceProvider } from '@nocobase/service-provider';
 import { crmToken } from '../crm/index.js';
 import { crmPlansToken } from '../crm/plans/engine.js';
 import { deliverPlanOutcome } from './plan-news.js';
-import { registerCrmSkill } from './skill.js';
+import { registerCrmSkill, registerMethodSkills } from './skill.js';
+import { registerContextKinds } from './context.js';
+import { provisionNoco } from './noco.js';
+import { crmConversationRules } from './rules.js';
+import { databaseManagerToken } from '@nocobase/db';
+import type { CrmSettings } from '../crm/schema.js';
 import { provisionModelServices } from './model-services.js';
 import {
   agentActionOptions,
@@ -21,14 +26,35 @@ import { crmActionGate, crmAgentsAccess } from './gate.js';
 import { CRM_ASSISTANT_INSTRUCTIONS } from './preset.js';
 import { entities } from '../crm/schema.js';
 
-// The CRM on the Agents plugin (migration step 2): the business actions an
-// agent may be given and who holds them, the preset a CRM agent starts from,
-// and where its conversations start. The CRM's commands are its own API
-// routes (`cliRoute` on server/routes); writes a run asks for become plans a
-// person confirms (server/providers/crm/plans). The AI Employee plugin keeps
-// running the CRM's present assistant meanwhile.
+// The actions a CRM agent starts from: view, create and edit on each object,
+// search, colleagues, comments and plans (deleting and deciding approvals are
+// never granted, actions.ts).
+const PRESET_ACTIONS: readonly string[] = [
+  ...entities.flatMap((entity) => [
+    recordAction(entity, 'view'),
+    recordAction(entity, 'create'),
+    recordAction(entity, 'edit'),
+  ]),
+  SEARCH_ACTION,
+  COLLEAGUES_ACTION,
+  COMMENT_ACTION,
+  PLAN_ACTION,
+];
+
+// The CRM on the Agents plugin: the business actions an agent may be given
+// and who holds them, the preset a CRM agent starts from and Noco made from
+// it (noco.ts), the rules and skills every conversation gets, what a page
+// context may name, and where conversations start. The CRM's commands are
+// its own API routes (`cliRoute` on server/routes); writes a run asks for
+// become plans a person confirms (server/providers/crm/plans). Since
+// migration step 3 Noco is the assistant people talk to; the AI Employee
+// plugin still runs the background work, the reports' AI analysis and the
+// global search's AI answer.
 export default class CrmAgentsProvider extends ServiceProvider<Application> {
   readonly name = 'crm-agents';
+  // The settings the conversation rules read, which run where nothing may
+  // be read; kept current as they are saved.
+  private settings: CrmSettings | null = null;
 
   public override register(): void {
     // Resolved on each request, after every provider has registered.
@@ -37,8 +63,8 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
     );
   }
 
-  public override boot(): Promise<void> {
-    if (!this.app.container.has(agentsToken)) return Promise.resolve();
+  public override async boot(): Promise<void> {
+    if (!this.app.container.has(agentsToken)) return;
     const agents = this.app.container.resolve(agentsToken);
     const service = this.app.container.resolve(crmToken);
     agents.actions.provide(agentActionOptions);
@@ -54,18 +80,17 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
       descriptionText: { key: 'crm.agentPreset.description', ns: 'crm' },
       instructions: CRM_ASSISTANT_INSTRUCTIONS,
       type: 'online',
-      actions: [
-        ...entities.flatMap((entity) => [
-          recordAction(entity, 'view'),
-          recordAction(entity, 'create'),
-          recordAction(entity, 'edit'),
-        ]),
-        SEARCH_ACTION,
-        COLLEAGUES_ACTION,
-        COMMENT_ACTION,
-        PLAN_ACTION,
-      ],
+      actions: [...PRESET_ACTIONS],
     });
+    agents.conversations.rules.provide(
+      crmConversationRules(() => this.settings),
+    );
+    registerContextKinds(
+      agents,
+      service,
+      this.app.publicBasePath.replace(/\/+$/, ''),
+    );
+    await registerMethodSkills(agents, this.app.paths.root('ai/skills'));
     // What became of a plan goes back to the conversation that proposed it.
     this.app.container.resolve(crmPlansToken).onDecided = deliverPlanOutcome(
       agents,
@@ -75,14 +100,23 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
       key: 'crm',
       title: { key: 'crm.agentConversationSource', ns: 'crm' },
     });
-    return Promise.resolve();
   }
 
   public override async start(): Promise<void> {
     if (!this.app.container.has(agentsToken)) return;
-    await provisionModelServices(
-      this.app,
-      this.app.container.resolve(agentsToken),
+    const agents = this.app.container.resolve(agentsToken);
+    const service = this.app.container.resolve(crmToken);
+    this.settings = await service.settings();
+    const saved = service.settingsSaved;
+    service.settingsSaved = (settings) => {
+      this.settings = settings;
+      saved?.(settings);
+    };
+    await provisionModelServices(this.app, agents);
+    await provisionNoco(
+      agents,
+      this.app.container.resolve(databaseManagerToken),
+      PRESET_ACTIONS,
     );
   }
 }

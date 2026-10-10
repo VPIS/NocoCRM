@@ -2,7 +2,7 @@ import { Badge } from '#components/ui/badge';
 import { Button } from '#components/ui/button';
 import { Checkbox } from '#components/ui/checkbox';
 import { Spinner } from '#components/ui/spinner';
-import { useCan } from '@nocobase/app-plugin-authorization/client';
+import { useChatPanel } from '@nocobase/app-plugin-agents/client/chat';
 import { ArrowRight, ClipboardList, MessagesSquare } from 'lucide-react';
 import {
   useEffect,
@@ -61,12 +61,8 @@ export function PlanCard({
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
   const { decide, busy, error, gone } = usePlanDecision(plan);
-  // The conversation is linked only for whoever may open its page, which
-  // is root alone while the AI Employee assistant stays everyone's (its
-  // route in routes.ts).
-  const { can: opensChat } = useCan('unrestricted', {
-    enabled: origin && Boolean(plan.conversationId),
-  });
+  // The conversation it came from opens in the assistant panel.
+  const chat = useChatPanel();
   const [skipped, setSkipped] = useState<Set<number>>(() => new Set());
   // Once decided here, focus goes to what came of it, the buttons being gone.
   const outcomeRef = useRef<HTMLParagraphElement>(null);
@@ -115,14 +111,20 @@ export function PlanCard({
             time: relativeTime(plan.createdAt, language, now, text('justNow')),
           })}
         </span>
-        {origin && opensChat && plan.conversationId ? (
-          <Link
-            to={`/crm/agent-chat/${encodeURIComponent(plan.conversationId)}`}
+        {origin && plan.conversationId ? (
+          <button
+            type='button'
+            onClick={() =>
+              chat.openChat({
+                conversationId: plan.conversationId,
+                view: 'chat',
+              })
+            }
             className='inline-flex items-center gap-1 hover:text-primary hover:underline'
           >
             <MessagesSquare className='size-3.5' aria-hidden />
             {text('plans.fromConversation')}
-          </Link>
+          </button>
         ) : null}
         <Badge variant={TONES[plan.status]} className='ml-auto'>
           {text(`plans.status.${plan.status}`)}

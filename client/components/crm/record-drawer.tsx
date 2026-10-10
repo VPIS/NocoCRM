@@ -2,7 +2,9 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useState,
+  useSyncExternalStore,
   type MouseEvent,
 } from 'react';
 import {
@@ -62,15 +64,44 @@ export function useRecordLink(
   };
 }
 
+// How many pages draw the drawer now: the assistant's panel (agent-chat/
+// panel.tsx), above every page, draws its own only when none does, so one
+// `?open=` never opens two.
+let hosts = 0;
+const hostListeners = new Set<() => void>();
+function subscribeHosts(listener: () => void): () => void {
+  hostListeners.add(listener);
+  return () => hostListeners.delete(listener);
+}
+export function useRecordDrawerHosted(): boolean {
+  return useSyncExternalStore(
+    subscribeHosts,
+    () => hosts > 0,
+    () => false,
+  );
+}
+
 // The drawer's state for a page that hosts one: the record it shows lives in
 // the URL ("?open=entity/id"), so a reload, the back button and a copied link
 // all restore it. A phone has no room for a drawer over a page, so opening
-// goes to the record instead.
-export function useRecordDrawerState(): {
+// goes to the record instead. A page calling it counts as hosting the drawer
+// while mounted; the panel says it does not (`host: false`).
+export function useRecordDrawerState({
+  host = true,
+}: { host?: boolean } = {}): {
   opened: string;
   open: RecordDrawerApi['open'];
   close: () => void;
 } {
+  useEffect(() => {
+    if (!host) return;
+    hosts += 1;
+    hostListeners.forEach((listener) => listener());
+    return () => {
+      hosts -= 1;
+      hostListeners.forEach((listener) => listener());
+    };
+  }, [host]);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const opened = toText(searchParams.get('open') ?? '');

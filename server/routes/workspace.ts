@@ -94,6 +94,7 @@ import {
   UploadQuery,
   Workspace,
 } from './schemas/workspace.js';
+import type { DatabaseAuthorizationConditions } from '@nocobase/app-plugin-authorization/server';
 
 // The paths these routes own, which the guard (context.ts) is installed on.
 export const WORKSPACE_PATHS = [
@@ -157,11 +158,15 @@ export function registerWorkspaceRoutes(
       const actor = c.get('actor');
       await service.rememberLocale(actor);
       const permissions: Record<string, unknown> = {};
+      // What the person may read, kept for the page-context resolvers of
+      // the Agents plugin (CrmService.rememberReads).
+      const reads: Record<string, DatabaseAuthorizationConditions | null> = {};
       for (const entity of entities) {
         const actions: Record<string, unknown> = {};
         for (const action of ['read', 'create', 'update', 'delete']) {
           try {
             const access = await conditions(actor, entity, action);
+            if (action === 'read') reads[`${entity}.read`] = access;
             actions[action] = {
               fields:
                 action === 'read'
@@ -175,10 +180,12 @@ export function registerWorkspaceRoutes(
             };
           } catch {
             actions[action] = false;
+            if (action === 'read') reads[`${entity}.read`] = null;
           }
         }
         permissions[entity] = actions;
       }
+      service.rememberReads(actor.id, reads);
       await conditions(actor, 'leads', 'read');
       const settingsAccess = await capability(actor, 'manage', 'settings');
       return c.json({

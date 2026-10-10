@@ -61,8 +61,8 @@ const wording = {
   // (sidebar-chats.tsx); "conversation" as the panel's own list says it.
   chats: {
     title: ['Conversations', '对话'],
-    new: ['New conversation', '新对话'],
-    untitled: ['New conversation', '新对话'],
+    new: ['New conversation', '新建对话'],
+    untitled: ['Untitled conversation', '未命名对话'],
     empty: [
       'No conversations yet. Ask anything at the bottom of the page to start one.',
       '还没有对话。在页面底部输入问题即可开始。',
@@ -73,18 +73,7 @@ const wording = {
     loading: ['Loading…', '正在加载…'],
     missing: ['This conversation no longer exists', '这段对话已不存在'],
     actions: ['Actions for "{{title}}"', '“{{title}}”的操作'],
-    delete: ['Delete', '删除'],
-    deleting: ['Deleting…', '正在删除…'],
-    deleteTitle: ['Delete conversation "{{title}}"?', '删除对话“{{title}}”？'],
-    deleteHint: [
-      'Its messages are deleted with it. This cannot be undone.',
-      '其中的消息会一并删除，此操作无法撤销。',
-    ],
-    deleteFailed: [
-      'The conversation could not be deleted. Try again.',
-      '对话删除失败，请重试。',
-    ],
-    deleted: ['Deleted conversation "{{title}}"', '已删除对话“{{title}}”'],
+    archive: ['Archive', '归档'],
   },
   // The assistant's dock at the bottom of the page (assistant-dock.tsx), the
   // overview's ask box (assistant-ask-box.tsx), and the questions they
@@ -1629,6 +1618,7 @@ const wording = {
       decisions: ['AI suggestions in the inbox', '收件箱的 AI 建议'],
       agents: ['Agents', 'Agents'],
       reports: ['Reports', '报表'],
+      agentChat: ['Conversations with Noco', '与 Noco 的对话'],
     },
   },
   aiLanguages: {
@@ -1986,7 +1976,38 @@ const wording = {
       '审阅此审批申请，总结风险与缺失信息，不替审批人做决定。',
     ],
   },
-  // Singular, for "New lead" / "Delete contact"; Chinese has no plural.
+  // Noco's panel on the Agents plugin (client/components/crm/agent-chat/).
+  agentPanel: {
+    title: ['Noco', 'Noco'],
+    history: ['Conversations', '对话列表'],
+    newConversation: ['New conversation', '新建对话'],
+    openFullPage: ['Open full page', '在整页中打开'],
+    close: ['Close', '关闭'],
+    placeholder: ['Ask Noco…', '问问 Noco…'],
+    attachHint: [
+      'Attach files: Noco sees images, and only the names of other files',
+      '添加附件：Noco 能看到图片，其他文件只能看到文件名',
+    ],
+    model: ['Model', '模型'],
+    removePin: ['Remove {{label}}', '移除{{label}}'],
+    notSetUp: [
+      'The assistant is not available. Ask an administrator to set it up in Settings → Agent team.',
+      '助手暂时不可用，请联系管理员在 设置 → Agent 团队 里设置。',
+    ],
+    sendFailed: [
+      'The question was not sent. Try again.',
+      '问题没发出去，请重试。',
+    ],
+    uploadFailed: ['"{{name}}" could not be uploaded.', '“{{name}}”上传失败。'],
+    fileTooLarge: [
+      '"{{name}}" is too large to attach.',
+      '“{{name}}”太大，无法添加。',
+    ],
+    tooManyFiles: [
+      'A message carries at most {{count}} files.',
+      '一条消息最多带 {{count}} 个文件。',
+    ],
+  },
   // The conversations with the Agents plugin's agents.
   agentChat: {
     description: [
@@ -2025,7 +2046,7 @@ const wording = {
     archivedNote: ['This conversation is archived.', '这个对话已归档。'],
     unread: ['Unread', '未读'],
     jumpToLatest: ['Jump to latest', '回到最新'],
-    untitled: ['New conversation', '新对话'],
+    untitled: ['Untitled conversation', '未命名对话'],
     you: ['You', '你'],
     working: ['{{agent}}: {{step}}', '{{agent}}：{{step}}'],
     notFound: ['This conversation does not exist.', '这个对话不存在。'],
@@ -2118,6 +2139,7 @@ const wording = {
       stale: ['Plan “{{title}}” not carried out', '计划“{{title}}”未执行'],
     },
   },
+  // Singular, for "New lead" / "Delete contact"; Chinese has no plural.
   entity: {
     leads: ['lead', '线索'],
     companies: ['company', '公司'],

@@ -112,18 +112,21 @@
   }
 }
 
-/* Application change: the assistant panel (28rem, client/components/crm/
-   ai-chat.tsx) sits beside the page only where both fit, from 1280px; the
+/* Application change: the assistant panels (28rem: Noco's, client/
+   components/crm/agent-chat/panel.tsx, and the AI Employee's, ai-chat.tsx,
+   one at a time) sit beside the page only where both fit, from 1280px; the
    page makes room for exactly its width. Narrower screens show the panel
-   over the page, which is also where it starts closed. */
+   over the page. */
 @media (min-width: 1280px) {
-  body.crm-assistant-open .crm-page-main {
+  body.crm-assistant-open .crm-page-main,
+  body.crm-agent-panel-open .crm-page-main {
     margin-right: 28rem;
     transition: margin-right 200ms ease-in-out;
   }
   /* The record drawer (crm-detail.tsx's RecordDrawer), also from the right,
      moves left of the panel rather than lying under it. */
-  body.crm-assistant-open .crm-record-drawer {
+  body.crm-assistant-open .crm-record-drawer,
+  body.crm-agent-panel-open .crm-record-drawer {
     right: 28rem;
     transition: right 200ms ease-in-out;
   }

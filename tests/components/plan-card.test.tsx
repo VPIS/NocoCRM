@@ -1,10 +1,4 @@
-import {
-  cleanup,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ApiClientError } from '@nocobase/app-client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -23,19 +17,16 @@ import type { PlanView } from '../../client/components/crm/plans.js';
 
 const state = vi.hoisted(() => ({
   api: vi.fn(),
-  root: false,
   plans: [] as unknown[],
 }));
 
-vi.mock(
-  '@nocobase/app-plugin-authorization/client',
-  async (importOriginal) => ({
-    ...(await importOriginal<
-      typeof import('@nocobase/app-plugin-authorization/client')
-    >()),
-    useCan: () => ({ can: state.root }),
-  }),
+// The assistant panel the conversation opens in (tests/setup/agent-chat-fake).
+vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) =>
+  (await import('../setup/agent-chat-fake.js')).fakeChatModule(
+    await importOriginal(),
+  ),
 );
+const { chatFake } = await import('../setup/agent-chat-fake.js');
 vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('../../client/components/crm/api.js')>();
@@ -131,7 +122,7 @@ function renderWith(node: React.ReactNode): void {
 }
 
 beforeEach(() => {
-  state.root = false;
+  chatFake.reset();
   state.plans = [];
   state.api.mockReset();
   state.api.mockImplementation(async (path: string) =>
@@ -192,19 +183,14 @@ describe('a plan card', () => {
   it('shows a plan being carried out without its buttons', () => {
     renderWith(<PlanCard plan={plan({ status: 'executing' })} />);
     expect(screen.getByText('执行中…')).toBeTruthy();
-    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByRole('button', { name: /执行 \d/u })).toBeNull();
+    expect(screen.queryByRole('button', { name: '拒绝' })).toBeNull();
   });
 
-  it('links the conversation it came from only for whoever may open it', () => {
+  it('opens the conversation it came from in the assistant panel', async () => {
     renderWith(<PlanCard plan={plan()} />);
-    expect(screen.queryByRole('link', { name: '来自对话' })).toBeNull();
-    cleanup();
-    state.root = true;
-    renderWith(<PlanCard plan={plan()} />);
-    expect(screen.getByRole('link', { name: '来自对话' })).toHaveAttribute(
-      'href',
-      '/crm/agent-chat/c1',
-    );
+    await userEvent.click(screen.getByRole('button', { name: '来自对话' }));
+    expect(chatFake.opened).toEqual([{ conversationId: 'c1', view: 'chat' }]);
   });
 
   it('explains a stale plan', () => {

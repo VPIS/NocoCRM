@@ -7,18 +7,13 @@ import {
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { crmEn } from '../../client/locales/crm/index.js';
 
 // The assistant's dock at the bottom of the page: what it shows on a page and
 // a record, what it asks the panel for, and when it stays out of the way.
 
 const state = vi.hoisted(() => ({
-  assistant: true,
-  readiness: { state: 'ready' } as
-    | { state: 'loading' }
-    | { state: 'ready' }
-    | { state: 'unavailable'; reason: string },
   panelOpen: false,
   mobile: false,
 }));
@@ -39,45 +34,22 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
     await importOriginal<typeof import('../../client/components/crm/api.js')>();
   return {
     ...actual,
-    useMetadata: () => ({ data: { assistant: state.assistant } }),
     useCrmText: () => ({ text: english, language: 'en-US' }),
   };
 });
 vi.mock('../../client/components/crm/assistant-state.js', () => ({
   CRM_ASSISTANT: 'crm-assistant',
-  useAssistantReadiness: () => state.readiness,
+  CLOSE_EMPLOYEE_PANEL: 'crm-assistant-close',
   usePanelOpen: () => state.panelOpen,
 }));
-// The AI Employee plugin's service: the CRM employee with two models, and an
-// upload that answers with the stored file.
-vi.mock(
-  '../../client/extensions/nocobase-ai/index.js',
-  async (importOriginal) => {
-    const actual =
-      await importOriginal<
-        typeof import('../../client/extensions/nocobase-ai/index.js')
-      >();
-    return {
-      ...actual,
-      useAI: () => ({
-        employees: [{ username: 'crm-assistant', nickname: 'Noco' }],
-        models: [
-          { llmService: 'qwen', value: 'qwen-max', label: 'Qwen Max' },
-          { llmService: 'openai', value: 'gpt-5', label: 'GPT 5' },
-        ],
-        uploadFile: (file: File) =>
-          Promise.resolve({
-            id: `f-${file.name}`,
-            filename: file.name,
-            mimetype: file.type,
-            size: file.size,
-            url: `/files/${file.name}`,
-          }),
-      }),
-    };
-  },
+// Noco on the Agents plugin, with two models (tests/setup/agent-chat-fake).
+vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) =>
+  (await import('../setup/agent-chat-fake.js')).fakeChatModule(
+    await importOriginal(),
+  ),
 );
-const MODEL = { llmService: 'qwen', model: 'qwen-max' };
+const { chatFake } = await import('../setup/agent-chat-fake.js');
+const MODEL = { modelService: 'qwen', model: 'qwen-max' };
 vi.mock('../../client/hooks/use-mobile.js', () => ({
   useIsMobile: () => state.mobile,
 }));
@@ -92,10 +64,19 @@ function RecordPage({ name }: { name?: string }) {
   return null;
 }
 
-const events: Record<string, unknown>[] = [];
-const listen = (event: Event): void => {
-  events.push((event as CustomEvent<Record<string, unknown>>).detail);
-};
+// What was asked of Noco: each question as created and sent.
+function asked(): Record<string, unknown>[] {
+  return chatFake.sent.map((message, index) => {
+    const context = message.context as
+      { items: { kind: string; id: string }[] } | undefined;
+    return {
+      text: message.content,
+      model: chatFake.created[index]?.model,
+      items: (context?.items ?? []).map((item) => `${item.kind}:${item.id}`),
+      files: message.attachmentIds ?? [],
+    };
+  });
+}
 
 function renderDock(path = '/', record?: { name?: string }) {
   return render(
@@ -108,15 +89,11 @@ function renderDock(path = '/', record?: { name?: string }) {
 
 describe('the assistant dock', () => {
   beforeEach(() => {
-    state.assistant = true;
-    state.readiness = { state: 'ready' };
     state.panelOpen = false;
     state.mobile = false;
-    events.length = 0;
+    chatFake.reset();
     localStorage.clear();
-    window.addEventListener('crm-assistant', listen);
   });
-  afterEach(() => window.removeEventListener('crm-assistant', listen));
 
   it("shows the page's suggested questions when focused, and sends one with a click", async () => {
     const user = userEvent.setup();
@@ -133,14 +110,18 @@ describe('the assistant dock', () => {
     await user.click(
       screen.getByRole('button', { name: english('dock.q.leads.first') }),
     );
-    expect(events).toEqual([
-      {
-        prompt: english('dock.q.leads.first'),
-        send: true,
-        newConversation: true,
-        model: MODEL,
-      },
-    ]);
+    await waitFor(() =>
+      expect(asked()).toEqual([
+        {
+          text: english('dock.q.leads.first'),
+          model: MODEL,
+          items: [],
+          files: [],
+        },
+      ]),
+    );
+    // The panel opens on the conversation.
+    expect(chatFake.opened).toEqual([{ conversationId: 'c1', view: 'chat' }]);
   });
 
   it("asks about the page's record, its kind named in the placeholder, and clears itself", async () => {
@@ -160,18 +141,12 @@ describe('the assistant dock', () => {
     // Typing hides the suggestions.
     expect(screen.queryByRole('list')).toBeNull();
     await user.click(send);
-    expect(events).toEqual([
-      {
-        prompt: 'Who decides?',
-        send: true,
-        newConversation: true,
-        model: MODEL,
-        entity: 'leads',
-        recordId: 'l1',
-        name: 'Tang Rui',
-      },
-    ]);
     expect(input).toHaveValue('');
+    await waitFor(() =>
+      expect(asked()).toEqual([
+        { text: 'Who decides?', model: MODEL, items: ['leads:l1'], files: [] },
+      ]),
+    );
   });
 
   it('sends with Enter, but not while an input method is composing', async () => {
@@ -180,10 +155,9 @@ describe('the assistant dock', () => {
     const input = screen.getByRole('textbox');
     await user.type(input, '逾期');
     fireEvent.keyDown(input, { key: 'Enter', keyCode: 229, isComposing: true });
-    expect(events).toHaveLength(0);
     await user.keyboard('{Enter}');
-    expect(events).toHaveLength(1);
-    expect(events[0]?.prompt).toBe('逾期');
+    await waitFor(() => expect(asked()).toHaveLength(1));
+    expect(asked()[0]?.text).toBe('逾期');
   });
 
   it('opens into the composer when clicked, and Tab goes through its tools to the suggestions', async () => {
@@ -235,15 +209,11 @@ describe('the assistant dock', () => {
     const send = screen.getByRole('button', { name: english('send') });
     await waitFor(() => expect(send).toBeEnabled());
     await user.click(send);
-    expect(events[0]).toMatchObject({
-      prompt: '',
-      send: true,
-      newConversation: true,
-      entity: 'leads',
-      recordId: 'l1',
-      attachments: [{ filename: 'quote.pdf', status: 'done' }],
-      model: MODEL,
-    });
+    await waitFor(() =>
+      expect(asked()).toEqual([
+        { text: '', model: MODEL, items: ['leads:l1'], files: ['f-quote.pdf'] },
+      ]),
+    );
   });
 
   it('keeps the text when Esc closes the suggestions', async () => {
@@ -260,19 +230,13 @@ describe('the assistant dock', () => {
     expect(input).toHaveValue('draft');
   });
 
-  it('stays out of the way: assistant off, chat loading, panel open, the overview, filled pages', () => {
-    state.assistant = false;
-    const off = renderDock('/crm/leads');
-    expect(screen.queryByRole('textbox')).toBeNull();
-    off.unmount();
-
-    state.assistant = true;
-    state.readiness = { state: 'loading' };
+  it('stays out of the way: agents loading, panel open, the overview, filled pages', () => {
+    chatFake.loading = true;
     const loading = renderDock('/crm/leads');
     expect(screen.queryByRole('textbox')).toBeNull();
     loading.unmount();
 
-    state.readiness = { state: 'ready' };
+    chatFake.loading = false;
     // The overview has an ask box of its own.
     for (const path of [
       '/',
@@ -300,13 +264,23 @@ describe('the assistant dock', () => {
 
   it('says why when the chat cannot start, and sends nothing', async () => {
     const user = userEvent.setup();
-    state.readiness = { state: 'unavailable', reason: 'No model is enabled.' };
+    chatFake.agents = [
+      {
+        ...chatFake.agents[0],
+        availability: {
+          online: false,
+          reason: 'modelUnavailable',
+          onlineRunners: 0,
+        },
+      },
+    ];
     renderDock('/crm/leads');
-    const input = screen.getByRole('textbox', { name: 'No model is enabled.' });
+    const reason = english('agentChat.offline.modelUnavailable');
+    const input = screen.getByRole('textbox', { name: reason });
     expect(input).toBeDisabled();
     await user.click(input);
     expect(screen.queryByRole('list')).toBeNull();
-    expect(events).toHaveLength(0);
+    expect(chatFake.created).toHaveLength(0);
   });
 
   it('is a round button on a phone that opens a new conversation from the record', async () => {
@@ -317,14 +291,10 @@ describe('the assistant dock', () => {
     await user.click(
       screen.getByRole('button', { name: english('dock.open') }),
     );
-    expect(events).toEqual([
-      {
-        prompt: '',
-        newConversation: true,
-        entity: 'leads',
-        recordId: 'l1',
-        name: 'Tang Rui',
-      },
+    // A new conversation with the lead pinned, nothing sent.
+    expect(chatFake.created).toHaveLength(0);
+    expect(chatFake.pinned).toEqual([
+      { kind: 'leads', id: 'l1', label: 'Tang Rui' },
     ]);
   });
 
@@ -359,6 +329,11 @@ describe('the assistant dock', () => {
     });
     await user.type(input, 'Next?{Enter}');
     // The page that went away withdrew only its own announcement.
-    expect(events[0]?.name).toBe('Wu Yichen');
+    await waitFor(() => expect(chatFake.sent).toHaveLength(1));
+    const context = chatFake.sent[0]?.context as {
+      items: { id: string }[];
+    };
+    expect(context.items).toHaveLength(1);
+    expect(asked()[0]?.items).toEqual(['leads:l1']);
   });
 });

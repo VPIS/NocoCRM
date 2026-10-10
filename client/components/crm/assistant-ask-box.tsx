@@ -7,37 +7,33 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip.js';
-import { toText, useCrmText, useMetadata } from './api.js';
+import { toText, useCrmText } from './api.js';
 import {
   HOME_QUESTIONS,
   useAskDraft,
   useFocusReturn,
 } from './assistant-ask.js';
 import { AskComposer } from './assistant-ask-composer.js';
-import { useAssistantReadiness } from './assistant-state.js';
+import { useAgentReadiness } from './agent-chat/ask.js';
 
 // The overview's ask box: the first thing on the page, in its flow rather
 // than floating like the dock (which the overview does not show), with the
 // overview's suggested questions always laid out under it, always expanded
-// (assistant-ask-composer.tsx). Sending opens the panel on a new
-// conversation that sends the question with its files on the model picked.
-// While the metadata or the chat is still loading it is drawn disabled, so
-// nothing below it moves once the chat is ready; while the chat cannot start
-// the reason is its placeholder and tooltip.
+// (assistant-ask-composer.tsx). Sending starts a conversation with Noco that
+// sends the question with its files on the model picked, and opens the
+// panel on it. While the agents are still loading it is drawn disabled, so
+// nothing below it moves once Noco is ready; while Noco cannot answer the
+// reason is its placeholder and tooltip.
 export function AssistantAskBox(): ReactElement | null {
   const { text } = useCrmText();
-  const { data: meta } = useMetadata();
-  const readiness = useAssistantReadiness();
-  const disabled = !meta || readiness.state !== 'ready';
+  const readiness = useAgentReadiness();
+  const disabled = readiness.state !== 'ready';
   const draft = useAskDraft(undefined, disabled);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   useFocusReturn(() => inputRef.current);
 
-  // Removed only once the metadata says the assistant is off: until the
-  // metadata arrives it is drawn as while the chat loads.
-  if (meta && !meta.assistant) return null;
   const unavailable =
-    meta && readiness.state === 'unavailable' ? readiness.reason : undefined;
+    readiness.state === 'unavailable' ? readiness.reason : undefined;
   const placeholder = unavailable ?? toText(text('dock.placeholder'));
 
   const box = (

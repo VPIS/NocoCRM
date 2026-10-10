@@ -8,7 +8,6 @@ import {
 } from '#components/ui/select';
 import { Skeleton } from '#components/ui/skeleton';
 import { Spinner } from '#components/ui/spinner';
-import { Textarea } from '#components/ui/textarea';
 import {
   Tooltip,
   TooltipContent,
@@ -36,31 +35,24 @@ import type {
   ConversationDetail,
   ConversationMessage,
 } from '@nocobase/app-plugin-agents/shared/conversations';
-import {
-  Archive,
-  ArchiveRestore,
-  ArrowDown,
-  ArrowUp,
-  Bot,
-  Info,
-} from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowDown, Info } from 'lucide-react';
 import {
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
-  type KeyboardEvent,
   type ReactElement,
   type ReactNode,
 } from 'react';
 import { Link } from 'react-router';
-import { errorCode, toText, useCrmText } from '../../components/crm/api.js';
-import { AutoLoadMore } from '../../components/crm/auto-load.js';
-import { ErrorNotice } from '../../components/crm/common.js';
-import { Markdown } from '../../components/crm/markdown.js';
-import { useIsMobile } from '../../hooks/use-mobile.js';
-import { PlanCard } from '../../components/crm/plan-card.js';
-import { usePlans } from '../../components/crm/plans.js';
+import { errorCode, toText, useCrmText } from '../api.js';
+import { AutoLoadMore } from '../auto-load.js';
+import { ErrorNotice } from '../common.js';
+import { Markdown } from '../markdown.js';
+import { PlanCard } from '../plan-card.js';
+import { usePlans } from '../plans.js';
+import { CRM_SOURCE, useAgentModels } from './ask.js';
+import { Composer } from './composer.js';
 
 // One conversation with an agent, or a new one (`conversationId` null): its
 // messages, the notices of what happened meanwhile, the plans the agent
@@ -68,7 +60,6 @@ import { usePlans } from '../../components/crm/plans.js';
 // composer. The data are the Agents plugin's headless chat.
 
 const AGENTS_NS = '@nocobase/app-plugin-agents';
-const SOURCE = 'crm';
 
 export function Conversation({
   conversationId,
@@ -76,12 +67,16 @@ export function Conversation({
   onCreated,
   onArchived,
   onRestored,
+  onBack,
 }: {
   conversationId: string | null;
   agents: readonly ChatAgent[];
   onCreated: (conversation: ConversationDetail) => void;
   onArchived: () => void;
   onRestored: () => void;
+  // Back to the conversations from one that is gone: in the panel its own
+  // list; left out, the full page's.
+  onBack?: () => void;
 }): ReactElement {
   const { text } = useCrmText();
   const { t: agentsT } = useTranslation(AGENTS_NS);
@@ -102,10 +97,15 @@ export function Conversation({
       agents.find((item) => item.id === picked) ??
       agents[0] ??
       null);
+  // A new conversation answers with the model picked for it.
+  const models = useAgentModels(agent);
   const send = useSendMessage({
     conversationId,
     agentId: agent?.id ?? null,
-    source: SOURCE,
+    source: CRM_SOURCE,
+    model: models.model
+      ? { modelService: models.model.modelService, model: models.model.model }
+      : null,
     dispatch: messages.dispatch,
     onCreated,
   });
@@ -167,8 +167,12 @@ export function Conversation({
         <Button
           variant='ghost'
           size='sm'
-          render={<Link to='/crm/agent-chat' />}
-          nativeButton={false}
+          {...(onBack
+            ? { onClick: onBack }
+            : {
+                render: <Link to='/crm/agent-chat' />,
+                nativeButton: false,
+              })}
         >
           {text('agentChat.backToList')}
         </Button>
@@ -403,7 +407,16 @@ export function Conversation({
         <Composer
           disabled={loading || (!conversationId && !agent)}
           reason={offline}
-          onSend={(content) => void send({ content, context: undefined })}
+          {...(conversationId
+            ? {}
+            : {
+                models: models.models,
+                model: models.model,
+                onModel: models.select,
+              })}
+          onSend={({ content, context, attachments }) =>
+            void send({ content, context, attachments })
+          }
         />
       )}
     </section>
@@ -538,65 +551,5 @@ function LiveLine({
         step: stepLineText(agentsT, view.line),
       })}
     </p>
-  );
-}
-
-// The message box: Enter sends, Shift+Enter breaks the line, and an Enter
-// that ends an input method's composition does neither.
-function Composer({
-  disabled,
-  reason,
-  onSend,
-}: {
-  disabled: boolean;
-  reason: string | null;
-  onSend: (content: string) => void;
-}): ReactElement {
-  const { text } = useCrmText();
-  // A phone's keyboard would cover the conversation as soon as it opened.
-  const isMobile = useIsMobile();
-  const [value, setValue] = useState('');
-  const blocked = disabled || Boolean(reason);
-  const submit = (): void => {
-    const content = value.trim();
-    if (!content || blocked) return;
-    onSend(content);
-    setValue('');
-  };
-  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>): void => {
-    if (event.key !== 'Enter' || event.shiftKey) return;
-    if (event.nativeEvent.isComposing || event.keyCode === 229) return;
-    event.preventDefault();
-    submit();
-  };
-  return (
-    <div className='flex flex-col gap-1.5 border-t border-border/60 pt-3 pb-4'>
-      {reason ? (
-        <p className='flex items-center gap-1.5 text-xs text-muted-foreground'>
-          <Bot className='size-3.5' aria-hidden />
-          {reason}
-        </p>
-      ) : null}
-      <div className='flex items-end gap-2'>
-        <Textarea
-          autoFocus={!isMobile}
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder={toText(text('agentChat.placeholder'))}
-          aria-label={toText(text('agentChat.placeholder'))}
-          rows={1}
-          className='max-h-48 min-h-9 resize-none'
-        />
-        <Button
-          size='icon'
-          aria-label={text('agentChat.send')}
-          disabled={blocked || !value.trim()}
-          onClick={submit}
-        >
-          <ArrowUp />
-        </Button>
-      </div>
-    </div>
   );
 }

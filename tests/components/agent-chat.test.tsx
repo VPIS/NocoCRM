@@ -44,8 +44,15 @@ vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) => {
     fetchNextPage: vi.fn(),
     refetch: vi.fn(),
   });
+  const fake = (await import('../setup/agent-chat-fake.js')).fakeChatModule(
+    actual,
+  );
   return {
     ...actual,
+    // The panel's pieces the composer uses: pins, sources, uploads.
+    useChatPanel: fake.useChatPanel,
+    useChatSources: fake.useChatSources,
+    useChatAttachments: fake.useChatAttachments,
     ChatProvider: ({ children }: { children: ReactNode }) => children,
     useChatAgents: () => ({
       data: state.agents,
@@ -99,6 +106,10 @@ vi.mock(
     useCan: () => ({ can: state.root }),
   }),
 );
+vi.mock('@nocobase/app-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@nocobase/app-client')>()),
+  useToaster: () => ({ show: vi.fn(), close: vi.fn() }),
+}));
 vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('../../client/components/crm/api.js')>();
@@ -342,15 +353,17 @@ describe('the agent conversations', () => {
   it('sends on Enter, never on Shift+Enter or while composing', async () => {
     state.open = [conversation('c1', '展会线索')];
     renderAt('/crm/agent-chat/c1');
-    const box = screen.getByRole('textbox', { name: '问问 Agent…' });
+    const box = screen.getByRole('textbox', { name: '问问 Noco…' });
     await userEvent.type(box, '本周新线索有几条');
     fireEvent.keyDown(box, { key: 'Enter', isComposing: true, keyCode: 229 });
     fireEvent.keyDown(box, { key: 'Enter', shiftKey: true });
     expect(state.send).not.toHaveBeenCalled();
     fireEvent.keyDown(box, { key: 'Enter' });
+    // The page it was written on goes with it; nothing was pinned.
     expect(state.send).toHaveBeenCalledWith({
       content: '本周新线索有几条',
-      context: undefined,
+      context: { route: window.location.pathname, items: [] },
+      attachments: [],
     });
     expect((box as HTMLTextAreaElement).value).toBe('');
   });
@@ -375,7 +388,7 @@ describe('the agent conversations', () => {
     expect(screen.queryByRole('navigation')).toBeNull();
     expect(screen.queryByText('没有已归档的对话')).toBeNull();
     expect(screen.queryByRole('button', { name: '新建对话' })).toBeNull();
-    expect(screen.getByRole('textbox', { name: '问问 Agent…' })).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: '问问 Noco…' })).toBeTruthy();
   });
 
   it("shows none of the reader's plans in a conversation not yet started", async () => {
@@ -419,7 +432,7 @@ describe('the agent conversations', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    expect(screen.getByRole('textbox', { name: '问问 Agent…' })).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: '问问 Noco…' })).toBeTruthy();
     expect(screen.queryByText('别处的计划')).toBeNull();
   });
 
@@ -447,7 +460,7 @@ describe('the agent conversations', () => {
     ];
     renderAt('/crm/agent-chat/new');
     await userEvent.type(
-      screen.getByRole('textbox', { name: '问问 Agent…' }),
+      screen.getByRole('textbox', { name: '问问 Noco…' }),
       '你好',
     );
     expect(screen.getByRole('button', { name: '发送' })).toBeDisabled();

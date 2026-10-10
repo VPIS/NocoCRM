@@ -8,6 +8,13 @@ import {
   defaultSettings,
 } from '../../server/providers/crm/schema.js';
 
+// Noco can answer, so the cards offer Discuss (tests/setup/agent-chat-fake).
+vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) =>
+  (await import('../setup/agent-chat-fake.js')).fakeChatModule(
+    await importOriginal(),
+  ),
+);
+
 // The AI's review of an approval reads as a follow-up's card does: in the
 // timeline it leaves its heading to its line, and everything to do with it
 // sits at its foot, Discuss at the left, Ignore and the accept at the right.

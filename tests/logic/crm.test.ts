@@ -62,6 +62,7 @@ import {
 import { Hono, type MiddlewareHandler } from 'hono';
 import {
   capability,
+  conditions,
   registerCrmResources,
   provisionCrm,
   roleKey,
@@ -108,6 +109,10 @@ import {
   crmActionGate,
   heldActions,
 } from '../../server/providers/crm-agents/gate.js';
+import { registerContextKinds } from '../../server/providers/crm-agents/context.js';
+import { defaultSettings } from '../../server/providers/crm/schema.js';
+import { crmConversationRules } from '../../server/providers/crm-agents/rules.js';
+import { provisionNoco } from '../../server/providers/crm-agents/noco.js';
 import {
   findApiDocumentSchemaProblems,
   findUndeclaredApiRoutes,
@@ -10038,5 +10043,200 @@ describe('task preparation', () => {
     asked.length = 0;
     await scanTaskPreparation(service, preparer, now, 1000);
     expect(asked).not.toContain(timed.id);
+  });
+});
+
+describe("Noco's conversations on the Agents plugin", () => {
+  // What the CRM registers on the plugin's context kinds, by kind.
+  const resolvers = (): Map<
+    string,
+    (
+      conn: unknown,
+      userId: string,
+      ids: readonly string[],
+    ) => Promise<ReadonlyMap<string, { title: string; url: string | null }>>
+  > => {
+    const found = new Map();
+    registerContextKinds(
+      {
+        conversations: {
+          contextKinds: {
+            register: (kind: string, resolve: unknown) => {
+              found.set(kind, resolve);
+              return () => undefined;
+            },
+          },
+        },
+      } as never,
+      service,
+      '/main',
+    );
+    return found;
+  };
+
+  // What the person may read, as their last workspace load leaves it.
+  const remember = async (userId: string): Promise<void> => {
+    const reads: Record<string, never> = {};
+    for (const entity of entities)
+      reads[`${entity}.read`] = (await conditions(
+        actor(userId),
+        entity,
+        'read',
+      ).catch(() => null)) as never;
+    service.rememberReads(userId, reads);
+  };
+
+  it('names in a message only the records the person may read', async () => {
+    await remember('rep');
+    await remember('outsider');
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Context lead',
+    });
+    const id = toText(lead.id);
+    const leads = resolvers().get('leads')!;
+    // Inside a transaction, as the plugin calls them when a message is saved.
+    const within = <T>(run: (conn: unknown) => Promise<T>): Promise<T> =>
+      database.transaction((conn) => run(conn));
+    const mine = await within((conn) => leads(conn, 'rep', [id, 'missing']));
+    expect([...mine.keys()]).toEqual([id]);
+    expect(mine.get(id)).toMatchObject({
+      title: 'Context lead',
+      url: `/main/crm/leads/${id}`,
+    });
+    // Someone who may not read it learns nothing of it.
+    expect((await within((conn) => leads(conn, 'outsider', [id]))).size).toBe(
+      0,
+    );
+  });
+
+  it('names nothing without a recent snapshot of what the person may read', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Unsnapshotted lead',
+    });
+    const leads = resolvers().get('leads')!;
+    const seen = await database.transaction((conn) =>
+      leads(conn, 'nobody-yet', [toText(lead.id)]),
+    );
+    expect(seen.size).toBe(0);
+  });
+
+  it('names an AI card for whoever reads its record, and for no one else', async () => {
+    await remember('rep');
+    await remember('outsider');
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Card lead',
+    });
+    const now = new Date().toISOString();
+    await database
+      .query()
+      .insertInto('crmHistory')
+      .values({
+        id: 'card-1',
+        entity: 'leads',
+        recordId: toText(lead.id),
+        actorId: 'rep',
+        action: 'evaluation',
+        source: 'ai',
+        changes: JSON.stringify({}),
+        createdAt: now,
+      })
+      .execute();
+    const cards = resolvers().get('crm-evaluation')!;
+    const within = <T>(run: (conn: unknown) => Promise<T>): Promise<T> =>
+      database.transaction((conn) => run(conn));
+    const seen = await within((conn) => cards(conn, 'rep', ['card-1']));
+    expect(seen.get('card-1')).toMatchObject({
+      title: 'AI follow-up: Card lead',
+      url: `/main/crm/leads/${toText(lead.id)}?focus=card-1`,
+    });
+    expect(
+      (await within((conn) => cards(conn, 'outsider', ['card-1']))).size,
+    ).toBe(0);
+  });
+
+  it('gives every conversation the business guidance and the time zone', async () => {
+    const rules = crmConversationRules(() => ({
+      ...defaultSettings,
+      timeZone: 'Europe/Berlin',
+      aiLanguage: 'en-US',
+    }));
+    const lines = await rules({} as never, {} as never);
+    expect(lines.rules?.some((rule) => rule.includes('Europe/Berlin'))).toBe(
+      true,
+    );
+    expect(lines.rules?.some((rule) => rule.includes('web search'))).toBe(true);
+    // The guidance's headings each lead a section.
+    expect(lines.sections?.length).toBeGreaterThan(1);
+    expect(
+      lines.sections?.every((section) => section[0]?.startsWith('#')),
+    ).toBe(true);
+  });
+
+  it('creates Noco once, with the enabled chat models, as the default chat agent only when none is set', async () => {
+    const created: Record<string, unknown>[] = [];
+    let settings = { defaultAgentId: null as string | null };
+    const fakeAgents = {
+      online: {
+        services: {
+          list: () =>
+            Promise.resolve([
+              {
+                name: 'qwen',
+                enabled: true,
+                models: [
+                  { value: 'max', kind: 'chat' },
+                  { value: 'embed', kind: 'embedding' },
+                ],
+              },
+              {
+                name: 'off',
+                enabled: false,
+                models: [{ value: 'x', kind: 'chat' }],
+              },
+            ]),
+        },
+      },
+      agents: {
+        create: (_by: string, input: Record<string, unknown>) => {
+          created.push(input);
+          return Promise.resolve({ id: `agent-${String(created.length)}` });
+        },
+      },
+      chat: {
+        settings: () => Promise.resolve(settings),
+        updateSettings: (_by: string, patch: { defaultAgentId: string }) => {
+          settings = { ...settings, ...patch };
+          return Promise.resolve(settings);
+        },
+      },
+    } as never;
+    await database
+      .query()
+      .deleteFrom('crmSettings')
+      .where('id', '=', 'agents-noco-v1')
+      .execute();
+    await provisionNoco(fakeAgents, database, ['crm.leads/view']);
+    await provisionNoco(fakeAgents, database, ['crm.leads/view']);
+    // Once, whatever happens to it afterwards.
+    expect(created).toHaveLength(1);
+    expect(created[0]).toMatchObject({
+      name: 'Noco',
+      type: 'online',
+      access: 'everyone',
+      actions: ['crm.leads/view'],
+      // The enabled services' chat models only.
+      modelEntries: [{ modelService: 'qwen', model: 'max' }],
+    });
+    expect(settings.defaultAgentId).toBe('agent-1');
+    const marker = await database
+      .query()
+      .selectFrom('crmSettings')
+      .select('value')
+      .where('id', '=', 'agents-noco-v1')
+      .executeTakeFirst();
+    expect(JSON.parse(toText(marker?.value))).toEqual({
+      version: 1,
+      agentId: 'agent-1',
+    });
   });
 });

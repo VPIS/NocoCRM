@@ -11,7 +11,7 @@ import {
   type ReactElement,
 } from 'react';
 import { toText, useCrmText } from './api.js';
-import { useAskModel } from './assistant-ask.js';
+import { useEmployeeModel } from './employee-model.js';
 import {
   requestConversation,
   useAssistantReadiness,
@@ -55,7 +55,7 @@ export function GlobalSearchProvider({
 }: PropsWithChildren): ReactElement {
   const { text } = useCrmText();
   const readiness = useAssistantReadiness();
-  const { model } = useAskModel();
+  const model = useEmployeeModel();
   const chat = useSearchChat();
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState('');

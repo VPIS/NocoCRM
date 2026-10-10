@@ -173,16 +173,16 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       },
     ],
   },
-  // The conversations with the Agents plugin's agents (migration step 2):
-  // root only and out of the menu while the AI Employee assistant stays
-  // everyone's; opened by its address and from the plans' cards. The open
-  // conversation, or "new", is the child's segment; the page draws it, as a
-  // record page draws its tab (pages/crm-record-tab.tsx renders nothing).
+  // The conversations with the CRM's agent: the assistant panel's full-page
+  // view, out of the menu, opened from the panel and the plans' cards. The
+  // open conversation, or "new", is the child's segment; the page draws it,
+  // as a record page draws its tab (pages/crm-record-tab.tsx renders
+  // nothing).
   {
     name: 'crm-agent-chat',
     path: '/crm/agent-chat',
     auth: 'required',
-    authz: 'unrestricted',
+    authz: page('crm-agent-chat'),
     componentLoader: () => import('./pages/crm-agent-chat/index.js'),
     children: [
       {

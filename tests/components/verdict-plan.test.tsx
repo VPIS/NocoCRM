@@ -7,6 +7,13 @@ import {
 } from '../../server/providers/crm/schema.js';
 import { crmZh } from '../../client/locales/crm/index.js';
 
+// Noco can answer, so the cards offer Discuss (tests/setup/agent-chat-fake).
+vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) =>
+  (await import('../setup/agent-chat-fake.js')).fakeChatModule(
+    await importOriginal(),
+  ),
+);
+
 const state = vi.hoisted(() => ({ api: vi.fn(), assign: true }));
 // No mail here: the Mail plugin needs the application root, which these
 // tests do not mount.

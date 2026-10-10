@@ -57,13 +57,10 @@ import { IDLE_SEARCH_CHAT } from './search-turn.js';
 import {
   CRM_ASSISTANT,
   clearConversationRequest,
-  publishPanelChat,
-  setChatMounted,
-  takeDeleteRequest,
-  useDeleteRequest,
   publishPanelOpen,
   useAssistantReadiness,
   useConversationRequest,
+  CLOSE_EMPLOYEE_PANEL,
 } from './assistant-state.js';
 
 // The CRM assistant: the AI Employee plugin's chat, mounted in a side panel,
@@ -347,14 +344,19 @@ function CrmAssistantPanel(): ReactElement | null {
       shortcutOpensPanel = true;
       controller.open();
     };
+    // Noco's panel on the Agents plugin (agent-chat/panel.tsx) opening: one
+    // panel at a time.
+    const close = (): void => controller.setOpen(false);
     window.addEventListener('crm-assistant', show);
     window.addEventListener('crm-assistant-conversation', showConversation);
+    window.addEventListener(CLOSE_EMPLOYEE_PANEL, close);
     return () => {
       window.removeEventListener('crm-assistant', show);
       window.removeEventListener(
         'crm-assistant-conversation',
         showConversation,
       );
+      window.removeEventListener(CLOSE_EMPLOYEE_PANEL, close);
     };
   }, [controller]);
   // Expand and close, as the plugin's ChatSurfaceActions offers them but
@@ -494,7 +496,6 @@ function ConfiguredChat({
       >
         <RememberConversation />
         <OpenRequestedConversation />
-        <DeleteRequestedConversation />
         <AIChatWindow
           className='h-full'
           showEmployeeSelector={false}
@@ -650,26 +651,6 @@ function RememberConversation(): null {
   } = useAIChat();
   // Once per mount: a ref, since nothing renders from it.
   const restoredRef = useRef(false);
-  // What the chat shows and holds, for the sidebar's conversation list:
-  // the conversation it marks, and when to refresh its copy of the list
-  // (read state included, so a conversation opened here loses its dot there).
-  const signature = conversations
-    .map(
-      (item) =>
-        `${item.id}:${item.title}:${item.updatedAt}:${item.unread ? 1 : 0}`,
-    )
-    .join('|');
-  useEffect(() => {
-    publishPanelChat({
-      active:
-        activeConversationId === AI_DRAFT_CONVERSATION_ID
-          ? undefined
-          : activeConversationId,
-      signature,
-    });
-  }, [activeConversationId, signature]);
-  // The chat unmounts when the panel closes: nothing is shown then.
-  useEffect(() => () => publishPanelChat({}), []);
   useEffect(() => {
     try {
       if (activeConversationId !== AI_DRAFT_CONVERSATION_ID)
@@ -783,27 +764,5 @@ function OpenRequestedConversation(): null {
     queryClient,
     text,
   ]);
-  return null;
-}
-
-// Deletes what the sidebar asks to delete while this chat is mounted
-// (assistant-state.ts), through the plugin's own removal, which also starts
-// a new conversation when the deleted one is on screen.
-function DeleteRequestedConversation(): null {
-  const request = useDeleteRequest();
-  const { removeConversation } = useAIChat();
-  useEffect(() => {
-    setChatMounted(true);
-    return () => setChatMounted(false);
-  }, []);
-  useEffect(() => {
-    if (!request) return;
-    const taken = takeDeleteRequest();
-    if (!taken) return;
-    removeConversation(taken.id).then(
-      () => taken.settle(),
-      (error: unknown) => taken.settle(error ?? new Error('delete failed')),
-    );
-  }, [request, removeConversation]);
   return null;
 }

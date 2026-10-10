@@ -5,11 +5,17 @@ import {
   type ConversationListPages,
 } from '@nocobase/app-plugin-agents/client/chat';
 import type { UseInfiniteQueryResult } from '@tanstack/react-query';
-import { useEffect, useState, type ReactElement, type Ref } from 'react';
+import {
+  useEffect,
+  useState,
+  type ReactElement,
+  type ReactNode,
+  type Ref,
+} from 'react';
 import { NavLink } from 'react-router';
-import { relativeTime, useCrmText } from '../../components/crm/api.js';
-import { AutoLoadMore } from '../../components/crm/auto-load.js';
-import { ErrorNotice } from '../../components/crm/common.js';
+import { relativeTime, useCrmText } from '../api.js';
+import { AutoLoadMore } from '../auto-load.js';
+import { ErrorNotice } from '../common.js';
 
 // The reader's conversations with the agents, last message first: the side
 // list of the page (frontend standard §3.5), each row its conversation's
@@ -20,12 +26,18 @@ export function ConversationList({
   openId,
   archived,
   onArchived,
+  onOpen,
 }: {
   ref?: Ref<HTMLElement>;
   query: UseInfiniteQueryResult<ConversationListPages>;
   openId: string | null;
   archived: boolean;
-  onArchived: (shown: boolean) => void;
+  // Showing the archived ones instead of the open; left out, the list has
+  // no such switch (the assistant panel's history).
+  onArchived?: (shown: boolean) => void;
+  // Opening a conversation in place (the panel); left out, a row is a link
+  // to the conversation's page.
+  onOpen?: (id: string) => void;
 }): ReactElement {
   const { text, language } = useCrmText();
   const agentText = useAgentText();
@@ -42,7 +54,7 @@ export function ConversationList({
       variant='ghost'
       size='sm'
       className='text-muted-foreground'
-      onClick={() => onArchived(!archived)}
+      onClick={() => onArchived?.(!archived)}
     >
       {text(archived ? 'agentChat.hideArchived' : 'agentChat.showArchived')}
     </Button>
@@ -86,11 +98,10 @@ export function ConversationList({
               const unread = !conversation.read;
               return (
                 <li key={conversation.id}>
-                  <NavLink
+                  <RowTarget
                     to={`/crm/agent-chat/${encodeURIComponent(conversation.id)}${suffix}`}
-                    aria-current={
-                      conversation.id === openId ? 'page' : undefined
-                    }
+                    onOpen={onOpen ? () => onOpen(conversation.id) : undefined}
+                    current={conversation.id === openId}
                     className={`relative flex w-full flex-col gap-0.5 rounded-lg border px-3 py-2 text-left transition-[background-color,border-color] ${
                       conversation.id === openId
                         ? 'border-border bg-card shadow-xs'
@@ -126,7 +137,7 @@ export function ConversationList({
                         )}
                       </span>
                     </span>
-                  </NavLink>
+                  </RowTarget>
                 </li>
               );
             })}
@@ -138,7 +149,43 @@ export function ConversationList({
           onLoad={() => void query.fetchNextPage()}
         />
       </div>
-      <div className='border-t border-border/60 pt-2'>{toggle}</div>
+      {onArchived ? (
+        <div className='border-t border-border/60 pt-2'>{toggle}</div>
+      ) : null}
     </nav>
+  );
+}
+
+// A row: a link to the conversation's page, or a button opening it in place.
+function RowTarget({
+  to,
+  onOpen,
+  current,
+  className,
+  children,
+}: {
+  to: string;
+  onOpen: (() => void) | undefined;
+  current: boolean;
+  className: string;
+  children: ReactNode;
+}): ReactElement {
+  return onOpen ? (
+    <button
+      type='button'
+      className={className}
+      aria-current={current ? 'true' : undefined}
+      onClick={onOpen}
+    >
+      {children}
+    </button>
+  ) : (
+    <NavLink
+      to={to}
+      aria-current={current ? 'page' : undefined}
+      className={className}
+    >
+      {children}
+    </NavLink>
   );
 }
