@@ -34,7 +34,6 @@ import {
   resolveTab,
   useDetailTab,
   useRecordDrawerState,
-  useRecordLink,
   type RecordDrawerApi,
 } from '../components/crm/record-drawer.js';
 import {
@@ -121,8 +120,12 @@ import {
   VerdictPanel,
   type EvaluationEntry,
 } from '../components/crm/lead-evaluation.js';
-import { FileLinks, UploadZone } from '../components/crm/attachments.js';
-import { AttachButton, CommentFiles } from '../components/crm/comment-files.js';
+import { UploadZone } from '../components/crm/attachments.js';
+import {
+  AttachButton,
+  CommentFiles,
+  FileCards,
+} from '../components/crm/comment-files.js';
 import {
   useCommentFileList,
   useCommentUploads,
@@ -1431,7 +1434,13 @@ export function Attachments({
           onError={onError}
         />
       )}
-      <FileLinks files={files} onRemove={editable ? setPending : undefined} />
+      <FileCards
+        rows
+        ids={files.map(toText)}
+        onRemove={editable ? setPending : undefined}
+        empty={text('noAttachments')}
+        className=''
+      />
       {pending && (
         <ConfirmDialog
           title={text('removeFileTitle')}
@@ -1447,28 +1456,6 @@ export function Attachments({
 
 // Multiple files at once, dropped on the area or picked through its button;
 // they attach to whichever record hosts the zone.
-
-// The record a linked file came from, opened like any other record link.
-function SourceLink({
-  entity,
-  id,
-  name,
-}: {
-  entity: Entity;
-  id: string;
-  name: string;
-}): ReactElement {
-  const link = useRecordLink(entity, id);
-  return (
-    <Link
-      className='inline-block max-w-full truncate align-bottom text-muted-foreground hover:text-primary hover:underline'
-      title={name}
-      {...link}
-    >
-      {name}
-    </Link>
-  );
-}
 
 // The lead's own uploads plus everything attached to its tasks, so the tab
 // answers "what documents exist for this lead" rather than "what is on this row".
@@ -1589,37 +1576,42 @@ export function RecordAttachments({
             })}
           </p>
           {uploader}
-          <FileLinks files={own} onRemove={editable ? setPending : undefined} />
+          <FileCards
+            rows
+            ids={own}
+            onRemove={editable ? setPending : undefined}
+            empty={text('noAttachments')}
+            className=''
+          />
         </div>
       )}
       {!hasOwnFiles &&
         !commentFiles.length &&
-        !linked.some((g) => g.records.length > 0) && (
+        !linked.some((g) => filesFrom(g.entity).length > 0) && (
           <p className='text-sm text-muted-foreground'>
             {text('noAttachments')}
           </p>
         )}
       {linked
-        .filter((group) => group.entity !== entity && group.records.length > 0)
+        // A group with no files says nothing: left out.
+        .filter(
+          (group) =>
+            group.entity !== entity && filesFrom(group.entity).length > 0,
+        )
         .map((group) => (
           <div key={group.entity} className='space-y-2'>
             <p className='text-xs font-medium text-muted-foreground'>
               {text(group.label)}
             </p>
-            <FileLinks
-              files={filesFrom(group.entity)}
+            <FileCards
+              rows
+              ids={filesFrom(group.entity)}
               onRemove={editable ? setPending : undefined}
-              sourceLabel={(id) => {
-                const source = sources.get(id);
-                if (!source) return null;
-                return (
-                  <SourceLink
-                    entity={group.entity}
-                    id={toText(source.record.id)}
-                    name={toText(source.record.name)}
-                  />
-                );
-              }}
+              className=''
+              // The record it came from, by name, on hover.
+              detail={(id: string) =>
+                toText(sources.get(id)?.record.name ?? '')
+              }
             />
           </div>
         ))}
@@ -1628,24 +1620,22 @@ export function RecordAttachments({
           <p className='text-xs font-medium text-muted-foreground'>
             {text('attachmentsFromComments')}
           </p>
-          <FileLinks
-            files={[
+          <FileCards
+            rows
+            ids={[
               ...new Set(
                 commentFiles
                   .filter((file) => !sources.has(file.fileId))
                   .map((file) => file.fileId),
               ),
             ]}
+            className=''
             // Who attached it, as the timeline names the comment's writer.
-            sourceLabel={(fileId) => {
+            detail={(fileId) => {
               const writer = commentFiles.find(
                 (file) => file.fileId === fileId,
               )?.actorId;
-              return (
-                <span className='text-muted-foreground'>
-                  {meta?.users.find((user) => user.id === writer)?.name ?? ''}
-                </span>
-              );
+              return meta?.users.find((user) => user.id === writer)?.name;
             }}
           />
         </div>
