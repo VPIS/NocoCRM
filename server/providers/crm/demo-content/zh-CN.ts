@@ -1,5 +1,6 @@
 import type { DemoContent } from './types.js';
 import { zhMail, zhMailSenders } from './mail-zh-CN.js';
+import { zhProjects } from './projects-zh-CN.js';
 
 export const zhCN: DemoContent = {
   label: 'NocoBase 销售演示数据',
@@ -300,7 +301,7 @@ export const zhCN: DemoContent = {
   approvals: {
     discount: {
       name: '华策精密 企业版折扣特批',
-      description: '申请 10% 折扣，客户承诺上线后作为制造业案例联合发布。',
+      description: '申请 18% 折扣，客户承诺上线后作为制造业案例联合发布。',
     },
     paymentTerms: {
       name: '星桥零售 付款节奏评审',
@@ -317,4 +318,5 @@ export const zhCN: DemoContent = {
         '客户要求合同写明 6 周内完成巡检看板上线，短于标准交付周期，需要实施团队确认排期。',
     },
   },
+  projects: zhProjects,
 };

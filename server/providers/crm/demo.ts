@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { AppAuthorization } from '@nocobase/app-plugin-authorization/server';
 import { convertLead } from './conversion.js';
 import { CrmError, definitions, object, stages, toText } from './schema.js';
+import { EVALUATION } from './ai-entries.js';
 import { CrmService } from './service.js';
 import {
   demoContent,
@@ -68,9 +69,9 @@ export interface DemoAccount {
 // The people the dataset belongs to, each language its own. The
 // administrator importing it sells too: a sales manager besides (granted for
 // the import's lifetime unless already held), owning a share of the records
-// beside the manager and the two sellers, so signing in as the administrator
-// shows work of one's own; the other manager decides the manager's
-// approvals. The password is the username followed by 123
+// beside the manager and the two sellers, and projects of their own at real
+// companies, and deciding the sellers' and the manager's approvals, so
+// signing in as the administrator shows every part of the CRM at work. The password is the username followed by 123
 // (liming123): the users plugin wants eight characters, and the platform's
 // own administrator is admin123.
 const demoSeats: readonly (readonly [DemoSeat, DemoAccount['role']])[] = [
@@ -327,7 +328,6 @@ export async function populateDemo(
   });
   const owner = actorFor(actor.id);
   const managerActor = actorFor(userIds.manager);
-  const manager2 = { id: userIds.secondManager };
   const sellerActors = [
     actorFor(userIds.firstSeller),
     actorFor(userIds.secondSeller),
@@ -991,11 +991,11 @@ export async function populateDemo(
     }
   });
 
-  // Approvals are raised by whoever owns the deal, submitted to the manager;
-  // one of them the manager has already decided, one the manager raised goes
-  // to the second manager (an administrator is not an approver), and the
-  // importing administrator raises one on a deal of theirs, so every object
-  // holds something of theirs.
+  // Approvals are raised by whoever owns the deal. The importing
+  // administrator, a sales manager for the demo, decides the sellers' and the
+  // manager's: two wait on them, one they have decided; their own go to the
+  // manager. So the importer's inbox holds approvals to decide, each with the
+  // AI's review, as well as approvals of their own waiting on someone else.
   const raise = (
     who: Actor,
     input: Row,
@@ -1021,13 +1021,13 @@ export async function populateDemo(
       await historyAt(q, at(submitDay, 11));
       return record;
     });
-  await raise(
+  const discountApproval = await raise(
     companyOwner(0),
     {
       name: text.approvals.discount.name,
       opportunityId: opportunities[0].id,
       topic: 'discount',
-      approverId: managerActor.id,
+      approverId: owner.id,
       description: text.approvals.discount.description,
     },
     -1,
@@ -1039,13 +1039,13 @@ export async function populateDemo(
       name: text.approvals.paymentTerms.name,
       opportunityId: opportunities[1].id,
       topic: 'paymentTerms',
-      approverId: managerActor.id,
+      approverId: owner.id,
       description: text.approvals.paymentTerms.description,
     },
     -6,
     -6,
   );
-  await service.mutate(managerActor, async (prepared, q) => {
+  await service.mutate(owner, async (prepared, q) => {
     await service.approvalAction(
       { ...prepared, quiet: true },
       toText(paymentTerms.id),
@@ -1060,13 +1060,13 @@ export async function populateDemo(
       .execute();
     await historyAt(q, at(-5, 15));
   });
-  await raise(
+  const contractApproval = await raise(
     managerActor,
     {
       name: text.approvals.contractTerms.name,
       opportunityId: opportunities[3].id,
       topic: 'contractTerms',
-      approverId: manager2.id,
+      approverId: owner.id,
       description: text.approvals.contractTerms.description,
     },
     -2,
@@ -1084,6 +1084,604 @@ export async function populateDemo(
     -1,
     -1,
   );
+
+  // The importing administrator's own projects, at real companies
+  // (projects-*.ts): SF Express's new lead, H World's deal at proposal (a
+  // converted lead, a discount out for approval, tomorrow's review), GAC's
+  // deal in negotiation (an approved payment term, an overdue task) and New
+  // Hope, won, with an expansion. The AI's work on them is written as its
+  // cards keep it, below, so the import needs no model.
+  const project = text.projects;
+  // A comment written straight into the record's timeline, its id returned.
+  const commentIn =
+    (q: QueryAdapter) =>
+    async (
+      entity: 'leads' | 'opportunities' | 'companies',
+      recordId: unknown,
+      authorId: unknown,
+      heading: string,
+      body: string,
+      day: number,
+      hour: number,
+    ): Promise<string> => {
+      const id = randomUUID();
+      await q
+        .insertInto('crmHistory')
+        .values({
+          id,
+          entity,
+          recordId: toText(recordId),
+          actorId: toText(authorId),
+          action: 'comment',
+          changes: JSON.stringify({
+            text: heading ? `**${heading}**\n\n${body}` : body,
+          }),
+          createdAt: at(day, hour),
+        })
+        .execute();
+      return id;
+    };
+  type ProjectCompany = typeof project.hworld.company;
+  type ProjectPerson = (typeof project.hworld.people)[number];
+  const projects = await service.mutate(owner, async (prepared, q) => {
+    const save = saver(prepared, q);
+    const comment = commentIn(q);
+    const company = async (
+      about: ProjectCompany,
+      industry: string,
+      city: DemoCity,
+      source: string,
+      day: number,
+    ): Promise<Row> =>
+      save(
+        'companies',
+        {
+          name: about.name,
+          ownerId: owner.id,
+          industry,
+          city: text.cities[city],
+          state: provinceOf[city],
+          country: 'CN',
+          status: 'qualified',
+          source,
+          employees: '5000+',
+          type: 'direct',
+          website: `https://www.${about.domain}.example`,
+          description: about.description,
+        },
+        day,
+      );
+    const contact = async (
+      person: ProjectPerson,
+      employer: Row,
+      domain: string,
+      gender: string,
+      primary: boolean,
+      n: number,
+      day: number,
+    ): Promise<Row> =>
+      save(
+        'contacts',
+        {
+          name: person.name,
+          ownerId: owner.id,
+          companyId: employer.id,
+          jobTitle: person.jobTitle,
+          gender,
+          source: employer.source,
+          email: `${person.mailbox}@${domain}.example`,
+          phone: phone(n),
+          employed: true,
+          primary,
+        },
+        day,
+      );
+    // A deal created on a day and moved stage by stage to the one it holds.
+    const deal = async (
+      input: Row,
+      stage: string,
+      created: number,
+      changed: number,
+    ): Promise<Row> => {
+      let record = await save('opportunities', input, created);
+      const progression = ['won', 'lost', 'paused'].includes(stage)
+        ? ['qualification', 'proposal', stage]
+        : stages.slice(1, stages.indexOf(stage) + 1);
+      for (let i = 0; i < progression.length; i++)
+        record = await save(
+          'opportunities',
+          { stage: progression[i] },
+          Math.round(
+            created + ((changed - created) * (i + 1)) / progression.length,
+          ),
+          toText(record.id),
+        );
+      return record;
+    };
+    const task = async (
+      name: string,
+      links: Row,
+      day: number,
+      hour: number,
+      status = 'open',
+      result: string | null = null,
+      description = text.taskDescription,
+    ): Promise<Row> =>
+      save(
+        'tasks',
+        {
+          name,
+          ...links,
+          ownerId: owner.id,
+          dueAt: at(day, hour),
+          status,
+          description,
+          result,
+        },
+        Math.min(day - 2, -1),
+      );
+
+    // SF Express: a new lead from yesterday, followed up by the AI at once.
+    const sf = await save(
+      'leads',
+      {
+        name: project.sf.person.name,
+        company: project.sf.company,
+        status: 'new',
+        source: 'website',
+        ownerId: owner.id,
+        email: `${project.sf.person.mailbox}@${project.sf.domain}.example`,
+        phone: phone(60),
+        jobTitle: project.sf.person.jobTitle,
+        gender: 'male',
+        country: 'CN',
+        state: provinceOf.shenzhen,
+        city: text.cities.shenzhen,
+        message: project.sf.message,
+      },
+      -1,
+    );
+
+    // H World: a lead from the expo, converted, now a deal at proposal.
+    const hworld = await company(
+      project.hworld.company,
+      'hospitality',
+      'shanghai',
+      'exhibition',
+      -40,
+    );
+    const hworldPeople = [
+      await contact(
+        project.hworld.people[0],
+        hworld,
+        project.hworld.company.domain,
+        'male',
+        true,
+        61,
+        -40,
+      ),
+      await contact(
+        project.hworld.people[1],
+        hworld,
+        project.hworld.company.domain,
+        'male',
+        false,
+        62,
+        -30,
+      ),
+    ];
+    let hworldLead = await save(
+      'leads',
+      {
+        name: project.hworld.people[0].name,
+        company: project.hworld.company.name,
+        status: 'working',
+        source: 'exhibition',
+        ownerId: owner.id,
+        email: `${project.hworld.people[0].mailbox}@${project.hworld.company.domain}.example`,
+        phone: phone(61),
+        jobTitle: project.hworld.people[0].jobTitle,
+        gender: 'male',
+        country: 'CN',
+        state: provinceOf.shanghai,
+        city: text.cities.shanghai,
+        industry: 'hospitality',
+        message: project.hworld.message,
+      },
+      -42,
+    );
+    await comment(
+      'leads',
+      hworldLead.id,
+      owner.id,
+      project.hworld.discovery.heading,
+      project.hworld.discovery.body,
+      -36,
+      10,
+    );
+    hworldLead = await convertLead(
+      service,
+      prepared,
+      toText(hworldLead.id),
+      {
+        companyId: hworld.id,
+        contactId: hworldPeople[0].id,
+        createOpportunity: false,
+      },
+      q,
+    );
+    await q
+      .updateTable('crmLeads')
+      .set({ convertedAt: at(-33), updatedAt: at(-33) })
+      .where('id', '=', hworldLead.id)
+      .execute();
+    await historyAt(q, at(-33));
+    const hworldDeal = await deal(
+      {
+        name: project.hworld.deal,
+        ownerId: owner.id,
+        companyId: hworld.id,
+        amount: 680000,
+        currency: 'CNY',
+        source: 'exhibition',
+        businessType: 'newBusiness',
+        expectedCloseAt: at(25, 17),
+        description: project.hworld.company.description,
+        contacts: [
+          { contactId: hworldPeople[0].id, role: 'decisionMaker' },
+          { contactId: hworldPeople[1].id, role: 'evaluator' },
+        ],
+      },
+      'proposal',
+      -33,
+      -2,
+    );
+    const hworldLinks = {
+      companyId: hworld.id,
+      opportunityId: hworldDeal.id,
+    };
+    await comment(
+      'opportunities',
+      hworldDeal.id,
+      owner.id,
+      project.hworld.poc.heading,
+      project.hworld.poc.body,
+      -6,
+      14,
+    );
+    const quoteSent = await task(
+      project.hworld.quoteSent.heading,
+      hworldLinks,
+      -2,
+      15,
+      'completed',
+      project.hworld.quoteSent.body,
+    );
+    const review = await task(
+      project.hworld.review,
+      hworldLinks,
+      1,
+      10,
+      'open',
+      null,
+      project.hworld.reviewDescription,
+    );
+
+    // GAC: in negotiation, the contract under review.
+    const gac = await company(
+      project.gac.company,
+      'automotive',
+      'guangzhou',
+      'partner',
+      -75,
+    );
+    const gacPeople = [
+      await contact(
+        project.gac.people[0],
+        gac,
+        project.gac.company.domain,
+        'male',
+        true,
+        63,
+        -72,
+      ),
+      await contact(
+        project.gac.people[1],
+        gac,
+        project.gac.company.domain,
+        'female',
+        false,
+        64,
+        -20,
+      ),
+    ];
+    const gacDeal = await deal(
+      {
+        name: project.gac.deal,
+        ownerId: owner.id,
+        companyId: gac.id,
+        amount: 1200000,
+        currency: 'CNY',
+        source: 'partner',
+        businessType: 'newBusiness',
+        expectedCloseAt: at(12, 17),
+        description: project.gac.company.description,
+        contacts: [
+          { contactId: gacPeople[0].id, role: 'decisionMaker' },
+          { contactId: gacPeople[1].id, role: 'influencer' },
+        ],
+      },
+      'negotiation',
+      -60,
+      -10,
+    );
+    const gacLinks = { companyId: gac.id, opportunityId: gacDeal.id };
+    const alignment = await task(
+      project.gac.alignment.heading,
+      gacLinks,
+      -9,
+      14,
+      'completed',
+      project.gac.alignment.body,
+    );
+    await comment(
+      'opportunities',
+      gacDeal.id,
+      owner.id,
+      project.gac.legal.heading,
+      project.gac.legal.body,
+      -4,
+      11,
+    );
+    const gacNote = await comment(
+      'opportunities',
+      gacDeal.id,
+      owner.id,
+      '',
+      project.gac.note,
+      -3,
+      17,
+    );
+    await task(project.gac.signing, gacLinks, -1, 16);
+    await task(project.gac.followLegal, gacLinks, 0, 15);
+
+    // New Hope: won, live, and an extension the AI advised pausing.
+    const newHope = await company(
+      project.newHope.company,
+      'agriculture',
+      'chengdu',
+      'customerReferral',
+      -120,
+    );
+    const newHopePeople = [
+      await contact(
+        project.newHope.people[0],
+        newHope,
+        project.newHope.company.domain,
+        'female',
+        true,
+        65,
+        -118,
+      ),
+      await contact(
+        project.newHope.people[1],
+        newHope,
+        project.newHope.company.domain,
+        'male',
+        false,
+        66,
+        -110,
+      ),
+    ];
+    const newHopeContacts = [
+      { contactId: newHopePeople[0].id, role: 'decisionMaker' },
+      { contactId: newHopePeople[1].id, role: 'champion' },
+    ];
+    const newHopeDeal = await deal(
+      {
+        name: project.newHope.deal,
+        ownerId: owner.id,
+        companyId: newHope.id,
+        amount: 360000,
+        currency: 'CNY',
+        source: 'customerReferral',
+        businessType: 'newBusiness',
+        expectedCloseAt: at(-20, 17),
+        description: project.newHope.company.description,
+        contacts: newHopeContacts,
+      },
+      'won',
+      -110,
+      -20,
+    );
+    await comment(
+      'opportunities',
+      newHopeDeal.id,
+      owner.id,
+      project.newHope.kickoff.heading,
+      project.newHope.kickoff.body,
+      -18,
+      10,
+    );
+    await comment(
+      'companies',
+      newHope.id,
+      owner.id,
+      project.newHope.training.heading,
+      project.newHope.training.body,
+      -12,
+      15,
+    );
+    const expansion = await deal(
+      {
+        name: project.newHope.expansion,
+        ownerId: owner.id,
+        companyId: newHope.id,
+        amount: 150000,
+        currency: 'CNY',
+        source: 'customerReferral',
+        businessType: 'expansion',
+        expectedCloseAt: at(60, 17),
+        description: project.newHope.company.description,
+        contacts: newHopeContacts,
+      },
+      'qualification',
+      -8,
+      -7,
+    );
+    await task(
+      project.newHope.interview,
+      { companyId: newHope.id, opportunityId: expansion.id },
+      3,
+      10,
+    );
+    return {
+      sf,
+      hworldLead,
+      hworld,
+      hworldDeal,
+      hworldPeople,
+      quoteSent,
+      review,
+      gac,
+      gacDeal,
+      gacPeople,
+      gacNote,
+      alignment,
+      newHope,
+      newHopeDeal,
+      newHopePeople,
+      expansion,
+    };
+  });
+  // The importer's approvals go to the manager: H World's discount waits on
+  // them; GAC's payment terms, which the AI's follow-up proposed, they
+  // approved.
+  await raise(
+    owner,
+    {
+      name: project.hworld.approval.name,
+      opportunityId: projects.hworldDeal.id,
+      topic: 'discount',
+      approverId: managerActor.id,
+      description: project.hworld.approval.description,
+    },
+    -1,
+    -1,
+  );
+  const gacApproval = await raise(
+    owner,
+    {
+      name: project.gac.approval.name,
+      opportunityId: projects.gacDeal.id,
+      topic: 'paymentTerms',
+      approverId: managerActor.id,
+      description: project.gac.approval.description,
+    },
+    -10,
+    -10,
+  );
+  await service.mutate(managerActor, async (prepared, q) => {
+    await service.approvalAction(
+      { ...prepared, quiet: true },
+      toText(gacApproval.id),
+      'approve',
+      project.gac.approval.comment,
+      q,
+    );
+    await q
+      .updateTable('crmApprovals')
+      .set({ decidedAt: at(-8, 16), updatedAt: at(-8, 16) })
+      .where('id', '=', gacApproval.id)
+      .execute();
+    await historyAt(q, at(-8, 16));
+  });
+
+  // The AI's work, as its cards keep it (crmHistory, action `ai`): waiting
+  // on the importer, a new lead's follow-up, H World's deal and tomorrow's
+  // review prepared, and two approvals reviewed for them to decide; handled,
+  // H World's lead converted, GAC's follow-up accepted, New Hope's extension
+  // ignored and an approval decided as the review advised. Written straight
+  // in, so nothing runs a model; the agents' pages count them as runs.
+  const ai = project.ai;
+  const aiEntry = async (
+    entity: 'leads' | 'opportunities' | 'tasks' | 'approvals',
+    record: Row,
+    status: 'pending' | 'accepted' | 'dismissed',
+    createdAt: string,
+    entry: Row,
+  ): Promise<void> => {
+    await query
+      .insertInto('crmHistory')
+      .values({
+        id: randomUUID(),
+        entity,
+        recordId: toText(record.id),
+        actorId: owner.id,
+        action: 'ai',
+        source: 'ai',
+        aiStatus: status,
+        ai: JSON.stringify({
+          kind: EVALUATION,
+          startedAt: createdAt,
+          ...entry,
+        }),
+        changes: JSON.stringify({}),
+        createdAt,
+      })
+      .execute();
+  };
+  const decided = (day: number, hour: number): Row => ({
+    decidedById: owner.id,
+    decidedAt: at(day, hour),
+  });
+  await aiEntry('leads', projects.sf, 'pending', at(-1, 10, 6), {
+    trigger: 'created',
+    researchedAt: at(-1, 10, 6),
+    result: ai.sfLead,
+  });
+  await aiEntry('leads', projects.hworldLead, 'accepted', at(-34, 9), {
+    researchedAt: at(-34, 9),
+    result: ai.hworldLead,
+    ...decided(-33, 10),
+  });
+  await aiEntry(
+    'opportunities',
+    projects.hworldDeal,
+    'pending',
+    at(-2, 15, 20),
+    {
+      trigger: 'taskDone',
+      result: ai.hworldDeal,
+    },
+  );
+  await aiEntry('tasks', projects.review, 'pending', at(-1, 18), {
+    result: ai.hworldPrep,
+  });
+  await aiEntry('opportunities', projects.gacDeal, 'accepted', at(-11, 9), {
+    trigger: 'customerReplied',
+    result: ai.gacDeal,
+    taskId: toText(projects.alignment.id),
+    submittedApprovals: [{ index: 0, id: toText(gacApproval.id) }],
+    ...decided(-10, 10),
+  });
+  await aiEntry('opportunities', projects.expansion, 'dismissed', at(-6, 9), {
+    trigger: 'opened',
+    result: ai.newHopeExpansion,
+    ...decided(-5, 10),
+  });
+  await aiEntry('approvals', discountApproval, 'pending', at(-1, 11, 6), {
+    result: ai.reviewDiscount,
+  });
+  await aiEntry('approvals', contractApproval, 'pending', at(-2, 11, 6), {
+    result: ai.reviewContract,
+  });
+  await aiEntry('approvals', paymentTerms, 'accepted', at(-6, 11, 6), {
+    result: ai.reviewPayment,
+    decision: 'approve',
+    comment: ai.reviewPayment.comment,
+    ...decided(-5, 15),
+  });
 
   setDemoMailLanguage(language);
   // The demo mailboxes: the messages first, which the plugin reads as soon
@@ -1175,6 +1773,60 @@ export async function populateDemo(
       company: toText(leads[i].company),
       lastDay,
     });
+    // The importer's projects' threads, each with one of the deal's
+    // people; SF Express's lead is new and has none.
+    const aboutProject = (): DemoConversation[] =>
+      (
+        [
+          [
+            'quotation',
+            projects.hworldDeal,
+            projects.hworldPeople[0],
+            680000,
+            2,
+          ],
+          [
+            'securityReview',
+            projects.hworldDeal,
+            projects.hworldPeople[1],
+            680000,
+            5,
+          ],
+          [
+            'contractClause',
+            projects.gacDeal,
+            projects.gacPeople[0],
+            1200000,
+            3,
+          ],
+          [
+            'onboarding',
+            projects.newHopeDeal,
+            projects.newHopePeople[0],
+            360000,
+            16,
+          ],
+          [
+            'invoice',
+            projects.newHopeDeal,
+            projects.newHopePeople[0],
+            360000,
+            12,
+          ],
+        ] as const
+      ).map(([topic, deal, contact, amount, lastDay]) => ({
+        topic,
+        owner: own,
+        other: person(contact),
+        company: toText(
+          [projects.hworld, projects.gac, projects.newHope].find(
+            (company) => company.id === deal.companyId,
+          )?.name,
+        ),
+        deal: toText(deal.name),
+        amount: money(amount),
+        lastDay,
+      }));
     // Between two people of the team, both keeping a copy.
     const between = (
       topic: DemoMailTopic,
@@ -1256,6 +1908,8 @@ export async function populateDemo(
       aboutLead('bounce', 12, 12),
       aboutLead('leadTechnical', 13, 2),
       aboutLead('leadBudget', 15, 2),
+      // The importer's projects.
+      ...aboutProject(),
       // Between colleagues.
       between('internal', demoSeats.secondManager, demoSeats.manager, 2, {
         deal: text.deals[3],
@@ -1315,6 +1969,59 @@ export async function populateDemo(
     }
   }
 
+  // The import queued a notification for every assignment; a demo inbox
+  // full of "assigned to you" would drown what the demo is meant to show.
+  await query.deleteFrom('crmOutbox').where('recordId', 'in', ids()).execute();
+  // What the importer is told of, as it happens now, the manager writing:
+  // a comment on H World's deal that @-mentions them, a reply to their own
+  // comment on GAC's, and a task on New Hope given to them. Each is
+  // delivered to their inbox by the notification pass.
+  const ownName =
+    toText(
+      (
+        await query
+          .selectFrom('user')
+          .select(['name', 'username'])
+          .where('id', '=', actor.id)
+          .executeTakeFirst()
+      )?.name ?? '',
+    ) || actor.id;
+  await service.addComment(
+    managerActor,
+    'opportunities',
+    toText(projects.hworldDeal.id),
+    project.hworld.mention.replace('{{name}}', ownName),
+    [actor.id],
+  );
+  await service.addComment(
+    managerActor,
+    'opportunities',
+    toText(projects.gacDeal.id),
+    project.gac.reply,
+    [],
+    projects.gacNote,
+  );
+  await service.mutate(managerActor, async (prepared, q) => {
+    track(
+      'tasks',
+      await service.save(
+        prepared,
+        'tasks',
+        {
+          name: project.newHope.renewal,
+          companyId: projects.newHope.id,
+          opportunityId: projects.newHopeDeal.id,
+          ownerId: owner.id,
+          dueAt: at(4, 10),
+          status: 'open',
+          description: text.taskDescription,
+        },
+        undefined,
+        q,
+      ),
+    );
+  });
+
   // The manifest makes the import repeat-safe and records exactly which rows
   // it created, so removal can find them again.
   await query
@@ -1325,9 +2032,6 @@ export async function populateDemo(
       updatedAt: new Date(),
     })
     .execute();
-  // The import queued a notification for every assignment; a demo inbox
-  // full of "assigned to you" would drown what the demo is meant to show.
-  await query.deleteFrom('crmOutbox').where('recordId', 'in', ids()).execute();
   return demoStatus(service, actor);
 }
 

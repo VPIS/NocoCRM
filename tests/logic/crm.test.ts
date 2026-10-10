@@ -6458,10 +6458,12 @@ describe('demo dataset', () => {
     expect((await meta('admin')).demoPresent).toBe(true);
     expect(status.language).toBe('zh-CN');
     expect(status.records).toBeGreaterThan(100);
-    expect(await count('companies')).toBe(before.companies + 8);
-    expect(await count('opportunities')).toBe(before.opportunities + 30);
-    expect(await count('leads')).toBe(before.leads + 16);
-    expect(await count('approvals')).toBe(before.approvals + 4);
+    // The team's eight companies and the importer's three projects' (SF
+    // Express is a lead alone).
+    expect(await count('companies')).toBe(before.companies + 11);
+    expect(await count('opportunities')).toBe(before.opportunities + 34);
+    expect(await count('leads')).toBe(before.leads + 18);
+    expect(await count('approvals')).toBe(before.approvals + 6);
     // The administrator importing it sells too: they own something of every
     // kind, so signing in as them shows work of their own.
     const ownedByImporter = async (entity: Entity) =>
@@ -6471,12 +6473,36 @@ describe('demo dataset', () => {
           pageSize: 500,
         })
       ).total;
-    expect(await ownedByImporter('companies')).toBe(2);
-    expect(await ownedByImporter('leads')).toBe(4);
+    expect(await ownedByImporter('companies')).toBe(5);
+    expect(await ownedByImporter('leads')).toBe(6);
     expect(await ownedByImporter('contacts')).toBeGreaterThan(0);
     expect(await ownedByImporter('opportunities')).toBeGreaterThan(0);
     expect(await ownedByImporter('tasks')).toBeGreaterThan(0);
-    expect(await ownedByImporter('approvals')).toBe(1);
+    expect(await ownedByImporter('approvals')).toBe(3);
+    // The AI's work waits on the importer, written by the import with no
+    // model run: a new lead's follow-up, a deal's, a task's preparation and
+    // two approvals' reviews; four more are handled.
+    const suggestions = await pendingDecisions(service, actor('admin'), {
+      state: 'all',
+    });
+    expect(suggestions.pending).toBe(5);
+    expect(
+      suggestions.data
+        .map((entry) => `${toText(entry.entity)}:${toText(entry.status)}`)
+        .sort(),
+    ).toEqual(
+      [
+        'approvals:accepted',
+        'approvals:pending',
+        'approvals:pending',
+        'leads:accepted',
+        'leads:pending',
+        'opportunities:accepted',
+        'opportunities:dismissed',
+        'opportunities:pending',
+        'tasks:pending',
+      ].sort(),
+    );
     // Every demo company and lead carries its whole region: the province
     // of its city as well as the country and the city.
     for (const entity of ['companies', 'leads'] as const) {
@@ -6594,6 +6620,18 @@ describe('demo dataset', () => {
       .where('recipientId', '=', 'demo-liming')
       .execute();
     expect(queued).toEqual([]);
+    // The importer is told of what the manager does as the import ends: a
+    // comment that @-mentions them, a reply to theirs, a task given them.
+    const told = await database
+      .query()
+      .selectFrom('crmOutbox')
+      .select('event')
+      .where('recipientId', '=', 'admin')
+      .execute();
+    expect(told.map((row) => toText(row.event)).sort()).toEqual(
+      expect.arrayContaining(['mentioned', 'replied']),
+    );
+    expect(told.length).toBeGreaterThanOrEqual(3);
     expect((await request('/demoData/remove', 'rep', 'POST', {})).status).toBe(
       403,
     );

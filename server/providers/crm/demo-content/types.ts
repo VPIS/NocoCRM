@@ -1,3 +1,7 @@
+import type { ApprovalReview } from '../approval-review.js';
+import type { OpportunityVerdict, Verdict } from '../ai-entries.js';
+import type { TaskPreparation } from '../task-preparation.js';
+
 // Every piece of text the demo dataset writes, in one language, with what
 // is derived from a name (the demo accounts' usernames, mailboxes, website
 // and email domains), so each language has people and companies of its own.
@@ -6,8 +10,9 @@
 // follows the order of the matching list there.
 
 // The part a demo account plays: the manager owns records and decides the
-// sellers' approvals, the second manager decides the manager's own, and the
-// two sellers own the rest.
+// importing administrator's approvals, the second manager is a manager
+// besides, and the two sellers own the rest; the importer decides the
+// sellers' and the manager's approvals (demo.ts).
 export type DemoSeat =
   'manager' | 'secondManager' | 'firstSeller' | 'secondSeller';
 
@@ -180,5 +185,102 @@ export interface DemoContent {
     readonly paymentTerms: DemoNamedText & { readonly comment: string };
     readonly contractTerms: DemoNamedText;
     readonly commitment: DemoNamedText;
+  };
+  // The importing administrator's own projects (projects-*.ts).
+  readonly projects: DemoProjects;
+}
+
+// A person at one of the importer's project companies.
+export interface DemoProjectPerson extends DemoPerson {
+  readonly jobTitle: string;
+}
+
+// A comment as the demo writes it: what took place, then what came of it.
+export interface DemoComment {
+  readonly heading: string;
+  readonly body: string;
+}
+
+// The importing administrator's own projects, at real companies, so that the
+// account importing the demo shows every part of the CRM at work: a new lead
+// the AI has just followed up, a converted lead whose deal is at proposal
+// with an approval out and a meeting the AI prepared, a deal in negotiation
+// with an overdue task, and a won customer with an expansion under way. The
+// AI's results are written here as the cards keep them, so the import needs
+// no model. Each project's company is named for real; its people, its
+// exchanges and the deal are the demo's own. The record layout (stages,
+// days, amounts) is demo.ts's.
+export interface DemoProjects {
+  // The lead from SF Express, new and followed up by the AI.
+  readonly sf: {
+    readonly company: string;
+    readonly domain: string;
+    readonly person: DemoProjectPerson;
+    readonly message: string;
+  };
+  // H World: the lead that became a deal at proposal.
+  readonly hworld: {
+    readonly company: DemoCompany;
+    // The decision maker (who wrote the lead), the evaluator, and the
+    // buyer the AI proposes adding to the deal.
+    readonly people: readonly [
+      DemoProjectPerson,
+      DemoProjectPerson,
+      DemoProjectPerson,
+    ];
+    readonly message: string;
+    readonly deal: string;
+    readonly discovery: DemoComment;
+    readonly poc: DemoComment;
+    // Done two days ago, its result written.
+    readonly quoteSent: DemoComment;
+    // Tomorrow's meeting, which the AI prepared.
+    readonly review: string;
+    readonly reviewDescription: string;
+    readonly approval: DemoNamedText;
+    // The manager's comment @-mentioning the importer, {{name}} their name.
+    readonly mention: string;
+  };
+  // GAC: a deal in negotiation.
+  readonly gac: {
+    readonly company: DemoCompany;
+    readonly people: readonly [DemoProjectPerson, DemoProjectPerson];
+    readonly deal: string;
+    // The task the AI's accepted follow-up planned, done since.
+    readonly alignment: DemoComment;
+    readonly legal: DemoComment;
+    // Overdue since yesterday.
+    readonly signing: string;
+    // Today's.
+    readonly followLegal: string;
+    readonly approval: DemoNamedText & { readonly comment: string };
+    // The importer's comment, and the manager's reply to it.
+    readonly note: string;
+    readonly reply: string;
+  };
+  // New Hope: won, and an expansion at qualification.
+  readonly newHope: {
+    readonly company: DemoCompany;
+    readonly people: readonly [DemoProjectPerson, DemoProjectPerson];
+    readonly deal: string;
+    readonly expansion: string;
+    readonly kickoff: DemoComment;
+    readonly training: DemoComment;
+    readonly interview: string;
+    // The task the manager assigns the importer.
+    readonly renewal: string;
+  };
+  // The AI's results, as each card keeps them.
+  readonly ai: {
+    readonly sfLead: Verdict;
+    readonly hworldLead: Verdict;
+    readonly hworldDeal: OpportunityVerdict;
+    readonly hworldPrep: TaskPreparation;
+    readonly gacDeal: OpportunityVerdict;
+    readonly newHopeExpansion: OpportunityVerdict;
+    // The sellers' and the manager's approvals the importer decides.
+    readonly reviewDiscount: ApprovalReview;
+    readonly reviewContract: ApprovalReview;
+    readonly reviewPayment: ApprovalReview;
   };
 }

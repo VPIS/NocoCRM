@@ -1,0 +1,410 @@
+import type { DemoProjects } from './types.js';
+
+export const zhProjects: DemoProjects = {
+  sf: {
+    company: '顺丰速运',
+    domain: 'sf-express',
+    person: {
+      name: '梁志远',
+      mailbox: 'liang.zhiyuan',
+      jobTitle: '华南区运营数字化经理',
+    },
+    message:
+      '你好，我们是顺丰速运华南区运营中心。目前 300 多个网点的巡检记录和异常工单都靠表格和群消息流转，区域经理很难看到全貌。想了解 NocoBase 能否私有化部署在我们自己的机房，并和现有的统一身份认证打通。下个月要给区域总做方案汇报，方便的话这周约个时间聊聊。',
+  },
+  hworld: {
+    company: {
+      name: '华住集团',
+      domain: 'h-world',
+      description:
+        '华住集团 IT 部计划把门店运营巡检、维修工单和加盟商协同从多套 SaaS 收拢到自建平台，要求私有化部署、审计日志和与会员系统对接。',
+    },
+    people: [
+      { name: '陆晨', mailbox: 'lu.chen', jobTitle: 'IT 总监' },
+      { name: '程浩', mailbox: 'cheng.hao', jobTitle: '数据平台负责人' },
+      { name: '邵佳', mailbox: 'shao.jia', jobTitle: '采购经理' },
+    ],
+    message:
+      '在上海的数字化酒店展会上看了你们的演示。我们有 9000 多家门店，巡检和维修工单分散在三套系统里，想评估能否统一到一个平台上，需要私有化部署和完整的审计日志。',
+    deal: '门店运营与工单平台（企业版）',
+    discovery: {
+      heading: '需求调研',
+      body: '与陆晨、程浩梳理了巡检、维修工单、加盟商报修三条线；一期覆盖华东 2000 家门店，要求对接会员系统的单点登录，审计日志保留 3 年。',
+    },
+    poc: {
+      heading: 'POC 演示',
+      body: '在华住测试环境演示了工单流转和集群部署，程浩确认性能满足要求；陆晨提出希望首年价格有一定空间，并会拉采购邵佳参加下次评审。',
+    },
+    quoteSent: {
+      heading: '报价单发送',
+      body: '已发送企业版报价与三年运维服务方案，合计 72 万元；陆晨回复会在方案评审会上和采购一起过。',
+    },
+    review: '方案评审会',
+    reviewDescription:
+      '与陆晨、程浩、邵佳一起评审方案与报价，确认一期范围、上线节奏和商务条款。',
+    approval: {
+      name: '华住集团 企业版首年 15% 折扣',
+      description:
+        '客户 9000 家门店，一期 2000 家，后续分批推广；为拿下首期，申请企业版首年 15% 折扣，客户愿意签三年运维服务。',
+    },
+    mention:
+      '@{{name}} 华住 15% 的折扣我倾向批准，前提是三年运维服务写进主合同。你确认一下客户能接受吗？',
+  },
+  gac: {
+    company: {
+      name: '广汽集团',
+      domain: 'gac',
+      description:
+        '广汽集团数字化部牵头建设经销商协同平台，统一线索分配、库存调拨和服务工单，要求国产数据库和集群部署。',
+    },
+    people: [
+      { name: '冯毅', mailbox: 'feng.yi', jobTitle: '数字化部部长' },
+      { name: '莫琳', mailbox: 'mo.lin', jobTitle: '法务经理' },
+    ],
+    deal: '经销商协同平台（企业版）',
+    alignment: {
+      heading: '合同条款对齐会',
+      body: '与冯毅、莫琳逐条过了合同：付款按 3-4-3 分期，尾款验收后 60 天支付（已走审批）；法务要求补充数据安全条款，我们答应三个工作日内给出修订稿。',
+    },
+    legal: {
+      heading: '法务意见',
+      body: '莫琳回复了修订稿：数据安全条款接受，但希望把违约金上限从 5% 提到 10%，需要内部再评估。',
+    },
+    signing: '合同签署推进',
+    followLegal: '跟进法务违约金条款',
+    approval: {
+      name: '广汽集团 尾款 60 天账期',
+      description:
+        '客户财务流程规定验收后 60 天付款，超出 30 天的标准账期；首付 30% 合同签订后支付，回款风险可控。',
+      comment: '同意 60 天账期，首付比例不低于 30%，请在合同中写明验收标准。',
+    },
+    note: '违约金上限客户希望提到 10%，我倾向守在 5%，可以用延长一年升级服务来换，大家怎么看？',
+    reply: '同意守 5%。合同签署我明天和你一起约冯毅，把升级服务的方案带上。',
+  },
+  newHope: {
+    company: {
+      name: '新希望集团',
+      domain: 'newhope',
+      description:
+        '新希望集团信息中心在养殖场巡检系统上线后，计划把饲料厂质检和设备点检扩展到同一平台。',
+    },
+    people: [
+      { name: '钟岚', mailbox: 'zhong.lan', jobTitle: '信息中心主任' },
+      { name: '唐峰', mailbox: 'tang.feng', jobTitle: '数字化项目经理' },
+    ],
+    deal: '养殖场巡检系统（专业版）',
+    expansion: '饲料厂质检应用扩展（专业版）',
+    kickoff: {
+      heading: '项目启动会',
+      body: '与钟岚、唐峰确认上线计划：首批 12 个养殖场，三周内完成巡检表单和异常上报，唐峰负责内部推广。',
+    },
+    training: {
+      heading: '上线培训',
+      body: '完成两场场长培训，首周巡检提交率 92%；钟岚提出饲料厂质检也想用同一平台。',
+    },
+    interview: '质检需求访谈',
+    renewal: '新希望 续约与扩展方案准备',
+  },
+  ai: {
+    sfLead: {
+      recommendation: 'follow',
+      grade: 'A',
+      summary:
+        '大型企业、需求明确、要私有化和统一身份认证，适合企业版，值得尽快跟进。',
+      brief:
+        '梁志远负责顺丰速运华南区 300 多个网点的运营数字化，巡检和异常工单靠表格和群消息流转，下个月要向区域总汇报方案。他明确提出私有化部署和对接统一身份认证，这两点正是企业版的强项。顺丰是年营收数千亿的物流龙头，一旦华南试点成功，有机会推广到其他大区。',
+      reasons: [
+        '规模大：300 多个网点、区域级汇报，后续可向全国推广（原始留言）',
+        '需求清晰：巡检记录和异常工单，私有化部署 + 统一身份认证（原始留言）',
+        '时间紧：下个月要做方案汇报，本周就希望沟通（原始留言）',
+      ],
+      edition: '企业版',
+      invalidReason: null,
+      nextStep: {
+        type: 'email',
+        subject: '回复梁志远，约本周需求沟通',
+        inDays: 0,
+      },
+      prep: [
+        '准备物流网点巡检和异常工单的演示应用',
+        '整理私有化部署架构图和统一身份认证（OIDC/SAML）对接说明',
+        '带一份大型企业集群部署案例',
+      ],
+      questions: [
+        '区域总汇报的时间和关注点是什么？',
+        '现有统一身份认证用的是什么协议？',
+        '一期是华南全部网点，还是先选几个试点？',
+        '机房环境用什么数据库和操作系统？',
+      ],
+      opportunity: null,
+      reviewInDays: null,
+      changes: [],
+      email: {
+        subject: '关于网点巡检与异常工单平台的沟通',
+        body: '梁经理您好：\n\n感谢您的留言。300 多个网点的巡检和异常工单从表格迁到统一平台，这正是 NocoBase 很多客户的做法：支持在您自己的机房私有化部署，也可以通过 OIDC/SAML 对接现有的统一身份认证。\n\n为了给您的区域汇报准备得更有针对性，想约本周三或周四下午半小时线上沟通，了解一下网点规模、现有身份认证和机房环境。届时我也可以现场演示一个巡检工单的示例应用。\n\n您看哪个时间方便？\n\nNocoBase 销售',
+      },
+      enrich: [
+        {
+          field: 'industry',
+          value: 'logistics',
+          source: 'https://www.sf-express.com',
+          current: null,
+        },
+        {
+          field: 'employees',
+          value: '5000+',
+          source: 'https://www.sf-express.com',
+          current: null,
+        },
+        {
+          field: 'website',
+          value: 'https://www.sf-express.com',
+          source: 'https://www.sf-express.com',
+          current: null,
+        },
+      ],
+    },
+    hworldLead: {
+      recommendation: 'convert',
+      grade: 'A',
+      summary: '需求、规模、预算和决策人都已明确，建议转化并开企业版商机。',
+      brief:
+        '陆晨是华住集团 IT 总监，展会后的两次沟通确认了巡检、维修工单、加盟商报修三条线，一期华东 2000 家门店，要求私有化和审计日志，预算在年度规划内。他本人就是决策人，程浩负责技术评估。',
+      reasons: [
+        '决策人直接参与：陆晨是 IT 总监（原始留言、需求调研）',
+        '一期范围明确：华东 2000 家门店、三条业务线（需求调研）',
+        '私有化、审计日志、集群部署指向企业版（需求调研）',
+      ],
+      edition: '企业版',
+      invalidReason: null,
+      nextStep: null,
+      prep: [],
+      questions: [],
+      opportunity: { name: '门店运营与工单平台（企业版）', amount: 680000 },
+      reviewInDays: null,
+      changes: [],
+      email: null,
+      enrich: [],
+    },
+    hworldDeal: {
+      recommendation: 'advance',
+      confidence: 'medium',
+      stage: 'negotiation',
+      summary: '报价已发出、POC 通过、折扣审批在走，可以推进到谈判阶段。',
+      brief:
+        'POC 在华住测试环境通过了性能和集群部署验证，报价单（企业版 + 三年运维，合计 72 万）两天前已发给陆晨。陆晨希望首年价格有空间，15% 折扣的审批已提交给李明，还在等待。明天的方案评审会采购邵佳会参加，她还不在商机的联系人里。',
+      reasons: [
+        'POC 通过，技术评估人程浩已确认（POC 演示）',
+        '报价单已发出，客户同意在评审会上过（报价单发送）',
+        '商务进入价格讨论，折扣审批已提交（审批）',
+      ],
+      risks: [
+        '折扣审批未批前不要对客户承诺 15%',
+        '采购邵佳第一次参与，可能带来新的比价要求',
+      ],
+      nextStep: {
+        type: 'task',
+        subject: '方案评审会后确认商务条款',
+        inDays: 1,
+      },
+      prep: [
+        '准备两套报价：标准价和 15% 折扣 + 三年运维',
+        '整理同等规模连锁客户的实施周期',
+      ],
+      questions: [
+        '采购这边的比价和决策流程是怎样的？',
+        '三年运维能否写进主合同？',
+        '一期上线时间的硬性要求是什么？',
+      ],
+      email: null,
+      updates: [
+        {
+          field: 'amount',
+          value: '720000',
+          reason: '报价单为企业版加三年运维服务，合计 72 万元（报价单发送）',
+          current: '680000',
+        },
+      ],
+      pauseReason: null,
+      resumeInDays: null,
+      lostReason: null,
+      revisitInDays: null,
+      changes: [
+        '报价单已发出，金额更新为 72 万',
+        '折扣审批已提交，等待李明决定',
+      ],
+      approvals: [],
+      terms: [
+        {
+          topic: 'discount',
+          term: '企业版首年 15% 折扣',
+          status: 'pending',
+          approval: '华住集团 企业版首年 15% 折扣',
+        },
+      ],
+      contacts: [
+        {
+          name: '邵佳',
+          role: 'influencer',
+          contactId: null,
+          currentRole: null,
+          jobTitle: '采购经理',
+          phone: null,
+          email: null,
+          reason: '陆晨说会拉采购邵佳参加下次评审（POC 演示）',
+        },
+      ],
+    },
+    hworldPrep: {
+      summary: '在评审会上确认一期范围和上线节奏，并让采购认可报价结构。',
+      brief:
+        '展会后做过需求调研和 POC，程浩确认技术可行；两天前发出企业版加三年运维的报价，合计 72 万。陆晨希望首年有价格空间，15% 折扣审批还在李明那里。这是采购邵佳第一次参加。',
+      people: [
+        { name: '陆晨', note: 'IT 总监，决策人；关心首年预算和上线节奏' },
+        { name: '程浩', note: '数据平台负责人，POC 已确认性能和集群部署' },
+        { name: '邵佳', note: '采购经理，第一次参与，可能要求比价' },
+      ],
+      company:
+        '华住集团近期公布的门店数已超过 9000 家，并在持续推进数字化运营（https://ir.hworld.com）。',
+      questions: [
+        '采购的比价和审批流程需要多长时间？',
+        '三年运维能否写进主合同？',
+        '一期 2000 家门店的上线时间是否有硬性要求？',
+      ],
+      bring: [
+        '报价单两套方案（标准价 / 折扣 + 三年运维）',
+        '集群部署架构图和审计日志说明',
+        '同规模连锁客户的实施案例',
+      ],
+      risks: [
+        '折扣审批还没结果，评审会上不承诺 15%',
+        '采购可能拿其他平台的报价比价',
+      ],
+      agenda: [
+        '回顾 POC 结论（程浩）',
+        '确认一期范围：华东 2000 家门店、三条业务线',
+        '上线计划与里程碑',
+        '报价结构与付款方式',
+        '约定合同评审时间',
+      ],
+    },
+    gacDeal: {
+      recommendation: 'continue',
+      confidence: 'high',
+      stage: null,
+      summary:
+        '客户已进入合同条款讨论，先把付款和数据安全条款对齐，再推进签署。',
+      brief:
+        '冯毅确认了企业版和集群部署方案，客户财务要求尾款验收后 60 天支付，法务莫琳提出要补充数据安全条款。两点都需要在签署前对齐。',
+      reasons: [
+        '决策人冯毅已确认方案（邮件）',
+        '法务开始审合同，说明进入签约流程（邮件）',
+      ],
+      risks: [
+        '60 天账期超出标准，需要审批',
+        '数据安全条款若拖延，会影响签署时间',
+      ],
+      nextStep: { type: 'task', subject: '合同条款对齐会', inDays: 1 },
+      prep: ['准备数据安全条款修订稿', '准备分期付款方案'],
+      questions: ['验收标准由谁确认？', '法务的审核周期多长？'],
+      email: null,
+      updates: [],
+      pauseReason: null,
+      resumeInDays: null,
+      lostReason: null,
+      revisitInDays: null,
+      changes: [],
+      approvals: [
+        {
+          topic: 'paymentTerms',
+          name: '广汽集团 尾款 60 天账期',
+          description:
+            '客户财务流程规定验收后 60 天付款，超出 30 天的标准账期；首付 30% 合同签订后支付，回款风险可控。',
+        },
+      ],
+      terms: [
+        {
+          topic: 'paymentTerms',
+          term: '尾款验收后 60 天支付',
+          status: 'needed',
+        },
+      ],
+      contacts: [],
+    },
+    newHopeExpansion: {
+      recommendation: 'pause',
+      confidence: 'low',
+      stage: null,
+      summary: '扩展需求还停留在意向，建议暂停到饲料厂预算确定后再推进。',
+      brief:
+        '养殖场巡检系统上线顺利，钟岚提到饲料厂质检也想用同一平台，但还没有明确的范围和预算。',
+      reasons: ['扩展只有口头意向，没有范围和预算（上线培训）'],
+      risks: ['过早报价可能影响续约谈判'],
+      nextStep: null,
+      prep: [],
+      questions: [],
+      email: null,
+      updates: [],
+      pauseReason: 'waitingOnCustomer',
+      resumeInDays: 30,
+      lostReason: null,
+      revisitInDays: null,
+      changes: [],
+      approvals: [],
+      terms: [],
+      contacts: [],
+    },
+    reviewDiscount: {
+      recommendation: 'conditional',
+      summary: '案例合作有价值，但 18% 超出标准较多，建议以 15% 为上限批准。',
+      asked:
+        '一期 28 万，申请 18% 折扣，比 10% 的标准上限多 8 个百分点，少收 22,400 元；按 10% 为 252,000 元，按申请为 229,600 元，按 15% 为 238,000 元。',
+      reasons: [
+        '客户承诺上线后作为制造业案例联合发布（审批说明）',
+        '三家工厂、约 200 名报工人员，后续有扩展空间（需求摸底电话）',
+        '目前没有竞争对手报价的证据（商机记录）',
+      ],
+      together: null,
+      precedents:
+        '近半年同类折扣审批均以 15% 为上限，本次 18% 偏宽，按 15% 批准与先例一致。',
+      risks: ['没有竞品压力的证据，18% 让利缺少依据'],
+      missing: ['联合发布案例的具体形式和时间'],
+      conditions: '折扣不超过 15%，并在合同中写明案例联合发布的时间和形式。',
+      comment:
+        '同意以 15% 为上限，请在合同中写明案例联合发布的时间和形式；如客户坚持 18%，请补充竞品报价后再提交。',
+    },
+    reviewContract: {
+      recommendation: 'approve',
+      summary: '授权范围在专业版权益之内，写进合同有利于集成商交付，可以批准。',
+      asked:
+        '集成商希望在合同中写明为最终客户交付应用的授权范围；专业版本身允许为客户构建应用，不涉及金额和回款变化。',
+      reasons: [
+        '专业版授权本就允许为客户交付应用（定价与版本说明）',
+        '集成商按项目采购专业版，写明范围便于后续每个项目复用（公司简介）',
+      ],
+      together: null,
+      precedents: '暂无同类先例。',
+      risks: ['范围措辞过宽可能被理解为不限项目数，需限定按项目授权'],
+      missing: [],
+      conditions: null,
+      comment:
+        '同意。合同中请写明授权按项目计，每个最终客户项目对应一份专业版授权。',
+    },
+    reviewPayment: {
+      recommendation: 'approve',
+      summary: '金额小、老客户扩容、回款记录良好，60 天账期可以批准。',
+      asked:
+        '扩容 45,000 元，账期从标准 30 天延长到 60 天，多占用 30 天，涉及金额 45,000 元。',
+      reasons: [
+        '星桥零售是已签约客户，过往按时回款（商机记录）',
+        '扩容金额小，回款风险有限（商机金额）',
+      ],
+      together: null,
+      precedents: '同类账期审批此前均以 60 天为上限批准，与本次一致。',
+      risks: [],
+      missing: ['首期发票金额'],
+      conditions: null,
+      comment: '同意 60 天账期，请在合同中注明首期发票金额。',
+    },
+  },
+};

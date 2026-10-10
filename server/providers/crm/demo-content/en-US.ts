@@ -1,5 +1,6 @@
 import type { DemoContent } from './types.js';
 import { enMail, enMailSenders } from './mail-en-US.js';
+import { enProjects } from './projects-en-US.js';
 
 export const enUS: DemoContent = {
   label: 'NocoBase sales demo data',
@@ -324,7 +325,7 @@ export const enUS: DemoContent = {
     discount: {
       name: 'Northfield Precision Enterprise discount exception',
       description:
-        'Requesting a 10% discount; the customer commits to a joint manufacturing case study after go-live.',
+        'Requesting an 18% discount; the customer commits to a joint manufacturing case study after go-live.',
     },
     paymentTerms: {
       name: 'Brightway Retail payment terms review',
@@ -343,4 +344,5 @@ export const enUS: DemoContent = {
         'The customer wants the contract to commit to go-live within 6 weeks, shorter than the standard delivery schedule; the implementation team needs to confirm capacity.',
     },
   },
+  projects: enProjects,
 };
