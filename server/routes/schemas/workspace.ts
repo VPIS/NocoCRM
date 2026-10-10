@@ -219,6 +219,35 @@ export const DecisionsQuery = z.object({
     description: '`all` lists the decided ones too, after those waiting.',
   }),
 });
+// The in-app notifications the CRM sent the reader, by their ids, for the
+// inbox's detail.
+export const NoticesQuery = z.object({
+  ids: z.string().meta({
+    description: 'Notification ids, comma-separated; at most 200.',
+  }),
+});
+export const Notice = z
+  .object({
+    notificationId: z.string(),
+    source: z.literal('crm'),
+    kind: z.literal('info'),
+    type: z.string().meta({ description: 'What happened.' }),
+    subject: z.object({
+      type: z.string(),
+      id: z.string(),
+      label: z.null(),
+    }),
+    decisionKey: z.null(),
+    data: JsonObject.meta({
+      description:
+        'The record, who did it and when, and for a mention or a reply the comment.',
+    }),
+    count: z.literal(1),
+    resolvedAt: z.null(),
+    outcome: z.null(),
+  })
+  .meta({ ref: 'CrmNotice' });
+
 // An AI suggestion with the record it concerns.
 export const Decision = AiEntry.extend({
   entity: z.enum(['leads', 'opportunities', 'approvals', 'tasks']),

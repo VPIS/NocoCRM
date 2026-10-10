@@ -39,6 +39,7 @@ import { searchPlaces, subdivisions } from '../providers/crm/geography.js';
 import { crmToken } from '../providers/crm/index.js';
 import { pendingDecisions } from '../providers/crm/lead-evaluation.js';
 import { mailTimelineToken } from '../providers/crm/mail-timeline.js';
+import { noticesOf } from '../providers/crm/notices.js';
 import {
   CrmError,
   definitions,
@@ -77,6 +78,8 @@ import {
   Decision,
   DecisionsMeta,
   DecisionsQuery,
+  Notice,
+  NoticesQuery,
   DemoDataStatus,
   ImportDemoDataInput,
   Place,
@@ -105,6 +108,7 @@ export const WORKSPACE_PATHS = [
   'search',
   'dashboard',
   'decisions',
+  'notices',
   'aiAgents',
   'screenProposal',
   'attachments',
@@ -505,6 +509,32 @@ export function registerWorkspaceRoutes(
         },
       });
     },
+  );
+
+  // What the CRM knows about the notifications it sent the reader, for the
+  // inbox's detail (notices.ts).
+  router.get(
+    '/notices',
+    describeRoute({
+      tags: ['Notifications'],
+      summary: 'Describe the notifications the CRM sent the reader',
+      operationId: 'listCrmNotices',
+      description:
+        'Each by its notification id: what happened, on which record, who did it and when, and the comment a mention or a reply is about.',
+      responses: {
+        '200': dataResponse(z.array(Notice)),
+        ...apiErrorResponses,
+      },
+    }),
+    apiValidator('query', NoticesQuery),
+    async (c) =>
+      c.json({
+        data: await noticesOf(
+          service,
+          c.get('actor'),
+          c.req.valid('query').ids.split(','),
+        ),
+      }),
   );
 
   // The inbox's AI suggestions: how many wait on the reader (and how many

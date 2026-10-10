@@ -133,17 +133,19 @@
   }
 }
 
-/* A message in a comment's thread, pointed out from a reply that answers
-   it: its background alone takes the grey of a hovered particular, so a
-   comment's line and its text below read as one. */
+/* What a jump lands on (flash in client/components/crm/flash.ts): a
+   timeline entry a link or a notification names, the message a reply
+   answers, a mail conversation. Its background alone takes the menu's
+   ground for a few seconds, then fades, so a comment's line and its text
+   below read as one. */
 @keyframes crm-flash {
   0%,
-  40% {
-    background-color: color-mix(in oklab, var(--muted) 60%, transparent);
+  65% {
+    background-color: var(--sidebar);
   }
 }
 .crm-flash {
-  animation: crm-flash 1.6s ease-out;
+  animation: crm-flash 3s ease-out;
 }
 
 /* A scroller whose bar shows only while it is pointed at or scrolls

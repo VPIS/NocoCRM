@@ -43,7 +43,8 @@ function typing(
     : undefined;
 }
 
-// The box's text with each mentioned "@Name" in a light blue mark.
+// The box's text with each mentioned "@Name" drawn as a saved comment draws
+// it (MENTION_CLASS): in the mention's colour, made bold by a stroke.
 function marked(text: string, names: readonly string[]): ReactNode[] {
   if (!names.length) return [text];
   const pattern = new RegExp(
@@ -59,7 +60,9 @@ function marked(text: string, names: readonly string[]): ReactNode[] {
     return index % 2 ? (
       <span
         key={`m${String(start)}`}
-        className='rounded-sm bg-info/15 dark:bg-info/25'
+        // Bold by a stroke rather than the weight, which would widen the
+        // name and move the text off the box's caret.
+        className='text-info [-webkit-text-stroke:0.35px_currentColor]'
       >
         {part}
       </span>
@@ -85,11 +88,11 @@ export function MentionTextarea({
   const colleagues = useColleagues();
   const ref = useRef<HTMLTextAreaElement>(null);
   const caretRef = useRef<number | undefined>(undefined);
-  // The layer under the box that marks each mentioned "@Name": it copies
-  // the box's box model and type, so its text, transparent, lies exactly
-  // under the box's own, and only the marks show through the box. It
-  // carries the fill, the card's white: the box is transparent, so its
-  // own fill cannot be read from it.
+  // The layer under the box that draws its text, each mentioned "@Name" in
+  // the mention's colour: it copies the box's box model and type, so its
+  // text lies exactly under the box's own, which is transparent but for
+  // its caret. It carries the fill, the card's white: the box is
+  // transparent, so its own fill cannot be read from it.
   const backRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const box = ref.current;
@@ -178,7 +181,7 @@ export function MentionTextarea({
       <div
         ref={backRef}
         aria-hidden
-        className='pointer-events-none absolute inset-0 overflow-hidden bg-card break-words whitespace-pre-wrap text-transparent'
+        className='pointer-events-none absolute inset-0 overflow-hidden bg-card break-words whitespace-pre-wrap text-foreground'
       >
         {marked(value, names)}
         {/* A last line break still takes a line, as in the box. */}
@@ -188,10 +191,13 @@ export function MentionTextarea({
         {...props}
         ref={ref}
         value={value}
-        // Its fill is the layer's, under it.
+        // Its fill and its text are the layer's, under it; only the caret
+        // is its own.
         style={{
           ...props.style,
           background: 'transparent',
+          color: 'transparent',
+          caretColor: 'var(--foreground)',
           position: 'relative',
         }}
         onScroll={(event) => {

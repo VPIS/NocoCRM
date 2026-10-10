@@ -438,9 +438,17 @@ export function relativeTime(
   now: number = Date.now(),
 ): string {
   const seconds = Math.round((new Date(at).getTime() - now) / 1000);
-  const format = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+  // Application change: compact, as the CRM's own lists read ("6h ago",
+  // "3分钟前"), always in figures but in Chinese, which keeps its words.
+  const format = new Intl.RelativeTimeFormat(locale, {
+    style: 'narrow',
+    numeric: locale.startsWith('zh') ? 'auto' : 'always',
+  });
   for (const [unit, size] of UNITS)
     if (Math.abs(seconds) >= size)
       return format.format(Math.round(seconds / size), unit);
-  return format.format(0, 'second');
+  return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(
+    0,
+    'second',
+  );
 }

@@ -184,6 +184,7 @@ import {
   demoStatus,
 } from '../../server/providers/crm/demo.js';
 import type { Application } from '@nocobase/app-server/application';
+import { noticesOf } from '../../server/providers/crm/notices.js';
 import {
   latestPreparation,
   scanTaskPreparation,
@@ -10227,5 +10228,65 @@ describe("Noco's conversations on the Agents plugin", () => {
       version: 1,
       agentId: 'agent-1',
     });
+  });
+});
+
+describe('the notifications the inbox describes', () => {
+  it('tells its recipient alone who mentioned them, when, and in what comment', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Notice Person',
+      company: 'Notice Works',
+      ownerId: 'rep',
+    });
+    await service.addComment(
+      actor('rep'),
+      'leads',
+      toText(lead.id),
+      'Please call them, @manager',
+      ['manager'],
+    );
+    // Queued once the comment is saved; delivered, it carries a
+    // notification id, as CrmProvider records it.
+    await vi.waitFor(async () => {
+      const queued = await database
+        .query()
+        .selectFrom('crmOutbox')
+        .selectAll()
+        .where('recordId', '=', toText(lead.id))
+        .where('event', '=', 'mentioned')
+        .executeTakeFirst();
+      expect(queued).toBeTruthy();
+    });
+    const row = await database
+      .query()
+      .selectFrom('crmOutbox')
+      .selectAll()
+      .where('recordId', '=', toText(lead.id))
+      .where('event', '=', 'mentioned')
+      .executeTakeFirstOrThrow();
+    expect(row.actorId).toBe('rep');
+    await database
+      .query()
+      .updateTable('crmOutbox')
+      .set({ status: 'submitted', notificationId: 'notice-test-1' })
+      .where('id', '=', row.id)
+      .execute();
+    const [notice] = await noticesOf(service, actor('manager'), [
+      'notice-test-1',
+    ]);
+    expect(notice).toMatchObject({
+      notificationId: 'notice-test-1',
+      source: 'crm',
+      type: 'mentioned',
+      subject: { type: 'leads', id: lead.id },
+      data: {
+        actorId: 'rep',
+        comment: { text: 'Please call them, @manager', reply: false },
+      },
+    });
+    // Someone else's notification is not theirs to describe.
+    expect(await noticesOf(service, actor('other'), ['notice-test-1'])).toEqual(
+      [],
+    );
   });
 });

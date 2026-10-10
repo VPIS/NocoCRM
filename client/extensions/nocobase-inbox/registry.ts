@@ -102,6 +102,11 @@ export interface InboxEntryRenderer<M = unknown> {
   readonly Actions?: ComponentType<InboxPartProps<M>>;
   /** Everything below the header. */
   readonly Body?: ComponentType<InboxPartProps<M>>;
+  /**
+   * Application change: shown in the detail pane in place of the item's detail, for an item shown elsewhere when
+   * picked (the record a notification is about, in a drawer over the inbox).
+   */
+  readonly Placeholder?: ComponentType<{ readonly entry: InboxEntry }>;
   /** The gist of the item, for a card shown outside the inbox without `Body`. */
   readonly Brief?: ComponentType<InboxPartProps<M>>;
   /** What a card shown on the page of what the item is about offers in place of `Actions`, such as a way there. */

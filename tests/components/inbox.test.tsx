@@ -117,9 +117,10 @@ it("lists the plugin's messages as notifications and marks one read when it is o
     await screen.findByRole('heading', { name: /Notifications/u }),
   ).toBeInTheDocument();
   expect(screen.getByText('Backup finished')).toBeInTheDocument();
-  // The first message is shown, and opening it marks it read.
+  // The first message is shown, its sentence on the title's line, and
+  // opening it marks it read.
   expect(
-    screen.getByRole('heading', { name: 'Weekly report is ready', level: 2 }),
+    screen.getByRole('heading', { name: /^Weekly report is ready/u, level: 2 }),
   ).toBeInTheDocument();
   fireEvent.click(screen.getAllByText('Weekly report is ready')[0]!);
   await waitFor(() =>

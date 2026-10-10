@@ -39,6 +39,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '../components/ui/tooltip.js';
+import { flash } from '../components/crm/flash.js';
 import {
   RecordDrawerContext,
   useRecordDrawer,
@@ -929,6 +930,26 @@ export function DetailColumns({
   // once the intro's room is added; it returns at the very top.
   const [introAway, setIntroAway] = useState(false);
   const introRef = useRef<HTMLDivElement>(null);
+  // The tab bar's height, as `--crm-tabs-h` on the tab column, where the
+  // timeline's comment box sticks right under it when stacked: the bar
+  // wraps and its type differs by screen, so no fixed offset meets it, and
+  // a gap between them lets the scrolling entries show through.
+  const tabColumnRef = useRef<HTMLElement>(null);
+  const tabBarRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const bar = tabBarRef.current;
+    const column = tabColumnRef.current;
+    if (!bar || !column || typeof ResizeObserver === 'undefined') return;
+    const measure = (): void =>
+      column.style.setProperty(
+        '--crm-tabs-h',
+        `${String(bar.getBoundingClientRect().height)}px`,
+      );
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, []);
   const scrollTab = (event: UIEvent<HTMLElement>): void => {
     revealScrollbar(event);
     const box = event.currentTarget;
@@ -1032,7 +1053,10 @@ export function DetailColumns({
                   the content scrolls down (a long intro, unfolded, scrolls
                   within a part of the column of its own). Stacked, the page
                   scrolls and the tabs stick to its top. */}
-              <section className='flex min-w-0 flex-col @3xl:col-start-1 @3xl:row-start-2 @3xl:min-h-0 @3xl:overflow-hidden'>
+              <section
+                ref={tabColumnRef}
+                className='flex min-w-0 flex-col @3xl:col-start-1 @3xl:row-start-2 @3xl:min-h-0 @3xl:overflow-hidden'
+              >
                 {intro ? (
                   <div
                     // Side by side only; stacked it is drawn under the
@@ -1061,6 +1085,7 @@ export function DetailColumns({
                     too (none where scrollbars lie over the page), so the
                     tabs' rule ends where the content does. */}
                 <div
+                  ref={tabBarRef}
                   className={`sticky top-0 z-10 flex shrink-0 flex-wrap items-center bg-background pt-1 pb-4 @3xl:overflow-hidden @3xl:[scrollbar-gutter:stable] @3xl:pt-0 ${sidePad} scroll-quiet`}
                 >
                   {tabBar}
@@ -1896,24 +1921,30 @@ export function HistoryChanges({
       const added = now.filter((file) => !was.includes(file));
       const removed = was.filter((file) => !now.includes(file));
       return (
+        // On one line, as every change reads: the files cut where it ends
+        // (named whole on hover).
         <span
           key={key}
-          className='inline-flex max-w-full min-w-0 flex-wrap items-baseline gap-x-1.5'
+          className='inline-flex max-w-full min-w-0 items-baseline gap-x-1.5'
         >
           {added.length ? (
             <>
-              <span className='text-muted-foreground'>
+              <span className='shrink-0 text-muted-foreground'>
                 {text('feed.addedFiles')}
               </span>
-              <span className='min-w-0 truncate'>{fileList(added)}</span>
+              <span className='min-w-0 truncate' title={fileList(added)}>
+                {fileList(added)}
+              </span>
             </>
           ) : null}
           {removed.length ? (
             <>
-              <span className='text-muted-foreground'>
+              <span className='shrink-0 text-muted-foreground'>
                 {text('feed.removedFiles')}
               </span>
-              <span className='min-w-0 truncate'>{fileList(removed)}</span>
+              <span className='min-w-0 truncate' title={fileList(removed)}>
+                {fileList(removed)}
+              </span>
             </>
           ) : null}
           {separator(index)}
@@ -2410,8 +2441,8 @@ function CommentThread({
   if (!replies.length && !answering) return null;
   const name = (id: unknown): string =>
     meta?.users.find((user) => user.id === id)?.name ?? '';
-  // Brings the message a reply answers into view and lights it up a
-  // moment, unfolding the replies when it is among the folded ones.
+  // Brings the message a reply answers into view and lights it up for a
+  // few seconds, unfolding the replies when it is among the folded ones.
   const point = (id: string): void => {
     const at = replies.findIndex((reply) => toText(reply.id) === id);
     if (folded && at > 0 && at < replies.length - 1) setUnfolded(true);
@@ -2420,17 +2451,7 @@ function CommentThread({
         `[data-comment="${CSS.escape(id)}"]`,
       );
       nodes[0]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      for (const node of nodes) {
-        node.classList.remove('crm-flash');
-        // Restarts the animation when it is pointed out again.
-        void node.offsetWidth;
-        node.classList.add('crm-flash');
-        node.addEventListener(
-          'animationend',
-          () => node.classList.remove('crm-flash'),
-          { once: true },
-        );
-      }
+      flash(nodes);
     });
   };
   const box = (replyTo: string): ReactElement | null =>
@@ -2878,7 +2899,8 @@ export function HistoryFeed({
   const fileNames = Object.fromEntries(
     (files ?? []).map((file) => [file.id, file.filename]),
   );
-  // Bring the entry asked for into view once it has loaded: the pages
+  // Bring the entry asked for into view, and light it up, once it has
+  // loaded: the pages
   // before it loaded first, and again on each ask. The entries above it
   // settle after it first lands (a comment measured whole or to its line,
   // files named, a card opened), which moves it; it is brought back twice
@@ -2900,6 +2922,14 @@ export function HistoryFeed({
       if (!seen) node.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
     bring();
+    // Lit up once as it arrives, whether it moved or was already in sight:
+    // a comment's own message, as a reply's pointer lights it, since its
+    // card's white would cover the entry's; any other entry whole.
+    const node = document.getElementById(`feed-${focus}`);
+    const message = node?.querySelector(
+      `[data-comment="${CSS.escape(focus)}"]`,
+    );
+    if (node) flash([message ?? node]);
     const settled = window.setTimeout(bring, 400);
     const later = window.setTimeout(bring, 1200);
     return () => {
@@ -3606,10 +3636,11 @@ function CommentComposer({
   };
   const me = meta?.users.find((user) => user.id === meta.userId)?.name ?? '';
   return (
-    // Stays under the tabs as the timeline scrolls (the tab bar is 3.5rem
-    // side by side, 3.75rem stacked), on the page's background, its gap
-    // below its own so entries pass under it.
-    <div className='sticky top-[3.75rem] z-[9] grid gap-2 bg-background pb-5 @3xl:top-0'>
+    // Stays under the tabs as the timeline scrolls: stacked, right under
+    // the sticky tab bar, whose height DetailColumns measures; side by side,
+    // atop the tab's own scrolling content. On the page's background, its
+    // gap below its own so entries pass under it.
+    <div className='sticky top-[var(--crm-tabs-h,3.75rem)] z-[9] grid gap-2 bg-background pb-5 @3xl:top-0'>
       {/* The writer's avatar before the box, drawn as the account menu's:
           the first letter of each of the name's first two words. */}
       <div className='flex items-start gap-3'>

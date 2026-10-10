@@ -2711,6 +2711,8 @@ export class CrmService {
           recordId: record.id,
           name: record.name,
           event,
+          // Who caused it, for the inbox to say; none for the system's own.
+          actorId: actor.id && actor.id !== 'system' ? actor.id : null,
           status: 'pending',
           createdAt: new Date().toISOString(),
         })

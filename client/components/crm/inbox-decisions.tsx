@@ -1,3 +1,4 @@
+import { crmNoticeRenderer } from './inbox-notices.js';
 import { useCan } from '@nocobase/app-plugin-authorization/client';
 import { useEffect, useMemo, useRef } from 'react';
 import {
@@ -46,7 +47,8 @@ export function useCrmInboxRegistry(): {
   const plansLabel = text('plans.category');
   const registry = useMemo<InboxRegistry>(
     () => ({
-      renderers: [],
+      // The CRM's notifications drawn with who, when and their record.
+      renderers: [crmNoticeRenderer],
       feeds: [],
       categories: [
         ...(shown ? [decisionsCategory(label)] : []),

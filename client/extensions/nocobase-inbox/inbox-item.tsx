@@ -1,8 +1,4 @@
-import {
-  CheckCircle2Icon,
-  ChevronRightIcon,
-  MoreHorizontalIcon,
-} from 'lucide-react';
+import { CheckCircle2Icon, MoreHorizontalIcon } from 'lucide-react';
 import { createElement, type KeyboardEvent, type ReactElement } from 'react';
 
 import { Button } from '#components/ui/button';
@@ -99,9 +95,8 @@ export function InboxItemCard(props: InboxItemCardProps): ReactElement {
 }
 
 /**
- * One compact card of the inbox list. Clicking anywhere on it shows it in the detail pane (and marks it read), as its
- * chevron says; Enter on a focused card opens its route. The card reads: what it is about (an issue's identifier), type, ×N and time, then its title,
- * then one sentence, as its contributor words them. A decision that still waits carries an amber bar, an unread card a
+ * One compact card of the inbox list. Clicking anywhere on it shows it in the detail pane (and marks it read); Enter on a focused card opens its route. The card reads: what it is about (an issue's identifier), type, ×N and time, then its title
+ * and, after it on the same line, one sentence, as its contributor words them. A decision that still waits carries an amber bar, an unread card a
  * dot and a bold title, a settled decision is dimmed with a check, and an item that arrived after the list loaded
  * slides in. The menu button and a right-click offer read / unread and delete.
  */
@@ -158,7 +153,7 @@ function ItemCard({
         data-inbox-item={item.id}
         data-selected={selected ? 'true' : undefined}
         className={cn(
-          'group relative flex items-start gap-3 rounded-lg border border-transparent p-3 pr-2 transition-[background-color,border-color,opacity] duration-200',
+          'group relative flex items-start gap-3 rounded-lg border border-transparent p-3 transition-[background-color,border-color,opacity] duration-200',
           selected ? 'border-border bg-card shadow-xs' : 'hover:bg-accent/60',
           settled && 'opacity-55',
           fresh &&
@@ -206,8 +201,11 @@ function ItemCard({
               </span>
             ) : null}
             {/* The latest notice's time: a merged item (×N) is sent anew, replacing the previous one. */}
+            {/* Application change: the menu button takes the time's place
+                while the card is hovered or its menu open, rather than a
+                column of its own at the card's right. */}
             <time
-              className='ml-auto shrink-0 tabular-nums'
+              className='ml-auto shrink-0 tabular-nums group-has-focus-visible:invisible group-hover:invisible group-has-data-popup-open:invisible'
               dateTime={item.createdAt}
               title={new Date(item.createdAt).toLocaleString(language)}
             >
@@ -216,8 +214,9 @@ function ItemCard({
           </span>
           <span
             className={cn(
-              'flex items-center gap-1.5 text-sm group-focus-within:underline',
-              unread ? 'font-semibold' : 'font-normal',
+              'flex items-center gap-1.5 text-sm group-has-focus-visible:underline',
+              // Application change: a read title in the AI suggestions' weight.
+              unread ? 'font-semibold' : 'font-medium',
             )}
           >
             {unread ? (
@@ -227,13 +226,17 @@ function ItemCard({
                 </span>
               </span>
             ) : null}
-            <span className='truncate'>{title}</span>
-          </span>
-          {sentence ? (
-            <span className='line-clamp-1 text-sm text-muted-foreground wrap-anywhere'>
-              {sentence}
+            {/* Application change: the sentence follows the title on its
+                line, muted, as the AI suggestions' cards read. */}
+            <span className='min-w-0 truncate'>
+              {title}
+              {sentence ? (
+                <span className='ml-1.5 font-normal text-muted-foreground'>
+                  {sentence}
+                </span>
+              ) : null}
             </span>
-          ) : null}
+          </span>
         </button>
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -242,7 +245,7 @@ function ItemCard({
                 variant='ghost'
                 size='icon-xs'
                 disabled={busy}
-                className='relative opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100'
+                className='absolute top-2 right-2 opacity-0 group-hover:opacity-100 group-has-focus-visible:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100'
                 aria-label={t('inbox.actionsFor', {
                   title,
                   defaultValue: 'Actions for {{title}}',
@@ -256,15 +259,6 @@ function ItemCard({
             <DropdownMenuGroup>{menuItems(DropdownMenuItem)}</DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-        <ChevronRightIcon
-          aria-hidden='true'
-          className={cn(
-            'size-4 shrink-0 self-center transition-colors',
-            selected
-              ? 'text-foreground'
-              : 'text-muted-foreground group-hover:text-foreground',
-          )}
-        />
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuGroup>{menuItems(ContextMenuItem)}</ContextMenuGroup>

@@ -18,6 +18,7 @@ import {
 } from 'react';
 import { Link } from 'react-router';
 import { Button } from '../ui/button.js';
+import { flash } from './flash.js';
 import { localDate, toText, useCrmText, useMetadata } from './api.js';
 import {
   uniqueMessages,
@@ -92,10 +93,10 @@ export function RecordMailPanel({
     setSelected(focused);
   }
   useEffect(() => {
-    if (focused)
-      document
-        .getElementById(`mail-${focused}`)
-        ?.scrollIntoView({ block: 'nearest' });
+    const node = focused && document.getElementById(`mail-${focused}`);
+    if (!node) return;
+    node.scrollIntoView({ block: 'nearest' });
+    flash([node]);
   }, [focused]);
   const selectedMessage = threads.find(
     (thread) => thread.key === selected,

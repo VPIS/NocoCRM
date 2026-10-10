@@ -175,6 +175,17 @@ export function InboxList({
         </CollectionSlot>
       ));
 
+  // Application change: the list's head (Mark all as read) on the first
+  // group's heading line, at its right, rather than on a line of its own.
+  const headGroup = head
+    ? shown.find(({ entries }) => !(entries.length === 0 && kind === 'all'))
+        ?.category.id
+    : undefined;
+  // Application change: a view with a single group (Notifications) does not
+  // repeat its tab's name over it; the heading stays for screen readers.
+  const lone =
+    shown.filter(({ entries }) => !(entries.length === 0 && kind === 'all'))
+      .length === 1 && !showFeeds;
   let content: ReactNode;
   if (selectedCollection) content = collections[selectedCollection.id]?.list;
   else if (query.isError && !loaded)
@@ -264,16 +275,29 @@ export function InboxList({
             <CollectionSlot key={category.id}>
               {entries.length === 0 && kind === 'all' ? null : (
                 <section aria-labelledby={heading} className='space-y-1'>
-                  <h2
-                    id={heading}
-                    className='flex items-center gap-2 px-3 text-xs font-medium tracking-wider text-muted-foreground uppercase'
+                  <div
+                    className={cn(
+                      'flex items-center justify-between gap-2 pr-1',
+                      // The heading hidden, its head still at the right.
+                      lone && 'justify-end',
+                      lone && category.id !== headGroup && 'hidden',
+                    )}
                   >
-                    {category.title(t)}
-                    {/* What still waits, as To do counts it; handled items stay listed in All but are not counted. */}
-                    {count > 0 ? (
-                      <span className='tabular-nums'>{count}</span>
-                    ) : null}
-                  </h2>
+                    <h2
+                      id={heading}
+                      className={cn(
+                        'flex items-center gap-2 px-3 text-xs font-medium tracking-wider text-muted-foreground uppercase',
+                        lone && 'sr-only',
+                      )}
+                    >
+                      {category.title(t)}
+                      {/* What still waits, as To do counts it; handled items stay listed in All but are not counted. */}
+                      {count > 0 ? (
+                        <span className='tabular-nums'>{count}</span>
+                      ) : null}
+                    </h2>
+                    {category.id === headGroup ? head : null}
+                  </div>
                   <ul aria-label={category.title(t)} className='space-y-0.5'>
                     {entries.map((entry) => (
                       <li key={entry.item.id}>
@@ -422,7 +446,7 @@ export function InboxList({
         </div>
       ) : null}
       <div className='min-h-0 flex-1 overflow-y-auto px-2 py-3'>
-        {head}
+        {headGroup ? null : head}
         {content}
       </div>
       {/* Application change: no keyboard hints at the list's foot. */}

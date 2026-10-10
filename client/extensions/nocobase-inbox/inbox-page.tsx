@@ -78,6 +78,11 @@ export interface InboxPageProps {
   readonly detailToolbar?: (input: InboxDetailToolbarInput) => ReactNode;
   /** Beside the kind filter, such as a sound reminder switch. */
   readonly listFooter?: ReactNode;
+  /**
+   * Application change: adds to the address when an item is picked, as the record drawer over the inbox shows what
+   * a notification is about.
+   */
+  readonly selectParams?: (entry: InboxEntry, params: URLSearchParams) => void;
   /** Called with what waits on the viewer, the count on To do, whenever it changes once loaded. */
   readonly onPendingChange?: (count: number) => void;
   /** The application's toasts; the application toaster when left out. */
@@ -153,6 +158,7 @@ function InboxPageContent({
   description,
   detailToolbar,
   listFooter,
+  selectParams,
   onPendingChange,
   notify: givenNotify,
   pageSize,
@@ -346,6 +352,7 @@ function InboxPageContent({
   function select(entry: InboxEntry): void {
     const next = withoutSelection();
     next.set('item', entry.item.id);
+    selectParams?.(entry, next);
     replaceParams(next);
     if (!entry.item.readAt) act(entry, 'read');
   }
@@ -417,16 +424,13 @@ function InboxPageContent({
   return (
     <div className='flex h-full min-h-0 flex-col'>
       <div className='shrink-0 border-b px-6 py-5 md:px-8'>
+        {/* Application change: the refresh spinner beside the title rather
+            than as the header's actions, which on a phone take a row of
+            their own under it, a gap even while empty. */}
         <PageHeader
-          title={title ?? t('inbox.title', { defaultValue: 'Inbox' })}
-          description={
-            description ??
-            t('inbox.description', {
-              defaultValue: 'Notifications and requests sent to you.',
-            })
-          }
-          actions={
-            <>
+          title={
+            <span className='inline-flex items-center gap-3'>
+              {title ?? t('inbox.title', { defaultValue: 'Inbox' })}
               {(pages.isFetching || notices.isFetching || waiting.isFetching) &&
               pages.data ? (
                 <Spinner
@@ -434,7 +438,13 @@ function InboxPageContent({
                   aria-label={t('inbox.loading', { defaultValue: 'Loading' })}
                 />
               ) : null}
-            </>
+            </span>
+          }
+          description={
+            description ??
+            t('inbox.description', {
+              defaultValue: 'Notifications and requests sent to you.',
+            })
           }
         />
       </div>
@@ -498,7 +508,7 @@ function InboxPageContent({
             // in the page's header for every tab.
             head={
               view === 'all' ? (
-                <div className='flex justify-end px-1 pb-1'>
+                <div className='flex shrink-0 justify-end'>
                   <Button
                     variant='ghost'
                     size='xs'
