@@ -1,4 +1,5 @@
 import type { DemoContent } from './types.js';
+import { zhMail, zhMailSenders } from './mail-zh-CN.js';
 
 export const zhCN: DemoContent = {
   label: 'NocoBase 销售演示数据',
@@ -293,6 +294,9 @@ export const zhCN: DemoContent = {
     '确认了时间表与参与人。',
     '演示材料已按反馈调整。',
   ],
+  replyPrefix: '回复：',
+  mail: zhMail,
+  mailSenders: zhMailSenders,
   approvals: {
     discount: {
       name: '华策精密 企业版折扣特批',

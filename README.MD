@@ -47,6 +47,8 @@ A banner then offers the **demo data**, a sample dataset in English or Chinese i
 | English  | `daniel` (Daniel Brooks), `emily` (Emily Carter) | `sophie` (Sophie Bennett), `oliver` (Oliver Hayes) |
 | Chinese  | `liming` (李明), `zhaomin` (赵敏)                | `wangxiaofang` (王小芳), `chenxiaohao` (陈小浩)    |
 
+Each of them, and the administrator who imports, also gets a demo mailbox (`<username>@demo.example`) holding the customer conversations of the dataset, so the mailbox, the records' Mail tabs and the timeline work without connecting a real mailbox. A demo mailbox delivers nothing: mail to the dataset's own `.example` addresses is filed as sent, and mail to anyone else is refused. Removing the demo data removes the mailboxes.
+
 Other accounts are created on **Settings → User management**, where each gets one or more roles; there is no self-registration.
 
 | Role          | What it can do                                                                                |

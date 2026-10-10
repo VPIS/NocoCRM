@@ -50,6 +50,7 @@ import {
   type ServiceResolver,
 } from '@nocobase/service-provider';
 import { mailServiceToken } from '@nocobase/app-plugin-mail/server';
+import { DEMO_MAIL_SECRET } from '../../server/providers/crm/demo-mail.js';
 import {
   MailTimeline,
   mailTimelineToken,
@@ -260,7 +261,13 @@ type FakeMessage = {
   receivedAt: string;
   draft?: boolean;
 };
-const mailbox: { accounts: Record<string, string>; messages: FakeMessage[] } = {
+const mailbox: {
+  accounts: Record<string, string>;
+  messages: FakeMessage[];
+  // The accounts whose synchronization has completed, by user; absent, the
+  // plugin reports none (as before it was asked).
+  synced?: Record<string, string[]>;
+} = {
   accounts: {},
   messages: [],
 };
@@ -273,6 +280,13 @@ const fakeMail = {
         mailbox.accounts[actorId]
           ? [{ id: `mailbox-${actorId}`, address: mailbox.accounts[actorId] }]
           : [],
+      listSyncRuns: async ({ actorId }: { actorId: string }) => {
+        if (!mailbox.synced) throw new Error('not asked');
+        return (mailbox.synced[actorId] ?? []).map((accountId) => ({
+          accountId,
+          status: 'completed',
+        }));
+      },
       listMessages: async ({ actorId }: { actorId: string }) => ({
         items: mailbox.messages
           .filter((m) => m.accountId === `mailbox-${actorId}`)
@@ -283,6 +297,15 @@ const fakeMail = {
   },
 } as unknown as ServiceResolver;
 let timeline: MailTimeline;
+const demoMail: {
+  connected: {
+    userId: string;
+    address: string;
+    password: string;
+    provider: unknown;
+  }[];
+  removed: { userId: string; accountId: string }[];
+} = { connected: [], removed: [] };
 const actor = (id: string): Actor => ({
   id,
   locale: 'en-US',
@@ -457,6 +480,25 @@ beforeAll(async () => {
     },
   } as unknown as ReturnType<
     typeof container.resolve<typeof userManagementServiceToken>
+  >);
+  // The Mail plugin as the demo import sees it: mailboxes connected and
+  // removed as the user they belong to.
+  container.instance(mailServiceToken, {
+    listAccounts: async () => [],
+    listMessages: async () => ({ items: [] }),
+    async connectAccount(
+      context: { actorId: string },
+      input: { address: string; password: string; provider: unknown },
+    ) {
+      demoMail.connected.push({ userId: context.actorId, ...input });
+      return { id: `demo-mailbox-${context.actorId}` };
+    },
+    async removeAccount(context: { actorId: string }, accountId: string) {
+      demoMail.removed.push({ userId: context.actorId, accountId });
+      return undefined;
+    },
+  } as unknown as ReturnType<
+    typeof container.resolve<typeof mailServiceToken>
   >);
   router = await crmRoutes.createRouter({
     container,
@@ -6272,6 +6314,52 @@ describe('demo dataset', () => {
     const again = await request('/demo/populate', 'admin', 'POST', {});
     expect(again.status).toBe(409);
     expect((await again.json()).code).toBe('demoExists');
+    // A demo mailbox for each demo account and the importer, connected as
+    // each with the provider's secret, holding the import's conversations.
+    expect(demoMail.connected).toHaveLength(5);
+    expect(demoMail.connected.map((c) => c.userId)).toContain('admin');
+    expect(
+      demoMail.connected.every(
+        (c) =>
+          c.password === DEMO_MAIL_SECRET &&
+          JSON.stringify(c.provider) ===
+            JSON.stringify({ type: 'crm-demo', name: 'crm-demo' }),
+      ),
+    ).toBe(true);
+    const stored = await database
+      .query()
+      .selectFrom('crmSettings')
+      .select('value')
+      .where('id', '=', 'demo-mail')
+      .executeTakeFirst();
+    const store = (
+      typeof stored?.value === 'string'
+        ? JSON.parse(stored.value)
+        : stored?.value
+    ) as Record<string, { from?: { address: string }; receivedAt: string }[]>;
+    const addresses = demoMail.connected.map((c) => c.address);
+    expect(Object.keys(store).every((a) => addresses.includes(a))).toBe(true);
+    const messages = Object.values(store).flat();
+    expect(messages.length).toBeGreaterThan(20);
+    // Nothing reads as a reply just received, which would start a follow-up.
+    expect(
+      messages.every(
+        (m) =>
+          addresses.includes(m.from?.address ?? '') ||
+          Date.now() - Date.parse(m.receivedAt) > 24 * 3_600_000,
+      ),
+    ).toBe(true);
+    // No new lead has mail, which would turn it working.
+    const newLeads = await service.list(actor('admin'), 'leads', {
+      status: 'new',
+      pageSize: 100,
+    });
+    const newAddresses = new Set(
+      newLeads.data.map((lead) => String(lead.email ?? '').toLowerCase()),
+    );
+    expect(messages.some((m) => newAddresses.has(m.from?.address ?? ''))).toBe(
+      false,
+    );
     // The assignment notifications the import produced do not reach anyone.
     const queued = await database
       .query()
@@ -6284,6 +6372,18 @@ describe('demo dataset', () => {
     const reset = await request('/demo/reset', 'admin', 'POST', {});
     expect(reset.status).toBe(200);
     expect((await reset.json()).data.present).toBe(false);
+    // Its mailboxes go with it, removed as their owners; so do their messages.
+    expect(demoMail.removed.map((r) => r.accountId).sort()).toEqual(
+      demoMail.connected.map((c) => `demo-mailbox-${c.userId}`).sort(),
+    );
+    expect(
+      await database
+        .query()
+        .selectFrom('crmSettings')
+        .select('id')
+        .where('id', '=', 'demo-mail')
+        .executeTakeFirst(),
+    ).toBeUndefined();
     expect(
       await database
         .query()
@@ -8287,6 +8387,56 @@ describe('opportunity signals', () => {
 });
 
 describe('mail in the timeline', () => {
+  it("reads back a mailbox's history once its first synchronization completes, after a pass that saw none of it", async () => {
+    const now = new Date();
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: '补读线索',
+      email: 'late@history-mail.test',
+      source: 'website',
+    });
+    mailbox.accounts = { other: 'other@example.test' };
+    mailbox.messages = [];
+    mailbox.synced = { other: [] };
+    try {
+      // A pass while the mailbox's first synchronization runs: nothing yet.
+      expect(await timeline.syncUser('other', now)).toBe(0);
+      // It completes, with a conversation from two weeks before.
+      mailbox.messages = [
+        {
+          id: 'h1',
+          accountId: 'mailbox-other',
+          conversationId: 'history-thread',
+          from: { address: 'late@history-mail.test' },
+          to: [{ address: 'other@example.test' }],
+          subject: '两周前的邮件',
+          receivedAt: new Date(now.getTime() - 14 * 86_400_000).toISOString(),
+        },
+      ];
+      mailbox.synced = { other: ['mailbox-other'] };
+      const later = new Date(now.getTime() + 60_000);
+      expect(await timeline.syncUser('other', later)).toBe(1);
+      expect(
+        (await service.historyOf(actor('other'), 'leads', lead.id)).data.some(
+          (entry) => entry.action === 'mail',
+        ),
+      ).toBe(true);
+      // And only once: the next pass reads from where this one stopped.
+      expect(
+        await timeline.syncUser('other', new Date(later.getTime() + 60_000)),
+      ).toBe(0);
+    } finally {
+      mailbox.accounts = {};
+      mailbox.messages = [];
+      mailbox.synced = undefined;
+      await database
+        .query()
+        .deleteFrom('crmHistory')
+        .where('recordId', '=', lead.id)
+        .where('action', '=', 'mail')
+        .execute();
+    }
+  });
+
   it('brings each mail conversation into the timeline of the records whose people are in it', async () => {
     const now = new Date();
     const ago = (minutes: number) =>

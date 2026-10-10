@@ -10,6 +10,14 @@ import {
   type DemoLanguage,
   type DemoSeat,
 } from './demo-content/index.js';
+import type { DemoMailTopic } from './demo-content/types.js';
+import {
+  DEMO_MAIL_ROW,
+  buildDemoMail,
+  setDemoMailLanguage,
+  type DemoConversation,
+  type DemoMailbox,
+} from './demo-mail.js';
 import {
   listUsers,
   requireCapability,
@@ -84,6 +92,16 @@ export interface DemoAccountCreator {
   enable(id: string): Promise<void>;
 }
 
+// How the import gets its demo mailboxes (demo-mail.ts): through the Mail
+// plugin in the running application, a stub in tests, absent without the
+// plugin, when the dataset comes without mail.
+export interface DemoMailboxes {
+  // The account's id, or nothing when the plugin refused it (an address
+  // already connected to another user).
+  connect(userId: string, mailbox: DemoMailbox): Promise<string | undefined>;
+  remove(userId: string, accountId: string): Promise<void>;
+}
+
 export interface DemoStatus {
   present: boolean;
   // The language the present import was made in.
@@ -111,6 +129,9 @@ interface Manifest {
   // undoes; absent when they already were one.
   importerManager?: boolean;
   records: { entity: string; id: string; name: string }[];
+  // The demo mailboxes the import connected, which removal disconnects;
+  // absent on an import made before the dataset had mail.
+  mailAccounts?: { userId: string; accountId: string }[];
 }
 
 // Whether a demo dataset is imported, for the banner that offers one to
@@ -124,6 +145,21 @@ export async function demoPresent(service: CrmService): Promise<boolean> {
       .where('id', '=', DEMO_MARKER)
       .executeTakeFirst(),
   );
+}
+
+// The language of the demo imported, if any (the demo mailboxes' label
+// follows it).
+export async function demoLanguageOf(
+  service: CrmService,
+): Promise<string | undefined> {
+  const row = await service.database
+    .query()
+    .selectFrom('crmSettings')
+    .select('value')
+    .where('id', '=', DEMO_MARKER)
+    .executeTakeFirst();
+  const manifest = row ? parseManifest(row.value) : undefined;
+  return manifest ? (manifest.language ?? 'zh-CN') : undefined;
 }
 
 export async function demoStatus(
@@ -189,6 +225,7 @@ export async function populateDemo(
   actor: Actor,
   accounts: DemoAccountCreator,
   language: DemoLanguage = 'zh-CN',
+  mailboxes?: DemoMailboxes,
 ): Promise<DemoStatus> {
   await requireCapability(actor, 'manage', 'settings');
   const text = demoContent(language);
@@ -293,7 +330,8 @@ export async function populateDemo(
     ).toISOString();
   const started = now.toISOString();
   const manifest: Manifest = {
-    version: 6,
+    // 7: the demo mailboxes (mailAccounts).
+    version: 7,
     language,
     label: text.label,
     createdAt: started,
@@ -1012,6 +1050,236 @@ export async function populateDemo(
     -1,
   );
 
+  setDemoMailLanguage(language);
+  // The demo mailboxes: the messages first, which the plugin reads as soon
+  // as a mailbox connects, then a mailbox for each demo account and the
+  // importer, holding the conversations of the records they own.
+  if (mailboxes) {
+    const people = await query
+      .selectFrom('user')
+      .select(['id', 'username', 'email', 'name'])
+      .where('id', 'in', [actor.id, ...Object.values(userIds)])
+      .execute();
+    // Every demo mailbox is at the demo's own domain, the importer's too:
+    // a demo mailbox sends only to the demo's addresses, and one at the
+    // importer's real address would collide with their real mailbox.
+    const mailboxOf = (id: string, name?: string): DemoMailbox => {
+      const person = people.find((p) => toText(p.id) === id);
+      const username = toText(person?.username ?? '') || id;
+      return {
+        address: `${username.toLowerCase()}@demo.example`,
+        name: name ?? (toText(person?.name ?? '') || username),
+      };
+    };
+    const seatName = (seat: DemoSeat): string => text.accounts[seat].name;
+    const seat = (key: DemoSeat): DemoMailbox =>
+      mailboxOf(userIds[key], seatName(key));
+    const own = mailboxOf(actor.id);
+    const demoSeats = {
+      manager: {
+        ...seat('manager'),
+        address: `${text.accounts.manager.username}@demo.example`,
+      },
+      secondManager: {
+        ...seat('secondManager'),
+        address: `${text.accounts.secondManager.username}@demo.example`,
+      },
+      firstSeller: {
+        ...seat('firstSeller'),
+        address: `${text.accounts.firstSeller.username}@demo.example`,
+      },
+      secondSeller: {
+        ...seat('secondSeller'),
+        address: `${text.accounts.secondSeller.username}@demo.example`,
+      },
+    };
+    const ownerBox = (id: string): DemoMailbox =>
+      id === actor.id
+        ? own
+        : (Object.entries(userIds)
+            .map(([key, value]) =>
+              value === id ? demoSeats[key as DemoSeat] : undefined,
+            )
+            .find(Boolean) ?? own);
+    const money = (amount: number): string =>
+      new Intl.NumberFormat(language, {
+        style: 'currency',
+        currency: 'CNY',
+        maximumFractionDigits: 0,
+      }).format(amount);
+    const person = (row: Row): DemoMailbox => ({
+      address: toText(row.email).toLowerCase(),
+      name: toText(row.name),
+    });
+    // A deal's conversation with one of its account's contacts.
+    const aboutDeal = (
+      topic: DemoMailTopic,
+      d: number,
+      contact: 0 | 1,
+      lastDay: number,
+    ): DemoConversation => {
+      const a = deals[d][0];
+      return {
+        topic,
+        owner: ownerBox(toText(opportunities[d].ownerId)),
+        other: person(contacts[a][contact]),
+        company: text.companies[a].name,
+        deal: text.deals[d],
+        amount: money(deals[d][1]),
+        lastDay,
+      };
+    };
+    const aboutLead = (
+      topic: DemoMailTopic,
+      i: number,
+      lastDay: number,
+    ): DemoConversation => ({
+      topic,
+      owner: ownerBox(toText(leads[i].ownerId)),
+      other: person(leads[i]),
+      company: toText(leads[i].company),
+      lastDay,
+    });
+    // Between two people of the team, both keeping a copy.
+    const between = (
+      topic: DemoMailTopic,
+      from: DemoMailbox,
+      to: DemoMailbox,
+      lastDay: number,
+      about: Partial<DemoConversation> = {},
+    ): DemoConversation => ({
+      topic,
+      owner: from,
+      other: to,
+      internal: true,
+      lastDay,
+      ...about,
+    });
+    const dealOf = (d: number): Partial<DemoConversation> => ({
+      company: text.companies[deals[d][0]].name,
+      deal: text.deals[d],
+      amount: money(deals[d][1]),
+    });
+    // The mail every salesperson gets that concerns no record.
+    const everyday = [own, ...Object.values(demoSeats)].flatMap(
+      (mailbox): DemoConversation[] =>
+        (
+          [
+            ['newsletter', 'newsletter', 3],
+            ['eventInvite', 'events', 6],
+            ['release', 'product', 4],
+            ['officeNotice', 'office', 2],
+          ] as const
+        ).map(([topic, sender, lastDay]) => ({
+          topic,
+          owner: mailbox,
+          other: text.mailSenders[sender],
+          lastDay,
+        })),
+    );
+    // A customer's last message is at least two days old, so none reads as
+    // a reply just received (which would start an AI follow-up), and only
+    // working, nurtured and invalid leads have mail (mail would turn a new
+    // one working). The closed deals' mail is dated around their closing.
+    const conversations: DemoConversation[] = [
+      // The open deals, a thread each and the busiest two.
+      aboutDeal('quotation', 0, 0, 2),
+      aboutDeal('deploymentRequirements', 0, 1, 5),
+      aboutDeal('contractClause', 1, 0, 1),
+      aboutDeal('vendorOnboarding', 1, 1, 3),
+      aboutDeal('discount', 2, 0, 3),
+      aboutDeal('securityReview', 2, 1, 6),
+      aboutDeal('trialFeedback', 3, 1, 4),
+      aboutDeal('needsRecap', 4, 0, 2),
+      aboutDeal('budgetPaused', 7, 0, 8),
+      aboutDeal('discovery', 24, 0, 3),
+      aboutDeal('introduction', 25, 1, 1),
+      aboutDeal('requirementCall', 26, 0, 2),
+      aboutDeal('questionnaire', 27, 0, 4),
+      aboutDeal('pocSetup', 28, 1, 6),
+      aboutDeal('proposalFollowUp', 29, 0, 5),
+      // Won and lost.
+      aboutDeal('onboarding', 5, 0, 15),
+      aboutDeal('supportQuestion', 5, 1, 6),
+      aboutDeal('kickoff', 6, 0, 1),
+      aboutDeal('invoice', 6, 0, 2),
+      aboutDeal('declined', 8, 0, 21),
+      aboutDeal('renewalDeclined', 9, 0, 4),
+      aboutDeal('acceptance', 16, 0, 93),
+      aboutDeal('tenderWon', 17, 0, 86),
+      aboutDeal('requirementGap', 20, 0, 61),
+      aboutDeal('goLiveCheck', 22, 0, 30),
+      aboutDeal('competitorChosen', 23, 0, 35),
+      // The leads.
+      aboutLead('leadMigration', 5, 2),
+      aboutLead('firstReply', 6, 2),
+      aboutLead('meeting', 7, 3),
+      aboutLead('pricing', 8, 9),
+      aboutLead('nurtureCheckIn', 9, 20),
+      aboutLead('nurtureCase', 10, 25),
+      aboutLead('jobSeeker', 11, 10),
+      aboutLead('bounce', 12, 12),
+      aboutLead('leadTechnical', 13, 2),
+      aboutLead('leadBudget', 15, 2),
+      // Between colleagues.
+      between('internal', demoSeats.secondManager, demoSeats.manager, 2, {
+        deal: text.deals[3],
+      }),
+      between(
+        'discountPrep',
+        ownerBox(toText(opportunities[2].ownerId)),
+        demoSeats.manager,
+        3,
+        dealOf(2),
+      ),
+      between(
+        'forecast',
+        demoSeats.manager,
+        ownerBox(toText(opportunities[1].ownerId)),
+        1,
+        dealOf(1),
+      ),
+      between(
+        'handover',
+        ownerBox(toText(leads[7].ownerId)),
+        ownerBox(toText(leads[13].ownerId)),
+        2,
+        { company: toText(leads[7].company) },
+      ),
+      ...everyday,
+    ].filter(
+      // A conversation with oneself, should two parts fall to one person.
+      (conversation) =>
+        conversation.owner.address !== conversation.other.address,
+    );
+    // A store an interrupted removal left behind gives way to this one.
+    await query
+      .deleteFrom('crmSettings')
+      .where('id', '=', DEMO_MAIL_ROW)
+      .execute();
+    await query
+      .insertInto('crmSettings')
+      .values({
+        id: DEMO_MAIL_ROW,
+        value: JSON.stringify(buildDemoMail(text, conversations, at)),
+        updatedAt: new Date(),
+      })
+      .execute();
+    const owners: [string, DemoMailbox][] = [
+      [actor.id, own],
+      ...(Object.entries(userIds) as [DemoSeat, string][]).map(
+        ([key, id]): [string, DemoMailbox] => [id, demoSeats[key]],
+      ),
+    ];
+    manifest.mailAccounts = [];
+    for (const [userId, mailbox] of owners) {
+      const accountId = await mailboxes
+        .connect(userId, mailbox)
+        .catch(() => undefined);
+      if (accountId) manifest.mailAccounts.push({ userId, accountId });
+    }
+  }
+
   // The manifest makes the import repeat-safe and records exactly which rows
   // it created, so removal can find them again.
   await query
@@ -1035,6 +1303,7 @@ export async function resetDemo(
   service: CrmService,
   actor: Actor,
   accounts?: DemoAccountCreator,
+  mailboxes?: DemoMailboxes,
 ): Promise<DemoStatus> {
   await requireCapability(actor, 'manage', 'settings');
   const query = service.database.query();
@@ -1051,6 +1320,12 @@ export async function resetDemo(
     list.push(record.id);
     byEntity.set(record.entity, list);
   }
+  // The demo mailboxes go first, while the manifest still records them;
+  // the plugin deletes their mail. One the user removed already is passed
+  // over. An import made before the dataset had mail has none.
+  if (mailboxes)
+    for (const { userId, accountId } of manifest.mailAccounts ?? [])
+      await mailboxes.remove(userId, accountId).catch(() => undefined);
   const all = manifest.records.map((r) => r.id);
   await service.database.transaction(async ({ query: q }) => {
     if (all.length) {
@@ -1070,7 +1345,9 @@ export async function resetDemo(
         await q.deleteFrom(table).where('id', 'in', ids).execute();
     }
     await q.deleteFrom('crmSettings').where('id', '=', DEMO_MARKER).execute();
+    await q.deleteFrom('crmSettings').where('id', '=', DEMO_MAIL_ROW).execute();
   });
+  setDemoMailLanguage(undefined);
   if (accounts) await disableDemoAccounts(service, actor, accounts);
   // The sales manager role the import gave its importer goes with it.
   if (manifest.importerManager)

@@ -56,6 +56,78 @@ export interface DemoNamedText {
   readonly description: string;
 }
 
+// The demo mailboxes' conversations (demo-mail.ts), each written once and
+// filled with the dataset's own people: {{customer}} the customer's name,
+// {{company}} their company, {{deal}} the opportunity, {{amount}} its
+// amount, {{owner}} the mailbox's owner, {{colleague}} the other side of an
+// internal exchange.
+export type DemoMailTopic =
+  // With a deal's contact.
+  | 'quotation'
+  | 'contractClause'
+  | 'discount'
+  | 'trialFeedback'
+  | 'onboarding'
+  | 'budgetPaused'
+  | 'needsRecap'
+  | 'kickoff'
+  | 'declined'
+  | 'renewalDeclined'
+  | 'acceptance'
+  | 'tenderWon'
+  | 'requirementGap'
+  | 'goLiveCheck'
+  | 'competitorChosen'
+  | 'discovery'
+  | 'introduction'
+  | 'requirementCall'
+  | 'questionnaire'
+  | 'pocSetup'
+  | 'proposalFollowUp'
+  | 'deploymentRequirements'
+  | 'securityReview'
+  | 'vendorOnboarding'
+  | 'supportQuestion'
+  | 'invoice'
+  // With a lead.
+  | 'firstReply'
+  | 'meeting'
+  | 'pricing'
+  | 'leadMigration'
+  | 'leadTechnical'
+  | 'leadBudget'
+  | 'nurtureCheckIn'
+  | 'nurtureCase'
+  | 'jobSeeker'
+  | 'bounce'
+  // Between colleagues.
+  | 'internal'
+  | 'discountPrep'
+  | 'forecast'
+  | 'handover'
+  // Mail every salesperson gets that concerns no record.
+  | 'newsletter'
+  | 'eventInvite'
+  | 'release'
+  | 'officeNotice';
+
+// Who sends the mail that concerns no record, and the delivery system's
+// bounces.
+export type DemoMailSender =
+  'newsletter' | 'events' | 'product' | 'office' | 'postmaster';
+
+export interface DemoMailThread {
+  readonly subject: string;
+  // In order; who wrote each: the mailbox's owner, the other side, or the
+  // delivery system returning the message before it. A message's own
+  // subject replaces the reply's; {{subject}} is the thread's.
+  readonly messages: readonly {
+    readonly from: 'owner' | 'other' | 'postmaster';
+    readonly subject?: string;
+    readonly body: string;
+  }[];
+}
+
 export interface DemoContent {
   // The manifest's label for the import.
   readonly label: string;
@@ -97,6 +169,12 @@ export interface DemoContent {
   // The steady cadence of tasks around the hand-placed ones.
   readonly cadenceMatters: readonly string[];
   readonly cadenceFeedback: readonly string[];
+  readonly mail: Readonly<Record<DemoMailTopic, DemoMailThread>>;
+  readonly mailSenders: Readonly<
+    Record<DemoMailSender, { readonly name: string; readonly address: string }>
+  >;
+  // What a reply's subject begins with.
+  readonly replyPrefix: string;
   readonly approvals: {
     readonly discount: DemoNamedText;
     readonly paymentTerms: DemoNamedText & { readonly comment: string };

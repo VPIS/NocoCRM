@@ -1493,8 +1493,8 @@ const wording = {
   clearChoice: ['Clear', '清除选择'],
   demoData: ['Demo data', '演示数据'],
   demoDescription: [
-    'A dataset of NocoBase selling its own licences and services to fictional customers, in Chinese or in English: leads, accounts, contacts, opportunities, tasks and approvals, dated relative to the day it is imported. Importing creates the demo accounts below when they do not exist; the password is the username followed by 123.',
-    '一套以 NocoBase 自己的销售（商业授权与服务，客户均为虚构）为背景的演示数据，有中文和英文两种，包含线索、客户、联系人、商机、任务和审批，日期以导入当天为基准。导入时会自动创建下列演示账号（已存在的直接使用），密码为用户名加 123。',
+    'A dataset of NocoBase selling its own licences and services to fictional customers, in Chinese or in English: leads, accounts, contacts, opportunities, tasks and approvals, and mail in demo mailboxes, dated relative to the day it is imported. Importing creates the demo accounts below when they do not exist; the password is the username followed by 123.',
+    '一套以 NocoBase 自己的销售（商业授权与服务，客户均为虚构）为背景的演示数据，有中文和英文两种，包含线索、客户、联系人、商机、任务和审批，以及演示邮箱里的往来邮件，日期以导入当天为基准。导入时会自动创建下列演示账号（已存在的直接使用），密码为用户名加 123。',
   ],
   demoLanguage: ['Demo data language', '演示数据语言'],
   demoAbsent: ['No demo data has been imported.', '尚未导入演示数据。'],
@@ -1506,15 +1506,15 @@ const wording = {
   demoImport: ['Import demo data', '导入演示数据'],
   demoImportTitle: ['Import the demo data?', '导入演示数据？'],
   demoImportHint: [
-    'The records are added to the current database and belong to the demo accounts and to you: you become a sales manager as well, keeping your administrator role, and own a share of them. Nothing existing is changed, and the import can be removed again from here.',
-    '演示记录将加入当前数据库，负责人为演示账号和你：你会同时成为销售经理（管理员身份不变），负责其中一部分记录；现有数据不会被修改，之后可以在此清除。',
+    'The records are added to the current database and belong to the demo accounts and to you: you become a sales manager as well, keeping your administrator role, and own a share of them. Nothing existing is changed, and the import can be removed again from here. The demo accounts and you each get a demo mailbox holding mail with the demo customers; it sends only to the demo’s people, and nothing is ever delivered.',
+    '演示记录将加入当前数据库，负责人为演示账号和你：你会同时成为销售经理（管理员身份不变），负责其中一部分记录；现有数据不会被修改，之后可以在此清除。演示账号和你会各获得一个演示邮箱，里面是与演示客户的往来邮件；演示邮箱只能发给演示数据里的人，邮件不会真正寄出。',
   ],
   demoImported: ['Demo data imported', '演示数据已导入'],
   demoReset: ['Remove demo data', '清除演示数据'],
   demoResetTitle: ['Remove the demo data?', '清除演示数据？'],
   demoResetHint: [
-    'Every record the import created is deleted, including changes made to them since, and the demo accounts it created are disabled: they no longer sign in or appear as owners, and importing again enables them. The sales manager role the import gave you is removed. Records created by hand stay.',
-    '导入创建的全部记录（含之后对它们的修改）都会被删除，导入时新建的演示账号会被停用：不能再登录，也不会出现在负责人等选项里，再次导入时会重新启用；导入时给你加上的销售经理角色会被移除。手工创建的记录保留。',
+    'Every record the import created is deleted, including changes made to them since, and the demo accounts it created are disabled: they no longer sign in or appear as owners, and importing again enables them. The sales manager role the import gave you is removed. The demo mailboxes and their mail are removed too. Records created by hand stay.',
+    '导入创建的全部记录（含之后对它们的修改）都会被删除，导入时新建的演示账号会被停用：不能再登录，也不会出现在负责人等选项里，再次导入时会重新启用；导入时给你加上的销售经理角色会被移除；演示邮箱及其中的邮件也会一并删除。手工创建的记录保留。',
   ],
   demoRemoved: ['Demo data removed', '演示数据已清除'],
   demoBanner: [

@@ -19,6 +19,7 @@ import { bodyLimit } from 'hono/body-limit';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { crmToken } from '../providers/crm/index.js';
 import { mailTimelineToken } from '../providers/crm/mail-timeline.js';
+import { mailServiceToken } from '@nocobase/app-plugin-mail/server';
 import { captureLeads } from '../providers/crm/lead-capture.js';
 import {
   captureOpportunity,
@@ -73,6 +74,7 @@ import {
   populateDemo,
   resetDemo,
   type DemoAccountCreator,
+  type DemoMailboxes,
 } from '../providers/crm/demo.js';
 import {
   demoLanguages,
@@ -96,6 +98,11 @@ import {
 } from '../providers/crm/agents.js';
 import { resolveTitles } from '../providers/crm/titles.js';
 import { searchAll } from '../providers/crm/search.js';
+import {
+  DEMO_MAIL_NAME,
+  DEMO_MAIL_SECRET,
+  DEMO_MAIL_TYPE,
+} from '../providers/crm/demo-mail.js';
 import type { Row } from '@nocobase/db';
 
 type CrmEnv = { Variables: AuthorizationEnv['Variables'] & { actor: Actor } };
@@ -295,6 +302,52 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         },
       });
     });
+    // The demo dataset's mailboxes, through the Mail plugin's service as the
+    // user each belongs to (demo-mail.ts); none without the plugin.
+    // A deployment that switched the demo provider off (enabled: false under
+    // mail.providers) gets demo data without mail, as without the plugin.
+    const demoProvider = app.config?.get<{
+      providers?: Record<string, { enabled?: boolean }>;
+    }>('mail')?.providers?.[DEMO_MAIL_NAME];
+    const demoMailboxes: DemoMailboxes | undefined =
+      app.container.has(mailServiceToken) && demoProvider?.enabled !== false
+        ? {
+            async connect(userId, mailbox) {
+              const connect = () =>
+                app.container.resolve(mailServiceToken).connectAccount(
+                  { actorId: userId },
+                  {
+                    provider: { type: DEMO_MAIL_TYPE, name: DEMO_MAIL_NAME },
+                    address: mailbox.address,
+                    displayName: mailbox.name,
+                    username: mailbox.address,
+                    password: DEMO_MAIL_SECRET,
+                    // Everything the import wrote: it is all from the last weeks.
+                    initialSyncReceivedAfter: new Date(
+                      Date.now() - 181 * 86_400_000,
+                    ).toISOString(),
+                  },
+                );
+              // The plugin removes a mailbox in the background: an import
+              // right after a removal waits for the old one to go, half a
+              // minute at most.
+              for (let attempt = 0; ; attempt += 1)
+                try {
+                  return (await connect()).id;
+                } catch (error) {
+                  const removing =
+                    error instanceof Error && /remov/iu.test(error.message);
+                  if (!removing || attempt >= 15) throw error;
+                  await new Promise((resolve) => setTimeout(resolve, 2000));
+                }
+            },
+            async remove(userId, accountId) {
+              await app.container
+                .resolve(mailServiceToken)
+                .removeAccount({ actorId: userId }, accountId);
+            },
+          }
+        : undefined;
     // The demo dataset creates its own accounts through the users plugin, so
     // they appear on the Users page like any account an administrator adds.
     const demoAccounts: DemoAccountCreator = {
@@ -399,11 +452,19 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           c.get('actor'),
           demoAccounts,
           language as DemoLanguage,
+          demoMailboxes,
         ),
       });
     });
     routes.post('/demo/reset', async (c) =>
-      c.json({ data: await resetDemo(service, c.get('actor'), demoAccounts) }),
+      c.json({
+        data: await resetDemo(
+          service,
+          c.get('actor'),
+          demoAccounts,
+          demoMailboxes,
+        ),
+      }),
     );
     routes.put('/settings', async (c) =>
       c.json({

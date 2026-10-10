@@ -1,4 +1,5 @@
 import type { DemoContent } from './types.js';
+import { enMail, enMailSenders } from './mail-en-US.js';
 
 export const enUS: DemoContent = {
   label: 'NocoBase sales demo data',
@@ -316,6 +317,9 @@ export const enUS: DemoContent = {
     'Confirmed the timeline and the participants.',
     'Adjusted the demo materials to the feedback.',
   ],
+  replyPrefix: 'Re: ',
+  mail: enMail,
+  mailSenders: enMailSenders,
   approvals: {
     discount: {
       name: 'Northfield Precision Enterprise discount exception',

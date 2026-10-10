@@ -29,6 +29,14 @@ const mail: AppConfigFactory<MailConfig> = defineAppConfig({
     // customer's reply reaches the record's timeline, and starts the AI's
     // follow-up, within a minute or two (mail-timeline.ts).
     automaticSyncIntervalMs: 60_000,
+    // The demo dataset's mailboxes (server/providers/crm/demo-mail.ts): a
+    // provider of the CRM's own, configured here so a deployment needs
+    // nothing for it; config.yml's providers are merged beside it. Only the
+    // demo import can connect one.
+    providers: {
+      ...DEFAULT_MAIL_CONFIG.providers,
+      'crm-demo': { type: 'crm-demo' },
+    },
   },
   env: {
     MAIL_OAUTH_CALLBACK_URL: envString('oauthCallbackUrl', {

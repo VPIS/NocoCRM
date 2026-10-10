@@ -284,9 +284,29 @@ export class MailTimeline {
     const accounts = await mail.listAccounts(context).catch(() => []);
     if (!accounts.length) return 0;
     const own = new Set(accounts.map((a) => lower(a.address)));
-    const cursors = await this.cursors();
-    const since = cursors[userId]
-      ? Date.parse(cursors[userId]) - OVERLAP_MS
+    // The mailboxes whose first synchronization has finished: a mailbox
+    // connected since the last pass brings its history only once the plugin
+    // has imported it, dated long before this pass's cursor, so the pass
+    // after that reads back the whole window again (the demo dataset's
+    // mailboxes, and any mailbox a user connects later).
+    const synced = await Promise.resolve()
+      .then(() => mail.listSyncRuns(context, 0, 50))
+      .then(
+        (runs) =>
+          new Set(
+            runs
+              .filter((run) => ['completed', 'partial'].includes(run.status))
+              .map((run) => run.accountId),
+          ),
+      )
+      .catch(() => undefined);
+    const stored = (await this.cursors())[userId];
+    const known = new Set(stored?.synced ?? []);
+    const caughtUp =
+      stored !== undefined &&
+      (!synced || [...synced].every((id) => known.has(id)));
+    const since = caughtUp
+      ? Date.parse(stored.at) - OVERLAP_MS
       : now.getTime() - BACKFILL_DAYS * 86_400_000;
     const messages: MailMessageSummary[] = [];
     let cursor: string | undefined;
@@ -312,7 +332,11 @@ export class MailTimeline {
         if (await this.write(userId, target, conversation, customers, own, now))
           written += 1;
     }
-    await this.saveCursor(userId, now);
+    // Only the latest runs are listed, so a mailbox synced long ago may be
+    // missing from them; keeping it avoids reading the window again.
+    await this.saveCursor(userId, now, [
+      ...new Set([...known, ...(synced ?? [])]),
+    ]);
     return written;
   }
 
@@ -417,7 +441,13 @@ export class MailTimeline {
     });
   }
 
-  private async cursors(): Promise<Record<string, string>> {
+  // Per user: when their last pass ran, and which of their mailboxes had
+  // finished their first synchronization then. A cursor kept as a bare time
+  // (before this was recorded) knows of no mailbox, so its first pass reads
+  // back the whole window once, which writes nothing twice.
+  private async cursors(): Promise<
+    Record<string, { at: string; synced: string[] }>
+  > {
     const row = await this.service.database
       .query()
       .selectFrom('crmSettings')
@@ -425,12 +455,27 @@ export class MailTimeline {
       .where('id', '=', CURSOR_ID)
       .executeTakeFirst();
     const value = jsonValue(row?.value);
-    return value && typeof value === 'object'
-      ? (value as Record<string, string>)
-      : {};
+    if (!value || typeof value !== 'object') return {};
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([id, entry]) => [
+        id,
+        typeof entry === 'string'
+          ? { at: entry, synced: [] }
+          : {
+              at: toText((entry as { at?: unknown }).at),
+              synced: Array.isArray((entry as { synced?: unknown }).synced)
+                ? (entry as { synced: unknown[] }).synced.map(toText)
+                : [],
+            },
+      ]),
+    );
   }
 
-  private async saveCursor(userId: string, now: Date): Promise<void> {
+  private async saveCursor(
+    userId: string,
+    now: Date,
+    synced: readonly string[],
+  ): Promise<void> {
     await this.service.database.transaction(async ({ query }) => {
       const row = await query
         .selectFrom('crmSettings')
@@ -440,7 +485,7 @@ export class MailTimeline {
       const stored = jsonValue(row?.value);
       const value = {
         ...(stored && typeof stored === 'object' ? stored : {}),
-        [userId]: now.toISOString(),
+        [userId]: { at: now.toISOString(), synced },
       };
       if (row)
         await query

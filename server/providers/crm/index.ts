@@ -24,6 +24,15 @@ import { jobExecutorServiceToken } from '@nocobase/app-server/jobs';
 import type { JobExecutor } from '@nocobase/jobs';
 import { createFollowUpJob, FOLLOW_UP_JOBS } from './follow-up-jobs.js';
 import { MailTimeline, mailTimelineToken } from './mail-timeline.js';
+import { mailProviderRegistryToken } from '@nocobase/app-plugin-mail/server';
+import {
+  DEMO_MAIL_ROW,
+  createDemoMailProvider,
+  demoMailLanguage,
+  setDemoMailLanguage,
+  type DemoMailStore,
+} from './demo-mail.js';
+import { demoLanguageOf } from './demo.js';
 import {
   followUpAfterTask,
   followUpLead,
@@ -139,6 +148,38 @@ export default class CrmProvider extends ServiceProvider<Application> {
       this.app.container.resolve(authorizationToken),
       this.app.container.resolve(databaseManagerToken),
     );
+    // The demo dataset's mailboxes (demo-mail.ts), through the Mail plugin's
+    // public provider registry; their messages are the import's.
+    if (this.app.container.has(mailProviderRegistryToken)) {
+      const service = this.app.container.resolve(crmToken);
+      this.app.container.resolve(mailProviderRegistryToken).register(
+        createDemoMailProvider(
+          async (address) => {
+            const row = await service.database
+              .query()
+              .selectFrom('crmSettings')
+              .select('value')
+              .where('id', '=', DEMO_MAIL_ROW)
+              .executeTakeFirst();
+            const value: unknown = row?.value;
+            const store = (
+              typeof value === 'string' ? JSON.parse(value) : (value ?? {})
+            ) as DemoMailStore;
+            return store[address.toLowerCase()] ?? [];
+          },
+          // The label in the demo's language, else the application's.
+          () =>
+            (
+              demoMailLanguage() ??
+              toText(
+                this.app.config.get<{ defaultLocale?: string }>('i18n')
+                  ?.defaultLocale ?? '',
+              )
+            ).startsWith('zh'),
+        ),
+      );
+      setDemoMailLanguage(await demoLanguageOf(service));
+    }
     // The CRM assistant employee and its tools, for the AI Employee
     // plugin's chat (server/ai). Registered here, after every provider has
     // registered its services and before the plugin serves conversations.
