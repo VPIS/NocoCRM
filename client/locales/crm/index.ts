@@ -376,6 +376,8 @@ const wording = {
     confirmDelete: ['Delete it?', '确认删除'],
     // Replies under a comment, in its thread.
     reply: ['Reply', '回复'],
+    // A long thread's folded middle.
+    moreReplies: ['Show {{count}} more replies', '展开另外 {{count}} 条回复'],
     // After a reply's author: whom it answers.
     replyTo: ['replied to {{name}}', '回复 {{name}}'],
     replyPlaceholder: ['Reply, @ someone...', '回复，可 @ 某人...'],

@@ -554,6 +554,30 @@ describe("a comment's thread", () => {
     });
   });
 
+  it('folds a long thread to its first and last replies until unfolded', async () => {
+    state.history = [
+      {
+        ...comment('n1', 'manager', '客户想看演示'),
+        replies: ['一', '二', '三', '四', '五'].map((text, index) => ({
+          id: `r${index}`,
+          replyToId: 'n1',
+          actorId: 'rep',
+          createdAt: `2026-10-02T0${index + 1}:00:00.000Z`,
+          changes: { text },
+        })),
+      },
+    ];
+    renderPage();
+    expect(screen.getByText('一')).toBeTruthy();
+    expect(screen.getByText('五')).toBeTruthy();
+    expect(screen.queryByText('三')).toBeNull();
+    await userEvent.click(
+      screen.getByRole('button', { name: '展开另外 3 条回复' }),
+    );
+    for (const text of ['二', '三', '四'])
+      expect(screen.getByText(text)).toBeTruthy();
+  });
+
   it("keeps a deleted comment's place for its replies", () => {
     state.history = [
       {

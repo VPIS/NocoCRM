@@ -9,6 +9,7 @@ import {
 } from '../components/crm/mentions.js';
 import { markdownLine } from '../components/crm/line-breaks.js';
 import {
+  Fragment,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -2188,7 +2189,9 @@ const commentGone = (event: { changes?: unknown }): boolean =>
 // timeline's own between its icons: each on a line of its own as a comment
 // reads (who, whom it answers, when, the text, folding when long), its
 // author's edit and delete on its hover; the reply box at the thread's end,
-// whichever it answers.
+// whichever it answers, opening anew for each (key). A long thread shows its
+// first reply and its last, the ones between folded behind a line that
+// unfolds them.
 function CommentThread({
   entity,
   recordId,
@@ -2212,9 +2215,13 @@ function CommentThread({
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
   const [editing, setEditing] = useState<string>();
+  const [unfolded, setUnfolded] = useState(false);
   const replies = (
     Array.isArray(comment.replies) ? comment.replies : []
   ) as Data[];
+  // How many between the first and the last are folded away.
+  const folded = unfolded || replies.length <= 3 ? 0 : replies.length - 2;
+  const shown = folded ? [replies[0], replies[replies.length - 1]] : replies;
   const commentId = toText(comment.id);
   // Answering the comment or one of its replies.
   const answering =
@@ -2241,83 +2248,94 @@ function CommentThread({
     ) : null;
   return (
     <div className='mt-2 grid gap-2 border-l border-border/50 pl-3'>
-      {replies.map((reply) => {
+      {shown.map((reply, index) => {
         const replyId = toText(reply.id);
         return (
-          <div key={replyId} className='min-w-0'>
-            <div className='group/reply'>
-              <div className='flex min-h-[26px] items-center gap-2 text-sm'>
-                <span
-                  aria-hidden
-                  className='grid size-5 shrink-0 place-items-center rounded-full bg-muted text-[0.625rem] font-medium text-muted-foreground'
-                >
-                  {initials(name(reply.actorId))}
-                </span>
-                {/* Who wrote it, and whom it answers: the comment's
-                      author, or the reply's above it. */}
-                <span className='min-w-0 flex-1 truncate'>
-                  <span className='font-semibold'>{name(reply.actorId)}</span>{' '}
-                  <span className='text-muted-foreground'>
-                    {text('comments.replyTo', {
-                      name: name(
-                        (
-                          replies.find(
-                            (other) =>
-                              toText(other.id) === toText(reply.replyToId),
-                          ) ?? comment
-                        ).actorId,
-                      ),
-                    })}
+          <Fragment key={replyId}>
+            {folded && index === 1 ? (
+              <button
+                type='button'
+                className='justify-self-start rounded-md py-0.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:underline'
+                onClick={() => setUnfolded(true)}
+              >
+                {text('comments.moreReplies', { count: folded })}
+              </button>
+            ) : null}
+            <div className='min-w-0'>
+              <div className='group/reply'>
+                <div className='flex min-h-[26px] items-center gap-2 text-sm'>
+                  <span
+                    aria-hidden
+                    className='grid size-5 shrink-0 place-items-center rounded-full bg-muted text-[0.625rem] font-medium text-muted-foreground'
+                  >
+                    {initials(name(reply.actorId))}
                   </span>
-                </span>
-                <CommentActions
-                  id={replyId}
-                  reply
-                  onReply={() => onReply(replyId)}
-                  onEdit={
-                    reply.actorId === meta?.userId && !commentGone(reply)
-                      ? () => setEditing(replyId)
-                      : undefined
-                  }
-                />
-                <time
-                  dateTime={toText(reply.createdAt)}
-                  title={localDate(reply.createdAt, language, timeZone)}
-                  className='shrink-0 text-xs text-muted-foreground/80 tabular-nums'
-                >
-                  {reply.editedAt && !commentGone(reply)
-                    ? `${toText(text('comments.edited'))} · `
-                    : ''}
-                  {relativeTime(
-                    reply.createdAt,
-                    language,
-                    now,
-                    text('justNow'),
-                  )}
-                </time>
-              </div>
-              {editing === replyId ? (
-                <CommentEditor
-                  comment={reply}
-                  onDone={() => setEditing(undefined)}
-                />
-              ) : commentGone(reply) ? (
-                <div className='pl-7 text-sm text-muted-foreground'>
-                  {text('comments.deleted')}
-                </div>
-              ) : (
-                <div className='pl-7 text-sm'>
-                  <FoldingText
-                    value={markdownMentions(
-                      commentText(reply),
-                      (reply.changes as Data | undefined)?.mentions,
-                      meta?.users ?? [],
-                    )}
+                  {/* Who wrote it, and whom it answers: the comment's
+                      author, or the reply's above it. */}
+                  <span className='min-w-0 flex-1 truncate'>
+                    <span className='font-semibold'>{name(reply.actorId)}</span>{' '}
+                    <span className='text-muted-foreground'>
+                      {text('comments.replyTo', {
+                        name: name(
+                          (
+                            replies.find(
+                              (other) =>
+                                toText(other.id) === toText(reply.replyToId),
+                            ) ?? comment
+                          ).actorId,
+                        ),
+                      })}
+                    </span>
+                  </span>
+                  <CommentActions
+                    id={replyId}
+                    reply
+                    onReply={() => onReply(replyId)}
+                    onEdit={
+                      reply.actorId === meta?.userId && !commentGone(reply)
+                        ? () => setEditing(replyId)
+                        : undefined
+                    }
                   />
+                  <time
+                    dateTime={toText(reply.createdAt)}
+                    title={localDate(reply.createdAt, language, timeZone)}
+                    className='shrink-0 text-xs text-muted-foreground/80 tabular-nums'
+                  >
+                    {reply.editedAt && !commentGone(reply)
+                      ? `${toText(text('comments.edited'))} · `
+                      : ''}
+                    {relativeTime(
+                      reply.createdAt,
+                      language,
+                      now,
+                      text('justNow'),
+                    )}
+                  </time>
                 </div>
-              )}
+                {editing === replyId ? (
+                  <CommentEditor
+                    comment={reply}
+                    onDone={() => setEditing(undefined)}
+                  />
+                ) : commentGone(reply) ? (
+                  <div className='pl-7 text-sm text-muted-foreground'>
+                    {text('comments.deleted')}
+                  </div>
+                ) : (
+                  <div className='pl-7 text-sm'>
+                    <FoldingText
+                      value={markdownMentions(
+                        commentText(reply),
+                        (reply.changes as Data | undefined)?.mentions,
+                        meta?.users ?? [],
+                      )}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          </Fragment>
         );
       })}
       {box(replyingTo ?? commentId)}
