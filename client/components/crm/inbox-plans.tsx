@@ -132,7 +132,7 @@ export function PlanDetail({
         {t('navigation.back')}
       </button>
       {/* Keyed: what was unticked or failed on one plan stays with it. */}
-      <PlanCard key={current.id} plan={current} primary />
+      <PlanCard key={current.id} plan={current} />
     </div>
   );
 }

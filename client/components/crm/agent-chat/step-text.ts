@@ -4,9 +4,10 @@ import type { StepLine } from '@nocobase/app-plugin-agents/client/chat';
 // command it runs: the plugin sums a run up as thinking, reading or working
 // on a subject, and the subject of the CRM's agent is its CLI command line
 // (`crm leads list --q "顺丰" --json | head -50`), which reads as noise. The
-// command's object and verb, and what it searches for, say it plainly; any
-// other step keeps the plugin's own wording. No imports beyond types, so the
-// tests read it directly.
+// command's object and verb, and what it searches for, say it plainly; a
+// CRM command it does not know reads as querying the CRM, and any other
+// command as working, so no command line ever shows. No imports beyond
+// types, so the tests read it directly.
 
 // The CRM's objects as its commands name them, singular or plural.
 const OBJECTS: Record<string, string> = {
@@ -27,13 +28,12 @@ const OBJECTS: Record<string, string> = {
 };
 
 export interface StepWords {
-  // The key under `agentChat.step` and its values; null when the plugin's
-  // wording stands.
+  // The key under `agentChat.step` and its values.
   readonly key: string;
   readonly values?: Record<string, string>;
 }
 
-export function stepWords(line: StepLine): StepWords | null {
+export function stepWords(line: StepLine): StepWords {
   if (line.kind === 'thinking') return { key: 'thinking' };
   const subject = line.subject.trim();
   // A skill the run loads: the method it works by.
@@ -41,15 +41,17 @@ export function stepWords(line: StepLine): StepWords | null {
   const command = /(?:^|[\s;&|(])crm\s+([a-z-]+)(?:\s+([a-z-]+))?/iu.exec(
     subject,
   );
-  if (!command) return null;
-  if (/--help\b/u.test(subject)) return { key: 'help' };
+  if (!command) return { key: line.kind === 'reading' ? 'reading' : 'working' };
   const [, first, second] = command;
+  if (/--help\b/u.test(subject) || first === 'docs') return { key: 'help' };
+  if (first === 'colleagues') return { key: 'colleagues' };
   const query = /--q\s+(?:"([^"]+)"|'([^']+)'|(\S+))/u.exec(subject);
   const q = query ? (query[1] ?? query[2] ?? query[3] ?? '') : '';
-  if (first === 'search') return q ? { key: 'search', values: { q } } : null;
+  if (first === 'search')
+    return q ? { key: 'search', values: { q } } : { key: 'crm' };
   if (first === 'plan' || first === 'plans') return { key: 'plan' };
   const object = OBJECTS[first.toLowerCase()];
-  if (!object) return null;
+  if (!object) return { key: 'crm' };
   const verb = (second ?? '').toLowerCase();
   if (verb === 'list')
     return q
@@ -57,5 +59,7 @@ export function stepWords(line: StepLine): StepWords | null {
       : { key: 'list', values: { object } };
   if (verb === 'get') return { key: 'get', values: { object } };
   if (verb === 'history') return { key: 'history', values: { object } };
+  if (verb === 'summary' || verb === 'statistics')
+    return { key: 'summary', values: { object } };
   return { key: 'read', values: { object } };
 }

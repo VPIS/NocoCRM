@@ -390,6 +390,64 @@ export class CrmPlans {
     return executed;
   }
 
+  // The person changes what a waiting step writes before deciding (a value
+  // on the card): the values of a record it creates or updates. The whole
+  // plan is rehearsed again with them, so a value the step would be refused
+  // for is refused now, naming the step, and the plan keeps its revision;
+  // otherwise every step's check is the new rehearsal's and the revision
+  // moves on, so a card still showing the old plan cannot carry it out.
+  async revise(
+    actor: Actor,
+    id: string,
+    input: { revision: number; position: number; values: Row },
+  ): Promise<PlanView> {
+    const plan = await this.decidable(actor, id, input.revision);
+    const target = plan.steps.find((step) => step.position === input.position);
+    if (
+      !target ||
+      (target.op !== 'record.create' && target.op !== 'record.update')
+    )
+      throw new CrmError('invalidInput', 400, 'position');
+    const params = {
+      ...target.params,
+      values: { ...object(target.params.values), ...input.values },
+    };
+    const steps: PlanStepInput[] = plan.steps.map((step) => ({
+      op: step.op,
+      ...(step.ref ? { ref: step.ref } : {}),
+      params: step.position === input.position ? params : step.params,
+    }));
+    const checks = await this.rehearse(actor, steps);
+    const now = new Date().toISOString();
+    await this.service.database.transaction(async ({ query }) => {
+      const moved = await query
+        .updateTable('crmPlans')
+        .set({ revision: plan.revision + 1, updatedAt: now })
+        .where('id', '=', id)
+        .where('status', '=', 'pending')
+        .where('revision', '=', plan.revision)
+        .execute();
+      if (Number(moved.updatedCount ?? 0) !== 1)
+        throw new CrmError('conflict', 409);
+      for (const [index, step] of plan.steps.entries()) {
+        const check = checks[index];
+        await query
+          .updateTable('crmPlanRows')
+          .set({
+            ...(step.position === input.position
+              ? { params: JSON.stringify(params) }
+              : {}),
+            baseline: JSON.stringify(baselineOf(check)),
+            check: JSON.stringify(check),
+            targets: check?.id ? `${check.entity}:${check.id}` : null,
+          })
+          .where('id', '=', step.id)
+          .execute();
+      }
+    });
+    return this.get(actor, id);
+  }
+
   async void(actor: Actor, id: string, revision: number): Promise<PlanView> {
     const plan = await this.decidable(actor, id, revision);
     return this.close(actor, plan, 'voided', null);

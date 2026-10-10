@@ -1447,18 +1447,18 @@ const wording = {
   // Permission Sets page's own, under authz.
   agentActions: {
     throughPlan: [
-      'Proposed as a plan the person confirms.',
-      '以计划提出，由本人确认后执行。',
+      'Suggested as changes the person confirms.',
+      '以建议的改动提出，由本人确认后执行。',
     ],
-    plans: ['Plans', '计划'],
+    plans: ['Suggested changes', '建议的改动'],
     workspace: ['Workspace', '工作台'],
     search: ['Search records', '搜索记录'],
     colleagues: ['See colleagues', '查看同事'],
     comment: ['Comment on records', '评论记录'],
-    planCreate: ['Propose plans', '提出计划'],
+    planCreate: ['Suggest changes', '建议改动'],
     planCreateDescription: [
-      'Proposes changes to records as one plan, carried out once the person confirms it.',
-      '把对记录的改动整理成一份计划，本人确认后执行。',
+      'Suggests changes to records together, carried out once the person confirms them.',
+      '把对记录的改动整理在一起提出，本人确认后执行。',
     ],
     deleteReason: [
       'Deleting records is left to people.',
@@ -1477,8 +1477,8 @@ const wording = {
   agentPreset: {
     name: ['CRM assistant', 'CRM 助手'],
     description: [
-      'Looks records up across the CRM and proposes changes as plans the person confirms.',
-      '在 CRM 里查询记录，把改动整理成计划交本人确认。',
+      'Looks records up across the CRM and suggests changes for the person to confirm.',
+      '在 CRM 里查询记录，提出改动交本人确认。',
     ],
   },
   // The agent whose model and instructions the CRM's background work
@@ -1992,9 +1992,14 @@ const wording = {
         '正在查看{{object}}的动态…',
       ],
       read: ['looking at the {{object}}…', '正在查看{{object}}…'],
+      summary: ['counting up the {{object}}…', '正在统计{{object}}…'],
+      colleagues: ['looking up colleagues…', '正在查看同事…'],
+      crm: ['querying the CRM…', '正在查询 CRM…'],
+      reading: ['reading…', '正在查阅资料…'],
+      working: ['working on it…', '正在处理…'],
       plan: [
         'putting the changes into a plan for you…',
-        '正在整理改动计划，等你确认…',
+        '正在整理建议的改动，等你确认…',
       ],
     },
     notFound: ['This conversation does not exist.', '这个对话不存在。'],
@@ -2017,11 +2022,14 @@ const wording = {
   },
   // The plans an agent proposes, decided by the person they were proposed to.
   plans: {
-    category: ['Plans', '计划'],
+    category: ['Suggested changes', '建议的改动'],
     agent: ['Agent', 'Agent'],
-    meta: ['Plan · {{agent}} · {{time}}', '计划 · {{agent}} · {{time}}'],
+    meta: [
+      'Changes suggested by {{agent}} · {{time}}',
+      '{{agent}} 建议的改动 · {{time}}',
+    ],
     fromConversation: ['from a conversation', '来自对话'],
-    none: ['No plans', '没有计划'],
+    none: ['No suggested changes', '没有建议的改动'],
     waitingOnYou: ['Waiting on you', '等你决定'],
     viewInInbox: ['View in inbox', '在收件箱查看'],
     status: {
@@ -2054,37 +2062,37 @@ const wording = {
     expiresIn_one: ['expires in 1 hour', '1 小时后过期'],
     expiresIn_other: ['expires in {{count}} hours', '{{count}} 小时后过期'],
     carryingOut: ['Carrying out…', '执行中…'],
-    gone: ['This plan no longer exists.', '这份计划已不存在。'],
-    executed: ['Carried out plan “{{title}}”', '已执行计划“{{title}}”'],
-    voided: ['Declined plan “{{title}}”', '已拒绝计划“{{title}}”'],
-    notExecuted: [
-      'Plan “{{title}}” was not carried out',
-      '计划“{{title}}”未执行',
+    gone: [
+      'These suggested changes no longer exist.',
+      '这些建议的改动已不存在。',
     ],
+    executed: ['Carried out “{{title}}”', '已执行「{{title}}」'],
+    voided: ['Declined “{{title}}”', '已拒绝「{{title}}」'],
+    notExecuted: ['“{{title}}” was not carried out', '「{{title}}」未执行'],
     outcome: {
       executed: [
         'Carried out by {{name}} · {{time}}',
         '{{name}} 已执行 · {{time}}',
       ],
       voided: [
-        '{{name}} declined this plan · {{time}}',
-        '{{name}} 拒绝了这份计划 · {{time}}',
+        '{{name}} declined these changes · {{time}}',
+        '{{name}} 拒绝了这些改动 · {{time}}',
       ],
       failed: [
         'Step {{position}} was refused: {{reason}}. Nothing was changed.',
         '第 {{position}} 步被拒：{{reason}}。没有任何改动。',
       ],
       stale: [
-        'Not carried out: the record of step {{position}} changed after the plan was made. Ask the agent again.',
-        '未执行：第 {{position}} 步的记录在计划提出后被改动过。请让 Agent 重新提出。',
+        'Not carried out: a record these changes concern changed after they were suggested. Ask the agent again.',
+        '未执行：涉及的记录在提出建议后被改动过。请让 Agent 重新提出。',
       ],
       expired: ['Expired after a day undecided', '超过一天未处理，已过期'],
     },
     news: {
-      executed: ['Plan “{{title}}” carried out', '计划“{{title}}”已执行'],
-      voided: ['Plan “{{title}}” declined', '计划“{{title}}”已拒绝'],
-      failed: ['Plan “{{title}}” failed', '计划“{{title}}”执行失败'],
-      stale: ['Plan “{{title}}” not carried out', '计划“{{title}}”未执行'],
+      executed: ['“{{title}}” carried out', '「{{title}}」已执行'],
+      voided: ['“{{title}}” declined', '「{{title}}」已拒绝'],
+      failed: ['“{{title}}” failed', '「{{title}}」执行失败'],
+      stale: ['“{{title}}” not carried out', '「{{title}}」未执行'],
     },
   },
   // Singular, for "New lead" / "Delete contact"; Chinese has no plural.
@@ -2366,16 +2374,16 @@ const wording = {
       '这条建议已经处理过了。',
     ],
     planDecided: [
-      'This plan has already been decided.',
-      '这份计划已经处理过了。',
+      'These suggested changes have already been decided.',
+      '这些建议的改动已经处理过了。',
     ],
     planExpired: [
-      'This plan waited more than a day and has expired. Ask the agent again if the change is still needed.',
-      '这份计划超过一天未处理，已过期。如仍需要，请让 Agent 重新提出。',
+      'These suggested changes waited more than a day and have expired. Ask the agent again if they are still needed.',
+      '这些建议的改动超过一天未处理，已过期。如仍需要，请让 Agent 重新提出。',
     ],
     planStepRefused: [
-      'A step of the plan would be refused.',
-      '计划中有一步无法执行。',
+      'One of the suggested changes would be refused.',
+      '建议的改动中有一项无法执行。',
     ],
     taskNotOpen: [
       'Only an open task can be prepared.',

@@ -146,7 +146,11 @@ export function ConversationList({
                         <span className='min-w-0 truncate'>
                           <LastMessage
                             id={conversation.id}
-                            at={conversation.lastMessageAt}
+                            // Read again when a message arrives, when a run
+                            // starts or ends (a reply streamed into its
+                            // message keeps the message's time), and when the
+                            // conversation changes.
+                            at={`${conversation.lastMessageAt}|${conversation.updatedAt}|${conversation.run?.id ?? ''}`}
                             agent={agent}
                           />
                         </span>
@@ -208,7 +212,8 @@ function RowTarget({
 }
 
 // The newest message of a conversation, as one plain line under its title,
-// led by who wrote it ("You:", or the agent's name): the plugin's list carries no preview, so each row reads its
+// led by who wrote it ("You:", or the agent's name); `at` is what it is read
+// again on: the plugin's list carries no preview, so each row reads its
 // conversation's last message, read again when the conversation moves on.
 function LastMessage({
   id,

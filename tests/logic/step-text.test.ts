@@ -45,10 +45,27 @@ describe('a run step in plain words', () => {
     expect(stepWords({ kind: 'thinking' })).toEqual({ key: 'thinking' });
   });
 
-  it("leaves a step it does not know to the plugin's wording", () => {
-    expect(stepWords({ kind: 'working', subject: 'ls -la' })).toBeNull();
+  it('never shows a command line, whatever the step', () => {
     expect(
-      stepWords({ kind: 'reading', subject: 'crm widgets list' }),
-    ).toBeNull();
+      stepWords({
+        kind: 'working',
+        subject: 'crm docs leads create 2>&1 | tail -30',
+      }),
+    ).toEqual({ key: 'help' });
+    expect(
+      stepWords({ kind: 'reading', subject: 'crm leads summary --json' }),
+    ).toEqual({ key: 'summary', values: { object: 'leads' } });
+    expect(
+      stepWords({ kind: 'reading', subject: 'crm colleagues list --json' }),
+    ).toEqual({ key: 'colleagues' });
+    expect(stepWords({ kind: 'reading', subject: 'crm widgets list' })).toEqual(
+      { key: 'crm' },
+    );
+    expect(stepWords({ kind: 'working', subject: 'ls -la' })).toEqual({
+      key: 'working',
+    });
+    expect(stepWords({ kind: 'reading', subject: 'cat notes.md' })).toEqual({
+      key: 'reading',
+    });
   });
 });

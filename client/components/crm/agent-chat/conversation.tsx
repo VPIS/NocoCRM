@@ -20,7 +20,6 @@ import {
   liveStepsView,
   newConversationAgent,
   noticeText,
-  stepLineText,
   timelineOrder,
   useAgentText,
   useConversation,
@@ -673,22 +672,18 @@ function LiveLine({
   agentName: string;
 }): ReactElement {
   const { text } = useCrmText();
-  const { t: agentsT } = useTranslation(AGENTS_NS);
   const events = useLiveRunEvents(runId);
   const view = liveStepsView(events);
-  // In the person's words (step-text.ts), the plugin's own for a step the
-  // CRM does not know.
+  // In the person's words (step-text.ts), never the command line.
   const words = stepWords(view.line);
-  const step = words
-    ? toText(
-        text(`agentChat.step.${words.key}`, {
-          ...words.values,
-          ...(words.values?.object
-            ? { object: toText(text(`entity.${words.values.object}`)) }
-            : {}),
-        }),
-      )
-    : stepLineText(agentsT, view.line);
+  const step = toText(
+    text(`agentChat.step.${words.key}`, {
+      ...words.values,
+      ...(words.values?.object
+        ? { object: toText(text(`entity.${words.values.object}`)) }
+        : {}),
+    }),
+  );
   return (
     <p
       role='status'

@@ -173,7 +173,7 @@ export default function AgentChatPage(): ReactElement {
   let body: ReactElement;
   if (open.isLoading && !detailOpen)
     body = (
-      <div className='flex flex-col gap-2 p-4 lg:w-80' role='status'>
+      <div className='flex flex-col gap-2 p-4 lg:w-96' role='status'>
         <span className='sr-only'>{text('loading')}</span>
         {[0, 1, 2].map((row) => (
           <Skeleton key={row} className='h-16 w-full rounded-lg' />
@@ -205,7 +205,7 @@ export default function AgentChatPage(): ReactElement {
       <div className='flex min-h-0 flex-1'>
         {first ? null : (
           <div
-            className={`flex min-h-0 w-full flex-col border-r bg-sidebar/60 lg:w-80 lg:shrink-0 ${detailOpen ? 'max-lg:hidden' : ''}`}
+            className={`flex min-h-0 w-full flex-col border-r bg-sidebar/60 lg:w-96 lg:shrink-0 ${detailOpen ? 'max-lg:hidden' : ''}`}
           >
             <ConversationList
               ref={listRef}

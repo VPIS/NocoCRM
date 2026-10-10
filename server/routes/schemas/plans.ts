@@ -142,6 +142,21 @@ export const VoidPlanInput = z.strictObject({
   revision: z.number().int(),
 });
 
+export const RevisePlanStepParams = z.object({
+  planId: z.string(),
+  position: z.coerce.number().int().min(1),
+});
+
+export const RevisePlanStepInput = z.strictObject({
+  revision: z.number().int().meta({
+    description: 'The revision changed, as last read.',
+  }),
+  values: JsonObject.meta({
+    description:
+      'The fields of the record the step creates or updates to change, laid over the values it holds.',
+  }),
+});
+
 const StepView: z.ZodType<PlanStepView> = z.object({
   id: z.string(),
   position: z.number().int(),
