@@ -1,6 +1,7 @@
 import {
   AlignLeft,
   ArrowRightLeft,
+  BadgeCheck,
   BriefcaseBusiness,
   Building2,
   CalendarClock,
@@ -22,10 +23,12 @@ import {
   Phone,
   Radar,
   Signpost,
+  Star,
   Tag,
   UserRound,
   UserRoundCheck,
   UsersRound,
+  VenusAndMars,
   type LucideIcon,
 } from 'lucide-react';
 import { createElement, type ReactElement } from 'react';
@@ -56,6 +59,11 @@ const FIELD_ICONS: Record<string, LucideIcon> = {
   description: AlignLeft,
   message: AlignLeft,
   amount: CircleDollarSign,
+  annualRevenue: CircleDollarSign,
+  gender: VenusAndMars,
+  // A contact's: the star the contacts tab marks the primary one with.
+  primary: Star,
+  employed: BadgeCheck,
   expectedCloseAt: CalendarDays,
   resumeAt: CalendarClock,
   createdAt: CalendarPlus,

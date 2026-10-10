@@ -677,6 +677,13 @@ export async function populateDemo(
             industry: ['manufacturing', 'education', 'retail', 'technology'][
               i % 4
             ],
+            // Half of them say what their company turns over, in CNY.
+            ...(i % 2 === 0
+              ? {
+                  annualRevenue: (5 + ((i * 7) % 40)) * 1_000_000,
+                  currency: 'CNY',
+                }
+              : {}),
             message,
             ...(status === 'invalid'
               ? { invalidReason: i === 12 ? 'badContact' : 'notTarget' }

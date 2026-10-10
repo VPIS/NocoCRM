@@ -455,7 +455,11 @@ export function InlineField({
             disabled={saving}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === 'Escape') setEditing(false);
+              if (event.key === 'Escape') {
+                // Leaving the field only: not the drawer or dialog around it.
+                event.stopPropagation();
+                setEditing(false);
+              }
             }}
           />
           <LengthHint length={draft.length} language={language} />
@@ -485,7 +489,10 @@ export function InlineField({
               event.preventDefault();
               void save(draft);
             }
-            if (event.key === 'Escape') setEditing(false);
+            if (event.key === 'Escape') {
+              event.stopPropagation();
+              setEditing(false);
+            }
           }}
         />
       ) : field.type === 'datetime' ? (
@@ -502,7 +509,10 @@ export function InlineField({
           }}
           onKeyDown={(event) => {
             if (event.key === 'Enter') void save(draft);
-            if (event.key === 'Escape') setEditing(false);
+            if (event.key === 'Escape') {
+              event.stopPropagation();
+              setEditing(false);
+            }
           }}
         />
       ) : (
@@ -524,7 +534,10 @@ export function InlineField({
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') void save(draft);
-            if (event.key === 'Escape') setEditing(false);
+            if (event.key === 'Escape') {
+              event.stopPropagation();
+              setEditing(false);
+            }
           }}
         />
       )}

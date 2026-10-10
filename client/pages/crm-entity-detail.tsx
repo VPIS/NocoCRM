@@ -1,13 +1,9 @@
+import { FieldIcon } from '../components/crm/field-icons.js';
 import { recordTitle } from '../components/crm/lookups.js';
 import { TaskCards } from '../components/crm/task-list.js';
 import { AutoLoadMore } from '../components/crm/auto-load.js';
 import { toText, useMore } from '../components/crm/api.js';
-import {
-  useState,
-  type MouseEvent,
-  type ReactElement,
-  type ReactNode,
-} from 'react';
+import { useState, type ReactElement, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
   resolveTab,
@@ -17,7 +13,6 @@ import {
 } from '../components/crm/record-drawer.js';
 import {
   ArrowUpRight,
-  Clock,
   UserRound,
   History,
   Mail,
@@ -54,21 +49,12 @@ import {
   DialogTitle,
 } from '../components/ui/dialog.js';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../components/ui/table.js';
-import {
   useCrmApi,
   useCrmQuery,
   useCrmText,
   useMetadata,
   useRefresh,
   fieldLabelKey,
-  localDate,
   rows,
   type CrmRecord,
   type Data,
@@ -93,6 +79,7 @@ import {
 } from '../components/crm/lead-evaluation.js';
 import { useFollowUpRequest } from '../components/crm/follow-up-request.js';
 import { LocationField } from '../components/crm/location-field.js';
+import { MoneyField } from '../components/crm/money-field.js';
 import { ReviewStatus } from '../components/crm/approval-review.js';
 import { Choice, RecordForm } from '../components/crm/form.js';
 import { StageField } from '../components/crm/reasons.js';
@@ -132,7 +119,10 @@ function CompanyCrumb({
 }): ReactElement {
   const link = useRecordLink('companies', id);
   return (
-    <Link className='px-2 hover:text-primary hover:underline' {...link}>
+    <Link
+      className='box-decoration-clone px-2 hover:text-primary hover:underline'
+      {...link}
+    >
       {name}
     </Link>
   );
@@ -207,6 +197,9 @@ export default function EntityDetail({
   const [confirmDelete, setConfirmDelete] = useState(false);
   // A planned task's outcome being recorded.
   const [recording, setRecording] = useState(false);
+  // Cancelling an open task, once confirmed.
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelBusy, setCancelBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   // A deal's company change waiting for the user to confirm it takes the
   // deal's contacts off (see changeCompany below).
@@ -541,14 +534,14 @@ export default function EntityDetail({
             )}
           </TabHeading>
           {!approvals.length ? (
-            <p className='text-sm text-muted-foreground'>{text('noRecords')}</p>
+            <p className={CARD_EMPTY}>{text('noRecords')}</p>
           ) : (
             <>
-              <ol className='relative ml-1.5 border-l border-border'>
+              <ul className={CARD_LIST}>
                 {approvals.map((approval) => (
                   <ApprovalItem key={toText(approval.id)} approval={approval} />
                 ))}
-              </ol>
+              </ul>
               <AutoLoadMore
                 hasMore={moreApprovals.hasMore}
                 loading={moreApprovals.loading}
@@ -722,6 +715,22 @@ export default function EntityDetail({
           onClose={() => setRecording(false)}
         />
       )}
+      {cancelling && (
+        <ConfirmDialog
+          title={text('cancelTaskTitle')}
+          description={text('cancelTaskDescription')}
+          confirmLabel={toText(text('cancelTask'))}
+          busy={cancelBusy}
+          onCancel={() => setCancelling(false)}
+          onConfirm={() => {
+            setCancelBusy(true);
+            patch({ status: 'cancelled' })
+              .then(() => setCancelling(false))
+              .catch(setError)
+              .finally(() => setCancelBusy(false));
+          }}
+        />
+      )}
       {confirmDelete && (
         <ConfirmDialog
           title={text('deleteRecordTitle', {
@@ -865,6 +874,13 @@ export default function EntityDetail({
       {inline(key)}
     </InfoRow>
   );
+  // A linked record's own field atop its card, under the card's heading:
+  // its name.
+  const linkRow = (key: string): ReactElement => (
+    <InfoRow field={key} label={text('fields.name')}>
+      {inline(key)}
+    </InfoRow>
+  );
   // Country, state, city and street address on one row, the location.
   const locationRow = (
     <InfoRow key='location' field='location' label={text('location')}>
@@ -936,12 +952,13 @@ export default function EntityDetail({
       {after ? <AfterSlash>{after}</AfterSlash> : null}
     </div>
   );
-  // The rarer deleting, last, in a "More" menu.
+  // The rarer deleting, in a "More" menu at the end of the heading's
+  // line (DetailColumns' `more`).
   const moreMenu = detail.permissions.delete ? (
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={text('moreActions')}
-        className={buttonVariants({ size: 'icon-sm', variant: 'outline' })}
+        className={`${buttonVariants({ size: 'icon-sm', variant: 'ghost' })} text-muted-foreground`}
       >
         <Ellipsis />
       </DropdownMenuTrigger>
@@ -997,6 +1014,27 @@ export default function EntityDetail({
       }))}
     />
   );
+  // What a deal or a company is, under its heading as a lead's original
+  // message: with neither heading nor label, five lines unfolding on a
+  // click, the editor's own 8px pulled out so the text lines up. Empty, it
+  // offers itself to whoever may write it.
+  const descriptionIntro = (placeholderKey: string): ReactNode =>
+    editable || toText(record.description).trim() ? (
+      <div className='-mx-2 min-w-0 text-sm'>
+        <Copyable>
+          <InlineField
+            entity={entity}
+            record={record}
+            field={field('description')}
+            editable={editable}
+            lookup={names}
+            label={text(fieldLabelKey(entity, 'description'))}
+            placeholder={toText(text(placeholderKey))}
+            longText='fold'
+          />
+        </Copyable>
+      </div>
+    ) : undefined;
   const page = (
     heading: ReactNode,
     actions: Actions,
@@ -1014,6 +1052,7 @@ export default function EntityDetail({
       tabBar={tabBar}
       notice={<ErrorNotice error={error ?? loadError} />}
       intro={intro}
+      more={moreMenu}
       left={left}
       right={tabContent}
     >
@@ -1029,23 +1068,28 @@ export default function EntityDetail({
           {/* An open task: done, with what came of it if anything (and
               its record followed up anew), in one step. */}
           {currentStatus === 'open' && editable && (
-            <Button size='sm' onClick={() => setRecording(true)}>
-              <Check />
-              {text('completeTask')}
-            </Button>
+            <>
+              <Button size='sm' onClick={() => setRecording(true)}>
+                <Check />
+                {text('completeTask')}
+              </Button>
+              {/* Not to be done after all: cancelled, after a word on
+                  who hears of it. */}
+              <Button
+                size='sm'
+                variant='outline'
+                onClick={() => setCancelling(true)}
+              >
+                <X />
+                {text('cancelTask')}
+              </Button>
+            </>
           )}
-          {moreMenu}
         </>,
       ),
       <>
-        {/* What it is first, across the column with neither heading nor
-            label. What came of it is told in the timeline, under the entry
-            that completed it. */}
-        <InfoGroup>
-          <div className='min-w-0 py-0.5 text-sm'>{inline('description')}</div>
-        </InfoGroup>
         {/* Who has it and who takes part, where it stands, and when. */}
-        <InfoGroup title={text('detailsGroup')}>
+        <InfoGroup title={text('companyGroups.general')}>
           {row('ownerId')}
           {row('internalParticipants')}
           {statusKey && (
@@ -1070,10 +1114,34 @@ export default function EntityDetail({
           )}
           {/* When it is, if it is. */}
           {row('dueAt')}
-          {['leadId', 'companyId', 'opportunityId'].map(row)}
           <RecordTimes record={record} />
         </InfoGroup>
+        {/* The record it concerns, a card of its own as an approval's
+            deal is, picked there: a deal (with its company's card), a
+            company or a lead; none yet, the three to pick from. */}
+        {record.opportunityId ? (
+          <DealCard
+            id={toText(record.opportunityId)}
+            picker={linkRow('opportunityId')}
+            title={toText(text('taskGroups.deal'))}
+          />
+        ) : record.companyId ? (
+          <CompanyCard
+            id={toText(record.companyId)}
+            picker={linkRow('companyId')}
+            title={toText(text('taskGroups.company'))}
+          />
+        ) : record.leadId ? (
+          <LeadCard id={toText(record.leadId)} picker={linkRow('leadId')} />
+        ) : (
+          <InfoGroup title={text('taskGroups.linked')}>
+            {['leadId', 'companyId', 'opportunityId'].map(row)}
+          </InfoGroup>
+        )}
       </>,
+      // What it is, under its heading; what came of it is told in the
+      // timeline, under the entry that completed it.
+      descriptionIntro('taskDescriptionPlaceholder'),
     );
 
   if (entity === 'opportunities') {
@@ -1083,13 +1151,13 @@ export default function EntityDetail({
       actionsOf(
         <>
           <EvaluateButton request={followUp} />
-          {moreMenu}
         </>,
       ),
       <>
-        {/* One list: who has it and where it stands, what it is worth
-            and when it should close, then the company and how it came. */}
-        <InfoGroup title={text('detailsGroup')}>
+        {/* Two cards, as a contact's page has: the deal (who has it,
+            where it stands, what it is worth and when it should close,
+            how it came), then its company. */}
+        <InfoGroup title={text('companyGroups.general')}>
           {row('ownerId')}
           <InfoRow field='stage' label={text('fields.stage')}>
             <StageField
@@ -1114,57 +1182,40 @@ export default function EntityDetail({
           {stage === 'paused' && row('resumeAt')}
           {/* What it is worth and when it should close, then the company
             and how it came. */}
-          {/* Currency, then the bare number: both edit in place, and the
-              sign is not repeated. */}
           <InfoRow field='amount' label={text('fields.amount')}>
-            <div className='flex items-center'>
-              <div className='shrink-0'>{inline('currency')}</div>
-              <div className='min-w-0 flex-1'>
-                <InlineField
-                  entity={entity}
-                  record={record}
-                  field={field('amount')}
-                  editable={editable}
-                  lookup={names}
-                  label={text('fields.amount')}
-                  bare
-                />
-              </div>
-            </div>
+            {/* One value, its currency and number edited together in a
+                pop-up, as a location is. */}
+            <MoneyField
+              entity={entity}
+              record={record}
+              amountKey='amount'
+              editable={editable}
+              label={text('fields.amount')}
+              placeholder={toText(text('amountPlaceholder'))}
+            />
           </InfoRow>
           {row('expectedCloseAt')}
-          {['companyId', 'businessType', 'source'].map(row)}
+          {['businessType', 'source'].map(row)}
           {convertedRow}
           <RecordTimes record={record} />
         </InfoGroup>
+        <CompanyCard
+          id={record.companyId ? toText(record.companyId) : undefined}
+          picker={
+            <InfoRow field='companyId' label={text('fields.companyName')}>
+              {inline('companyId')}
+            </InfoRow>
+          }
+        />
       </>,
-      // What the deal is, under its heading as a lead's original message:
-      // with neither heading nor label, five lines unfolding on a click,
-      // the editor's own 8px pulled out so the text lines up. Empty, it
-      // offers itself to whoever may write it.
-      editable || toText(record.description).trim() ? (
-        <div className='-mx-2 min-w-0 text-sm'>
-          <Copyable>
-            <InlineField
-              entity={entity}
-              record={record}
-              field={field('description')}
-              editable={editable}
-              lookup={names}
-              label={text(fieldLabelKey(entity, 'description'))}
-              placeholder={toText(text('dealDescriptionPlaceholder'))}
-              longText='fold'
-            />
-          </Copyable>
-        </div>
-      ) : undefined,
+      descriptionIntro('dealDescriptionPlaceholder'),
     );
   }
 
   if (entity === 'companies')
     return page(
       headingOf(),
-      actionsOf(<>{moreMenu}</>),
+      actionsOf(null),
       <>
         {/* Who has it and where it stands (a churned company's reason
             beside its status). */}
@@ -1197,49 +1248,53 @@ export default function EntityDetail({
             />
           </InfoRow>
           {['industry', 'employees'].map(row)}
-          {/* Its annual revenue as an opportunity's amount: the currency,
-              then the bare number, both edited in place. */}
           <InfoRow field='annualRevenue' label={text('fields.annualRevenue')}>
-            <div className='flex items-center'>
-              <div className='shrink-0'>{inline('currency')}</div>
-              <div className='min-w-0 flex-1'>
-                <InlineField
-                  entity={entity}
-                  record={record}
-                  field={field('annualRevenue')}
-                  editable={editable}
-                  lookup={names}
-                  label={text('fields.annualRevenue')}
-                  bare
-                />
-              </div>
-            </div>
+            {/* One value, its currency and number edited together in a
+                pop-up, as a location is. */}
+            <MoneyField
+              entity={entity}
+              record={record}
+              amountKey='annualRevenue'
+              editable={editable}
+              label={text('fields.annualRevenue')}
+              placeholder={toText(text('amountPlaceholder'))}
+            />
           </InfoRow>
           {locationRow}
-          {row('description')}
           {convertedRow}
         </InfoGroup>
       </>,
+      descriptionIntro('companyDescriptionPlaceholder'),
     );
 
   if (entity === 'contacts')
     return page(
       headingOf(undefined, companyCrumb),
-      actionsOf(<>{moreMenu}</>),
+      actionsOf(null),
       <>
-        <InfoGroup title={text('detailsGroup')}>
-          {[
-            'ownerId',
-            'companyId',
-            'primary',
-            'employed',
-            'gender',
-            'source',
-          ].map(row)}
+        {/* Three cards: the record, the person (their gender and how to
+            reach them), and their company, with their part in it. */}
+        <InfoGroup title={text('companyGroups.general')}>
+          {['ownerId', 'source'].map(row)}
           {convertedRow}
-          {['jobTitle', 'phone', 'email'].map(row)}
           <RecordTimes record={record} />
         </InfoGroup>
+        <InfoGroup title={text('contactGroups.reach')}>
+          {['gender', 'phone', 'email'].map(row)}
+        </InfoGroup>
+        {/* The company is picked in its own card, which then reads what
+            the company is. */}
+        <CompanyCard
+          id={record.companyId ? toText(record.companyId) : undefined}
+          picker={
+            <InfoRow field='companyId' label={text('fields.companyName')}>
+              {inline('companyId')}
+            </InfoRow>
+          }
+          // The person's place there: their job, whether they are its
+          // primary contact and still there.
+          standing={['jobTitle', 'primary', 'employed'].map(row)}
+        />
       </>,
     );
 
@@ -1251,16 +1306,10 @@ export default function EntityDetail({
     actionsOf(
       <>
         <ApprovalActions approval={record} names={names} />
-        {moreMenu}
       </>,
     ),
     <>
-      {/* What is asked, across the column with neither heading nor label,
-          as a task's description leads its page. */}
-      <InfoGroup>
-        <div className='min-w-0 py-0.5 text-sm'>{inline('description')}</div>
-      </InfoGroup>
-      <InfoGroup title={text('detailsGroup')}>
+      <InfoGroup title={text('companyGroups.general')}>
         {row('ownerId')}
         {statusKey && (
           <InfoRow field={statusKey} label={text(`fields.${statusKey}`)}>
@@ -1281,12 +1330,31 @@ export default function EntityDetail({
             </span>
           </InfoRow>
         )}
-        {['topic', 'approverId', 'opportunityId'].map(row)}
+        {['topic', 'approverId'].map(row)}
         <RecordTimes record={record} />
       </InfoGroup>
+      {/* The deal it is asked about, a card of its own as a contact's
+          company is: picked there, then where the deal stands. */}
+      <DealCard
+        id={record.opportunityId ? toText(record.opportunityId) : undefined}
+        picker={
+          <InfoRow field='opportunityId' label={text('fields.name')}>
+            {inline('opportunityId')}
+          </InfoRow>
+        }
+      />
     </>,
+    // What is asked, under its heading, as a deal's description is.
+    descriptionIntro('approvalDescriptionPlaceholder'),
   );
 }
+
+// A record's related people and records drawn as its Tasks tab draws its
+// tasks: rows in one card, a faint rule between them.
+const CARD_LIST =
+  'divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60 bg-card shadow-xs';
+const CARD_EMPTY =
+  'rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground';
 
 function RelatedList({
   entity,
@@ -1309,21 +1377,6 @@ function RelatedList({
 }): ReactElement {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
-  const navigate = useNavigate();
-  const drawer = useRecordDrawer();
-  // A row opens its record like the other tabs' entries: in the page's
-  // drawer, or its full page where there is none (a phone). A click on a link
-  // in the row keeps its own target, and a click that ends a text selection
-  // opens nothing.
-  const openRow = (
-    event: MouseEvent<HTMLTableRowElement>,
-    id: string,
-  ): void => {
-    if ((event.target as HTMLElement).closest('a,button')) return;
-    if (window.getSelection()?.toString()) return;
-    if (drawer) drawer.open(entity, id);
-    else void navigate(`/crm/${toText(entity)}/${id}`);
-  };
   const more = useMore(base, {
     data: firstPage,
     total: total ?? firstPage.length,
@@ -1336,7 +1389,7 @@ function RelatedList({
     entity === 'contacts'
       ? ['name', 'jobTitle', 'phone', 'email']
       : entity === 'opportunities'
-        ? ['name', 'stage', 'amount', 'expectedCloseAt', 'ownerId']
+        ? ['name', 'stage', 'amount', 'ownerId']
         : entity === 'approvals'
           ? ['name', 'topic', 'status', 'ownerId', 'updatedAt']
           : ['name', 'status', 'ownerId', 'updatedAt'];
@@ -1376,17 +1429,17 @@ function RelatedList({
         )}
       </TabHeading>
       {!records.length ? (
-        <p className='text-sm text-muted-foreground'>{text('noRecords')}</p>
+        <p className={CARD_EMPTY}>{text('noRecords')}</p>
       ) : (
         <>
-          {entity === 'contacts' ? contactList(ordered) : table(ordered)}
+          {entity === 'contacts' ? contactList(ordered) : recordList(ordered)}
           <AutoLoadMore
             hasMore={more.hasMore}
             loading={more.loading}
             onLoad={() => void more.loadMore()}
           />
           {departed.length > 0 && (
-            <div className='space-y-2 pt-2'>
+            <div className='space-y-3 pt-1'>
               <h4 className='text-xs font-medium text-muted-foreground'>
                 {text('leftCompany')}
                 <span className='ml-1 tabular-nums'>{departed.length}</span>
@@ -1404,7 +1457,7 @@ function RelatedList({
   // a job title is corrected without leaving the company.
   function contactList(list: CrmRecord[]): ReactElement {
     return (
-      <ul className='divide-y divide-border'>
+      <ul className={CARD_LIST}>
         {list.map((r) => (
           <ContactItem
             key={r.id}
@@ -1415,48 +1468,288 @@ function RelatedList({
       </ul>
     );
   }
-  function table(list: CrmRecord[]): ReactElement {
+  // Any other related record (a company's deals, its leads) as a row of
+  // its name and, muted beside it, the columns that say something about it.
+  function recordList(list: CrmRecord[]): ReactElement {
+    const filled = (r: CrmRecord, key: string): boolean =>
+      r[key] !== null && r[key] !== undefined && r[key] !== '';
+    // Its state as a tag beside the name; the rest muted under it.
+    const tagged = (key: string): boolean =>
+      key === 'stage' || key === 'status';
     return (
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {columns.map((key) => (
-              <TableHead key={key}>
-                {text(fieldLabelKey(entity, key))}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {list.map((r) => (
-            <TableRow
-              key={r.id}
-              className='cursor-pointer'
-              onClick={(event) => openRow(event, r.id)}
-            >
-              {columns.map((key) => (
-                <TableCell key={key}>
-                  {key === 'name' ? (
-                    <span className='inline-flex flex-wrap items-center gap-2'>
-                      <RecordLink
-                        entity={entity}
-                        record={{
-                          id: r.id,
-                          name: recordTitle(entity, r, names),
-                        }}
-                      />
-                    </span>
-                  ) : (
-                    <Value record={r} field={fieldDef(key)} lookup={names} />
-                  )}
-                </TableCell>
+      <ul className={CARD_LIST}>
+        {list.map((r) => (
+          <RelatedItem
+            key={r.id}
+            entity={entity}
+            record={r}
+            // Its own name: the record whose tab it is goes without saying.
+            title={toText(r.name) || recordTitle(entity, r, names)}
+            tag={columns
+              .filter((key) => tagged(key) && filled(r, key))
+              .map((key) => (
+                <Value
+                  key={key}
+                  record={r}
+                  field={fieldDef(key)}
+                  lookup={names}
+                />
               ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+            details={columns
+              .filter((key) => key !== 'name' && !tagged(key) && filled(r, key))
+              .map((key) => (
+                // The owner led by the particulars' own icon for it.
+                <span key={key} className='flex items-center gap-1'>
+                  {key === 'ownerId' ? <FieldIcon field={key} /> : null}
+                  <Value record={r} field={fieldDef(key)} lookup={names} />
+                </span>
+              ))}
+          />
+        ))}
+      </ul>
     );
   }
+}
+
+// A related record's row: its name and state, what else says something
+// about it muted at the row's end; the whole row opens it, in the page's
+// drawer or its full page, as a contact's row does.
+function RelatedItem({
+  entity,
+  record,
+  title,
+  tag,
+  details,
+}: {
+  entity: Entity;
+  record: CrmRecord;
+  title: string;
+  tag: ReactNode;
+  details: ReactNode[];
+}): ReactElement {
+  const link = useRecordLink(entity, toText(record.id));
+  return (
+    <li>
+      {/* One line: the name and its state, and what else there is, muted,
+          at the row's end; the name gives way first. */}
+      <Link
+        className='flex min-w-0 items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40'
+        {...link}
+      >
+        <span className='flex min-w-0 items-center gap-2'>
+          <span className='truncate text-sm font-medium' title={title}>
+            {title}
+          </span>
+          <ArrowUpRight className='size-3 shrink-0 text-muted-foreground' />
+          {tag}
+        </span>
+        {details.length ? (
+          <span className='ml-auto flex shrink-0 gap-3 text-xs whitespace-nowrap text-muted-foreground tabular-nums'>
+            {details}
+          </span>
+        ) : null}
+      </Link>
+    </li>
+  );
+}
+
+// A contact's or a deal's company, a card of its own under the record's:
+// the record's company field, then what the company is, read only (it is
+// edited on its own page), when the reader may read it.
+function CompanyCard({
+  id,
+  picker,
+  standing = [],
+  title,
+}: {
+  id?: string;
+  // Its heading where "Company" is not what the record calls it (a task's
+  // linked company).
+  title?: string;
+  // The record's own company field, which picks or changes it; without
+  // one (an approval's, whose company is its deal's), the company's name
+  // opening it.
+  picker?: ReactElement;
+  // The record's own rows about the company (a contact's job title there),
+  // shown once it has one.
+  standing?: ReactElement[];
+}): ReactElement | null {
+  const { text } = useCrmText();
+  const { data: meta } = useMetadata();
+  // The list's rows (the query gives its data alone): this one company,
+  // through the reader's own access.
+  const { data } = useCrmQuery<CrmRecord[]>(
+    `companies?ids=${encodeURIComponent(id ?? '')}`,
+    Boolean(id),
+  );
+  const company = id ? data?.[0] : undefined;
+  if (!company || !meta)
+    return picker ? (
+      <InfoGroup title={title ?? text('contactGroups.company')}>
+        {picker}
+        {id ? standing : null}
+      </InfoGroup>
+    ) : null;
+  const fieldOf = (key: string): Field =>
+    meta.definitions.companies.fields.find((f) => f.key === key) ?? {
+      key,
+      type: 'text',
+    };
+  const valueRow = (key: string): ReactElement => (
+    <InfoRow
+      key={key}
+      field={key}
+      label={text(fieldLabelKey('companies', key))}
+    >
+      <div className='px-2 py-1.5 text-sm'>
+        {company[key] === null ||
+        company[key] === undefined ||
+        company[key] === '' ? (
+          <span data-placeholder className='text-muted-foreground'>
+            —
+          </span>
+        ) : (
+          <Value record={company} field={fieldOf(key)} />
+        )}
+      </div>
+    </InfoRow>
+  );
+  return (
+    <InfoGroup title={title ?? text('contactGroups.company')}>
+      {picker ?? (
+        <InfoRow field='companyId' label={text('fields.companyName')}>
+          <div className='px-2 py-1.5 text-sm'>
+            <RecordLink
+              entity='companies'
+              record={{ id: toText(company.id), name: toText(company.name) }}
+            />
+          </div>
+        </InfoRow>
+      )}
+      {standing}
+      {/* In the company page's order: its status, then its profile.
+          Every row shows, a dash for what it leaves empty. */}
+      {valueRow('status')}
+      <InfoRow field='website' label={text('fields.website')}>
+        <WebsiteField
+          entity='companies'
+          record={company}
+          editable={false}
+          label={text('fields.website')}
+        />
+      </InfoRow>
+      {['industry', 'employees', 'annualRevenue'].map(valueRow)}
+      <InfoRow field='location' label={text('location')}>
+        <LocationField
+          entity='companies'
+          record={company}
+          editable={false}
+          label={text('location')}
+          countries={fieldOf('country').options ?? []}
+        />
+      </InfoRow>
+    </InfoGroup>
+  );
+}
+
+// A task's lead, a card of its own under the task's: the task's lead
+// field, then where the lead stands and how to reach its person, read only,
+// when the reader may read it.
+function LeadCard({
+  id,
+  picker,
+}: {
+  id: string;
+  // The task's own lead field, which picks or changes it.
+  picker: ReactElement;
+}): ReactElement {
+  const { text } = useCrmText();
+  const { data: meta } = useMetadata();
+  const { data } = useCrmQuery<CrmRecord[]>(
+    `leads?ids=${encodeURIComponent(id)}`,
+  );
+  const lead = data?.[0];
+  return (
+    <InfoGroup title={text('taskGroups.lead')}>
+      {picker}
+      {lead && meta
+        ? ['status', 'company', 'phone', 'email', 'ownerId'].map((key) => (
+            <InfoRow
+              key={key}
+              field={key}
+              label={text(fieldLabelKey('leads', key))}
+            >
+              <div className='px-2 py-1.5 text-sm'>
+                <Value
+                  record={lead}
+                  field={
+                    meta.definitions.leads.fields.find(
+                      (f) => f.key === key,
+                    ) ?? {
+                      key,
+                      type: 'text',
+                    }
+                  }
+                />
+              </div>
+            </InfoRow>
+          ))
+        : null}
+    </InfoGroup>
+  );
+}
+
+// An approval's deal, a card of its own under the approval's: the
+// approval's deal field, then where the deal stands, read only, when the
+// reader may read it; then the deal's company, in a card of its own.
+function DealCard({
+  id,
+  picker,
+  title,
+}: {
+  id?: string;
+  // Its heading where "Opportunity" is not what the record calls it (a
+  // task's linked deal).
+  title?: string;
+  // The approval's own deal field, which picks or changes it.
+  picker: ReactElement;
+}): ReactElement {
+  const { text } = useCrmText();
+  const { data: meta } = useMetadata();
+  const { data } = useCrmQuery<CrmRecord[]>(
+    `opportunities?ids=${encodeURIComponent(id ?? '')}`,
+    Boolean(id),
+  );
+  const deal = id ? data?.[0] : undefined;
+  return (
+    <>
+      <InfoGroup title={title ?? text('approvalGroups.deal')}>
+        {picker}
+        {deal && meta
+          ? ['stage', 'amount', 'expectedCloseAt', 'ownerId'].map((key) => (
+              <InfoRow
+                key={key}
+                field={key}
+                label={text(fieldLabelKey('opportunities', key))}
+              >
+                <div className='px-2 py-1.5 text-sm'>
+                  <Value
+                    record={deal}
+                    field={
+                      meta.definitions.opportunities.fields.find(
+                        (f) => f.key === key,
+                      ) ?? { key, type: 'text' }
+                    }
+                  />
+                </div>
+              </InfoRow>
+            ))
+          : null}
+      </InfoGroup>
+      {/* The deal's company, as a contact's page shows its own. */}
+      {deal?.companyId ? <CompanyCard id={toText(deal.companyId)} /> : null}
+    </>
+  );
 }
 
 // One contact on a record's contacts tab: a row that opens the contact in
@@ -1480,40 +1773,41 @@ function ContactItem({
     .map((key) => toText(contact[key]))
     .filter(Boolean);
   return (
-    <li className='py-0.5'>
+    <li>
       {/* The shading covers the star too, so the row reads as one unit. */}
-      <div className='flex items-start gap-1 rounded-md transition-colors hover:bg-muted'>
+      <div className='flex items-center gap-2.5 px-4 transition-colors hover:bg-muted/40'>
         {leading ? (
-          <span className='ml-1 mt-1.5 flex shrink-0 items-center'>
-            {leading}
-          </span>
+          <span className='flex shrink-0 items-center'>{leading}</span>
         ) : null}
-        <Link
-          className='min-w-0 flex-1 rounded-md px-2 py-2 text-left'
-          {...contactLink}
-        >
-          <div className='flex flex-wrap items-baseline gap-x-3 gap-y-0.5'>
-            <span className='flex max-w-full min-w-0 items-center gap-1'>
+        <Link className='min-w-0 flex-1 py-3 text-left' {...contactLink}>
+          {/* One line: the name, then what else there is, muted, cut
+              where the row ends (whole on hover). */}
+          <span className='flex min-w-0 items-baseline gap-3'>
+            <span className='flex max-w-[60%] shrink-0 items-center gap-1'>
               <span
                 className='truncate text-sm font-medium'
                 title={toText(contact.name)}
               >
                 {toText(contact.name)}
               </span>
-              <ArrowUpRight className='size-3 shrink-0 text-muted-foreground' />
+              <ArrowUpRight className='size-3 shrink-0 self-center text-muted-foreground' />
             </span>
-            {summary.map((value) => (
+            {summary.length ? (
               <span
-                key={value}
-                className='truncate text-xs text-muted-foreground'
+                className='min-w-0 truncate text-xs text-muted-foreground tabular-nums'
+                title={summary.join('  ')}
               >
-                {value}
+                {summary.map((value, index) => (
+                  <span key={value} className={index ? 'ml-3' : undefined}>
+                    {value}
+                  </span>
+                ))}
               </span>
-            ))}
-          </div>
+            ) : null}
+          </span>
         </Link>
         {trailing ? (
-          <span className='mt-1.5 flex shrink-0 items-center justify-center'>
+          <span className='flex shrink-0 items-center justify-center'>
             {trailing}
           </span>
         ) : null}
@@ -1618,11 +1912,11 @@ function OpportunityContacts({
           <span className='ml-1 tabular-nums'>{list.length}</span>
         </h4>
         {!list.length ? (
-          <p className='text-sm text-muted-foreground'>{text('noContacts')}</p>
+          <p className={CARD_EMPTY}>{text('noContacts')}</p>
         ) : (
           // The same expandable rows as the company's contacts tab, with the
           // role (and a remove control) where that tab has its star.
-          <ul className='divide-y divide-border'>
+          <ul className={CARD_LIST}>
             {list.map((item) => {
               // A contact the lookup lacks (not readable) still gets a row,
               // with only its name.
@@ -1700,9 +1994,9 @@ function OpportunityContacts({
           </span>
         </h4>
         {!candidates.length && !more.hasMore ? (
-          <p className='text-sm text-muted-foreground'>{text('noContacts')}</p>
+          <p className={CARD_EMPTY}>{text('noContacts')}</p>
         ) : (
-          <ul className='divide-y divide-border'>
+          <ul className={CARD_LIST}>
             {candidates.map((c) => (
               <ContactItem
                 key={c.id}
@@ -1877,37 +2171,30 @@ function PrimaryStar({
 // opens the approval in the page's drawer, the way a task does, where
 // it is edited and decided.
 function ApprovalItem({ approval }: { approval: Data }): ReactElement {
-  const { text, language } = useCrmText();
+  const { text } = useCrmText();
   const approvalLink = useRecordLink('approvals', toText(approval.id));
   const { data: meta } = useMetadata();
   const status = toText(approval.status);
   const mine = Boolean(meta && approval.approverId === meta.userId);
   const nameOf = (id: unknown): string =>
     meta?.users.find((u) => u.id === toText(id))?.name ?? '';
+  const name = toText(approval.name);
+  // One line, as a related deal's row: its topic, name and status, whose
+  // side the reader is on, and who asks and who decides, muted at the
+  // row's end, each by an icon (the label on hover).
   return (
-    <li className='relative pl-5'>
-      <span
-        aria-hidden
-        className={`absolute top-4 left-0 size-2.5 -translate-x-1/2 rounded-full border-2 border-card ${toText(
-          status === 'approved'
-            ? 'bg-primary'
-            : status === 'rejected' || status === 'withdrawn'
-              ? 'bg-muted-foreground/40'
-              : 'bg-background ring-2 ring-primary/40',
-        )}`}
-      />
+    <li>
       <Link
-        className='block w-full rounded-md px-2 py-2 text-left transition-colors hover:bg-muted'
+        className='flex min-w-0 items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40'
         {...approvalLink}
       >
-        <div className='flex flex-wrap items-center gap-2'>
+        <span className='flex min-w-0 items-center gap-2'>
           <KindTag value={approval.topic} />
-          <span className='flex min-w-0 flex-1 items-center gap-1'>
-            <span className='truncate text-sm font-medium'>
-              {toText(approval.name)}
-            </span>
-            <ArrowUpRight className='size-3 shrink-0 text-muted-foreground' />
+          <span className='truncate text-sm font-medium' title={name}>
+            {name}
           </span>
+          <ArrowUpRight className='size-3 shrink-0 text-muted-foreground' />
+          <Status value={approval.status} />
           {/* Which side of the request the reader is on: it is theirs to
               decide, or theirs to wait for. */}
           {mine && (
@@ -1915,12 +2202,8 @@ function ApprovalItem({ approval }: { approval: Data }): ReactElement {
               {text(status === 'pending' ? 'yourDecision' : 'youApprove')}
             </Badge>
           )}
-          <Status value={approval.status} />
-        </div>
-        {/* Who asks and who decides, each by an icon (the label on hover,
-            as the dashboard's approval cards show them), then when it last
-            moved. */}
-        <p className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground'>
+        </span>
+        <span className='ml-auto flex shrink-0 gap-3 text-xs whitespace-nowrap text-muted-foreground'>
           {(
             [
               ['fields.applicant', approval.ownerId, User],
@@ -1930,23 +2213,18 @@ function ApprovalItem({ approval }: { approval: Data }): ReactElement {
             id ? (
               <span
                 key={label}
-                className='inline-flex items-center gap-1'
-                title={text(label)}
+                className='flex items-center gap-1'
+                title={toText(text(label))}
               >
-                <Icon className='size-3 shrink-0' aria-label={text(label)} />
+                <Icon
+                  className='size-3.5 shrink-0'
+                  aria-label={toText(text(label))}
+                />
                 {nameOf(id)}
               </span>
             ) : null,
           )}
-          <span className='inline-flex items-center gap-1'>
-            <Clock className='size-3 shrink-0' />
-            {localDate(
-              approval.updatedAt,
-              language,
-              meta?.settings.timeZone ?? 'Asia/Shanghai',
-            )}
-          </span>
-        </p>
+        </span>
       </Link>
     </li>
   );

@@ -1,3 +1,4 @@
+import { MoneyField } from '../components/crm/money-field.js';
 import { fieldLabelKey, linkOf, toText } from '../components/crm/api.js';
 import { TaskCards } from '../components/crm/task-list.js';
 import { AutoLoadMore } from '../components/crm/auto-load.js';
@@ -28,6 +29,11 @@ import {
   useSearchParams,
 } from 'react-router';
 import { Sheet, SheetContent, SheetTitle } from '../components/ui/sheet.js';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '../components/ui/tooltip.js';
 import {
   RecordDrawerContext,
   useRecordDrawer,
@@ -272,6 +278,7 @@ const leadGroups = [
       'website',
       'industry',
       'employees',
+      'annualRevenue',
       'location',
       'companyDescription',
     ],
@@ -434,6 +441,15 @@ function LeadDetail({ id }: { id: string }): ReactElement {
           editable={editable}
           label={text('fields.website')}
         />
+      ) : key === 'annualRevenue' ? (
+        <MoneyField
+          entity='leads'
+          record={record}
+          amountKey='annualRevenue'
+          editable={editable}
+          label={text('fields.annualRevenue')}
+          placeholder={toText(text('amountPlaceholder'))}
+        />
       ) : (
         inline(key)
       )}
@@ -513,30 +529,31 @@ function LeadDetail({ id }: { id: string }): ReactElement {
           {text('convertShort')}
         </Button>
       )}
-      {detail.permissions.delete && (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            aria-label={text('moreActions')}
-            className={buttonVariants({
-              size: 'icon-sm',
-              variant: 'outline',
-            })}
-          >
-            <Ellipsis />
-          </DropdownMenuTrigger>
-          {/* As wide as its longest item: the trigger is a small icon. */}
-          <DropdownMenuContent align='end' className='w-max'>
-            <DropdownMenuItem
-              variant='destructive'
-              onClick={() => setConfirmDelete(true)}
-            >
-              <Trash2 />
-              {text('deleteRecord', { entity: text('entity.leads') })}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
     </>
+  );
+  // Deleting, in a "More" menu at the end of the heading's line.
+  const leadMore = detail.permissions.delete && (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={text('moreActions')}
+        className={buttonVariants({
+          size: 'icon-sm',
+          variant: 'ghost',
+        })}
+      >
+        <Ellipsis />
+      </DropdownMenuTrigger>
+      {/* As wide as its longest item: the trigger is a small icon. */}
+      <DropdownMenuContent align='end' className='w-max'>
+        <DropdownMenuItem
+          variant='destructive'
+          onClick={() => setConfirmDelete(true)}
+        >
+          <Trash2 />
+          {text('deleteRecord', { entity: text('entity.leads') })}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
   // Atop the particulars, where the AI's latest follow-up stands, which
   // opens it in the timeline.
@@ -556,6 +573,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       recordId={toText(id)}
       heading={heading}
       actions={leadActions}
+      more={leadMore}
       status={leadStatus}
       tabBar={tabBar}
       notice={<ErrorNotice error={error ?? loadError} />}
@@ -599,7 +617,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
               void refresh();
             }}
           />
-          <div>
+          <div className='grid gap-3'>
             {/* Who has the lead and where it stands head the next group. */}
             <InfoGroup title={text('leadGroups.general')}>
               <InfoRow field='ownerId' label={text('fields.ownerId')}>
@@ -858,6 +876,7 @@ export function DetailColumns({
   recordId,
   heading,
   actions,
+  more,
   status,
   tabBar,
   notice,
@@ -871,8 +890,12 @@ export function DetailColumns({
   // The record, whose plans waiting on the reader lead its particulars.
   recordId?: string;
   heading: ReactNode;
-  // Everything the reader can do with the record, right of the heading.
+  // Everything the reader can do with the record, on a row under the
+  // heading.
   actions: ReactNode;
+  // The rarer things (deleting), in a menu at the end of the heading's
+  // line, so a record with nothing else leaves no row for it.
+  more?: ReactNode;
   // Where the AI's latest work on the record stands, at the head of the
   // actions at the top right.
   status?: ReactNode;
@@ -954,7 +977,10 @@ export function DetailColumns({
               >
                 <DetailBack entity={entity} />
                 <div className='grid gap-2'>
-                  <div className='min-w-0'>{heading}</div>
+                  <div className='flex items-start gap-2'>
+                    <div className='min-w-0 flex-1'>{heading}</div>
+                    {more ? <div className='shrink-0'>{more}</div> : null}
+                  </div>
                   {/* The AI's latest suggestion leads the actions, as what
                       to do next; it draws nothing before the first. */}
                   {actions || status ? (
@@ -1353,13 +1379,13 @@ export function WebsiteField({
     >
       {/* The link is inline, so the rest of the row stays a plain surface a
           double-click can land on without opening the site. */}
-      {/* A chip in the info colour, unlike any other value: the domain,
-          cut with an ellipsis when it must be, and the arrow of a link that
-          opens elsewhere. */}
+      {/* A chip on a grey fill, unlike any other value: the domain in the
+          value's own weight, cut with an ellipsis when it must be, and the
+          arrow of a link that opens elsewhere. */}
       <a
         // Its padding taken back from the line, so the row is as tall as
         // any other.
-        className='-my-0.5 inline-flex min-w-0 items-center gap-1 rounded-md bg-info/10 px-1.5 py-0.5 text-sm font-medium text-info transition-colors hover:bg-info/20 dark:bg-info/20'
+        className='-my-0.5 inline-flex min-w-0 items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-sm text-foreground transition-colors hover:bg-muted/70'
         href={href}
         target='_blank'
         rel='noopener noreferrer'
@@ -1369,7 +1395,10 @@ export function WebsiteField({
         onDoubleClick={(e) => e.stopPropagation()}
       >
         <span className='min-w-0 truncate'>{host}</span>
-        <ArrowUpRight aria-hidden className='size-3.5 shrink-0' />
+        <ArrowUpRight
+          aria-hidden
+          className='size-3.5 shrink-0 text-muted-foreground'
+        />
       </a>
       {/* A long address leaves no row to double-click beside it: the pencil,
           shown on hover over the end of the row (taking no room from the
@@ -3366,6 +3395,7 @@ export function HistoryFeed({
                               approvalId={id}
                               approvalName={recordName ?? ''}
                               onChanged={refresh}
+                              inFeed
                             />
                           </div>
                         ) : pending && open ? (
@@ -3848,7 +3878,7 @@ export function InfoGroup({
   // the lightest shadow, set 0.75rem from the group above it.
   return (
     <section
-      className={`mt-3 rounded-xl border border-border/60 bg-card px-2 shadow-xs first:mt-0 ${
+      className={`rounded-xl border border-border/60 bg-card px-2 shadow-xs ${
         folded ? 'py-1.5' : 'py-3'
       }`}
     >
@@ -3934,6 +3964,36 @@ export function Copyable({ children }: { children: ReactNode }): ReactElement {
 // A row of a record's particulars: the field's icon and label, then the
 // value (an inline editor, a status, a time), copied from a button on
 // hover (Copyable).
+// A particular's label on one line: cut where its column ends, and then
+// shown whole in a tooltip; a label that fits has none.
+function RowLabel({ label }: { label: string }): ReactElement {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [cut, setCut] = useState(false);
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    if (typeof ResizeObserver === 'undefined') return;
+    // Observing calls back at once, then whenever the column resizes.
+    const observer = new ResizeObserver(() =>
+      setCut(node.scrollWidth > node.clientWidth + 1),
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [label]);
+  return (
+    <Tooltip disabled={!cut}>
+      <TooltipTrigger
+        render={<span ref={ref} className='min-w-0 truncate leading-snug' />}
+      >
+        {label}
+      </TooltipTrigger>
+      <TooltipContent side='top' align='start'>
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function InfoRow({
   label,
   field,
@@ -3945,10 +4005,12 @@ export function InfoRow({
   children: ReactNode;
 }): ReactElement {
   return (
+    // The label on one line, cut with an ellipsis where its column ends
+    // (whole in a tooltip then), so every row keeps one height.
     <div className='grid grid-cols-[7.5rem_minmax(0,1fr)] items-start gap-2'>
-      <dt className='flex items-center gap-1.5 px-2 py-1.5 text-sm text-muted-foreground'>
+      <dt className='flex min-w-0 items-center gap-1.5 px-2 py-1.5 text-sm text-muted-foreground'>
         <FieldIcon field={field} />
-        <span className='min-w-0 leading-snug'>{label}</span>
+        <RowLabel label={label} />
       </dt>
       <dd className='min-w-0 text-sm'>
         <Copyable>{children}</Copyable>

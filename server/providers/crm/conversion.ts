@@ -93,9 +93,16 @@ export async function convertLead(
     website: lead.website,
     description: lead.companyDescription,
     ...Object.fromEntries(
-      ['industry', 'country', 'state', 'city', 'employees', 'address'].map(
-        (key) => [key, lead[key]],
-      ),
+      [
+        'industry',
+        'country',
+        'state',
+        'city',
+        'employees',
+        'annualRevenue',
+        'currency',
+        'address',
+      ].map((key) => [key, lead[key]]),
     ),
   };
   // input.company / input.contact override what the lead supplies, field by

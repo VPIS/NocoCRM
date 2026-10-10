@@ -7,8 +7,16 @@ const wording = {
   emptyChoose: ['Choose {{field}}', '选择{{field}}'],
   // A lead's empty original message, under its heading.
   messagePlaceholder: ['Add the original message...', '填写原始信息...'],
+  // An empty amount beside its currency (a deal's, a company's revenue).
+  amountPlaceholder: ['Add amount', '填写金额'],
   // An opportunity's empty description, under its heading.
   dealDescriptionPlaceholder: ['Add a description...', '填写商机描述...'],
+  companyDescriptionPlaceholder: ['Add an introduction...', '填写公司介绍...'],
+  taskDescriptionPlaceholder: ['Add a description...', '填写任务描述...'],
+  approvalDescriptionPlaceholder: [
+    'Describe what is asked...',
+    '填写审批内容...',
+  ],
   stale: ['Stalled', '停滞'],
   convertedThisMonth: ['Converted this month', '本月转化'],
   converted: ['Converted leads', '已转化线索'],
@@ -694,7 +702,28 @@ const wording = {
   // The company, contact and approval pages' particulars, likewise.
   companyGroups: {
     general: ['General', '概况'],
-    company: ['Company', '公司'],
+    // What the company is (its site, trade, size, revenue, place): not
+    // "Company" again on a company's own page.
+    company: ['Profile', '公司档案'],
+  },
+  // A contact's page: who the person is and how to reach them, beside its
+  // General card.
+  // A task's page: the record it concerns, a card of its own.
+  taskGroups: {
+    lead: ['Lead', '关联线索'],
+    company: ['Company', '关联公司'],
+    deal: ['Opportunity', '关联商机'],
+    linked: ['Linked record', '关联记录'],
+  },
+  // An approval's page: the deal it is asked about, beside its Details.
+  approvalGroups: {
+    deal: ['Opportunity', '所属商机'],
+  },
+  contactGroups: {
+    reach: ['Personal info', '个人信息'],
+    // The company the person works at, or a deal is with, a card of its
+    // own.
+    company: ['Company', '所属公司'],
   },
   region: ['Region', '地区'],
   // The region and the street address in one row.
@@ -731,7 +760,7 @@ const wording = {
   noTasksOnDay: ['No tasks on this day', '这一天没有任务'],
   dayTotal: ['Total {{count}}', '共 {{count}} 项'],
   todayButton: ['Today', '今天'],
-  noAttachments: ['No attachments yet', '暂无附件'],
+  noAttachments: ['No files yet', '暂无附件'],
   // Beside the button that creates a lead.
   leadFollowUpNow: ['AI follows up at once', 'AI 立刻跟进'],
   // Under a conversion that opens an opportunity.
@@ -815,8 +844,10 @@ const wording = {
     again: ['Follow up', '跟进'],
     // Before the first suggestion: asking for one, as a chip.
     start: ['AI follow-up', 'AI 跟进'],
+    // Under the chip's hover.
+    chipHint: ['click to open it in the timeline', '点击在动态里查看'],
     // At the end of the AI's latest suggestion's chip.
-    askAgain: ['Rerun', '重新跟进'],
+    askAgain: ['Rerun the AI follow-up', '重新运行 AI 跟进'],
     running: [
       'The AI is reviewing it and preparing a suggestion…',
       'AI 正在查看、准备跟进建议…',
@@ -1146,13 +1177,13 @@ const wording = {
     '没有可选记录。请先选择公司，或创建相关记录。',
   ],
   addContact: ['Add contact role', '添加联系人角色'],
-  attachment: ['Attachment', '附件'],
+  attachment: ['File', '附件'],
   openFullPage: ['Open full page', '整页打开'],
   uploadFile: ['Upload file', '上传文件'],
   uploading: ['Uploading…', '上传中…'],
   dropFilesHere: ['Drop files here, or', '将文件拖到这里，或'],
   chooseFiles: ['choose files', '点击选择文件'],
-  removeFileTitle: ['Remove this attachment?', '移除此附件？'],
+  removeFileTitle: ['Remove this file?', '移除此附件？'],
   removeFileHint: [
     'The file stays in the system and is only unlinked from this record.',
     '文件仍保留在系统中，仅解除与此记录的关联。',
@@ -1288,7 +1319,7 @@ const wording = {
     superseded: ['decided on the approval itself', '已在审批上直接处理'],
     // Where the latest review stands, and asking for another, on its chip.
     working: ['Reviewing', '分析中'],
-    again: ['Rerun', '重新分析'],
+    again: ['Rerun the AI review', '重新运行 AI 辅助审批'],
     // Voided because the approval left the queue without the card.
     retired: {
       withdrawn: [
@@ -1335,9 +1366,22 @@ const wording = {
       approve: ['Approve as advised', '按建议批准'],
       reject: ['Reject as advised', '按建议驳回'],
     },
+    // What the accept does, listed on its hover.
+    will: {
+      title: ['Accepting will:', '采纳将：'],
+      approve: [
+        'Approve the request with the comment above',
+        '批准此申请，并附上上面的审批意见',
+      ],
+      reject: [
+        'Reject the request with the comment above',
+        '驳回此申请，并附上上面的审批意见',
+      ],
+    },
     // Asking for a review, the first or another, as "Follow up" is for a
     // lead or a deal.
-    ask: ['Review with AI', '辅助审批'],
+    // Also the chip's name once there is a review, as "AI follow-up" is.
+    ask: ['AI review', 'AI 辅助审批'],
     applicant: ['Applicant', '申请人'],
   },
   // The conversion dialog's duplicate check, when it found nothing.
@@ -1699,6 +1743,12 @@ const wording = {
   owner: ['Owner', '负责人'],
   newTask: ['New task', '新建任务'],
   completeTask: ['Complete', '完成'],
+  cancelTask: ['Cancel task', '取消任务'],
+  cancelTaskTitle: ['Cancel this task?', '取消此任务？'],
+  cancelTaskDescription: [
+    'It is marked cancelled, and the colleagues taking part are told. It can be opened again later.',
+    '任务将标记为已取消，参与的同事会收到通知。之后仍可重新打开。',
+  ],
   completeTaskOf: ['Complete: {{name}}', '完成：{{name}}'],
   newApproval: ['Request approval', '申请审批'],
   linkExisting: ['Link existing', '关联已有'],
@@ -1801,7 +1851,7 @@ const wording = {
     'The contact itself is kept; only its role on this opportunity is removed.',
     '联系人本身保留，只移除其在本商机中的角色。',
   ],
-  convertedFrom: ['Converted from lead', '转化自线索'],
+  convertedFrom: ['From lead', '转化自线索'],
   companyPrimary: ["The company's primary contact", '公司的主要联系人'],
   setPrimary: ['Set as primary contact', '设为主要联系人'],
   unsetPrimary: ['Primary contact (click to clear)', '主要联系人（点击取消）'],
@@ -2059,7 +2109,7 @@ const wording = {
     description: ['Description', '描述'],
     // The enquiry as it arrived, kept as it is.
     message: ['Original message', '原始信息'],
-    attachments: ['Attachments', '附件'],
+    attachments: ['Files', '附件'],
     lostReason: ['Lost reason', '输单原因'],
     churnReason: ['Churn reason', '流失原因'],
     type: ['Type', '类型'],
@@ -2069,9 +2119,10 @@ const wording = {
     comments: ['Comments', '评论'],
     companyId: ['Company', '所属公司'],
     related: {
-      leadId: ['Related lead', '关联线索'],
-      companyId: ['Related company', '关联公司'],
-      opportunityId: ['Related opportunity', '关联商机'],
+      // Short, to fit the particulars' label column on one line.
+      leadId: ['Lead', '关联线索'],
+      companyId: ['Company', '关联公司'],
+      opportunityId: ['Opportunity', '关联商机'],
     },
     contactId: ['Contact', '联系人'],
     newCompanyName: ['New company name', '新公司名称'],
@@ -2084,7 +2135,7 @@ const wording = {
     currency: ['Currency', '币种'],
     // A company's, in its currency.
     annualRevenue: ['Annual revenue', '年营收'],
-    expectedCloseAt: ['Expected close date', '预计成交日期'],
+    expectedCloseAt: ['Close date', '预计成交日期'],
     businessType: ['Business type', '业务类型'],
     contacts: ['Opportunity contacts', '商机联系人'],
     pauseReason: ['Pause reason', '暂停原因'],
