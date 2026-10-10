@@ -101,15 +101,13 @@ export function PlanCard({
     Math.ceil((Date.parse(plan.expiresAt) - now) / 3_600_000),
   );
   return (
-    // Drawn as the assistant's confirmation cards were: tinted in the AI's
-    // colour while it waits on a decision (in the plain border), neutral once decided; each step
-    // a card of its own with its fields in a label column, and the decision
-    // under them, the AI's colour on the button that carries it out.
+    // On the card's own white, waiting or decided, as the AI's cards in a
+    // timeline are; each step a card of its own with its fields in a label
+    // column, and the decision under them, the AI's colour on the button
+    // that carries it out.
     <section
       aria-label={plan.title}
-      className={`rounded-lg border p-4 ${
-        waiting ? 'border-border bg-ai/5' : 'border-border bg-card shadow-xs'
-      }`}
+      className='rounded-lg border border-border bg-card p-4 shadow-xs'
     >
       <div className='flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground'>
         <ClipboardList className='size-3.5' aria-hidden />
