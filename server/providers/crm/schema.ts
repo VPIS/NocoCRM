@@ -220,6 +220,10 @@ export const definitions: Record<Entity, EntityDefinition> = {
         'other',
       ]),
       field('employees', 'select', false, employeeRanges),
+      // The company's annual revenue in a currency, as a company's, and
+      // carried to it on conversion.
+      field('currency', 'select', false, currencies),
+      field('annualRevenue', 'number'),
       // The website beside the industry: both say what the company is, and
       // the form lays fields out in this order.
       geography[0],

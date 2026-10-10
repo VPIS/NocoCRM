@@ -221,9 +221,7 @@ describe('CRM forms and file interchange', () => {
         onClose={vi.fn()}
       />,
     );
-    expect(
-      screen.getByRole('combobox', { name: 'Related lead' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Lead' })).toBeInTheDocument();
   });
   it('creates a task from a title and chips', async () => {
     state.locale = 'en';

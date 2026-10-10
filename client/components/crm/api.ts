@@ -373,11 +373,27 @@ export function money(
   language = 'en-US',
 ): string {
   try {
-    return new Intl.NumberFormat(language, {
+    // A little room between the currency and the number ("CN¥ 35,000"),
+    // a narrow space that never breaks, where the language writes none.
+    const parts = new Intl.NumberFormat(language, {
       style: 'currency',
       currency,
       maximumFractionDigits: 0,
-    }).format(Number(value ?? 0));
+    }).formatToParts(Number(value ?? 0));
+    return parts
+      .map((part, index) => {
+        const next = parts[index + 1];
+        return part.type === 'currency' &&
+          next &&
+          (next.type === 'integer' || next.type === 'minusSign')
+          ? `${part.value}\u202f`
+          : part.type === 'currency' &&
+              index > 0 &&
+              parts[index - 1]?.type !== 'literal'
+            ? `\u202f${part.value}`
+            : part.value;
+      })
+      .join('');
   } catch {
     return `${toText(currency)} ${toText(Number(value ?? 0).toLocaleString(language))}`;
   }

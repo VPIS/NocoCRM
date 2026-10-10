@@ -807,6 +807,23 @@ describe('CRM API security and domain rules', () => {
     expect(Number(company.annualRevenue)).toBe(120000000);
     expect(company.currency).toBe('CNY');
   });
+  it("carries a lead's annual revenue and its currency to the company", async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Revenue Person',
+      company: 'Turnover Works',
+      annualRevenue: 8500000,
+      currency: 'USD',
+      source: 'exhibition',
+    });
+    const converted = await convertLead(service, actor('rep'), lead.id, {});
+    const company = await service.get(
+      actor('rep'),
+      'companies',
+      toText(converted.convertedCompanyId),
+    );
+    expect(Number(company.annualRevenue)).toBe(8500000);
+    expect(company.currency).toBe('USD');
+  });
   it('saves the values the person changed in the conversion dialog', async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: 'Edited Person',

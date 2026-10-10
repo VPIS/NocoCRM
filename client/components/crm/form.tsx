@@ -205,6 +205,8 @@ export function Choice({
 // and attachments, usually filled later or by research.
 const LEAD_MORE_FIELDS = [
   'employees',
+  'currency',
+  'annualRevenue',
   'industry',
   'website',
   'country',
@@ -866,11 +868,11 @@ export function RecordForm({
             if (tucked(field)) return null;
             // An opportunity's amount and currency are one thing: one
             // field labelled Amount, the currency picker leading the
-            // number; a company's annual revenue the same.
+            // number; a company's annual revenue (a lead's too) the same.
             const moneyKey =
               entity === 'opportunities'
                 ? 'amount'
-                : entity === 'companies'
+                : entity === 'companies' || entity === 'leads'
                   ? 'annualRevenue'
                   : undefined;
             const pairedCurrency =

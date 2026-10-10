@@ -316,10 +316,10 @@ describe('the contact page', () => {
       expect(heading.textContent).toContain('周晓');
       expect(heading.textContent).toContain('沃格光电');
     }
-    // One list headed Details.
-    expect(screen.getByRole('heading', { name: '详情' })).toBeTruthy();
-    for (const group of ['概况', '联系方式'])
-      expect(screen.queryByRole('heading', { name: group })).toBeNull();
+    // Cards of their own: the record, the person, the company.
+    for (const group of ['概况', '个人信息', '所属公司'])
+      expect(screen.getByRole('heading', { name: group })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: '详情' })).toBeNull();
     expect(screen.queryByRole('tab', { name: /附件/ })).toBeNull();
     expect(screen.getAllByRole('tab', { name: /商机/ })).toHaveLength(1);
   });
@@ -380,14 +380,18 @@ describe('the approval page', () => {
       screen.getByRole('button', { name: /建议有条件批准 · 待处理/ }),
     ).toBeTruthy();
     expect(
-      screen.getAllByRole('button', { name: '重新运行 AI 审批建议' }),
+      screen.getAllByRole('button', { name: '重新运行 AI 辅助审批' }),
     ).toHaveLength(1);
-    expect(screen.queryByRole('button', { name: /辅助审批/ })).toBeNull();
+    // The chip in place of the first review's button, under the same name.
+    expect(screen.queryByRole('button', { name: 'AI 辅助审批' })).toBeNull();
+    expect(
+      screen.getByRole('button', { name: /^AI 辅助审批 · 建议有条件批准/ }),
+    ).toBeTruthy();
     cleanup();
     state.userId = 'someone';
     renderPage();
     expect(
-      screen.queryByRole('button', { name: '重新运行 AI 审批建议' }),
+      screen.queryByRole('button', { name: '重新运行 AI 辅助审批' }),
     ).toBeNull();
   });
 

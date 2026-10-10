@@ -165,19 +165,17 @@ export function StageField({
       ? text(`options.${toText(record.invalidReason)}`, {
           defaultValue: toText(record.invalidReason),
         })
-      : current === 'churned'
-        ? text(`options.${toText(record.churnReason)}`, {
-            defaultValue: toText(record.churnReason),
+      : // A churned company's reason has a row of its own under its
+        // status, so it is not said again beside it.
+        current === 'lost'
+        ? text(`options.${toText(record.lostReason)}`, {
+            defaultValue: toText(record.lostReason),
           })
-        : current === 'lost'
-          ? text(`options.${toText(record.lostReason)}`, {
-              defaultValue: toText(record.lostReason),
+        : current === 'paused'
+          ? text(`options.${toText(record.pauseReason)}`, {
+              defaultValue: toText(record.pauseReason),
             })
-          : current === 'paused'
-            ? text(`options.${toText(record.pauseReason)}`, {
-                defaultValue: toText(record.pauseReason),
-              })
-            : '';
+          : '';
   // Moving to a status without a reason clears the reasons this object has,
   // so a stale "price" does not linger on a customer that came back.
   const clearedReasons: Data =
