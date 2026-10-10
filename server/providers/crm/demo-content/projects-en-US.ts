@@ -17,7 +17,7 @@ export const enProjects: DemoProjects = {
       name: 'H World Group',
       domain: 'h-world',
       description:
-        "H World's IT department plans to bring store inspections, maintenance tickets and franchisee collaboration from several SaaS tools onto a platform of its own, deployed privately, with audit logs and a link to the membership system.",
+        "H World Group runs more than ten hotel brands, including Hanting, JI Hotel and Orange, with over 9,000 hotels in China, most of them franchised.\n\nIts IT department plans to bring store inspections, maintenance tickets and franchisee collaboration from three SaaS tools onto one platform of its own:\n\n- **Inspections**: area supervisors check each hotel against its brand standard, photograph issues and follow the fixes;\n- **Maintenance tickets**: a hotel's repair request goes to the nearest contractor automatically and is measured against its deadline;\n- **Franchisee collaboration**: franchisees see their hotels' inspection scores and ticket progress in a portal.\n\nIt must be deployed privately on H World's own cloud as a cluster, keep audit logs for three years, and sign people in through the membership system's identity service. Phase one covers 2,000 hotels in East China, followed by regional waves.",
     },
     people: [
       { name: 'Chen Lu', mailbox: 'chen.lu', jobTitle: 'IT Director' },
@@ -33,7 +33,7 @@ export const enProjects: DemoProjects = {
       },
     ],
     message:
-      'We saw your demo at the digital hospitality expo in Shanghai. We have more than 9,000 stores, with inspections and maintenance tickets spread across three systems, and want to see whether one platform can cover them. It must be deployed privately and keep complete audit logs.',
+      "We saw your demo at the digital hospitality expo in Shanghai and were impressed.\n\nWe have more than 9,000 hotels, and inspections, maintenance tickets and franchisee communication are spread across three systems, so supervisors, hotels and contractors switch between them all day and head office can't see the whole picture. We want to see whether one platform can cover them.\n\nOur baseline: private deployment, complete audit logs, and sign-in through our membership system's identity service. If possible, we'd like to start with a requirements session; Howard Cheng, our data platform lead, would join me.",
     deal: 'Store operations and ticketing platform (Enterprise)',
     discovery: {
       heading: 'Discovery session',
@@ -49,11 +49,11 @@ export const enProjects: DemoProjects = {
     },
     review: 'Solution review meeting',
     reviewDescription:
-      'Review the solution and the quotation with Chen Lu, Howard Cheng and Joy Shao; agree phase one scope, rollout timing and commercial terms.',
+      "Review the solution and the quotation with Chen Lu, Howard Cheng and Joy Shao.\n\n**To settle**\n- Phase one scope: inspections, maintenance tickets and the franchisee portal for 2,000 hotels in East China;\n- Rollout timing: the POC conclusion, the pilot region and the dates of the full rollout;\n- Commercial terms: the first-year discount (in approval), whether the three years of support go into the main contract, and the payment schedule.\n\n**After**\nWrite the review's conclusions and the material still owed into the result, and note the steps of Joy Shao's procurement process.",
     approval: {
       name: 'H World Enterprise first-year 15% discount',
       description:
-        '9,000 stores, 2,000 in phase one, rolled out in waves; to win phase one we ask for 15% off Enterprise in the first year, with the customer signing three years of support.',
+        "H World's store operations and ticketing platform: Enterprise plus three years of support, RMB 720,000 in total. We ask for 15% off Enterprise in the first year.\n\n**Background**\nThe customer has more than 9,000 hotels; phase one covers 2,000 in East China, the POC has passed, and the rollout will continue region by region, so the long-term value is large.\n\n**Why**\n- Joy Shao in procurement has made clear the first-year budget is capped, so the quotation must come down to enter procurement;\n- the customer will put three years of support into the main contract, so the three-year revenue barely changes;\n- winning H World gives us a reference account in hospitality.\n\nThe discount applies only to the first-year Enterprise licence; support and later expansion are at list price.",
     },
     mention:
       "@{{name}} I'm inclined to approve the 15% for H World, as long as the three years of support go into the main contract. Can you confirm the customer will accept that?",
@@ -63,7 +63,7 @@ export const enProjects: DemoProjects = {
       name: 'GAC Group',
       domain: 'gac',
       description:
-        "GAC's digital department leads a dealer collaboration platform that unifies lead distribution, stock transfers and service tickets, on a domestic database with cluster deployment.",
+        "GAC Group's digital department leads a dealer collaboration platform for the more than 1,000 dealers of the group's passenger car brands.\n\nLead distribution, vehicle stock transfers and after-sales service tickets each run in a different system today, so dealers log in to several back offices and the group cannot see each dealer's stock and lead conversion as it happens. The platform brings the three together behind one entry point for dealers.\n\nIt must run on a domestic database as a cluster and meet the group's data security rules; the contract is in legal review, paid in 30-40-30 instalments.",
     },
     people: [
       {
@@ -87,7 +87,7 @@ export const enProjects: DemoProjects = {
     approval: {
       name: 'GAC balance on 60-day terms',
       description:
-        "The customer's finance process pays 60 days after acceptance, beyond the 30-day standard; 30% is paid on signing, so the collection risk is contained.",
+        "GAC's dealer collaboration platform, an Enterprise contract of RMB 1,200,000, paid 30-40-30: 30% on signing, 40% at go-live, 30% on acceptance.\n\nThe customer's finance process pays the balance 60 days after acceptance, beyond our standard 30 days.\n\n**Risk**\n- 30% is paid as soon as the contract is signed, so the collection risk is contained;\n- the customer is a large state-owned group with a good payment record;\n- the balance is RMB 360,000, so 30 more days has little effect on cash flow.\n\nWe recommend approving, with the acceptance criteria and the acceptance deadline written into the contract so acceptance cannot drag on.",
       comment:
         'Approved at 60 days with at least 30% on signing; please write the acceptance criteria into the contract.',
     },
@@ -100,7 +100,7 @@ export const enProjects: DemoProjects = {
       name: 'New Hope Group',
       domain: 'newhope',
       description:
-        "After its farm inspection system went live, New Hope's information centre plans to bring feed mill quality checks and equipment inspections onto the same platform.",
+        'New Hope Group is an agriculture and food company with many livestock farms and feed mills.\n\nThis year its information centre launched a farm inspection system on NocoBase Professional: the first 12 farms went live within three weeks, the inspection submission rate holds above 90%, and farm managers find it much easier than the paper forms.\n\nBuilding on that, the information centre plans to bring feed mill quality checks and equipment inspections onto the same platform, linking quality data with the farms. Quality requirement interviews are under way and a renewal and expansion proposal is being prepared.',
     },
     people: [
       {
