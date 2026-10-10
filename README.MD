@@ -80,7 +80,7 @@ ai:
 
 The assistant is switched on and off with the **Enabled** switch of Noco on **Settings → AI → AI Employees**. Web search works with OpenAI and Qwen, not with DeepSeek. The business guidance in `server/ai/employees/crm-guidance.ts` and the skills in `ai/skills/` hold the sales practice the AI follows; edit them to make it yours.
 
-**Notifications.** In-app notifications need the channel `inbox` (`notification.channels.inbox: { provider: in-app }`, already in `config.example.yml`), and are sent by the CRM itself; each kind (approvals, record changes, task reminders) can be switched off on **Settings → System settings → Reminders**.
+**Notifications.** In-app notifications need the channel `inbox` (`notification.channels.inbox: { provider: in-app }`, already in `config.example.yml`), and are sent by the CRM itself; each kind (approvals, record changes, task reminders) can be switched off on **Settings → System settings → Reminders**. The Workflow plugin is disabled, as in the template it was generated from: its dependency and `server/config/workflow.ts` are kept, and an application that wants it registers it with `pnpm nocobase plugin register @nocobase/app-plugin-workflow` and restores the `workflow` import, type and entry in `server/config/index.ts`.
 
 **Mail.** Declare the mail servers users may connect under `mail.providers` (examples in `config.example.yml`); each user then connects their mailbox on **Mail → Mail accounts**. Gmail and Microsoft 365 also need an OAuth client, with `<origin><base path>/mail/oauth/callback` registered as its redirect URL.
 

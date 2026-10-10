@@ -15,6 +15,8 @@ Do not create a plugin to add a feature. Plugins are separately published packag
 
 When users refer to annotations, marks, or selections in the current application, first run `pnpm exec agent-annotations list --json` from the application root to find Agent Annotations records, ask for clarification only if none match or the target remains unclear, and do not implement annotation requests when the user only asks where they are.
 
+The Workflow plugin is retained as a dependency but is disabled by default in Client, Server, and CLI. Its configuration and example sources are retained for explicit opt-in use. This application keeps it disabled (its notifications are its own code, see "CRM application additions") and keeps the AI Employee plugin registered, which template 1.0.0-beta.58 also stopped registering and whose `server/config/ai.ts` it removed: the CRM's assistant, follow-ups and approval reviews are built on it.
+
 ## Default template scope
 
 Default is the clean application starting point. It registers product capabilities but no `app-plugin-*-example` plugins, example pages, application sample services, or sample APIs. Keep runnable demonstrations in `app-template-examples`. Application-owned server routes start empty; the only built-in application provider exposes Authorization Permission Sets as direct roles in the Users page. The only application page is a localized homepage.
