@@ -2038,7 +2038,7 @@ const wording = {
       executed: ['Carried out', '已执行'],
       failed: ['Failed', '执行失败'],
       stale: ['Not carried out', '未执行'],
-      voided: ['Declined', '已拒绝'],
+      voided: ['Ignored', '已忽略'],
       expired: ['Expired', '已过期'],
     },
     op: {
@@ -2058,7 +2058,7 @@ const wording = {
     keepStep: ['Keep step {{step}}', '保留第 {{step}} 步'],
     execute_one: ['Carry out 1 change', '执行 1 项改动'],
     execute_other: ['Carry out {{count}} changes', '执行 {{count}} 项改动'],
-    void: ['Decline', '拒绝'],
+    void: ['Ignore', '忽略'],
     expiresIn_one: ['expires in 1 hour', '1 小时后过期'],
     expiresIn_other: ['expires in {{count}} hours', '{{count}} 小时后过期'],
     carryingOut: ['Carrying out…', '执行中…'],
@@ -2067,7 +2067,7 @@ const wording = {
       '这些建议的改动已不存在。',
     ],
     executed: ['Carried out “{{title}}”', '已执行「{{title}}」'],
-    voided: ['Declined “{{title}}”', '已拒绝「{{title}}」'],
+    voided: ['Ignored “{{title}}”', '已忽略「{{title}}」'],
     notExecuted: ['“{{title}}” was not carried out', '「{{title}}」未执行'],
     outcome: {
       executed: [
@@ -2075,8 +2075,8 @@ const wording = {
         '{{name}} 已执行 · {{time}}',
       ],
       voided: [
-        '{{name}} declined these changes · {{time}}',
-        '{{name}} 拒绝了这些改动 · {{time}}',
+        '{{name}} ignored these changes · {{time}}',
+        '{{name}} 忽略了这些改动 · {{time}}',
       ],
       failed: [
         'Step {{position}} was refused: {{reason}}. Nothing was changed.',
@@ -2090,7 +2090,7 @@ const wording = {
     },
     news: {
       executed: ['“{{title}}” carried out', '「{{title}}」已执行'],
-      voided: ['“{{title}}” declined', '「{{title}}」已拒绝'],
+      voided: ['“{{title}}” ignored', '「{{title}}」已忽略'],
       failed: ['“{{title}}” failed', '「{{title}}」执行失败'],
       stale: ['“{{title}}” not carried out', '「{{title}}」未执行'],
     },

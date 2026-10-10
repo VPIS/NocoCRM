@@ -174,9 +174,9 @@ describe('a plan card', () => {
       }),
     );
     renderWith(<PlanCard plan={plan()} />);
-    await userEvent.click(screen.getByRole('button', { name: '拒绝' }));
+    await userEvent.click(screen.getByRole('button', { name: '忽略' }));
     expect(await screen.findByText('这些建议的改动已不存在。')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: '拒绝' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '忽略' })).toBeNull();
     expect(document.activeElement?.textContent).toBe(
       '这些建议的改动已不存在。',
     );
@@ -186,7 +186,7 @@ describe('a plan card', () => {
     renderWith(<PlanCard plan={plan({ status: 'executing' })} />);
     expect(screen.getByText('执行中…')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /执行 \d/u })).toBeNull();
-    expect(screen.queryByRole('button', { name: '拒绝' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '忽略' })).toBeNull();
   });
 
   it('opens the conversation it came from in the assistant panel', async () => {

@@ -3,7 +3,13 @@ import { Button } from '#components/ui/button';
 import { Checkbox } from '#components/ui/checkbox';
 import { Spinner } from '#components/ui/spinner';
 import { useChatPanel } from '@nocobase/app-plugin-agents/client/chat';
-import { ArrowRight, ClipboardList, MessagesSquare } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  ClipboardList,
+  MessagesSquare,
+  X,
+} from 'lucide-react';
 import {
   useEffect,
   useRef,
@@ -183,7 +189,7 @@ export function PlanCard({
               disabled={Boolean(busy)}
               onClick={() => run('void')}
             >
-              {busy === 'void' ? <Spinner /> : null}
+              {busy === 'void' ? <Spinner /> : <X />}
               {text('plans.void')}
             </Button>
             <Button
@@ -192,7 +198,7 @@ export function PlanCard({
               disabled={Boolean(busy) || kept === 0}
               onClick={() => run('execute')}
             >
-              {busy === 'execute' ? <Spinner /> : null}
+              {busy === 'execute' ? <Spinner /> : <Check />}
               {text('plans.execute', { count: kept })}
             </Button>
           </div>
