@@ -108,8 +108,9 @@ describe('MentionTextarea', () => {
     await userEvent.keyboard('{Enter}');
     expect((box as HTMLTextAreaElement).value).toBe('Ask @Wang Fang ');
     expect(screen.queryByRole('listbox')).toBeNull();
-    // The layer under the box marks the mention where its text lies.
-    const mark = document.querySelector('[aria-hidden] span.bg-info\\/15');
+    // The layer under the box draws the mention, in its colour, where its
+    // text lies.
+    const mark = document.querySelector('[aria-hidden] span.text-info');
     expect(mark?.textContent).toBe('@Wang Fang');
     await userEvent.type(box, 'and @li');
     await userEvent.click(screen.getByRole('option', { name: 'Li Ming' }));

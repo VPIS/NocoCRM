@@ -1,10 +1,16 @@
+import { randomUUID } from 'node:crypto';
 import type { Application } from '@nocobase/app-server/application';
+import { agentsToken } from '@nocobase/app-plugin-agents/server/tokens';
 import { mailServiceToken } from '@nocobase/app-plugin-mail/server';
 import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/tokens';
 import type {
   DemoAccountCreator,
+  DemoChats,
   DemoMailboxes,
 } from '../providers/crm/demo.js';
+import { crmToken } from '../providers/crm/index.js';
+import { NOCO_MARKER } from '../providers/crm-agents/noco.js';
+import { jsonValue } from '../providers/crm/values.js';
 import {
   DEMO_MAIL_NAME,
   DEMO_MAIL_SECRET,
@@ -13,10 +19,12 @@ import {
 import { CrmError, toText } from '../providers/crm/schema.js';
 
 // What the demo dataset's import and removal do through other plugins: its
-// accounts through the users plugin, its mailboxes through the Mail plugin.
+// accounts through the users plugin, its mailboxes through the Mail plugin,
+// the importer's conversations through the Agents plugin.
 export function demoServices(app: Application): {
   demoAccounts: DemoAccountCreator;
   demoMailboxes: DemoMailboxes | undefined;
+  demoChats: DemoChats | undefined;
 } {
   // The demo dataset's mailboxes, through the Mail plugin's service as the
   // user each belongs to (demo-mail.ts); none without the plugin.
@@ -155,5 +163,84 @@ export function demoServices(app: Application): {
       }
     },
   };
-  return { demoAccounts, demoMailboxes };
+  // The importer's finished conversations with Noco, the CRM's assistant
+  // (crm-agents/noco.ts): the plugin makes the conversation, the messages
+  // are written into its table as its store writes them, since a
+  // conversation can only grow by a run of its agent and the demo runs no
+  // model. @temporary(nocobase-official): until the plugin can import a
+  // finished conversation. None without the plugin or before Noco exists.
+  const demoChats: DemoChats | undefined = app.container.has(agentsToken)
+    ? {
+        async create(userId, chat) {
+          const database = app.container.resolve(crmToken).database;
+          const query = database.query();
+          const marker = await query
+            .selectFrom('crmSettings')
+            .select('value')
+            .where('id', '=', NOCO_MARKER)
+            .executeTakeFirst();
+          const agentId = toText(
+            (jsonValue(marker?.value) as { agentId?: unknown } | null)
+              ?.agentId ?? '',
+          );
+          if (!agentId) return undefined;
+          const conversation = await app.container
+            .resolve(agentsToken)
+            .conversations.create(userId, {
+              agentId,
+              title: chat.title,
+              source: 'crm',
+            });
+          const first = chat.messages[0]?.at ?? new Date().toISOString();
+          const last = chat.messages.at(-1)?.at ?? first;
+          for (const [index, message] of chat.messages.entries())
+            await query
+              .insertInto('agConversationMessages')
+              .values({
+                id: randomUUID(),
+                conversationId: conversation.id,
+                seq: index + 1,
+                role: message.role,
+                content: JSON.stringify({
+                  type: 'text',
+                  content: message.text,
+                }),
+                searchText: message.text,
+                toolCalls: null,
+                attachments: null,
+                workContext: null,
+                metadata: JSON.stringify({}),
+                runId: null,
+                runEventSeq: null,
+                createdAt: message.at,
+                updatedAt: message.at,
+              })
+              .execute();
+          await query
+            .updateTable('agConversations')
+            .set({
+              lastSeq: chat.messages.length,
+              lastMessageAt: last,
+              createdAt: first,
+              updatedAt: last,
+            })
+            .where('id', '=', conversation.id)
+            .execute();
+          return conversation.id;
+        },
+        async remove(ids) {
+          if (!ids.length) return;
+          const query = app.container.resolve(crmToken).database.query();
+          await query
+            .deleteFrom('agConversationMessages')
+            .where('conversationId', 'in', [...ids])
+            .execute();
+          await query
+            .deleteFrom('agConversations')
+            .where('id', 'in', [...ids])
+            .execute();
+        },
+      }
+    : undefined;
+  return { demoAccounts, demoMailboxes, demoChats };
 }

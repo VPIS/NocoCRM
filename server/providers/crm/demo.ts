@@ -125,6 +125,25 @@ export interface DemoMailboxes {
   remove(userId: string, accountId: string): Promise<void>;
 }
 
+// How the import writes the importer's finished conversations with the
+// assistant: through the Agents plugin in the running application, a stub in
+// tests, absent without the plugin or before the assistant exists.
+export interface DemoChats {
+  // The conversation's id, or nothing when it could not be made.
+  create(
+    userId: string,
+    chat: {
+      title: string;
+      messages: readonly {
+        role: 'user' | 'assistant';
+        text: string;
+        at: string;
+      }[];
+    },
+  ): Promise<string | undefined>;
+  remove(ids: readonly string[]): Promise<void>;
+}
+
 export interface DemoStatus {
   present: boolean;
   // The language the present import was made in.
@@ -155,6 +174,9 @@ interface Manifest {
   // The demo mailboxes the import connected, which removal disconnects;
   // absent on an import made before the dataset had mail.
   mailAccounts?: { userId: string; accountId: string }[];
+  // The importer's conversations with the assistant, which removal deletes;
+  // absent on an import made before the dataset had them.
+  chats?: string[];
 }
 
 // Whether a demo dataset is imported, for the banner that offers one to
@@ -249,18 +271,61 @@ export async function populateDemo(
   accounts: DemoAccountCreator,
   language: DemoLanguage = 'zh-CN',
   mailboxes?: DemoMailboxes,
+  chats?: DemoChats,
 ): Promise<DemoStatus> {
   await requireCapability(actor, 'manage', 'settings');
+  // The marker is claimed before anything is written, so a second import
+  // started beside this one (a double click, another administrator) is
+  // refused at once instead of writing a second dataset that no manifest
+  // records. An import that fails takes back what it wrote.
+  const query = service.database.query();
+  try {
+    await query
+      .insertInto('crmSettings')
+      .values({
+        id: DEMO_MARKER,
+        value: JSON.stringify({ version: 7, importing: true, records: [] }),
+        updatedAt: new Date(),
+      })
+      .execute();
+  } catch {
+    throw new CrmError('demoExists', 409);
+  }
+  const claim: { manifest?: Manifest } = {};
+  try {
+    return await populate(
+      service,
+      authz,
+      actor,
+      accounts,
+      language,
+      mailboxes,
+      chats,
+      claim,
+    );
+  } catch (error) {
+    if (claim.manifest) await deleteRecords(service, claim.manifest);
+    await query
+      .deleteFrom('crmSettings')
+      .where('id', 'in', [DEMO_MARKER, DEMO_MAIL_ROW])
+      .execute();
+    throw error;
+  }
+}
+
+async function populate(
+  service: CrmService,
+  authz: AppAuthorization,
+  actor: Actor,
+  accounts: DemoAccountCreator,
+  language: DemoLanguage,
+  mailboxes: DemoMailboxes | undefined,
+  chats: DemoChats | undefined,
+  // What the import wrote so far, for taking it back should it fail.
+  claim: { manifest?: Manifest },
+): Promise<DemoStatus> {
   const text = demoContent(language);
   const query = service.database.query();
-  if (
-    await query
-      .selectFrom('crmSettings')
-      .select('id')
-      .where('id', '=', DEMO_MARKER)
-      .executeTakeFirst()
-  )
-    throw new CrmError('demoExists', 409);
 
   // Accounts: reuse one that exists by username, create the rest, and make
   // sure each holds its demo role and nothing else among the CRM roles.
@@ -362,6 +427,7 @@ export async function populateDemo(
     ...(importerManager ? { importerManager } : {}),
     records: [],
   };
+  claim.manifest = manifest;
   const track = (entity: string, record: Row): Row => {
     if (!manifest.records.some((r) => r.id === record.id))
       manifest.records.push({
@@ -2022,15 +2088,37 @@ export async function populateDemo(
     );
   });
 
+  // The importer's conversations with the assistant about their projects,
+  // each a few minutes long, over the last days.
+  if (chats) {
+    manifest.chats = [];
+    const when: readonly [number, number][] = [
+      [-3, 16],
+      [-2, 9.5],
+      [-1, 11],
+      [-1, 17],
+    ];
+    for (const [index, chat] of project.chats.entries()) {
+      const [day, hour] = when[index] ?? [-1, 9];
+      const id = await chats
+        .create(actor.id, {
+          title: chat.title,
+          messages: chat.messages.map((message, place) => ({
+            ...message,
+            at: at(day, hour, place * 2),
+          })),
+        })
+        .catch(() => undefined);
+      if (id) manifest.chats.push(id);
+    }
+  }
+
   // The manifest makes the import repeat-safe and records exactly which rows
   // it created, so removal can find them again.
   await query
-    .insertInto('crmSettings')
-    .values({
-      id: DEMO_MARKER,
-      value: JSON.stringify(manifest),
-      updatedAt: new Date(),
-    })
+    .updateTable('crmSettings')
+    .set({ value: JSON.stringify(manifest), updatedAt: new Date() })
+    .where('id', '=', DEMO_MARKER)
     .execute();
   return demoStatus(service, actor);
 }
@@ -2043,6 +2131,7 @@ export async function resetDemo(
   actor: Actor,
   accounts?: DemoAccountCreator,
   mailboxes?: DemoMailboxes,
+  chats?: DemoChats,
 ): Promise<DemoStatus> {
   await requireCapability(actor, 'manage', 'settings');
   const query = service.database.query();
@@ -2053,39 +2142,19 @@ export async function resetDemo(
     .executeTakeFirst();
   const manifest = row ? parseManifest(row.value) : undefined;
   if (!manifest) throw new CrmError('demoMissing', 404);
-  const byEntity = new Map<string, string[]>();
-  for (const record of manifest.records) {
-    const list = byEntity.get(record.entity) ?? [];
-    list.push(record.id);
-    byEntity.set(record.entity, list);
-  }
   // The demo mailboxes go first, while the manifest still records them;
   // the plugin deletes their mail. One the user removed already is passed
   // over. An import made before the dataset had mail has none.
   if (mailboxes)
     for (const { userId, accountId } of manifest.mailAccounts ?? [])
       await mailboxes.remove(userId, accountId).catch(() => undefined);
-  const all = manifest.records.map((r) => r.id);
-  await service.database.transaction(async ({ query: q }) => {
-    if (all.length) {
-      await q.deleteFrom('crmHistory').where('recordId', 'in', all).execute();
-      await q.deleteFrom('crmOutbox').where('recordId', 'in', all).execute();
-    }
-    for (const [entity, table] of [
-      ['tasks', 'crmTasks'],
-      ['approvals', 'crmApprovals'],
-      ['opportunities', 'crmOpportunities'],
-      ['contacts', 'crmContacts'],
-      ['leads', 'crmLeads'],
-      ['companies', 'crmCompanies'],
-    ] as const) {
-      const ids = byEntity.get(entity) ?? [];
-      if (ids.length)
-        await q.deleteFrom(table).where('id', 'in', ids).execute();
-    }
-    await q.deleteFrom('crmSettings').where('id', '=', DEMO_MARKER).execute();
-    await q.deleteFrom('crmSettings').where('id', '=', DEMO_MAIL_ROW).execute();
-  });
+  if (chats && manifest.chats?.length)
+    await chats.remove(manifest.chats).catch(() => undefined);
+  await deleteRecords(service, manifest);
+  await query
+    .deleteFrom('crmSettings')
+    .where('id', 'in', [DEMO_MARKER, DEMO_MAIL_ROW])
+    .execute();
   setDemoMailLanguage(undefined);
   if (accounts) await disableDemoAccounts(service, actor, accounts);
   // The sales manager role the import gave its importer goes with it.
@@ -2128,4 +2197,37 @@ async function disableDemoAccounts(
       toText(user.email).toLowerCase().endsWith(DEMO_DOMAIN)
     )
       await accounts.disable(toText(user.id));
+}
+
+// Deletes the rows a manifest records, with their history and queued
+// messages, in dependency order.
+async function deleteRecords(
+  service: CrmService,
+  manifest: Manifest,
+): Promise<void> {
+  const byEntity = new Map<string, string[]>();
+  for (const record of manifest.records) {
+    const list = byEntity.get(record.entity) ?? [];
+    list.push(record.id);
+    byEntity.set(record.entity, list);
+  }
+  const all = manifest.records.map((r) => r.id);
+  await service.database.transaction(async ({ query: q }) => {
+    if (all.length) {
+      await q.deleteFrom('crmHistory').where('recordId', 'in', all).execute();
+      await q.deleteFrom('crmOutbox').where('recordId', 'in', all).execute();
+    }
+    for (const [entity, table] of [
+      ['tasks', 'crmTasks'],
+      ['approvals', 'crmApprovals'],
+      ['opportunities', 'crmOpportunities'],
+      ['contacts', 'crmContacts'],
+      ['leads', 'crmLeads'],
+      ['companies', 'crmCompanies'],
+    ] as const) {
+      const ids = byEntity.get(entity) ?? [];
+      if (ids.length)
+        await q.deleteFrom(table).where('id', 'in', ids).execute();
+    }
+  });
 }

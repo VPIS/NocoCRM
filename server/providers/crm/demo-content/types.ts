@@ -270,6 +270,10 @@ export interface DemoProjects {
     // The task the manager assigns the importer.
     readonly renewal: string;
   };
+  // The importer's conversations with Noco, the CRM's assistant, oldest
+  // first: what they asked and what it answered, written in as the chat
+  // keeps them (demo.ts).
+  readonly chats: readonly DemoChat[];
   // The AI's results, as each card keeps them.
   readonly ai: {
     readonly sfLead: Verdict;
@@ -283,4 +287,14 @@ export interface DemoProjects {
     readonly reviewContract: ApprovalReview;
     readonly reviewPayment: ApprovalReview;
   };
+}
+
+// A conversation with the assistant: its title, and its messages in order,
+// the person's first.
+export interface DemoChat {
+  readonly title: string;
+  readonly messages: readonly {
+    readonly role: 'user' | 'assistant';
+    readonly text: string;
+  }[];
 }

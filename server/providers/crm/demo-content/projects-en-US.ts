@@ -127,6 +127,65 @@ export const enProjects: DemoProjects = {
     interview: 'Quality check requirements interview',
     renewal: 'Prepare the New Hope renewal and extension plan',
   },
+  chats: [
+    {
+      title: 'Negotiating the H World discount',
+      messages: [
+        {
+          role: 'user',
+          text: "Chen Lu will raise the first-year price again at tomorrow's H World review. How should I handle it?",
+        },
+        {
+          role: 'assistant',
+          text: "From the deal's record, I'd prepare this way:\n\n1. **Value before price**: open with Howard Cheng presenting the proof of concept (performance and cluster deployment both verified), so Joy Shao from procurement accepts the solution first.\n2. **The discount isn't approved yet, so don't promise 15%**: say \"we're working on the first-year price internally, provided phase one and the three years of support are agreed together\".\n3. **Trade the discount for three years of support**: Daniel Brooks commented on the deal that he leans towards approving 15% if the three years of support go into the main contract, which makes a natural exchange.\n4. **Bring two quotations**: list price, and 15% off with three years of support, so procurement chooses between them rather than shopping around.\n\nShall I turn this into an agenda in the task's description?",
+        },
+        {
+          role: 'user',
+          text: "It's Joy Shao's first meeting. What will she care about?",
+        },
+        {
+          role: 'assistant',
+          text: "Procurement usually cares about three things: **total price and payment**, **comparable quotes**, and **contract risk**. Prepare:\n\n- a clear breakdown: licence, implementation and three years of support;\n- a case from a chain of a similar size, to support the price;\n- the standard contract, sent to her in advance.\n\nShe isn't among the deal's contacts yet; the AI follow-up proposes adding her as an influencer, which you can accept with the deal's suggestion.",
+        },
+      ],
+    },
+    {
+      title: "This month's forecast",
+      messages: [
+        { role: 'user', text: 'How much can I close this month?' },
+        {
+          role: 'assistant',
+          text: "From your opportunities and their expected close dates:\n\n| Opportunity | Stage | Amount | Expected close |\n| --- | --- | --- | --- |\n| GAC dealer collaboration platform | Negotiation | RMB 1.2M | in 12 days |\n| H World store operations platform | Proposal | RMB 680K | in 25 days |\n\n- **Commit**: GAC, RMB 1.2M. The payment terms are approved; only the damages clause and the signature remain.\n- **Best case**: with H World, RMB 1.88M; but H World is still at proposal with the discount undecided, so closing it this month is unlikely.\n\nFocus on GAC's signature first: the task to push it is a day overdue.",
+        },
+      ],
+    },
+    {
+      title: 'Signing email to Victor Feng',
+      messages: [
+        {
+          role: 'user',
+          text: 'Draft an email to Victor Feng at GAC to move the contract to signature. We hold the damages cap at 5% and can add an extra year of upgrades.',
+        },
+        {
+          role: 'assistant',
+          text: "**Subject**: Signing the dealer collaboration platform contract\n\nDear Victor,\n\nThank you and Linda for your careful review of the contract over the past two weeks. The data security clause has been revised as you asked.\n\nOn the liquidated damages, we propose keeping the cap at 5% of the contract value, the standard we apply to every enterprise customer. As a sign of our commitment, we will add **an extra year of upgrades** on top of the first, so the platform receives new versions for two years.\n\nIf this works for you, we would like to sign this week, at a time that suits you.\n\nBest regards\n\n---\n\nShall I save it as an email task on the deal, or open it in your mailbox's composer?",
+        },
+      ],
+    },
+    {
+      title: 'Following up the SF Express lead',
+      messages: [
+        {
+          role: 'user',
+          text: 'Is the new SF Express lead worth following up?',
+        },
+        {
+          role: 'assistant',
+          text: "Yes, and quickly. The AI follow-up graded it **A, follow up**:\n\n- Kevin Liang runs operations digitalisation for 300+ outlets in South China and presents a plan to the regional head next month;\n- he asks for private deployment and single sign-on, both Enterprise strengths;\n- a successful pilot in South China could spread to other regions.\n\nThe AI has drafted a reply proposing a call on Wednesday or Thursday afternoon. Check it in your inbox's AI suggestions and send it from there.",
+        },
+      ],
+    },
+  ],
   ai: {
     sfLead: {
       recommendation: 'follow',

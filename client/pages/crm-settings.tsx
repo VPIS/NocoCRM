@@ -1,7 +1,7 @@
 import { PageContainer } from '../components/page-container.js';
 import { PageHeader } from '../components/page-header.js';
 import { toText } from '../components/crm/api.js';
-import { useState, type ReactElement } from 'react';
+import { useRef, useState, type ReactElement } from 'react';
 import { useSearchParams } from 'react-router';
 import { Button } from '../components/ui/button.js';
 import { Input } from '../components/ui/input.js';
@@ -84,7 +84,12 @@ function SettingsForm({
   const [demoLanguage, setDemoLanguage] = useState(
     language.startsWith('zh') ? 'zh-CN' : 'en-US',
   );
+  // A second click on the confirmation, before it closes, starts nothing:
+  // an import takes a while, and a second one beside it would be refused.
+  const demoRunningRef = useRef(false);
   const runDemo = async (action: 'populate' | 'reset'): Promise<void> => {
+    if (demoRunningRef.current) return;
+    demoRunningRef.current = true;
     setBusy(true);
     setError(undefined);
     setDemoNotice(undefined);
@@ -105,6 +110,7 @@ function SettingsForm({
     } catch (e) {
       setError(e);
     } finally {
+      demoRunningRef.current = false;
       setBusy(false);
       setDemoAction(undefined);
     }

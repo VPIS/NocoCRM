@@ -142,7 +142,7 @@ export function registerWorkspaceRoutes(
   router: Hono<CrmEnv>,
 ): void {
   const service = app.container.resolve(crmToken);
-  const { demoAccounts, demoMailboxes } = demoServices(app);
+  const { demoAccounts, demoMailboxes, demoChats } = demoServices(app);
   const contentUrl = (id: string) =>
     `${toText(app.publicBasePath)}/api/attachments/${encodeURIComponent(id)}/content`;
 
@@ -302,6 +302,7 @@ export function registerWorkspaceRoutes(
           // The language the dataset is written in, Chinese unless asked.
           c.req.valid('json').language ?? 'zh-CN',
           demoMailboxes,
+          demoChats,
         ),
       }),
   );
@@ -321,6 +322,7 @@ export function registerWorkspaceRoutes(
           c.get('actor'),
           demoAccounts,
           demoMailboxes,
+          demoChats,
         ),
       }),
   );

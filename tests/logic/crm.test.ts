@@ -6783,6 +6783,23 @@ describe('demo dataset', () => {
 });
 
 describe("a record's timeline and its tasks", () => {
+  it('refuses an import started beside another, leaving one dataset', async () => {
+    const count = async (entity: string): Promise<number> =>
+      (await service.list(actor('admin'), entity as never, { pageSize: 1 }))
+        .total;
+    const companies = await count('companies');
+    // A double click on the confirmation: both requests at once.
+    const [first, second] = await Promise.all([
+      request('/demoData/import', 'admin', 'POST', {}),
+      request('/demoData/import', 'admin', 'POST', {}),
+    ]);
+    expect([first.status, second.status].sort()).toEqual([200, 400]);
+    expect(await count('companies')).toBe(companies + 11);
+    expect(
+      (await request('/demoData/remove', 'admin', 'POST', {})).status,
+    ).toBe(200);
+    expect(await count('companies')).toBe(companies);
+  });
   it('tells when a task is planned, done or moved, to who may see it', async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: '动态里的活动',
