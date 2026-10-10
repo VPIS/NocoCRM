@@ -13,7 +13,7 @@ import { resolveTitles } from './titles.js';
 export const SEARCH_KINDS: readonly Entity[] = [
   'leads',
   'opportunities',
-  'accounts',
+  'companies',
   'contacts',
   'tasks',
   'approvals',

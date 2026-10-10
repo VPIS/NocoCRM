@@ -49,8 +49,8 @@ const object = (value: unknown): Data =>
 
 // The conversion request's own keys, which are not lead fields.
 const convertFields: Record<string, Field> = {
-  accountId: { key: 'accountId', type: 'relation', relation: 'accounts' },
-  accountName: { key: 'accountName', type: 'text' },
+  companyId: { key: 'companyId', type: 'relation', relation: 'companies' },
+  companyName: { key: 'newCompanyName', type: 'text' },
   contactId: { key: 'contactId', type: 'relation', relation: 'contacts' },
   createOpportunity: { key: 'createOpportunity', type: 'boolean' },
   opportunityName: { key: 'opportunityName', type: 'text' },
@@ -89,7 +89,7 @@ function metadataOf(part: AIToolRendererProps['part']): Data {
     : {};
 }
 
-// The names of the records a proposal points at (an account, a contact, a
+// The names of the records a proposal points at (a company, a contact, a
 // lead), read in one request per object so the rows show names rather than
 // ids; users come from the metadata the pages already hold.
 function useNames(
@@ -201,7 +201,7 @@ function Proposal({
   input: Data;
   editable: boolean;
   // Writes one value into the draft: a field of the record for a create or
-  // update, a key of the conversion request or of its account / contact
+  // update, a key of the conversion request or of its company / contact
   // overrides for a conversion.
   onChange: (path: string[], value: unknown) => void;
 }): ReactElement | null {
@@ -238,7 +238,7 @@ function Proposal({
       id: _id,
       title: _t,
       assumptions: _a,
-      account,
+      company,
       contact,
       ...rest
     } = input;
@@ -251,16 +251,16 @@ function Proposal({
           editable={editable}
           onChange={(key, value) => onChange([key], value)}
         />
-        {Object.keys(object(account)).length ? (
+        {Object.keys(object(company)).length ? (
           <div>
             <p className='mb-1 text-xs font-medium text-muted-foreground'>
-              {text('entities.accounts')}
+              {text('entities.companies')}
             </p>
             <Rows
-              entity='accounts'
-              values={object(account)}
+              entity='companies'
+              values={object(company)}
               editable={editable}
-              onChange={(key, value) => onChange(['account', key], value)}
+              onChange={(key, value) => onChange(['company', key], value)}
             />
           </div>
         ) : null}

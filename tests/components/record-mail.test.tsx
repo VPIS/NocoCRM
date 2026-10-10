@@ -6,7 +6,7 @@ import {
 } from '../../server/providers/crm/mail-target.js';
 import type { MailMessageSummary } from '@nocobase/app-plugin-mail/client';
 
-it("takes an account's own domain from its website, never a shared mail service's", () => {
+it("takes a company's own domain from its website, never a shared mail service's", () => {
   expect(domainOf('https://www.Acme-Robotics.com/about')).toBe(
     'acme-robotics.com',
   );

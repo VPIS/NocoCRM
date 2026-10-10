@@ -102,7 +102,7 @@ import { crmRoutes } from '../../server/routes/crm.js';
 import { captureLeads } from '../../server/providers/crm/lead-capture.js';
 import {
   captureOpportunity,
-  matchAccount,
+  matchCompany,
 } from '../../server/providers/crm/opportunity-capture.js';
 import {
   findDuplicates,
@@ -140,7 +140,7 @@ import {
 } from '../../server/providers/crm/approval-review.js';
 import {
   OpportunityEvaluator,
-  accountResearchDue,
+  companyResearchDue,
   checkTerms,
   latestOpportunityEvaluation,
 } from '../../server/providers/crm/opportunity-evaluation.js';
@@ -252,7 +252,7 @@ let router: Hono;
 // mailboxes and the messages they hold, set by a test.
 type FakeMessage = {
   id: string;
-  accountId: string;
+  companyId: string;
   conversationId?: string;
   from: { address: string; name?: string };
   to: { address: string }[];
@@ -336,7 +336,7 @@ beforeAll(async () => {
     c.string('name');
     c.string('username');
     c.string('email');
-    // The authentication plugin's account-level switch and deletion record,
+    // The authentication plugin's company-level switch and deletion record,
     // both read by the CRM.
     c.datetimeTz('disabledAt').nullable();
     c.datetimeTz('deletedAt').nullable();
@@ -655,7 +655,7 @@ describe('CRM API security and domain rules', () => {
     const lead = await service.save(actor('manager'), 'leads', {
       name: 'Lead with tasks',
     });
-    const account = await service.save(actor('manager'), 'accounts', {
+    const company = await service.save(actor('manager'), 'companies', {
       name: 'Anchor for kept task',
     });
     const leadOnly = await service.save(actor('manager'), 'tasks', {
@@ -664,16 +664,16 @@ describe('CRM API security and domain rules', () => {
       leadId: lead.id,
     });
     // Linked both ways, as a task could be before a task concerned either a
-    // lead or an account.
+    // lead or a company.
     const anchored = await service.save(actor('manager'), 'tasks', {
-      name: 'Also on the account',
+      name: 'Also on the company',
       dueAt: '2026-09-01T09:00:00.000Z',
       leadId: lead.id,
     });
     await database
       .query()
       .updateTable('crmTasks')
-      .set({ accountId: account.id })
+      .set({ companyId: company.id })
       .where('id', '=', anchored.id)
       .execute();
     await service.remove(actor('manager'), 'leads', toText(lead.id));
@@ -681,36 +681,36 @@ describe('CRM API security and domain rules', () => {
       service.get(actor('manager'), 'tasks', toText(leadOnly.id)),
     ).rejects.toMatchObject({ code: 'notFound' });
     // The survivor keeps every other link, so it still satisfies the rule that an
-    // task must reference a lead, account or opportunity.
+    // task must reference a lead, company or opportunity.
     const kept = await service.get(
       actor('manager'),
       'tasks',
       toText(anchored.id),
     );
     expect(kept.leadId).toBeNull();
-    expect(kept.accountId).toBe(account.id);
+    expect(kept.companyId).toBe(company.id);
     await expect(
       service.get(actor('manager'), 'leads', toText(lead.id)),
     ).rejects.toMatchObject({ code: 'notFound' });
   });
-  it('deletes an account with only tasks, cascading like a lead, and reports blockers', async () => {
-    const account = await service.save(actor('manager'), 'accounts', {
-      name: 'Account with tasks',
+  it('deletes a company with only tasks, cascading like a lead, and reports blockers', async () => {
+    const company = await service.save(actor('manager'), 'companies', {
+      name: 'Company with tasks',
     });
     const lead = await service.save(actor('manager'), 'leads', {
       name: 'Anchor lead',
     });
-    const accountOnly = await service.save(actor('manager'), 'tasks', {
-      name: 'Account only',
+    const companyOnly = await service.save(actor('manager'), 'tasks', {
+      name: 'Company only',
       dueAt: '2026-09-01T09:00:00.000Z',
-      accountId: account.id,
+      companyId: company.id,
     });
     // Linked both ways, as a task could be before a task concerned either a
-    // lead or an account.
+    // lead or a company.
     const anchored = await service.save(actor('manager'), 'tasks', {
       name: 'Also on a lead',
       dueAt: '2026-09-01T09:00:00.000Z',
-      accountId: account.id,
+      companyId: company.id,
     });
     await database
       .query()
@@ -721,29 +721,29 @@ describe('CRM API security and domain rules', () => {
     // Tasks alone do not block, so the detail reports nothing in the way.
     const before = await service.detail(
       actor('manager'),
-      'accounts',
-      toText(account.id),
+      'companies',
+      toText(company.id),
     );
     expect(before.blockers).toEqual({});
     // A contact does block, and is named in the count.
     const contact = await service.save(actor('manager'), 'contacts', {
       name: 'Blocking contact',
-      accountId: account.id,
+      companyId: company.id,
     });
     const blocked = await service.detail(
       actor('manager'),
-      'accounts',
-      toText(account.id),
+      'companies',
+      toText(company.id),
     );
     expect(blocked.blockers).toEqual({ contacts: 1 });
     await expect(
-      service.remove(actor('manager'), 'accounts', toText(account.id)),
+      service.remove(actor('manager'), 'companies', toText(company.id)),
     ).rejects.toMatchObject({ code: 'relatedRecords' });
     // A contact deletes directly: it is taken out of the opportunities that
     // list it, and those survive.
     const deal = await service.save(actor('manager'), 'opportunities', {
       name: 'Deal with contact',
-      accountId: account.id,
+      companyId: company.id,
       contacts: [{ contactId: contact.id, role: 'other' }],
     });
     const contactDetail = await service.detail(
@@ -759,7 +759,7 @@ describe('CRM API security and domain rules', () => {
         .contacts,
     ).toEqual([]);
     // An opportunity's tasks are unlinked, not deleted: a task on
-    // a deal always carries the deal's account too, so it keeps an anchor.
+    // a deal always carries the deal's company too, so it keeps an anchor.
     const dealOnly = await service.save(actor('manager'), 'tasks', {
       name: 'Deal only',
       dueAt: '2026-09-02T09:00:00.000Z',
@@ -782,21 +782,21 @@ describe('CRM API security and domain rules', () => {
       toText(dealOnly.id),
     );
     expect(unlinked.opportunityId).toBeNull();
-    expect(unlinked.accountId).toBe(account.id);
+    expect(unlinked.companyId).toBe(company.id);
     expect(
       (await service.get(actor('manager'), 'tasks', toText(anchored.id)))
         .opportunityId,
     ).toBeNull();
-    await service.remove(actor('manager'), 'accounts', toText(account.id));
+    await service.remove(actor('manager'), 'companies', toText(company.id));
     await expect(
-      service.get(actor('manager'), 'tasks', toText(accountOnly.id)),
+      service.get(actor('manager'), 'tasks', toText(companyOnly.id)),
     ).rejects.toMatchObject({ code: 'notFound' });
     const kept = await service.get(
       actor('manager'),
       'tasks',
       toText(anchored.id),
     );
-    expect(kept.accountId).toBeNull();
+    expect(kept.companyId).toBeNull();
     expect(kept.leadId).toBe(lead.id);
   });
   it('saves the values the person changed in the conversion dialog', async () => {
@@ -807,7 +807,7 @@ describe('CRM API security and domain rules', () => {
       source: 'exhibition',
     });
     const converted = await convertLead(service, actor('rep'), lead.id, {
-      account: { industry: 'manufacturing', website: 'https://edited.test' },
+      company: { industry: 'manufacturing', website: 'https://edited.test' },
       contact: { jobTitle: 'Purchasing director', phone: '13800000000' },
       createOpportunity: true,
       opportunityName: 'Edited deal',
@@ -822,8 +822,8 @@ describe('CRM API security and domain rules', () => {
     expect(
       await service.get(
         actor('rep'),
-        'accounts',
-        toText(converted.convertedAccountId),
+        'companies',
+        toText(converted.convertedCompanyId),
       ),
     ).toMatchObject({
       name: 'Edited Works',
@@ -870,14 +870,14 @@ describe('CRM API security and domain rules', () => {
     expect((await service.get(actor('rep'), 'leads', lead.id)).status).toBe(
       'working',
     );
-    const before = (await service.list(actor('rep'), 'accounts')).total;
+    const before = (await service.list(actor('rep'), 'companies')).total;
     await expect(
       convertLead(service, actor('rep'), lead.id, {
         createOpportunity: true,
         amount: -1,
       }),
     ).rejects.toMatchObject({ code: 'invalidInput' });
-    expect((await service.list(actor('rep'), 'accounts')).total).toBe(before);
+    expect((await service.list(actor('rep'), 'companies')).total).toBe(before);
     expect((await service.get(actor('rep'), 'leads', lead.id)).status).toBe(
       'working',
     );
@@ -887,7 +887,7 @@ describe('CRM API security and domain rules', () => {
     });
     expect(converted.status).toBe('converted');
     const linked = await service.get(actor('rep'), 'tasks', task.id);
-    expect(linked.accountId).toBe(converted.convertedAccountId);
+    expect(linked.companyId).toBe(converted.convertedCompanyId);
     expect(linked.opportunityId).toBe(converted.convertedOpportunityId);
     await expect(
       service.save(actor('rep'), 'leads', { name: 'No' }, lead.id),
@@ -896,31 +896,31 @@ describe('CRM API security and domain rules', () => {
       service.remove(actor('admin'), 'leads', lead.id),
     ).rejects.toMatchObject({ code: 'convertedReadOnly' });
   });
-  it('finds the account, the contact and the open deals a conversion may duplicate', async () => {
-    const account = await service.save(actor('rep'), 'accounts', {
+  it('finds the company, the contact and the open deals a conversion may duplicate', async () => {
+    const company = await service.save(actor('rep'), 'companies', {
       name: 'Duplicate Optics',
     });
     // The lead gave no phone or e-mail: its person is found by name at the
-    // matching account, not by name alone elsewhere.
+    // matching company, not by name alone elsewhere.
     const same = await service.save(actor('rep'), 'contacts', {
       name: 'Wei Zhang',
-      accountId: account.id,
+      companyId: company.id,
     });
-    const elsewhere = await service.save(actor('rep'), 'accounts', {
+    const elsewhere = await service.save(actor('rep'), 'companies', {
       name: 'Unrelated Works',
     });
     await service.save(actor('rep'), 'contacts', {
       name: 'Wei Zhang',
-      accountId: elsewhere.id,
+      companyId: elsewhere.id,
     });
     const open = await service.save(actor('rep'), 'opportunities', {
       name: 'Optics rollout',
-      accountId: account.id,
+      companyId: company.id,
       amount: 100,
     });
     await service.save(actor('rep'), 'opportunities', {
       name: 'Optics pilot',
-      accountId: account.id,
+      companyId: company.id,
       amount: 100,
       stage: 'lost',
       lostReason: lostReasons[0],
@@ -930,8 +930,8 @@ describe('CRM API security and domain rules', () => {
       company: 'Duplicate Optics',
     });
     const preview = await conversionPreview(service, actor('rep'), lead.id);
-    expect((preview.accounts as CrmRecord[]).map((r) => r.id)).toEqual([
-      account.id,
+    expect((preview.companies as CrmRecord[]).map((r) => r.id)).toEqual([
+      company.id,
     ]);
     expect((preview.contacts as CrmRecord[]).map((r) => r.id)).toEqual([
       same.id,
@@ -946,29 +946,29 @@ describe('CRM API security and domain rules', () => {
     });
     expect(
       await conversionPreview(service, actor('rep'), fresh.id),
-    ).toMatchObject({ accounts: [], contacts: [], opportunities: [] });
+    ).toMatchObject({ companies: [], contacts: [], opportunities: [] });
   });
   it('validates opportunity contacts and preserves customer status after reopening', async () => {
-    const account = await service.save(actor('rep'), 'accounts', {
-      name: 'Deal account',
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Deal company',
     });
-    const other = await service.save(actor('rep'), 'accounts', {
-      name: 'Other account',
+    const other = await service.save(actor('rep'), 'companies', {
+      name: 'Other company',
     });
     const contact = await service.save(actor('rep'), 'contacts', {
       name: 'Wrong company',
-      accountId: other.id,
+      companyId: other.id,
     });
     await expect(
       service.save(actor('rep'), 'opportunities', {
         name: 'Bad deal',
-        accountId: account.id,
+        companyId: company.id,
         contacts: [{ contactId: contact.id, role: 'other', primary: true }],
       }),
-    ).rejects.toMatchObject({ code: 'accountMismatch' });
+    ).rejects.toMatchObject({ code: 'companyMismatch' });
     const opportunity = await service.save(actor('rep'), 'opportunities', {
       name: 'Deal',
-      accountId: account.id,
+      companyId: company.id,
       amount: 100,
     });
     await expect(
@@ -987,7 +987,7 @@ describe('CRM API security and domain rules', () => {
     );
     expect(won.closedAt).toBeTruthy();
     expect(
-      (await service.get(actor('rep'), 'accounts', account.id)).status,
+      (await service.get(actor('rep'), 'companies', company.id)).status,
     ).toBe('customer');
     const reopened = await service.save(
       actor('rep'),
@@ -997,44 +997,44 @@ describe('CRM API security and domain rules', () => {
     );
     expect(reopened.closedAt).toBeNull();
     expect(
-      (await service.get(actor('rep'), 'accounts', account.id)).status,
+      (await service.get(actor('rep'), 'companies', company.id)).status,
     ).toBe('customer');
   });
-  it('moves a deal to another account without its contacts, and never with tasks', async () => {
+  it('moves a deal to another company without its contacts, and never with tasks', async () => {
     const [from, to] = await Promise.all(
       ['Move from', 'Move to'].map((name) =>
-        service.save(actor('rep'), 'accounts', { name, source: 'website' }),
+        service.save(actor('rep'), 'companies', { name, source: 'website' }),
       ),
     );
     const contact = await service.save(actor('rep'), 'contacts', {
-      name: 'Old account person',
-      accountId: from.id,
+      name: 'Old company person',
+      companyId: from.id,
       gender: 'unknown',
     });
     const deal = await service.save(actor('rep'), 'opportunities', {
       name: 'Moving deal',
-      accountId: from.id,
+      companyId: from.id,
       contacts: [{ contactId: contact.id, role: 'other' }],
     });
-    // Its contacts are the old account's people: moving it alone is refused.
+    // Its contacts are the old company's people: moving it alone is refused.
     await expect(
       service.save(
         actor('rep'),
         'opportunities',
-        { accountId: to.id },
+        { companyId: to.id },
         deal.id,
       ),
-    ).rejects.toMatchObject({ code: 'accountMismatch' });
+    ).rejects.toMatchObject({ code: 'companyMismatch' });
     // Moved together with the contacts taken off, as the page confirms it.
     const moved = await service.save(
       actor('rep'),
       'opportunities',
-      { accountId: to.id, contacts: [] },
+      { companyId: to.id, contacts: [] },
       deal.id,
     );
-    expect(moved.accountId).toBe(to.id);
+    expect(moved.companyId).toBe(to.id);
     expect(moved.contacts).toEqual([]);
-    // Once it has tasks it stays with its account, and says so first.
+    // Once it has tasks it stays with its company, and says so first.
     await service.save(actor('rep'), 'tasks', {
       name: 'Deal call',
       opportunityId: deal.id,
@@ -1044,18 +1044,18 @@ describe('CRM API security and domain rules', () => {
       service.save(
         actor('rep'),
         'opportunities',
-        { accountId: from.id, contacts: [] },
+        { companyId: from.id, contacts: [] },
         deal.id,
       ),
     ).rejects.toMatchObject({ code: 'opportunityHasTasks' });
   });
   it('enforces approval ownership, lock states, assigned approver and no self approval', async () => {
-    const account = await service.save(actor('rep'), 'accounts', {
-      name: 'Approval account',
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Approval company',
     });
     const opportunity = await service.save(actor('rep'), 'opportunities', {
       name: 'Approval deal',
-      accountId: account.id,
+      companyId: company.id,
     });
     const approval = await service.save(actor('rep'), 'approvals', {
       name: 'Discount request',
@@ -1116,12 +1116,12 @@ describe('CRM API security and domain rules', () => {
   });
 
   it('refuses an approval for an opportunity the applicant may not edit', async () => {
-    const account = await service.save(actor('manager'), 'accounts', {
-      name: 'Manager account',
+    const company = await service.save(actor('manager'), 'companies', {
+      name: 'Manager company',
     });
     const opportunity = await service.save(actor('manager'), 'opportunities', {
       name: 'Manager deal',
-      accountId: account.id,
+      companyId: company.id,
     });
     await expect(
       service.save(actor('rep'), 'approvals', {
@@ -1518,7 +1518,7 @@ describe('CRM API security and domain rules', () => {
       company: 'Orbit Kitchen Supplies',
       email: 'zhou@orbit-kitchen.test',
     });
-    const account = await service.save(actor('rep'), 'accounts', {
+    const company = await service.save(actor('rep'), 'companies', {
       name: 'Orbit Kitchen Group',
       ownerId: 'rep',
     });
@@ -1532,10 +1532,10 @@ describe('CRM API security and domain rules', () => {
     // Words in any order; grouped by kind in the search's order.
     expect(body.data.map((group) => group.entity)).toEqual([
       'leads',
-      'accounts',
+      'companies',
     ]);
     expect(body.data[0]?.rows.map((row) => row.id)).toEqual([lead.id]);
-    expect(body.data[1]?.rows.map((row) => row.id)).toEqual([account.id]);
+    expect(body.data[1]?.rows.map((row) => row.id)).toEqual([company.id]);
     // A word must match: one that matches nothing empties the result.
     expect(
       (
@@ -1703,28 +1703,28 @@ describe('CRM API security and domain rules', () => {
       'Sortcase A',
     ]);
     // A relation by the name it shows rather than its id.
-    const zeta = await service.save(actor('rep'), 'accounts', {
+    const zeta = await service.save(actor('rep'), 'companies', {
       name: 'Sortcase Zeta',
       source: 'website',
     });
-    const alpha = await service.save(actor('rep'), 'accounts', {
+    const alpha = await service.save(actor('rep'), 'companies', {
       name: 'Sortcase Alpha',
       source: 'website',
     });
-    for (const [name, accountId] of [
+    for (const [name, companyId] of [
       ['Sortcase at Zeta', zeta.id],
       ['Sortcase at Alpha', alpha.id],
     ])
       await service.save(actor('rep'), 'contacts', {
         name,
-        accountId,
+        companyId,
         gender: 'unknown',
       });
     expect(
       (
         await service.list(actor('rep'), 'contacts', {
           search: 'Sortcase',
-          sort: 'accountId',
+          sort: 'companyId',
         })
       ).data.map((contact) => contact.name),
     ).toEqual(['Sortcase at Alpha', 'Sortcase at Zeta']);
@@ -1779,23 +1779,23 @@ describe('CRM API security and domain rules', () => {
     ).toEqual(['Tie second created', 'Tie first created', 'Tie earlier']);
   });
   it('computes statistics with real money, dates, status history, pagination and contact links', async () => {
-    const account = await service.save(actor('rep'), 'accounts', {
-      name: 'Statistics account',
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Statistics company',
     });
     const contact = await service.save(actor('rep'), 'contacts', {
       name: 'Statistics contact',
-      accountId: account.id,
+      companyId: company.id,
     });
     const opportunity = await service.save(actor('rep'), 'opportunities', {
       name: 'Statistics opportunity',
-      accountId: account.id,
+      companyId: company.id,
       amount: 1000,
       currency: 'CNY',
       contacts: [{ contactId: contact.id, role: 'other', primary: true }],
     });
     const planned = await service.save(actor('other'), 'tasks', {
       name: 'Colleague next meeting',
-      accountId: account.id,
+      companyId: company.id,
       opportunityId: opportunity.id,
       dueAt: new Date(Date.now() + 86400000).toISOString(),
       internalParticipants: ['rep'],
@@ -1891,28 +1891,28 @@ describe('CRM API security and domain rules', () => {
       { stage: 'won' },
       opportunity.id,
     );
-    const accounts = await statistics(service, actor('rep'), 'accounts', {
-      search: 'Statistics account',
+    const companies = await statistics(service, actor('rep'), 'companies', {
+      search: 'Statistics company',
     });
-    expect(accounts.metrics).toMatchObject({
+    expect(companies.metrics).toMatchObject({
       customers: 1,
       churnedThisMonth: 0,
     });
     await service.save(
       actor('rep'),
-      'accounts',
+      'companies',
       { status: 'churned', churnReason: 'price' },
-      account.id,
+      company.id,
     );
     expect(
       (
-        await statistics(service, actor('rep'), 'accounts', {
-          search: 'Statistics account',
+        await statistics(service, actor('rep'), 'companies', {
+          search: 'Statistics company',
         })
       ).metrics,
     ).toMatchObject({ customers: 0, churnedThisMonth: 1 });
     const contacts = await statistics(service, actor('rep'), 'contacts', {
-      accountId: account.id,
+      companyId: company.id,
     });
     expect(contacts.metrics).toMatchObject({
       inactiveContacts: 0,
@@ -2168,7 +2168,7 @@ describe('CRM API security and domain rules', () => {
       (users.find((user) => user.id === 'rep') as { access?: unknown })?.access,
     ).toEqual({
       leads: 'view:all create edit:own',
-      accounts: 'view:all create edit:own',
+      companies: 'view:all create edit:own',
       contacts: 'view:all create edit:own',
       opportunities: 'view:all create edit:own',
       tasks: 'view:all create edit:own',
@@ -2240,8 +2240,8 @@ describe('CRM API security and domain rules', () => {
     ).toHaveLength(data.length);
   });
   it("summarizes records by field and period within the reader's scope, per currency", async () => {
-    const account = await service.save(actor('rep'), 'accounts', {
-      name: 'Summary account',
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Summary company',
     });
     for (const [name, stage, amount, currency, expectedCloseAt] of [
       ['Summary A', 'contact', 100, 'CNY', '2026-07-15'],
@@ -2250,7 +2250,7 @@ describe('CRM API security and domain rules', () => {
     ] as const)
       await service.save(actor('rep'), 'opportunities', {
         name,
-        accountId: account.id,
+        companyId: company.id,
         stage,
         amount,
         currency,
@@ -2259,7 +2259,7 @@ describe('CRM API security and domain rules', () => {
     const byStage = await service.summarize(
       actor('rep'),
       'opportunities',
-      { accountId: toText(account.id) },
+      { companyId: toText(company.id) },
       { groupBy: 'stage', measures: ['amount'] },
     );
     expect(byStage.total).toBe(3);
@@ -2305,7 +2305,7 @@ describe('CRM API security and domain rules', () => {
     const byMonth = await service.summarize(
       actor('rep'),
       'opportunities',
-      { accountId: toText(account.id) },
+      { companyId: toText(company.id) },
       { groupBy: 'expectedCloseAt', period: 'month' },
     );
     expect(byMonth.groups.map((g) => [g.key, g.count])).toEqual([
@@ -2317,7 +2317,7 @@ describe('CRM API security and domain rules', () => {
         await service.summarize(
           actor('rep'),
           'opportunities',
-          { accountId: toText(account.id) },
+          { companyId: toText(company.id) },
           { groupBy: 'expectedCloseAt', period: 'quarter' },
         )
       ).groups.map((g) => g.key),
@@ -2346,7 +2346,7 @@ describe('CRM API security and domain rules', () => {
       { actor: { id: 'rep', roles: [], isRoot: false } },
       {
         entity: 'opportunities',
-        accountId: account.id,
+        companyId: company.id,
         groupBy: 'ownerId',
       },
       { toolCallId: 'call', writer: () => undefined },
@@ -2357,21 +2357,21 @@ describe('CRM API security and domain rules', () => {
     expect(byOwner.groups).toEqual([{ key: 'rep', count: 3, measures: [] }]);
     // (The test users are named after their ids.)
     expect(byOwner.names).toEqual({ rep: 'rep' });
-    const byAccount = (await tool.invoke(
+    const byCompany = (await tool.invoke(
       { actor: { id: 'rep', roles: [], isRoot: false } },
-      { entity: 'opportunities', accountId: account.id, groupBy: 'accountId' },
+      { entity: 'opportunities', companyId: company.id, groupBy: 'companyId' },
       { toolCallId: 'call', writer: () => undefined },
     )) as { names: Record<string, string> };
     // Tasks filter by when they take place.
     await service.save(actor('rep'), 'tasks', {
       name: 'Summary call',
-      accountId: account.id,
+      companyId: company.id,
       status: 'open',
       dueAt: '2026-08-10T02:00:00.000Z',
     });
     await service.save(actor('rep'), 'tasks', {
       name: 'Summary meeting',
-      accountId: account.id,
+      companyId: company.id,
       status: 'open',
       dueAt: '2026-10-10T02:00:00.000Z',
     });
@@ -2379,7 +2379,7 @@ describe('CRM API security and domain rules', () => {
       { actor: { id: 'rep', roles: [], isRoot: false } },
       {
         entity: 'tasks',
-        accountId: account.id,
+        companyId: company.id,
         dueFrom: '2026-07-01T00:00:00.000Z',
         dueTo: '2026-09-30T23:59:59.999Z',
         groupBy: 'status',
@@ -2388,8 +2388,8 @@ describe('CRM API security and domain rules', () => {
     )) as { total: number; groups: { key: string }[] };
     expect(inQuarter.total).toBe(1);
     expect(inQuarter.groups.map((g) => g.key)).toEqual(['open']);
-    expect(byAccount.names).toEqual({
-      [toText(account.id)]: 'Summary account',
+    expect(byCompany.names).toEqual({
+      [toText(company.id)]: 'Summary company',
     });
   });
   it('screens a proposed write by the rules the tools apply, before the card offers confirmation', async () => {
@@ -2399,12 +2399,12 @@ describe('CRM API security and domain rules', () => {
     const mine = await service.save(actor('rep'), 'leads', {
       name: 'Screen own',
     });
-    const account = await service.save(actor('other'), 'accounts', {
-      name: 'Screen account',
+    const company = await service.save(actor('other'), 'companies', {
+      name: 'Screen company',
     });
     const deal = await service.save(actor('other'), 'opportunities', {
       name: 'Screen deal',
-      accountId: account.id,
+      companyId: company.id,
     });
     const screen = (
       who: string,
@@ -2744,7 +2744,7 @@ describe('CRM API security and domain rules', () => {
       scope.assertCanDisable?.('admin', connection),
     ).rejects.toMatchObject({ code: 'LAST_ADMINISTRATOR' });
     // Deleting: never the last administrator, nor someone a CRM record still
-    // names; someone else loses their CRM roles with the account.
+    // names; someone else loses their CRM roles with the company.
     await expect(
       scope.assertCanDelete?.('admin', 'admin', connection),
     ).rejects.toMatchObject({ code: 'LAST_ADMINISTRATOR' });
@@ -3008,7 +3008,7 @@ describe('CRM lead capture', () => {
       .spyOn(service, 'assistantEnabled')
       .mockResolvedValue(true);
     try {
-      await service.save(actor('rep'), 'accounts', { name: '华锐精工' });
+      await service.save(actor('rep'), 'companies', { name: '华锐精工' });
       const { container, runs } = capturing({
         leads: [
           {
@@ -3067,7 +3067,7 @@ describe('CRM lead capture', () => {
       });
       expect(leads[0].uncertain).toEqual(['jobTitle']);
       expect(leads[0].duplicates).toContainEqual(
-        expect.objectContaining({ entity: 'accounts', name: '华锐精工' }),
+        expect.objectContaining({ entity: 'companies', name: '华锐精工' }),
       );
       // A source is filled only when the text states one; otherwise the
       // form or the batch review asks for it.
@@ -4543,21 +4543,21 @@ describe('CRM opportunity follow-up', () => {
     return { evaluator: new OpportunityEvaluator(service, container), prompts };
   };
   const deal = async (name: string) => {
-    const account = await service.save(actor('rep'), 'accounts', {
+    const company = await service.save(actor('rep'), 'companies', {
       name: `${name} 客户`,
     });
     const contact = await service.save(actor('rep'), 'contacts', {
       name: `${name} 王总`,
-      accountId: account.id,
+      companyId: company.id,
     });
     const opportunity = await service.save(actor('rep'), 'opportunities', {
       name,
-      accountId: account.id,
+      companyId: company.id,
       amount: 50000,
       stage: 'qualification',
       contacts: [{ contactId: contact.id, role: 'decisionMaker' }],
     });
-    return { account, opportunity };
+    return { company, opportunity };
   };
   const advance = {
     recommendation: 'advance',
@@ -4586,13 +4586,13 @@ describe('CRM opportunity follow-up', () => {
       .spyOn(service, 'assistantEnabled')
       .mockResolvedValue(true);
     try {
-      const { account, opportunity } = await deal('跟进报工系统');
+      const { company, opportunity } = await deal('跟进报工系统');
       await service.save(actor('rep'), 'tasks', {
         name: '产品演示',
         status: 'completed',
         dueAt: '2026-09-20T02:00:00Z',
         opportunityId: opportunity.id,
-        accountId: account.id,
+        companyId: company.id,
         result: '客户在社区版上试了两个场景，反馈良好',
       });
       const { evaluator, prompts } = following(advance);
@@ -4600,12 +4600,12 @@ describe('CRM opportunity follow-up', () => {
       expect(entry).toMatchObject({ status: 'running' });
       await evaluator.idle();
       // The skill, the deal, its people and what came of its tasks.
-      // The account holds nothing about the company: it is looked up
+      // The company's particulars are empty: it is looked up
       // first, then the follow-up reads that research.
       expect(prompts[0]).toContain(
-        "First look up this opportunity's account company",
+        "First look up this opportunity's company",
       );
-      expect(prompts.at(-1)).toContain("Web research on the account's company");
+      expect(prompts.at(-1)).toContain("Web research on the company");
       expect(prompts.at(-1)).toContain('技能正文');
       expect(prompts.at(-1)).toContain('跟进报工系统');
       expect(prompts.at(-1)).toContain('决策');
@@ -4632,7 +4632,7 @@ describe('CRM opportunity follow-up', () => {
       const waiting = await pendingDecisions(service, actor('rep'));
       expect(waiting.data.find((row) => row.id === pending!.id)).toMatchObject({
         entity: 'opportunities',
-        opportunity: { name: '跟进报工系统', account: '跟进报工系统 客户' },
+        opportunity: { name: '跟进报工系统', company: '跟进报工系统 客户' },
       });
       // Accepted with only the date picked: the stage moves, the date is
       // set, the amount stays, and the meeting is planned on the deal.
@@ -4665,7 +4665,7 @@ describe('CRM opportunity follow-up', () => {
         name: '技术评估会（含部署）',
         status: 'open',
         opportunityId: opportunity.id,
-        accountId: account.id,
+        companyId: company.id,
       });
       expect(toText(planned.description)).toContain('带上部署方案');
       // Recorded as the AI's proposal the person confirmed.
@@ -4793,14 +4793,14 @@ describe('CRM opportunity follow-up', () => {
       .spyOn(service, 'assistantEnabled')
       .mockResolvedValue(true);
     try {
-      const { account, opportunity } = await deal('结果后跟进');
+      const { company, opportunity } = await deal('结果后跟进');
       const { evaluator } = following({ ...advance, stage: null });
       const task = await service.save(actor('rep'), 'tasks', {
         name: '电话确认',
         status: 'open',
         dueAt: new Date(Date.now() + 86_400_000).toISOString(),
         opportunityId: opportunity.id,
-        accountId: account.id,
+        companyId: company.id,
       });
       expect(
         await recordOutcome(
@@ -4879,23 +4879,23 @@ describe('CRM opportunity follow-up', () => {
       enrich: [{ field: 'website', value: 'https://a.test' }],
     });
   });
-  it('looks the account up only when it holds nothing, was renamed since, or long ago', async () => {
-    const { account } = await deal('调研时机');
+  it('looks the company up only when it holds nothing, was renamed since, or long ago', async () => {
+    const { company } = await deal('调研时机');
     // Nothing about the company yet.
-    expect(await accountResearchDue(service, account, 'none')).toBe(true);
+    expect(await companyResearchDue(service, company, 'none')).toBe(true);
     const filled = await service.save(
       actor('rep'),
-      'accounts',
+      'companies',
       { industry: 'manufacturing', employees: '51-200' },
-      account.id,
+      company.id,
     );
     // Filled by hand, its name and website untouched, never looked up: no
     // search. (A website filled or changed by hand would search.)
-    expect(await accountResearchDue(service, filled, 'none')).toBe(false);
+    expect(await companyResearchDue(service, filled, 'none')).toBe(false);
     // A follow-up that looked it up, then a person renaming the company.
     const opportunity = await service.save(actor('rep'), 'opportunities', {
       name: '调研时机二',
-      accountId: account.id,
+      companyId: company.id,
       stage: 'qualification',
     });
     await service.database
@@ -4917,33 +4917,33 @@ describe('CRM opportunity follow-up', () => {
         createdAt: new Date(Date.now() - 86_400_000).toISOString(),
       })
       .execute();
-    expect(await accountResearchDue(service, filled, 'none')).toBe(false);
+    expect(await companyResearchDue(service, filled, 'none')).toBe(false);
     const renamed = await service.save(
       actor('rep'),
-      'accounts',
+      'companies',
       { name: '调研时机 新名称' },
-      account.id,
+      company.id,
     );
-    expect(await accountResearchDue(service, renamed, 'none')).toBe(true);
+    expect(await companyResearchDue(service, renamed, 'none')).toBe(true);
     // The same change written from a card's findings is no reason to look
     // again.
-    const { account: found } = await deal('调研时机三');
+    const { company: found } = await deal('调研时机三');
     await service.save(
       { ...actor('rep'), via: 'assistant' },
-      'accounts',
+      'companies',
       { website: 'https://found.test', industry: 'manufacturing' },
       found.id,
     );
     expect(
-      await accountResearchDue(
+      await companyResearchDue(
         service,
-        await service.get(actor('rep'), 'accounts', found.id),
+        await service.get(actor('rep'), 'companies', found.id),
         'none',
       ),
     ).toBe(false);
     // Looked up more than 90 days before.
     expect(
-      await accountResearchDue(
+      await companyResearchDue(
         service,
         renamed,
         'none',
@@ -4952,12 +4952,12 @@ describe('CRM opportunity follow-up', () => {
     ).toBe(true);
   });
 
-  it('offers what the web says about the account and writes the picked findings with the accept', async () => {
+  it('offers what the web says about the company and writes the picked findings with the accept', async () => {
     const enabled = vi
       .spyOn(service, 'assistantEnabled')
       .mockResolvedValue(true);
     try {
-      const { account, opportunity } = await deal('联网补全');
+      const { company, opportunity } = await deal('联网补全');
       const { evaluator } = following({
         ...advance,
         updates: [],
@@ -4998,7 +4998,7 @@ describe('CRM opportunity follow-up', () => {
       );
       expect(accepted.ai.enrichedFields).toEqual(['website']);
       expect(
-        await service.get(actor('rep'), 'accounts', account.id),
+        await service.get(actor('rep'), 'companies', company.id),
       ).toMatchObject({ website: 'https://lianwang.test', employees: null });
     } finally {
       enabled.mockRestore();
@@ -5064,17 +5064,17 @@ describe('CRM opportunity follow-up', () => {
   });
 
   // The customer's people with a part in the deal: a role changed, a
-  // contact of the account added, a person created; written as ticked.
+  // contact of the company added, a person created; written as ticked.
   it("proposes the customer's people and their parts, and sets the ones kept", async () => {
     const enabled = vi
       .spyOn(service, 'assistantEnabled')
       .mockResolvedValue(true);
     try {
-      const { account, opportunity } = await deal('联系人角色');
-      // On the account but not on the deal.
+      const { company, opportunity } = await deal('联系人角色');
+      // On the company but not on the deal.
       const liu = await service.save(actor('rep'), 'contacts', {
         name: '刘总',
-        accountId: account.id,
+        companyId: company.id,
       });
       const run = following({
         ...advance,
@@ -5158,7 +5158,7 @@ describe('CRM opportunity follow-up', () => {
       expect(roles[toText(liu.id)]).toBe('decisionMaker');
       const chen = (
         await service.list(actor('rep'), 'contacts', {
-          accountId: toText(account.id),
+          companyId: toText(company.id),
           pageSize: 50,
         })
       ).data.find((c) => c.name === '老陈');
@@ -6136,12 +6136,12 @@ describe('lead signals', () => {
       request: vi.fn(async () => ({ id: 'd' })),
       available: async () => true,
     };
-    const account = await service.save(actor('rep'), 'accounts', {
+    const company = await service.save(actor('rep'), 'companies', {
       name: '活动归属客户',
     });
     const deal = await service.save(actor('rep'), 'opportunities', {
       name: '活动归属商机',
-      accountId: account.id,
+      companyId: company.id,
     });
     const lead = await service.save(actor('rep'), 'leads', {
       name: '活动归属线索',
@@ -6192,7 +6192,7 @@ describe('demo dataset', () => {
       await Promise.all(
         [
           'leads',
-          'accounts',
+          'companies',
           'contacts',
           'opportunities',
           'tasks',
@@ -6235,7 +6235,7 @@ describe('demo dataset', () => {
     expect((await meta('admin')).demoPresent).toBe(true);
     expect(status.language).toBe('zh-CN');
     expect(status.records).toBeGreaterThan(100);
-    expect(await count('accounts')).toBe(before.accounts + 8);
+    expect(await count('companies')).toBe(before.companies + 8);
     expect(await count('opportunities')).toBe(before.opportunities + 30);
     expect(await count('leads')).toBe(before.leads + 16);
     expect(await count('approvals')).toBe(before.approvals + 4);
@@ -6248,15 +6248,15 @@ describe('demo dataset', () => {
           pageSize: 500,
         })
       ).total;
-    expect(await ownedByImporter('accounts')).toBe(2);
+    expect(await ownedByImporter('companies')).toBe(2);
     expect(await ownedByImporter('leads')).toBe(4);
     expect(await ownedByImporter('contacts')).toBeGreaterThan(0);
     expect(await ownedByImporter('opportunities')).toBeGreaterThan(0);
     expect(await ownedByImporter('tasks')).toBeGreaterThan(0);
     expect(await ownedByImporter('approvals')).toBe(1);
-    // Every demo account and lead carries its whole region: the province
+    // Every demo company and lead carries its whole region: the province
     // of its city as well as the country and the city.
-    for (const entity of ['accounts', 'leads'] as const) {
+    for (const entity of ['companies', 'leads'] as const) {
       const { data } = await service.list(actor('admin'), entity, {
         pageSize: 500,
       });
@@ -6265,7 +6265,7 @@ describe('demo dataset', () => {
       expect(demo.filter((r) => !r.state)).toEqual([]);
     }
     const shenzhen = (
-      await service.list(actor('admin'), 'accounts', { pageSize: 500 })
+      await service.list(actor('admin'), 'companies', { pageSize: 500 })
     ).data.find((r) => r.city === '深圳');
     expect(shenzhen?.state).toBe('CN-44');
     // Tasks cover a month back and three months ahead on every
@@ -6298,13 +6298,13 @@ describe('demo dataset', () => {
       expect(user?.roles).toEqual([account.role]);
     }
     // The administrator who imported sells too: a sales manager besides,
-    // owning a share of the accounts, deals and leads.
+    // owning a share of the companies, deals and leads.
     const adminRoles = (await service.users(actor('admin'))).find(
       (u) => u.id === 'admin',
     )?.roles;
     expect(adminRoles).toContain('sales-manager');
     expect(adminRoles).toContain('system-administrator');
-    for (const entity of ['accounts', 'opportunities', 'leads'] as const) {
+    for (const entity of ['companies', 'opportunities', 'leads'] as const) {
       const owned = await service.list(actor('admin'), entity, {
         pageSize: 1,
         ownerId: 'admin',
@@ -6497,7 +6497,7 @@ describe('demo dataset', () => {
         /\p{Script=Han}/u,
       );
     }
-    // The English accounts are its own, created by the import, and the
+    // The English companies are its own, created by the import, and the
     // Chinese ones keep their names.
     const users = await service.users(actor('admin'));
     const daniel = users.find((u) => u.username === 'daniel');
@@ -6651,23 +6651,23 @@ describe("a record's timeline and its tasks", () => {
 
 describe('resolved titles and paged filters', () => {
   it('names every record a page refers to and filters tasks by date', async () => {
-    const account = await service.save(actor('rep'), 'accounts', {
-      name: 'Titled account',
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Titled company',
     });
     const contact = await service.save(actor('rep'), 'contacts', {
       name: 'Titled person',
-      accountId: account.id,
+      companyId: company.id,
     });
     const deal = await service.save(actor('rep'), 'opportunities', {
       name: 'Titled deal',
-      accountId: account.id,
+      companyId: company.id,
       amount: 12345,
       currency: 'CNY',
       contacts: [{ contactId: contact.id, role: 'other' }],
     });
     const task = await service.save(actor('rep'), 'tasks', {
       name: 'Titled call',
-      accountId: account.id,
+      companyId: company.id,
       opportunityId: deal.id,
       dueAt: '2031-03-10T09:00:00.000Z',
     });
@@ -6679,32 +6679,32 @@ describe('resolved titles and paged filters', () => {
     });
     const page = async (path: string): Promise<Record<string, any>> =>
       (await request(path, 'rep').then((r) => r.json())) as Record<string, any>;
-    // A contact and a deal carry their account in the title; the bare name
-    // stays available for lists already scoped to that account.
+    // A contact and a deal carry their company in the title; the bare name
+    // stays available for lists already scoped to that company.
     const contacts = await page(`/contacts?ids=${toText(contact.id)}`);
     expect(contacts.titles[toText(contact.id)]).toBe(
-      'Titled person / Titled account',
+      'Titled person / Titled company',
     );
     expect(contacts.names[toText(contact.id)]).toBe('Titled person');
     const deals = await page(`/opportunities?ids=${toText(deal.id)}`);
-    expect(deals.titles[toText(deal.id)]).toBe('Titled account / Titled deal');
-    expect(deals.titles[toText(account.id)]).toBe('Titled account');
+    expect(deals.titles[toText(deal.id)]).toBe('Titled company / Titled deal');
+    expect(deals.titles[toText(company.id)]).toBe('Titled company');
     expect(deals.titles[toText(contact.id)]).toBe(
-      'Titled person / Titled account',
+      'Titled person / Titled company',
     );
     // The approval list names the deal and carries its size for the column.
     const approvals = await page(`/approvals?ids=${toText(approval.id)}`);
     expect(approvals.titles[toText(deal.id)]).toBe(
-      'Titled account / Titled deal',
+      'Titled company / Titled deal',
     );
     expect(approvals.opportunities[toText(deal.id)]).toEqual({
       amount: 12345,
       currency: 'CNY',
     });
     // A detail page gets the names of what it links to and, for a deal, the
-    // account's contacts to offer.
+    // company's contacts to offer.
     const detail = await page(`/opportunities/${toText(deal.id)}`);
-    expect(detail.data.titles[toText(account.id)]).toBe('Titled account');
+    expect(detail.data.titles[toText(company.id)]).toBe('Titled company');
     expect(
       detail.data.related.contacts.map((c: { id: string }) => c.id),
     ).toContain(contact.id);
@@ -6714,7 +6714,7 @@ describe('resolved titles and paged filters', () => {
     );
     expect(inMarch.data.map((r: { id: string }) => r.id)).toContain(task.id);
     expect(inMarch.titles[toText(deal.id)]).toBe(
-      'Titled account / Titled deal',
+      'Titled company / Titled deal',
     );
     const inApril = await page(
       '/tasks?dueFrom=2031-04-01T00:00:00.000Z&dueTo=2031-04-30T23:59:59.999Z',
@@ -6730,24 +6730,24 @@ describe('resolved titles and paged filters', () => {
     expect((await request('/leads/lookup', 'rep')).status).toBe(404);
   });
   it("pages a detail page's related lists, its history and the AI actions", async () => {
-    const account = await service.save(actor('rep'), 'accounts', {
-      name: 'Busy account',
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Busy company',
     });
     for (let i = 0; i < 23; i++)
       await service.save(actor('rep'), 'contacts', {
         name: `Person ${toText(i)}`,
-        accountId: account.id,
+        companyId: company.id,
       });
     // Twenty-two history entries: the creation and twenty-one renames.
     for (let i = 0; i < 21; i++)
       await service.save(
         actor('rep'),
-        'accounts',
-        { name: `Busy account ${toText(i)}` },
-        toText(account.id),
+        'companies',
+        { name: `Busy company ${toText(i)}` },
+        toText(company.id),
       );
     const detail = (await request(
-      `/accounts/${toText(account.id)}`,
+      `/companies/${toText(company.id)}`,
       'rep',
     ).then((r) => r.json())) as {
       data: {
@@ -6762,13 +6762,13 @@ describe('resolved titles and paged filters', () => {
     expect(detail.data.history).toHaveLength(20);
     expect(detail.data.historyTotal).toBe(22);
     const contacts = (await request(
-      `/contacts?accountId=${toText(account.id)}&page=2&pageSize=20`,
+      `/contacts?companyId=${toText(company.id)}&page=2&pageSize=20`,
       'rep',
     ).then((r) => r.json())) as { data: unknown[]; total: number };
     expect(contacts.data).toHaveLength(3);
     expect(contacts.total).toBe(23);
     const history = (await request(
-      `/accounts/${toText(account.id)}/history?page=2&pageSize=20`,
+      `/companies/${toText(company.id)}/history?page=2&pageSize=20`,
       'rep',
     ).then((r) => r.json())) as {
       data: unknown[];
@@ -6780,24 +6780,24 @@ describe('resolved titles and paged filters', () => {
     expect(history.total).toBe(22);
     // History is read within the reader's access, like the record.
     expect(
-      (await request(`/accounts/${toText(account.id)}/history`, 'outsider'))
+      (await request(`/companies/${toText(company.id)}/history`, 'outsider'))
         .status,
     ).toBe(403);
   });
   it('pages the workspace lists in fives and only for the reader', async () => {
     // Seven overdue tasks of the reader's own, one of somebody else's.
-    const late = await service.save(actor('rep'), 'accounts', {
-      name: 'Late account',
+    const late = await service.save(actor('rep'), 'companies', {
+      name: 'Late company',
     });
     for (let i = 0; i < 7; i++)
       await service.save(actor('rep'), 'tasks', {
         name: `Overdue ${toText(i)}`,
-        accountId: late.id,
+        companyId: late.id,
         dueAt: `2020-01-0${toText(i + 1)}T09:00:00.000Z`,
       });
     await service.save(actor('other'), 'tasks', {
       name: 'Someone else is late',
-      accountId: late.id,
+      companyId: late.id,
       dueAt: '2020-02-01T09:00:00.000Z',
     });
     const board = (await request('/dashboard?scope=mine', 'rep').then((r) =>
@@ -6851,7 +6851,8 @@ it('maps legacy industry and country text to codes and back', async () => {
       directory: resolve('database/main/migrations'),
       packageName: 'crm',
     });
-    await migrator.latest();
+    // Before accounts became companies, the table the migration remaps.
+    await migrator.upTo('202610080003_crm_record_notes_to_timeline');
     const query = isolated.query();
     await query
       .insertInto('crmAccounts')
@@ -7076,9 +7077,10 @@ it('reverses the CRM migration on a real SQLite database', async () => {
         notes: '  ',
       })
       .execute();
-    expect((await migrator.latest()).executed).toEqual([
-      '202610080003_crm_record_notes_to_timeline',
-    ]);
+    expect(
+      (await migrator.upTo('202610080003_crm_record_notes_to_timeline'))
+        .executed,
+    ).toEqual(['202610080003_crm_record_notes_to_timeline']);
     const moved = await isolated
       .query()
       .selectFrom('crmHistory')
@@ -7103,7 +7105,36 @@ it('reverses the CRM migration on a real SQLite database', async () => {
           .executeTakeFirstOrThrow()) as object,
       ),
     ).not.toContain('notes');
-    expect((await migrator.latest()).executed).toEqual([]);
+    // Accounts become companies on the whole schema, and back.
+    expect((await migrator.latest()).executed).toEqual([
+      '202610100001_crm_companies',
+    ]);
+    expect(
+      await isolated
+        .query()
+        .selectFrom('crmContacts')
+        .select(['companyId'])
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ companyId: 'account' });
+    expect(
+      await isolated
+        .query()
+        .selectFrom('crmHistory')
+        .select(['entity'])
+        .where('action', '=', 'note')
+        .execute(),
+    ).toEqual([{ entity: 'companies' }]);
+    expect((await migrator.rollback()).rolledBack).toEqual([
+      '202610100001_crm_companies',
+    ]);
+    expect(await isolated.builder().hasCollection('crmCompanies')).toBe(false);
+    expect(
+      await isolated
+        .query()
+        .selectFrom('crmContacts')
+        .select(['accountId'])
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ accountId: 'account' });
     expect((await migrator.rollback()).rolledBack).toEqual([
       '202610080003_crm_record_notes_to_timeline',
     ]);
@@ -7255,10 +7286,10 @@ it('rewrites legacy epoch timestamps so repository reads succeed', async () => {
 
 describe('approval-notification workflow', () => {
   const approvalFor = async (crm: CrmService, name: string) => {
-    const account = await crm.save(actor('rep'), 'accounts', { name });
+    const company = await crm.save(actor('rep'), 'companies', { name });
     const opportunity = await crm.save(actor('rep'), 'opportunities', {
       name: `${name} deal`,
-      accountId: account.id,
+      companyId: company.id,
     });
     return crm.save(actor('rep'), 'approvals', {
       name: `${name} request`,
@@ -7288,7 +7319,7 @@ describe('approval-notification workflow', () => {
       trigger,
       registerInstruction: () => undefined,
     }));
-    const approval = await approvalFor(crm, 'Workflow account');
+    const approval = await approvalFor(crm, 'Workflow company');
     const submitted = await crm.approvalAction(
       actor('rep'),
       approval.id,
@@ -7345,7 +7376,7 @@ describe('approval-notification workflow', () => {
         .mockResolvedValue({ status: 'skipped', reason: 'disabled' }),
       registerInstruction: () => undefined,
     }));
-    const approval = await approvalFor(crm, 'Skipped account');
+    const approval = await approvalFor(crm, 'Skipped company');
     await crm.approvalAction(actor('rep'), approval.id, 'submit');
     const decided = await crm.approvalAction(
       actor('manager'),
@@ -7357,7 +7388,7 @@ describe('approval-notification workflow', () => {
   });
 
   it('queues each message once from the run script, however often it reruns', async () => {
-    const approval = await approvalFor(service, 'Script account');
+    const approval = await approvalFor(service, 'Script company');
     const at = new Date().toISOString();
     const args = {
       recordId: approval.id,
@@ -7407,7 +7438,7 @@ describe('record-notification workflow', () => {
       ownerId: 'rep',
     });
     inline.triggers.length = 0;
-    // The writer and an unknown account are dropped; the manager is kept.
+    // The writer and an unknown company are dropped; the manager is kept.
     const note = await crm.addNote(
       actor('rep'),
       'leads',
@@ -7987,8 +8018,8 @@ describe('phone numbers', () => {
         (
           await service.save(actor('rep'), 'contacts', {
             name: '迁移号码',
-            accountId: (
-              await service.save(actor('rep'), 'accounts', {
+            companyId: (
+              await service.save(actor('rep'), 'companies', {
                 name: '迁移号码客户',
               })
             ).id,
@@ -8010,22 +8041,22 @@ describe('phone numbers', () => {
 });
 
 describe('CRM opportunity capture', () => {
-  it('organises a text into one opportunity on its account, matching its people and open deals', async () => {
+  it('organises a text into one opportunity on its company, matching its people and open deals', async () => {
     const enabled = vi
       .spyOn(service, 'assistantEnabled')
       .mockResolvedValue(true);
     try {
-      const account = await service.save(actor('rep'), 'accounts', {
+      const company = await service.save(actor('rep'), 'companies', {
         name: '商机整理精工有限公司',
       });
       const known = await service.save(actor('rep'), 'contacts', {
         name: '陈整理',
-        accountId: account.id,
+        companyId: company.id,
         phone: '13801119999',
       });
       const open = await service.save(actor('rep'), 'opportunities', {
         name: '在谈的生产平台',
-        accountId: account.id,
+        companyId: company.id,
         stage: 'proposal',
         source: 'website',
       });
@@ -8095,9 +8126,9 @@ describe('CRM opportunity capture', () => {
       expect(prompts[0]).toContain(
         'Organise the text below into one sales opportunity',
       );
-      expect(deal.accounts).toEqual([{ id: account.id, name: account.name }]);
+      expect(deal.companies).toEqual([{ id: company.id, name: company.name }]);
       expect(deal.input).toMatchObject({
-        accountId: account.id,
+        companyId: company.id,
         name: '仓库系统（专业版）',
         amount: 300000,
         stage: 'qualification',
@@ -8137,7 +8168,7 @@ describe('CRM opportunity capture', () => {
         {
           text: '商机整理精工的陈整理来信……',
           instruction: '业务类型改成增购',
-          accountId: account.id,
+          companyId: company.id,
           deal: {
             ...deal.input,
             contacts: [
@@ -8152,11 +8183,11 @@ describe('CRM opportunity capture', () => {
       expect(prompts[1]).toContain('"name": "孙新人"');
       expect(prompts[1]).not.toContain('"contacts"');
       expect(adjusted.deal.input.contacts).toEqual(deal.input.contacts);
-      // Another account picked: nobody matches there.
-      const other = await service.save(actor('rep'), 'accounts', {
+      // Another company picked: nobody matches there.
+      const other = await service.save(actor('rep'), 'companies', {
         name: '另一家整理客户',
       });
-      const again = await matchAccount(service, actor('rep'), other.id, [
+      const again = await matchCompany(service, actor('rep'), other.id, [
         deal.people[0],
       ]);
       expect(again).toEqual({
@@ -8179,12 +8210,12 @@ describe('the tasks a follow-up reads', () => {
   // A next step carries on a planned task by its reference; one done or
   // called off has no id to carry on, so pointing at it plans a new one.
   it('lets only a planned task be carried on', async () => {
-    const account = await service.save(actor('rep'), 'accounts', {
+    const company = await service.save(actor('rep'), 'companies', {
       name: '沿用活动客户',
     });
     const opportunity = await service.save(actor('rep'), 'opportunities', {
       name: '沿用活动商机',
-      accountId: account.id,
+      companyId: company.id,
       stage: 'negotiation',
     });
     const at = (days: number) =>
@@ -8308,12 +8339,12 @@ describe('opportunity signals', () => {
   });
 
   it('starts a follow-up per signal as the owner, never over a waiting card', async () => {
-    const account = await service.save(actor('rep'), 'accounts', {
+    const company = await service.save(actor('rep'), 'companies', {
       name: '巡检客户',
     });
     const closing = await service.save(actor('rep'), 'opportunities', {
       name: '快到成交日',
-      accountId: account.id,
+      companyId: company.id,
       stage: 'proposal',
       expectedCloseAt: new Date(Date.now() + 3 * 86_400_000)
         .toISOString()
@@ -8321,7 +8352,7 @@ describe('opportunity signals', () => {
     });
     const waiting = await service.save(actor('rep'), 'opportunities', {
       name: '有卡片等着的商机',
-      accountId: account.id,
+      companyId: company.id,
       stage: 'proposal',
       expectedCloseAt: new Date(Date.now() + 3 * 86_400_000)
         .toISOString()
@@ -8447,18 +8478,18 @@ describe('mail in the timeline', () => {
       email: 'buyer@lead-mail.test',
       source: 'website',
     });
-    const account = await service.save(actor('rep'), 'accounts', {
+    const company = await service.save(actor('rep'), 'companies', {
       name: '邮件客户',
       website: 'https://www.acme-mail.test',
     });
     const contact = await service.save(actor('rep'), 'contacts', {
       name: '采购',
       email: 'cto@acme-mail.test',
-      accountId: account.id,
+      companyId: company.id,
     });
     const deal = await service.save(actor('rep'), 'opportunities', {
       name: '邮件商机',
-      accountId: account.id,
+      companyId: company.id,
       contacts: [{ contactId: contact.id, role: 'other' }],
     });
     mailbox.accounts = { rep: 'rep@example.test' };
@@ -8473,7 +8504,7 @@ describe('mail in the timeline', () => {
         subject: '询价',
         receivedAt: ago(30),
       },
-      // The contact's colleague at the company's domain: the account.
+      // The contact's colleague at the company's domain: the company.
       {
         id: 'a1',
         accountId: 'mailbox-rep',
@@ -8508,7 +8539,7 @@ describe('mail in the timeline', () => {
     const replied = vi.fn();
     timeline.customerReplied = replied;
     try {
-      // The lead; the contact, its account and its deal.
+      // The lead; the contact, its company and its deal.
       expect(await timeline.syncUser('rep', now)).toBe(4);
       const entries = await database
         .query()
@@ -8517,7 +8548,7 @@ describe('mail in the timeline', () => {
         .where('action', '=', 'mail')
         .execute();
       expect(entries.map((e) => `${e.entity}:${e.sourceKey}`).sort()).toEqual([
-        'accounts:mailbox-rep:deal-thread',
+        'companies:mailbox-rep:deal-thread',
         'contacts:mailbox-rep:deal-thread',
         'leads:mailbox-rep:lead-thread',
         'opportunities:mailbox-rep:deal-thread',
@@ -8535,7 +8566,7 @@ describe('mail in the timeline', () => {
       });
       expect(
         JSON.parse(
-          toText(entries.find((e) => e.entity === 'accounts')!.changes),
+          toText(entries.find((e) => e.entity === 'companies')!.changes),
         ).participants.sort(),
       ).toEqual(['cto@acme-mail.test', 'it@acme-mail.test']);
       // Mail with the customer is contact: the new lead is being worked.
@@ -8683,21 +8714,21 @@ describe('tasks', () => {
     expect(isEndOfDay(new Date('2026-11-03T06:30:00.000Z'), zone)).toBe(false);
   });
 
-  it('links a task to a lead, or to an account and its deal, not both', async () => {
+  it('links a task to a lead, or to a company and its deal, not both', async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: 'Either lead',
       source: 'website',
     });
-    const account = await service.save(actor('rep'), 'accounts', {
-      name: 'Either account',
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Either company',
     });
     await expect(
       service.save(actor('rep'), 'tasks', {
         name: 'Both',
         leadId: lead.id,
-        accountId: account.id,
+        companyId: company.id,
       }),
-    ).rejects.toMatchObject({ code: 'leadOrAccount' });
+    ).rejects.toMatchObject({ code: 'leadOrCompany' });
     expect(
       await service.save(actor('rep'), 'tasks', {
         name: 'Lead only',
@@ -8706,10 +8737,10 @@ describe('tasks', () => {
     ).toMatchObject({ leadId: lead.id });
     expect(
       await service.save(actor('rep'), 'tasks', {
-        name: 'Account only',
-        accountId: account.id,
+        name: 'Company only',
+        companyId: company.id,
       }),
-    ).toMatchObject({ accountId: account.id });
+    ).toMatchObject({ companyId: company.id });
   });
   it('counts a completed task, a note or mail as contact, and an open task due ahead as planned', async () => {
     const lead = await service.save(actor('rep'), 'leads', {

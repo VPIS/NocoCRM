@@ -118,15 +118,15 @@ import {
   type MailTarget,
 } from '../../server/providers/crm/mail-target.js';
 
-// The account a contact or a deal belongs to, in the title line.
-function AccountCrumb({
+// The company a contact or a deal belongs to, in the title line.
+function CompanyCrumb({
   id,
   name,
 }: {
   id: string;
   name: string;
 }): ReactElement {
-  const link = useRecordLink('accounts', id);
+  const link = useRecordLink('companies', id);
   return (
     <Link className='px-2 hover:text-primary hover:underline' {...link}>
       {name}
@@ -149,7 +149,7 @@ export default function EntityDetail({
   const { data: meta } = useMetadata();
   const mailSetup = useMailSetup();
   // The objects whose people mail is exchanged with.
-  const mailEntity = ['accounts', 'contacts', 'opportunities'].includes(entity);
+  const mailEntity = ['companies', 'contacts', 'opportunities'].includes(entity);
   const api = useCrmApi();
   const refresh = useRefresh();
   const navigate = useNavigate();
@@ -167,8 +167,8 @@ export default function EntityDetail({
   const linkParam =
     entity === 'leads'
       ? `leadId=${toText(id)}`
-      : entity === 'accounts'
-        ? `accountId=${toText(id)}`
+      : entity === 'companies'
+        ? `companyId=${toText(id)}`
         : entity === 'contacts'
           ? `contactId=${toText(id)}`
           : entity === 'opportunities'
@@ -201,10 +201,10 @@ export default function EntityDetail({
   // A planned task's outcome being recorded.
   const [recording, setRecording] = useState(false);
   const [error, setError] = useState<unknown>();
-  // A deal's account change waiting for the user to confirm it takes the
-  // deal's contacts off (see changeAccount below).
-  const [accountMove, setAccountMove] = useState<{
-    accountId: unknown;
+  // A deal's company change waiting for the user to confirm it takes the
+  // deal's contacts off (see changeCompany below).
+  const [companyMove, setCompanyMove] = useState<{
+    companyId: unknown;
     resolve: () => void;
     reject: (cause: unknown) => void;
   }>();
@@ -234,7 +234,7 @@ export default function EntityDetail({
   const editable = detail.permissions.edit;
   // Names for everything this page links to, resolved by the server with
   // the record: composed titles for links, bare names for people listed
-  // under their own account.
+  // under their own company.
   const names = {
     ...detail.titles,
     ...moreTasks.titles,
@@ -248,31 +248,31 @@ export default function EntityDetail({
     await api(`${toText(entity)}/${toText(id)}`, 'PATCH', values);
     await refresh();
   };
-  // Moving a deal to another account takes its contacts off it: they are
-  // the old account's people. The move is confirmed first, naming them, and
+  // Moving a deal to another company takes its contacts off it: they are
+  // the old company's people. The move is confirmed first, naming them, and
   // saved with the empty list in one request. A deal with tasks goes
   // straight to the server, which refuses the move and says why.
   const dealContacts =
     entity === 'opportunities' && Array.isArray(record.contacts)
       ? (record.contacts as { contactId?: unknown }[])
       : [];
-  const changeAccount = (accountId: unknown): Promise<void> =>
+  const changeCompany = (companyId: unknown): Promise<void> =>
     dealContacts.length && !moreTasks.total
       ? new Promise((resolve, reject) => {
-          setAccountMove({ accountId, resolve, reject });
+          setCompanyMove({ companyId, resolve, reject });
         })
-      : patch({ accountId });
-  const confirmAccountMove = async (): Promise<void> => {
-    if (!accountMove) return;
+      : patch({ companyId });
+  const confirmCompanyMove = async (): Promise<void> => {
+    if (!companyMove) return;
     setMoving(true);
     try {
-      await patch({ accountId: accountMove.accountId, contacts: [] });
-      accountMove.resolve();
+      await patch({ companyId: companyMove.companyId, contacts: [] });
+      companyMove.resolve();
     } catch (cause) {
-      accountMove.reject(cause);
+      companyMove.reject(cause);
     } finally {
       setMoving(false);
-      setAccountMove(undefined);
+      setCompanyMove(undefined);
     }
   };
   const inline = (key: string): ReactElement => (
@@ -283,13 +283,13 @@ export default function EntityDetail({
       editable={editable}
       lookup={names}
       relationFilter={
-        record.accountId ? { accountId: toText(record.accountId) } : undefined
+        record.companyId ? { companyId: toText(record.companyId) } : undefined
       }
       label={text(fieldLabelKey(entity, key))}
       hint
       onSave={
-        entity === 'opportunities' && key === 'accountId'
-          ? changeAccount
+        entity === 'opportunities' && key === 'companyId'
+          ? changeCompany
           : undefined
       }
     />
@@ -318,7 +318,7 @@ export default function EntityDetail({
     (currentStatus === 'won' || currentStatus === 'lost');
   // Which related lists this object has, beyond tasks.
   const relatedTabs = (
-    entity === 'accounts'
+    entity === 'companies'
       ? (['contacts', 'opportunities'] as const)
       : entity === 'contacts'
         ? (['opportunities'] as const)
@@ -331,7 +331,7 @@ export default function EntityDetail({
   const tabs: [string, string, number][] = [
     ['historyTab', 'historyTab', detail.historyTotal ?? detail.history.length],
     // A contact has no tasks of its own: a task concerns a lead, an
-    // account or a deal.
+    // company or a deal.
     ...(entity !== 'tasks' && entity !== 'approvals' && entity !== 'contacts'
       ? [
           ['tasks', 'entities.tasks', moreTasks.total] as [
@@ -385,37 +385,37 @@ export default function EntityDetail({
   const blockerEntries = Object.entries(detail.blockers ?? {}).filter(
     ([, n]) => Number(n) > 0,
   ) as [Entity, number][];
-  // An account's tasks go the way a lead's do: those anchored only here
+  // A company's tasks go the way a lead's do: those anchored only here
   // are deleted with it, those also on a lead or opportunity are kept and
   // unlinked. The dialog states both counts so nothing is a surprise.
-  const cascades = entity === 'accounts' || entity === 'opportunities';
+  const cascades = entity === 'companies' || entity === 'opportunities';
   const otherAnchors = (a: Data): boolean =>
-    entity === 'accounts'
+    entity === 'companies'
       ? Boolean(a.leadId || a.opportunityId)
-      : Boolean(a.leadId || a.accountId);
+      : Boolean(a.leadId || a.companyId);
   const cascadedTasks = cascades ? tasks.filter((a) => !otherAnchors(a)) : [];
   const keptTasks = cascades ? tasks.filter(otherAnchors) : [];
   const relatedInput: Data =
-    entity === 'accounts'
-      ? { accountId: id }
+    entity === 'companies'
+      ? { companyId: id }
       : entity === 'contacts'
         ? {
-            accountId: record.accountId,
+            companyId: record.companyId,
             contacts: [{ contactId: id, role: 'other' }],
           }
         : entity === 'opportunities'
-          ? { accountId: record.accountId, opportunityId: id }
+          ? { companyId: record.companyId, opportunityId: id }
           : {};
-  // Where the Mail tab looks: a contact's address; an account's domain and
+  // Where the Mail tab looks: a contact's address; a company's domain and
   // its contacts' addresses; a deal's contacts' addresses (or, while it
-  // names none, its account's people). What is sent from the tab is logged
+  // names none, its company's people). What is sent from the tab is logged
   // as a task linked as one created here is.
   const relatedContacts = rows(detail.related.contacts);
   const dealContactIds = new Set(
     rows(record.contacts).map((row) => toText(row.contactId)),
   );
   const mailTarget: MailTarget =
-    entity === 'accounts'
+    entity === 'companies'
       ? {
           addresses: emailsOf(relatedContacts),
           domain: domainOf(record.website),
@@ -463,12 +463,12 @@ export default function EntityDetail({
           target={mailTarget}
           focus={mailFocus}
           scope={
-            entity === 'accounts'
-              ? { kind: 'account', name: toText(record.name) }
+            entity === 'companies'
+              ? { kind: 'company', name: toText(record.name) }
               : entity === 'opportunities'
                 ? {
                     kind: 'opportunity',
-                    fromAccount: dealContactIds.size === 0,
+                    fromCompany: dealContactIds.size === 0,
                   }
                 : undefined
           }
@@ -481,14 +481,14 @@ export default function EntityDetail({
           contactsTotal={detail.relatedTotals?.contacts}
           names={bareNames}
           onSave={patch}
-          // A new person is created at the account, not on the deal:
+          // A new person is created at the company, not on the deal:
           // they then appear under "other contacts" to be added.
           onCreate={
             meta.permissions.contacts.create
               ? () =>
                   setForm({
                     entity: 'contacts',
-                    initial: { accountId: record.accountId },
+                    initial: { companyId: record.companyId },
                   })
               : undefined
           }
@@ -548,7 +548,7 @@ export default function EntityDetail({
                   setForm({
                     entity: 'tasks',
                     initial: relatedInput,
-                    // The record's name and its account's, so the record
+                    // The record's name and its company's, so the record
                     // chip names what the task starts linked to.
                     titles: { ...names, [id]: contextName ?? '' },
                   })
@@ -673,10 +673,10 @@ export default function EntityDetail({
           }
         />
       )}
-      {accountMove && (
+      {companyMove && (
         <ConfirmDialog
-          title={text('changeAccountTitle')}
-          description={text('changeAccountContacts', {
+          title={text('changeCompanyTitle')}
+          description={text('changeCompanyContacts', {
             names: dealContacts
               .map((c) => {
                 const contactId = toText(c.contactId ?? '');
@@ -686,10 +686,10 @@ export default function EntityDetail({
           })}
           busy={moving}
           onCancel={() => {
-            accountMove.resolve();
-            setAccountMove(undefined);
+            companyMove.resolve();
+            setCompanyMove(undefined);
           }}
-          onConfirm={() => void confirmAccountMove()}
+          onConfirm={() => void confirmCompanyMove()}
         />
       )}
       {recording && (
@@ -780,7 +780,7 @@ export default function EntityDetail({
                 </span>
                 {cascadedTasks.length > 0 && (
                   <span className='block text-destructive'>
-                    {text('deleteAccountTasks', {
+                    {text('deleteCompanyTasks', {
                       count: cascadedTasks.length,
                       entity: text(`entity.${toText(entity)}`),
                     })}
@@ -798,7 +798,7 @@ export default function EntityDetail({
                   ))}
                 {keptTasks.length > 0 && (
                   <span className='block'>
-                    {text('deleteAccountKeptTasks', {
+                    {text('deleteCompanyKeptTasks', {
                       count: keptTasks.length,
                       entity: text(`entity.${toText(entity)}`),
                     })}
@@ -859,7 +859,7 @@ export default function EntityDetail({
     </InfoRow>
   );
   // The leads the record came from, each opening in the drawer: the one
-  // place they show on an account, whose deletion they block.
+  // place they show on a company, whose deletion they block.
   const convertedRow =
     convertedFrom.length > 0 ? (
       <InfoRow key='convertedFrom' label={text('convertedFrom')}>
@@ -875,14 +875,14 @@ export default function EntityDetail({
         </div>
       </InfoRow>
     ) : null;
-  const accountCrumb = record.accountId ? (
-    <AccountCrumb
-      id={toText(record.accountId)}
-      name={names[toText(record.accountId)] ?? text('entities.accounts')}
+  const companyCrumb = record.companyId ? (
+    <CompanyCrumb
+      id={toText(record.companyId)}
+      name={names[toText(record.companyId)] ?? text('entities.companies')}
     />
   ) : null;
   // The name, edited in place, with what goes before or after it (a deal's
-  // account, a contact's). A <div> with the heading role, since the editor
+  // company, a contact's). A <div> with the heading role, since the editor
   // brings block elements an <h1> may not hold. Its negative margin is on
   // the left only, lining the text up with the fields: one on the right
   // would overflow the stacked column and make it scroll sideways.
@@ -1040,7 +1040,7 @@ export default function EntityDetail({
           )}
           {/* When it is, if it is. */}
           {row('dueAt')}
-          {['leadId', 'accountId', 'opportunityId'].map(row)}
+          {['leadId', 'companyId', 'opportunityId'].map(row)}
         </InfoGroup>
       </>,
     );
@@ -1048,7 +1048,7 @@ export default function EntityDetail({
   if (entity === 'opportunities') {
     const stage = toText(record.stage);
     return page(
-      headingOf(accountCrumb),
+      headingOf(companyCrumb),
       actionsOf(
         <>
           {editable && !closedDeal && (
@@ -1068,7 +1068,7 @@ export default function EntityDetail({
           <div className='min-w-0 py-0.5 text-sm'>{inline('description')}</div>
         </InfoGroup>
         {/* One list: who has it and where it stands, what it is worth
-            and when it should close, then the account and how it came. */}
+            and when it should close, then the company and how it came. */}
         <InfoGroup title={text('detailsGroup')} icon={GROUP_ICONS.general}>
           {row('ownerId')}
           <InfoRow label={text('fields.stage')}>
@@ -1092,7 +1092,7 @@ export default function EntityDetail({
             />
           </InfoRow>
           {stage === 'paused' && row('resumeAt')}
-          {/* What it is worth and when it should close, then the account
+          {/* What it is worth and when it should close, then the company
             and how it came. */}
           {/* Currency, then the bare number: both edit in place, and the
               sign is not repeated. */}
@@ -1113,22 +1113,22 @@ export default function EntityDetail({
             </div>
           </InfoRow>
           {row('expectedCloseAt')}
-          {['accountId', 'businessType', 'source'].map(row)}
+          {['companyId', 'businessType', 'source'].map(row)}
           {convertedRow}
         </InfoGroup>
       </>,
     );
   }
 
-  if (entity === 'accounts')
+  if (entity === 'companies')
     return page(
       headingOf(),
       actionsOf(<>{moreMenu}</>),
       <>
-        {/* Who has it and where it stands (a churned account's reason
+        {/* Who has it and where it stands (a churned company's reason
             beside its status). */}
         <InfoGroup
-          title={text('accountGroups.general')}
+          title={text('companyGroups.general')}
           icon={GROUP_ICONS.general}
         >
           {row('ownerId')}
@@ -1144,12 +1144,12 @@ export default function EntityDetail({
               />
             </InfoRow>
           )}
-          {/* The reason stays editable while the account is churned. */}
+          {/* The reason stays editable while the company is churned. */}
           {currentStatus === 'churned' && row('churnReason')}
           {['type', 'source'].map(row)}
         </InfoGroup>
         <InfoGroup
-          title={text('accountGroups.company')}
+          title={text('companyGroups.company')}
           icon={GROUP_ICONS.company}
         >
           <InfoRow label={text('fields.website')}>
@@ -1170,13 +1170,13 @@ export default function EntityDetail({
 
   if (entity === 'contacts')
     return page(
-      headingOf(undefined, accountCrumb),
+      headingOf(undefined, companyCrumb),
       actionsOf(<>{moreMenu}</>),
       <>
         <InfoGroup title={text('detailsGroup')} icon={GROUP_ICONS.general}>
           {[
             'ownerId',
-            'accountId',
+            'companyId',
             'primary',
             'employed',
             'gender',
@@ -1345,7 +1345,7 @@ function RelatedList({
     </div>
   );
   // Contacts open in the drawer the way tasks do, so a phone number or
-  // a job title is corrected without leaving the account.
+  // a job title is corrected without leaving the company.
   function contactList(list: CrmRecord[]): ReactElement {
     return (
       <ul className='divide-y divide-border'>
@@ -1414,7 +1414,7 @@ function ContactItem({
   trailing,
 }: {
   contact: CrmRecord;
-  // What sits before the name (the account page's primary star) and at the
+  // What sits before the name (the company page's primary star) and at the
   // row's end (the opportunity page's role and remove control).
   leading?: ReactNode;
   trailing?: ReactNode;
@@ -1468,7 +1468,7 @@ function ContactItem({
 
 // The people on an opportunity and their roles. Rows edit in place — the
 // role is a dropdown, a row can be removed after confirming — and a new row
-// is added from the account's contacts not yet listed.
+// is added from the company's contacts not yet listed.
 const contactRoles = [
   'decisionMaker',
   'champion',
@@ -1489,7 +1489,7 @@ function OpportunityContacts({
 }: {
   record: CrmRecord;
   editable: boolean;
-  // The account's contacts, the first page read with the deal: who can be
+  // The company's contacts, the first page read with the deal: who can be
   // on it. The rest come on request.
   contacts: CrmRecord[];
   contactsTotal?: number;
@@ -1499,8 +1499,8 @@ function OpportunityContacts({
 }): ReactElement {
   const { text } = useCrmText();
   const more = useMore(
-    record.accountId
-      ? `contacts?accountId=${toText(record.accountId)}`
+    record.companyId
+      ? `contacts?companyId=${toText(record.companyId)}`
       : undefined,
     { data: firstPage, total: contactsTotal ?? firstPage.length },
   );
@@ -1516,7 +1516,7 @@ function OpportunityContacts({
     contactId: toText(c.contactId),
     role: toText(c.role || 'other'),
   }));
-  const contactsOf = contacts.filter((c) => c.accountId === record.accountId);
+  const contactsOf = contacts.filter((c) => c.companyId === record.companyId);
   const nameOf = (id: string): string =>
     toText(contactsOf.find((c) => c.id === id)?.name) ||
     names[id] ||
@@ -1564,7 +1564,7 @@ function OpportunityContacts({
         {!list.length ? (
           <p className='text-sm text-muted-foreground'>{text('noContacts')}</p>
         ) : (
-          // The same expandable rows as the account's contacts tab, with the
+          // The same expandable rows as the company's contacts tab, with the
           // role (and a remove control) where that tab has its star.
           <ul className='divide-y divide-border'>
             {list.map((item) => {
@@ -1633,12 +1633,12 @@ function OpportunityContacts({
           </ul>
         )}
       </div>
-      {/* The account's other people: one click brings any of them onto the
+      {/* The company's other people: one click brings any of them onto the
           deal, with a role to set afterwards. Those who have left are not
           offered. */}
       <div className='space-y-2 pt-2'>
         <h4 className='text-xs font-medium text-muted-foreground'>
-          {text('otherAccountContacts')}
+          {text('otherCompanyContacts')}
           <span className='ml-1 tabular-nums'>
             {candidates.length + (more.total - contacts.length)}
           </span>
@@ -1747,7 +1747,7 @@ function PrimaryStar({
   siblings,
 }: {
   contact: CrmRecord;
-  // The account's contacts, to name the primary being replaced.
+  // The company's contacts, to name the primary being replaced.
   siblings: CrmRecord[];
 }): ReactElement | null {
   const { text } = useCrmText();
@@ -1774,16 +1774,16 @@ function PrimaryStar({
     return contact.primary ? (
       <Star
         className='m-1 size-3.5 fill-ai text-ai'
-        aria-label={text('accountPrimary')}
+        aria-label={text('companyPrimary')}
       >
-        <title>{text('accountPrimary')}</title>
+        <title>{text('companyPrimary')}</title>
       </Star>
     ) : null;
   return (
     <>
       <button
         type='button'
-        title={text(contact.primary ? 'accountPrimary' : 'setPrimary')}
+        title={text(contact.primary ? 'companyPrimary' : 'setPrimary')}
         aria-label={text(contact.primary ? 'unsetPrimary' : 'setPrimary')}
         aria-pressed={Boolean(contact.primary)}
         className='rounded-sm p-1 text-muted-foreground/50 transition-colors hover:text-ai'

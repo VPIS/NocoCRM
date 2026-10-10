@@ -26,7 +26,7 @@ import { decodeRow, encodeRow, jsonValue } from './values.js';
 // plugin as that user, from where the last pass stopped (the first pass looks
 // back 180 days). A conversation is matched to the records whose people are
 // in it: a lead not yet converted by its email, a contact by its email (and
-// with it the contact's account and the deals the contact is on), an account
+// with it the contact's company and the deals the contact is on), a company
 // by the domain of its website.
 //
 // @temporary(nocobase-official): the Mail plugin tells only the browser that
@@ -47,7 +47,7 @@ const NEWS_MS = 24 * 60 * 60 * 1000;
 const PARTICIPANT_LIMIT = 10;
 const CURSOR_ID = 'mail-timeline';
 
-export type MailEntity = 'leads' | 'contacts' | 'accounts' | 'opportunities';
+export type MailEntity = 'leads' | 'contacts' | 'companies' | 'opportunities';
 
 interface Target {
   entity: MailEntity;
@@ -126,30 +126,30 @@ export async function mailIndex(query: QueryAdapter): Promise<MailIndex> {
   }
   const contacts = await query
     .selectFrom('crmContacts')
-    .select(['id', 'email', 'accountId'])
+    .select(['id', 'email', 'companyId'])
     .where('email', 'is not', null)
     .execute();
   for (const contact of contacts) {
     const address = lower(contact.email);
     const id = toText(contact.id);
     add(byAddress, address, { entity: 'contacts', id });
-    if (contact.accountId)
+    if (contact.companyId)
       add(byAddress, address, {
-        entity: 'accounts',
-        id: toText(contact.accountId),
+        entity: 'companies',
+        id: toText(contact.companyId),
       });
     for (const deal of dealsOf.get(id) ?? [])
       add(byAddress, address, { entity: 'opportunities', id: deal });
   }
-  const accounts = await query
-    .selectFrom('crmAccounts')
+  const companies = await query
+    .selectFrom('crmCompanies')
     .select(['id', 'website'])
     .where('website', 'is not', null)
     .execute();
-  for (const account of accounts) {
-    const domain = domainOf(account.website);
+  for (const company of companies) {
+    const domain = domainOf(company.website);
     if (domain)
-      add(byDomain, domain, { entity: 'accounts', id: toText(account.id) });
+      add(byDomain, domain, { entity: 'companies', id: toText(company.id) });
   }
   const internal = new Set(
     (await query.selectFrom('user').select('email').execute())

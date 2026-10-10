@@ -19,9 +19,9 @@ import {
 import { recordTitle } from './lookups.js';
 
 // Picking a record by searching for it, one page of matches at a time, so a
-// form never has to load every account or contact there is. The search goes
+// form never has to load every company or contact there is. The search goes
 // through the list endpoint with the same filters the pages use (an
-// task's participants come from its account, a deal's contacts too).
+// task's participants come from its company, a deal's contacts too).
 interface SearchProps {
   entity: Entity;
   filter?: Record<string, string | undefined>;
@@ -82,7 +82,7 @@ function ResultList({
   enabled: boolean;
   isPicked: (id: string) => boolean;
   onPick: (record: CrmRecord, titles: Record<string, string>) => void;
-  // Bare names: the list is already scoped to one account.
+  // Bare names: the list is already scoped to one company.
   bare?: boolean;
 }): ReactElement {
   const { text } = useCrmText();
@@ -187,7 +187,7 @@ export function RecordPicker({
   // Names already resolved by the page, so the current pick shows at once.
   titles?: Record<string, string>;
   disabled?: boolean;
-  // Bare names: the search is already scoped to one account.
+  // Bare names: the search is already scoped to one company.
   bare?: boolean;
   // "inline": the quiet trigger of a pick inside a list row.
   variant?: 'default' | 'inline';
@@ -283,7 +283,7 @@ export function RecordPicker({
   );
 }
 
-// Several records from one scope (the contacts of an account): the trigger
+// Several records from one scope (the contacts of a company): the trigger
 // lists what is chosen by bare name, the popup ticks items on and off and
 // stays open between picks.
 export function RecordMultiPicker({

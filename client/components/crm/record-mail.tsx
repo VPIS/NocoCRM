@@ -39,12 +39,12 @@ function addressLine(message: MailMessageSummary, unknown: string): string {
 }
 
 // How a record's Mail tab names whose mail it lists, when that is more than
-// one address: an account by its name, its contacts and its domain; a deal
-// by its contacts, or its account's while it names none. The addresses
+// one address: a company by its name, its contacts and its domain; a deal
+// by its contacts, or its company's while it names none. The addresses
 // themselves show on hover. A lead or a contact is named by its address.
 export type MailScope =
-  | { readonly kind: 'account'; readonly name: string }
-  | { readonly kind: 'opportunity'; readonly fromAccount: boolean };
+  | { readonly kind: 'company'; readonly name: string }
+  | { readonly kind: 'opportunity'; readonly fromCompany: boolean };
 
 // A record's Mail tab: the reader's own conversations with the record, newest
 // first, each a row led by its latest message; one opens below its row as the
@@ -198,7 +198,7 @@ export function RecordMailPanel({
 
   const count = target.addresses.length;
   const scopeLine = (): string => {
-    if (scope?.kind === 'account' && scope.name) {
+    if (scope?.kind === 'company' && scope.name) {
       const parts = [
         count ? toText(text('mail.scopeContacts', { count })) : '',
         target.domain
@@ -206,7 +206,7 @@ export function RecordMailPanel({
           : '',
       ].filter(Boolean);
       return [
-        toText(text('mail.scopeAccount', { name: scope.name })),
+        toText(text('mail.scopeCompany', { name: scope.name })),
         parts.join(toText(text('mail.scopeAnd'))),
       ]
         .filter(Boolean)
@@ -214,7 +214,7 @@ export function RecordMailPanel({
     }
     if (scope?.kind === 'opportunity')
       return toText(
-        text(scope.fromAccount ? 'mail.scopeDealAccount' : 'mail.scopeDeal', {
+        text(scope.fromCompany ? 'mail.scopeDealCompany' : 'mail.scopeDeal', {
           count,
         }),
       );

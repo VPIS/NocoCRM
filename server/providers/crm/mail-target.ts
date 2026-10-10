@@ -2,7 +2,7 @@
 // the AI follow-ups that read the owner's mail with the customer. It has no
 // imports, so the browser bundle can take it.
 
-// Domains shared by everyone who uses them: an account's website on one of
+// Domains shared by everyone who uses them: a company's website on one of
 // these says nothing about whose mail is whose, so they are never searched.
 const SHARED_DOMAINS = new Set([
   '126.com',
@@ -25,14 +25,14 @@ const SHARED_DOMAINS = new Set([
   'yeah.net',
 ]);
 
-// Where a record's mail is looked for: its own addresses, and an account's
+// Where a record's mail is looked for: its own addresses, and a company's
 // domain (from its website) for anyone at the company.
 export interface MailTarget {
   readonly addresses: readonly string[];
   readonly domain?: string;
 }
 
-// The company's own domain from an account's website, unless it is a mail
+// The company's own domain from a company's website, unless it is a mail
 // service everyone shares.
 export function domainOf(website: unknown): string | undefined {
   const raw = typeof website === 'string' ? website.trim() : '';

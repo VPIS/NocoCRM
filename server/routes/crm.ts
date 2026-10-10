@@ -23,7 +23,7 @@ import { mailServiceToken } from '@nocobase/app-plugin-mail/server';
 import { captureLeads } from '../providers/crm/lead-capture.js';
 import {
   captureOpportunity,
-  matchAccount,
+  matchCompany,
   peopleOf,
 } from '../providers/crm/opportunity-capture.js';
 import { organiseFeedback, recordOutcome } from '../providers/crm/feedback.js';
@@ -822,8 +822,8 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         ),
       });
     });
-    // The web findings on a deal's account the person picked, into the
-    // account.
+    // The web findings on a deal's company the person picked, into the
+    // company.
     routes.post('/opportunities/:id/evaluation/:entryId/enrich', async (c) => {
       const run = dealEvaluator();
       if (!run) throw new CrmError('assistantUnavailable', 409);
@@ -882,8 +882,8 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       }),
     );
     // New opportunity with the AI (opportunity-capture.ts): pasted text in,
-    // a prefilled opportunity out, matched to an account and its contacts;
-    // and the matching again when the user picks another account.
+    // a prefilled opportunity out, matched to a company and its contacts;
+    // and the matching again when the user picks another company.
     routes.post('/opportunities/capture', async (c) =>
       c.json({
         data: await captureOpportunity(
@@ -898,10 +898,10 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
     routes.post('/opportunities/capture/match', async (c) => {
       const body = object(await c.req.json());
       return c.json({
-        data: await matchAccount(
+        data: await matchCompany(
           service,
           c.get('actor'),
-          toText(body.accountId ?? ''),
+          toText(body.companyId ?? ''),
           peopleOf(body.people),
         ),
       });
@@ -980,7 +980,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           ...data,
           ...(await resolveTitles(service, c.get('actor'), {
             leads: [data.lead as Row],
-            accounts: data.accounts as Row[],
+            companies: data.companies as Row[],
             contacts: data.contacts as Row[],
             opportunities: data.opportunities as Row[],
           })),
@@ -1078,7 +1078,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         c.req.param('id'),
       );
       // The record, everything related to it, and the ids its history
-      // mentions (a changed owner or account) all get their names.
+      // mentions (a changed owner or company) all get their names.
       const rows: Partial<Record<Entity, Row[]>> = {};
       for (const [name, list] of Object.entries(object(data.related ?? {})))
         rows[name as Entity] = array(list).map(object);

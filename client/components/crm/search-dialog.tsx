@@ -60,7 +60,7 @@ import { SearchRow } from './search-results.js';
 const KIND_ICONS: Record<Entity, LucideIcon> = {
   leads: Radar,
   opportunities: Handshake,
-  accounts: Building2,
+  companies: Building2,
   contacts: UserRound,
   tasks: SquareCheckBig,
   approvals: ListChecks,

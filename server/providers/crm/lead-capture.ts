@@ -295,7 +295,7 @@ function currentLeads(value: unknown): Row[] {
 
 // Records the lead may repeat, as the lead page's duplicate check finds
 // them (lead-merge.ts): open leads by the same person (mergeable) or
-// company, contacts by email or phone, accounts by company.
+// company, contacts by email or phone, companies by name.
 async function duplicatesOf(
   service: CrmService,
   actor: Actor,

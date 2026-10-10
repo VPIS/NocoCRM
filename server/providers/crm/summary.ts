@@ -73,7 +73,7 @@ const systemKinds: Record<string, Kind> = {
   completedAt: 'datetime',
   submittedAt: 'datetime',
   decidedAt: 'datetime',
-  convertedAccountId: 'group',
+  convertedCompanyId: 'group',
   convertedContactId: 'group',
   convertedOpportunityId: 'group',
 };
@@ -112,7 +112,7 @@ export function groupRelation(
   key: string,
 ): Entity | 'users' | undefined {
   if (key === 'ownerId' || key === 'createdById') return 'users';
-  if (key === 'convertedAccountId') return 'accounts';
+  if (key === 'convertedCompanyId') return 'companies';
   if (key === 'convertedContactId') return 'contacts';
   if (key === 'convertedOpportunityId') return 'opportunities';
   return definitions[entity].fields.find((f) => f.key === key)?.relation;

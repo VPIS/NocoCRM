@@ -18,7 +18,7 @@ const labels: Record<string, [string, string]> = {
 };
 const entityLabels: Record<string, [string, string]> = {
   leads: ['Lead', '线索'],
-  accounts: ['Account', '客户'],
+  companies: ['Company', '公司'],
   contacts: ['Contact', '联系人'],
   opportunities: ['Opportunity', '商机'],
   tasks: ['Task', '任务'],

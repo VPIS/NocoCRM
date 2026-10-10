@@ -48,7 +48,7 @@ export function useMatches(
   const rows = query.data?.data;
   return {
     rows: Array.isArray(rows) ? rows : [],
-    // The names of the records they refer to (a deal's account).
+    // The names of the records they refer to (a deal's company).
     titles: query.data?.titles ?? {},
   };
 }

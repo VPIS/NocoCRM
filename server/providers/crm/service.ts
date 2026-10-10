@@ -64,12 +64,12 @@ export interface ListOptions {
   search?: string;
   status?: string;
   ownerId?: string;
-  accountId?: string;
+  companyId?: string;
   leadId?: string;
   opportunityId?: string;
   contactId?: string;
   source?: string;
-  // "true" / "false": contacts by whether they are still at the account.
+  // "true" / "false": contacts by whether they are still at the company.
   employed?: string;
   // Tasks a user is an internal participant of (their id).
   participantId?: string;
@@ -123,22 +123,22 @@ export interface ListResult {
 // at the parent. Shared by remove(), which refuses when any exist, and
 // detail(), which counts them so the confirmation can say what is in the way.
 export function deletionChecks(entity: Entity): [Entity, string][] {
-  // Tasks are not listed for accounts: they are handled like a lead's,
-  // deleted when the account was their only anchor and unlinked otherwise.
+  // Tasks are not listed for companies: they are handled like a lead's,
+  // deleted when the company was their only anchor and unlinked otherwise.
   // Contacts have no blockers: the places that mention one (an opportunity's
   // contact list, a task's participants, a converted lead's pointer)
   // are cleaned up by remove() instead, since none of them needs the contact
   // to stay valid.
-  return entity === 'accounts'
+  return entity === 'companies'
     ? [
-        ['contacts', 'accountId'],
-        ['opportunities', 'accountId'],
-        ['leads', 'convertedAccountId'],
+        ['contacts', 'companyId'],
+        ['opportunities', 'companyId'],
+        ['leads', 'convertedCompanyId'],
       ]
     : entity === 'opportunities'
       ? // Only approvals block: they are an audit trail that cannot follow
         // the deal out. Tasks cascade or unlink as they do for an
-        // account; a converted lead's pointer is cleared.
+        // company; a converted lead's pointer is cleared.
         [['approvals', 'opportunityId']]
       : [];
 }
@@ -162,7 +162,7 @@ function noteText(value: unknown): string {
   return text;
 }
 
-// What of a task its lead, account, opportunity or contact is told on its
+// What of a task its lead, company, opportunity or contact is told on its
 // timeline: added, moved (its due time), handed to another owner, completed
 // or cancelled, and deleted. Its other edits stay on the task.
 const TOLD = ['dueAt', 'ownerId'];
@@ -395,7 +395,7 @@ export class CrmService {
         username: user.username ?? null,
         email: user.email,
         roles: userRoles,
-        // Disabled at the account, on the Users page: such a user cannot
+        // Disabled at the company, on the Users page: such a user cannot
         // sign in, and is not offered as an owner or approver either.
         disabled: disabled.has(toText(user.id)),
         // An approver is a sales manager. Administrators hold the approve
@@ -478,7 +478,7 @@ export class CrmService {
       .where((eb) => compileFilter(eb, access.scope));
     for (const key of [
       'ownerId',
-      'accountId',
+      'companyId',
       'leadId',
       'opportunityId',
       'source',
@@ -776,7 +776,7 @@ export class CrmService {
   ): Promise<{ data: Row[]; total: number; page: number; pageSize: number }> {
     const subject = await this.get(actor, entity, id);
     // An approval's AI review is its approver's working draft: it reads
-    // with the approver's access (precedents on accounts the applicant may
+    // with the approver's access (precedents on companies the applicant may
     // not see) and leans on a decision not yet made, so no one else reads it.
     const hideReviews =
       entity === 'approvals' && subject.approverId !== actor.id;
@@ -797,7 +797,7 @@ export class CrmService {
     const link = (
       {
         leads: 'leadId',
-        accounts: 'accountId',
+        companies: 'companyId',
         opportunities: 'opportunityId',
       } as Partial<Record<Entity, keyof ListOptions>>
     )[entity];
@@ -1055,23 +1055,23 @@ export class CrmService {
     const link: ListOptions =
       entity === 'leads'
         ? { leadId: id }
-        : entity === 'accounts'
-          ? { accountId: id }
+        : entity === 'companies'
+          ? { companyId: id }
           : entity === 'opportunities'
             ? { opportunityId: id }
             : entity === 'contacts'
               ? { contactId: id }
               : {};
-    if (['leads', 'accounts', 'contacts', 'opportunities'].includes(entity))
+    if (['leads', 'companies', 'contacts', 'opportunities'].includes(entity))
       await firstPage('tasks', { ...link, sort: 'dueAt' });
-    if (entity === 'accounts') {
-      await firstPage('contacts', { accountId: id });
-      await firstPage('opportunities', { accountId: id });
+    if (entity === 'companies') {
+      await firstPage('contacts', { companyId: id });
+      await firstPage('opportunities', { companyId: id });
     }
     // Where the object came from: the leads whose conversion produced it.
-    // Read for the "converted from" line, and on accounts for the delete check.
+    // Read for the "converted from" line, and on companies for the delete check.
     const convertedBy: Partial<Record<Entity, string>> = {
-      accounts: 'convertedAccountId',
+      companies: 'convertedCompanyId',
       contacts: 'convertedContactId',
       opportunities: 'convertedOpportunityId',
     };
@@ -1090,10 +1090,10 @@ export class CrmService {
       await firstPage('opportunities', { contactId: id });
     if (entity === 'opportunities') {
       await firstPage('approvals', { opportunityId: id });
-      // The people a deal can involve come from its account; the page
+      // The people a deal can involve come from its company; the page
       // offers the first of them and asks for more on demand.
-      if (record.accountId)
-        await firstPage('contacts', { accountId: toText(record.accountId) });
+      if (record.companyId)
+        await firstPage('contacts', { companyId: toText(record.companyId) });
     }
     let canEdit = false;
     let canDelete = false;
@@ -1146,7 +1146,7 @@ export class CrmService {
         const rows = await query
           .selectFrom(table)
           .select(field)
-          .where('accountId', '=', record.accountId)
+          .where('companyId', '=', record.companyId)
           .execute();
         const n = rows.filter((r) =>
           array(r[field]).some((v) =>
@@ -1217,7 +1217,7 @@ export class CrmService {
       source: 'other',
       ...(entity === 'leads'
         ? { status: 'new' }
-        : entity === 'accounts'
+        : entity === 'companies'
           ? { status: 'prospect' }
           : entity === 'contacts'
             ? { employed: true, gender: 'unknown' }
@@ -1244,9 +1244,9 @@ export class CrmService {
       createdById: previous?.createdById ?? actor.id,
     };
     if (entity === 'approvals') input.ownerId = previous?.ownerId ?? actor.id;
-    if (!input.name && entity === 'opportunities' && input.accountId)
+    if (!input.name && entity === 'opportunities' && input.companyId)
       input.name = (
-        await this.get(actor, 'accounts', toText(input.accountId), tx)
+        await this.get(actor, 'companies', toText(input.companyId), tx)
       ).name;
     const users = await this.users(actor);
     // An owner is someone who sells: an administrator runs the system and
@@ -1305,8 +1305,8 @@ export class CrmService {
       }
       const options =
         settings.options[
-          field.key === 'type' && entity === 'accounts'
-            ? 'accountType'
+          field.key === 'type' && entity === 'companies'
+            ? 'companyType'
             : field.key
         ] ?? field.options;
       if (
@@ -1344,22 +1344,22 @@ export class CrmService {
     )
       throw new CrmError('required', 400, 'invalidReason');
     if (
-      entity === 'accounts' &&
+      entity === 'companies' &&
       input.status === 'churned' &&
       !input.churnReason
     )
       throw new CrmError('required', 400, 'churnReason');
-    if (input.accountId)
-      await this.get(actor, 'accounts', toText(input.accountId), tx);
+    if (input.companyId)
+      await this.get(actor, 'companies', toText(input.companyId), tx);
     if (
       entity === 'contacts' &&
-      previous?.accountId !== input.accountId &&
+      previous?.companyId !== input.companyId &&
       previous
     ) {
       const used = await tx
         .selectFrom('crmOpportunities')
         .select('contacts')
-        .where('accountId', '=', previous.accountId)
+        .where('companyId', '=', previous.companyId)
         .execute();
       if (
         used.some((r) =>
@@ -1371,13 +1371,13 @@ export class CrmService {
     if (entity === 'opportunities') {
       if (!/^[A-Z]{3}$/.test(toText(input.currency)))
         throw new CrmError('invalidInput', 400, 'currency');
-      // A deal's tasks were held with its account's people, so a deal
-      // that has any stays with that account. Checked before the contacts,
+      // A deal's tasks were held with its company's people, so a deal
+      // that has any stays with that company. Checked before the contacts,
       // which the page takes off the deal when it moves: this is the reason
       // a move with both cannot go ahead.
       if (
         previous &&
-        previous.accountId !== input.accountId &&
+        previous.companyId !== input.companyId &&
         (await tx
           .selectFrom('crmTasks')
           .select('id')
@@ -1417,8 +1417,8 @@ export class CrmService {
           toText(contact.contactId),
           tx,
         );
-        if (linked.accountId !== input.accountId)
-          throw new CrmError('accountMismatch');
+        if (linked.companyId !== input.companyId)
+          throw new CrmError('companyMismatch');
       }
       // A contact on an opportunity carries its role and nothing else.
       input.contacts = contacts.map((value) => {
@@ -1430,25 +1430,25 @@ export class CrmService {
           ? now
           : null;
         if (input.stage === 'won') {
-          const account = await this.get(
+          const company = await this.get(
             actor,
-            'accounts',
-            toText(input.accountId),
+            'companies',
+            toText(input.companyId),
             tx,
           );
           await tx
-            .updateTable('crmAccounts')
+            .updateTable('crmCompanies')
             .set({ status: 'customer', updatedAt: now })
-            .where('id', '=', input.accountId)
+            .where('id', '=', input.companyId)
             .execute();
-          if (account.status !== 'customer')
+          if (company.status !== 'customer')
             await this.history(
               tx,
               actor,
-              'accounts',
-              toText(input.accountId),
+              'companies',
+              toText(input.companyId),
               'status',
-              account.status,
+              company.status,
               'customer',
             );
         }
@@ -1464,9 +1464,9 @@ export class CrmService {
           toText(input.opportunityId),
           tx,
         );
-        if (input.accountId && opp.accountId !== input.accountId)
-          throw new CrmError('accountMismatch');
-        input.accountId = opp.accountId;
+        if (input.companyId && opp.companyId !== input.companyId)
+          throw new CrmError('companyMismatch');
+        input.companyId = opp.companyId;
       }
       if (input.leadId) {
         const lead = await this.get(actor, 'leads', toText(input.leadId), tx);
@@ -1475,19 +1475,19 @@ export class CrmService {
           (!previous || previous.leadId !== input.leadId)
         )
           throw new CrmError('convertedReadOnly');
-        // A task is about a lead, or about an account and its deal, not
+        // A task is about a lead, or about a company and its deal, not
         // both: a lead has neither until it is converted, when its tasks are
-        // given the account and deal it became (conversion.ts).
+        // given the company and deal it became (conversion.ts).
         // Checked when the links are set, so a task linked both ways before
         // this rule can still be edited otherwise.
         if (
           lead.status !== 'converted' &&
-          (input.accountId || input.opportunityId) &&
-          ['leadId', 'accountId', 'opportunityId'].some(
+          (input.companyId || input.opportunityId) &&
+          ['leadId', 'companyId', 'opportunityId'].some(
             (key) => key in supplied,
           )
         )
-          throw new CrmError('leadOrAccount');
+          throw new CrmError('leadOrCompany');
         // A new lead is being worked once something has been done with it:
         // a task of it completed (as a note or mail does).
         if (input.status === 'completed' && previous?.status !== 'completed')
@@ -1552,14 +1552,14 @@ export class CrmService {
         .insertInto(definitions[entity].table)
         .values(encodeRow(values))
         .execute();
-    // An account has at most one primary contact: marking this one clears the
-    // flag on its siblings in the same transaction, so the star on the account
+    // A company has at most one primary contact: marking this one clears the
+    // flag on its siblings in the same transaction, so the star on the company
     // page moves rather than multiplies.
-    if (entity === 'contacts' && input.primary && input.accountId)
+    if (entity === 'contacts' && input.primary && input.companyId)
       await tx
         .updateTable('crmContacts')
         .set({ primary: false })
-        .where('accountId', '=', toText(input.accountId))
+        .where('companyId', '=', toText(input.companyId))
         .where('id', '!=', toText(input.id))
         .execute();
     // One entry per save. A status or stage move is not a second row: it is the
@@ -1677,7 +1677,7 @@ export class CrmService {
         const rows = await tx
           .selectFrom(table)
           .select(['id', field])
-          .where('accountId', '=', record.accountId)
+          .where('companyId', '=', record.companyId)
           .execute();
         for (const row of rows) {
           const list = array(row[field]);
@@ -1709,7 +1709,7 @@ export class CrmService {
         .execute();
     }
     // A lead's tasks go with it, because a task must keep at least one
-    // of lead/account/opportunity: clearing the lead from a task that has no
+    // of lead/company/opportunity: clearing the lead from a task that has no
     // other link would leave a record that fails its own validation and can never
     // be saved again. Tasks with another anchor survive, unlinked.
     if (entity === 'opportunities')
@@ -1720,21 +1720,21 @@ export class CrmService {
         .execute();
     if (
       entity === 'leads' ||
-      entity === 'accounts' ||
+      entity === 'companies' ||
       entity === 'opportunities'
     ) {
       const own =
         entity === 'leads'
           ? 'leadId'
-          : entity === 'accounts'
-            ? 'accountId'
+          : entity === 'companies'
+            ? 'companyId'
             : 'opportunityId';
-      const others = (['leadId', 'accountId', 'opportunityId'] as const).filter(
+      const others = (['leadId', 'companyId', 'opportunityId'] as const).filter(
         (key) => key !== own,
       );
       const linked = await tx
         .selectFrom('crmTasks')
-        .select(['id', 'leadId', 'accountId', 'opportunityId'])
+        .select(['id', 'leadId', 'companyId', 'opportunityId'])
         .where(own, '=', id)
         .execute();
       for (const task of linked) {
@@ -1766,7 +1766,7 @@ export class CrmService {
     if (entity === 'tasks')
       for (const [field, owner] of [
         ['leadId', 'leads'],
-        ['accountId', 'accounts'],
+        ['companyId', 'companies'],
         ['opportunityId', 'opportunities'],
       ] as const)
         if (record[field])
@@ -1863,7 +1863,7 @@ export class CrmService {
       editedAt: null,
     };
   }
-  // The colleagues a note may mention: active accounts other than the
+  // The colleagues a note may mention: active companies other than the
   // writer, each once, at most twenty. Whether one may read the record is
   // not asked here: a message to someone who may not is never delivered
   // (deliverNotifications reads the record as its recipient).

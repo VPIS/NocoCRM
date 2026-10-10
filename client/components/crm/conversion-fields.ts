@@ -3,7 +3,7 @@ import type { CrmRecord, Data } from './api.js';
 // What conversion copies from the lead into each record. The server holds the
 // same lists; these drive the preview and the conflict check only.
 export const inherited = {
-  accounts: [
+  companies: [
     'name',
     'website',
     'industry',
@@ -21,9 +21,9 @@ export const inherited = {
 
 export function proposalFor(
   lead: CrmRecord,
-  entity: 'accounts' | 'contacts',
+  entity: 'companies' | 'contacts',
 ): Data {
-  return entity === 'accounts'
+  return entity === 'companies'
     ? {
         name: lead.company,
         website: lead.website,

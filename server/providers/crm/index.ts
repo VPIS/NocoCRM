@@ -523,13 +523,13 @@ export default class CrmProvider extends ServiceProvider<Application> {
           .execute();
         if (!claim.updatedCount) continue;
         try {
-          // A disabled account gets nothing: the row fails with the reason.
-          const account = await query
+          // A disabled company gets nothing: the row fails with the reason.
+          const company = await query
             .selectFrom('user')
             .select('disabledAt')
             .where('id', '=', row.recipientId)
             .executeTakeFirst();
-          if (account?.disabledAt != null) throw new CrmError('disabled', 403);
+          if (company?.disabledAt != null) throw new CrmError('disabled', 403);
           const preference = await query
             .selectFrom('crmUserPreferences')
             .select('locale')
@@ -555,7 +555,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
             entity: t(`entities.${toText(row.entity)}`),
           });
           // The record is named the way the pages name it (a lead by person
-          // and company, a deal by account and name), not by its bare name.
+          // and company, a deal by company and name), not by its bare name.
           const entity = asEntity(toText(row.entity));
           const { titles } = await resolveTitles(service, recipient, {
             [entity]: [record],

@@ -99,7 +99,7 @@ export function useRecordDrawerState(): {
 }
 
 // A detail page's tab is the last segment of its address
-// (/crm/accounts/<id>/contacts, the record route's child), so a link or a
+// (/crm/companies/<id>/contacts, the record route's child), so a link or a
 // reload opens it and Back returns to the tab before. A record in the drawer
 // keeps its tab to itself and leaves the page's alone. The address says "history" and "contacts" where the pages' own names
 // are historyTab and opportunityContacts.

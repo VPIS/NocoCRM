@@ -20,7 +20,7 @@ vi.mock('../../client/components/crm/mail.js', async (importOriginal) => ({
   >()),
   useMailSetup: () => ({
     can: false,
-    accounts: [],
+    companies: [],
     providers: [],
     senders: [],
     loading: false,

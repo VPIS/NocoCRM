@@ -241,13 +241,13 @@ function TaskRow({
   const overdue =
     !finished && Boolean(task.dueAt) && +new Date(toText(task.dueAt)) < now;
   const linkedId = toText(
-    task.opportunityId || task.leadId || task.accountId || '',
+    task.opportunityId || task.leadId || task.companyId || '',
   );
   const linkedEntity = task.opportunityId
     ? 'opportunities'
     : task.leadId
       ? 'leads'
-      : 'accounts';
+      : 'companies';
   const LinkedIcon = task.opportunityId
     ? Handshake
     : task.leadId

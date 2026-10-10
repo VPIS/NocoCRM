@@ -22,7 +22,7 @@ When the system has already attached the material, use what is attached and do n
 1. **This request**: its topic (Discount, Payment terms, Contract terms, Commitment, Other), name, description, applicant and submission time.
 2. **The opportunity**: stage, amount and currency, expected close date, edition; contacts and their roles (whether the decision maker has been reached); tasks (the results of completed ones), notes and the mail with the customer, including the customer's own words when stating their terms, and the competitive situation.
 3. **Other approvals on the same opportunity**: those submitted with it and earlier ones, each with its terms and outcome.
-4. **Earlier requests of the same kind**: this account's earlier approvals, and other accounts' approvals of the same topic — approved or rejected, on what terms, and how the decision comment was written.
+4. **Earlier requests of the same kind**: this company's earlier approvals, and other companies' approvals of the same topic — approved or rejected, on what terms, and how the decision comment was written.
 
 ## 2. Standards
 
@@ -36,8 +36,8 @@ When the system has already attached the material, use what is attached and do n
 
 1. **Work out the gap and its effect**: compare the asked terms with the standard and convert the difference into amount and collection. For example: "Phase one is 420,000 at 20% off: 10 percentage points beyond the standard limit, 42,000 less; at the 10%-off limit it would be 378,000, as requested it is 336,000". For payment terms, state the amount involved and how many extra days it stays outstanding.
 2. **Judge whether it is worth it**:
-   - the opportunity's amount and further potential (a second phase, a nationwide rollout, renewal), and whether the account is a reference or strategic customer;
-   - whether there is evidence that the deal would be lost without the concession: which exchange the competitor and the price gap came from, and whether it is the customer's own words or someone's account of them;
+   - the opportunity's amount and further potential (a second phase, a nationwide rollout, renewal), and whether the company is a reference or strategic customer;
+   - whether there is evidence that the deal would be lost without the concession: which exchange the competitor and the price gap came from, and whether it is the customer's own words or someone's company of them;
    - whether the decision maker has been reached and whether the stage has reached Negotiation; a large concession discussed at an early stage is high risk.
 3. **Look at the concessions together**: add up the requests submitted together on the same opportunity, for example "20% off + final payment in 90 days + source code delivery". Each may be approvable on its own while together they go too far.
 4. **Align with earlier decisions**: how earlier requests of the same kind were decided, whether this one's terms are looser or stricter, and whether there is a reason for the difference. When the standard applied is inconsistent, say so.

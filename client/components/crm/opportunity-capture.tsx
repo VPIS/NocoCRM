@@ -31,10 +31,10 @@ import { LONG_TEXT_LIMIT } from '../../../server/providers/crm/limits.js';
 // "New opportunity" with the AI (server/providers/crm/opportunity-capture.ts),
 // as "new lead" is (lead-capture.tsx): paste what you have — a customer's
 // email about buying more, a renewal, a tender notice — and the AI fills the
-// opportunity form; the account is matched by the server, the people the
-// text names are matched to the account's contacts, and those not found may
-// be created with the opportunity. The account's open deals are shown, so
-// the same business is not opened twice. Picking another account matches
+// opportunity form; the company is matched by the server, the people the
+// text names are matched to the company's contacts, and those not found may
+// be created with the opportunity. The company's open deals are shown, so
+// the same business is not opened twice. Picking another company matches
 // again. Nothing is saved until the salesperson creates it.
 
 interface Person {
@@ -49,7 +49,7 @@ interface Person {
 interface CapturedDeal {
   input: Data;
   company: string | null;
-  accounts: { id: string; name: string }[];
+  companies: { id: string; name: string }[];
   people: Person[];
   duplicates: { id: string; name: string; stage: string }[];
   uncertain: string[];
@@ -61,7 +61,7 @@ const SELLER_ROLES = ['sales-representative', 'sales-manager'];
 // is for the review.
 const FIELDS = [
   'name',
-  'accountId',
+  'companyId',
   'ownerId',
   'stage',
   'amount',
@@ -125,7 +125,7 @@ export function OpportunityCaptureDialog({
   };
   const titles: Record<string, string> = {
     ...Object.fromEntries(
-      (deal?.accounts ?? []).map((a) => [a.id, a.name] as const),
+      (deal?.companies ?? []).map((a) => [a.id, a.name] as const),
     ),
     ...Object.fromEntries(
       (deal?.people ?? [])
@@ -194,7 +194,7 @@ export function OpportunityCaptureDialog({
         deal: Object.fromEntries(
           FIELDS.map((key) => [key, input[key] ?? null]),
         ),
-        accountId: input.accountId ?? '',
+        companyId: input.companyId ?? '',
       });
       take(data.deal, input, true);
       setTurns((all) => [
@@ -212,12 +212,12 @@ export function OpportunityCaptureDialog({
     }
   };
 
-  // Another account picked: its open deals, and the contacts matched again.
-  // A person the text named is looked for among the new account's contacts
+  // Another company picked: its open deals, and the contacts matched again.
+  // A person the text named is looked for among the new company's contacts
   // (or becomes new there); a contact picked by hand belongs to the old one.
   const onChange = (next: Data): void => {
-    const account = toText(next.accountId ?? '');
-    if (deal && account !== toText(input.accountId ?? '')) {
+    const company = toText(next.companyId ?? '');
+    if (deal && company !== toText(input.companyId ?? '')) {
       setInput(next);
       const people = rowsOf(next.contacts).flatMap((row): Data[] => {
         if (row.person) return [row];
@@ -233,7 +233,7 @@ export function OpportunityCaptureDialog({
           duplicates: CapturedDeal['duplicates'];
         };
       }>('opportunities/capture/match', 'POST', {
-        accountId: account,
+        companyId: company,
         people,
       })
         .then(({ data }) => {
@@ -256,7 +256,7 @@ export function OpportunityCaptureDialog({
     setBusy('create');
     setError(undefined);
     try {
-      // The new people in the list, created as the account's contacts
+      // The new people in the list, created as the company's contacts
       // first; rows left without a contact are dropped.
       const contacts: Data[] = [];
       for (const row of rowsOf(input.contacts)) {
@@ -264,7 +264,7 @@ export function OpportunityCaptureDialog({
           const person = row.person as Data;
           const { data } = await api<{ data: CrmRecord }>('contacts', 'POST', {
             name: person.name,
-            accountId: input.accountId,
+            companyId: input.companyId,
             ...(person.jobTitle ? { jobTitle: person.jobTitle } : {}),
             ...(person.phone ? { phone: person.phone } : {}),
             ...(person.email ? { email: person.email } : {}),
@@ -397,14 +397,14 @@ export function OpportunityCaptureDialog({
                           )}
                         </span>
                       </p>
-                      {/* The account: found by the company the text names,
+                      {/* The company: found by the company the text names,
                           or to be picked (or created first). */}
-                      {deal.company && !input.accountId && (
+                      {deal.company && !input.companyId && (
                         <p className='text-warning'>
                           {text(
-                            deal.accounts.length
-                              ? 'dealCapture.severalAccounts'
-                              : 'dealCapture.noAccount',
+                            deal.companies.length
+                              ? 'dealCapture.severalCompanies'
+                              : 'dealCapture.noCompany',
                             { company: deal.company },
                           )}
                         </p>

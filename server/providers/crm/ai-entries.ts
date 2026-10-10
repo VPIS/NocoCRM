@@ -80,7 +80,7 @@ export interface OpportunityVerdict {
   // Lost: when to look in on the customer again, if worth it.
   revisitInDays: number | null;
   changes: string[];
-  // What the web says about the deal's account, for its fields, when the
+  // What the web says about the deal's company, for its fields, when the
   // follow-up looked the company up (opportunity-evaluation.ts).
   enrich?: Enrichment[];
   // The approvals to request before the customer is promised what needs
@@ -91,15 +91,15 @@ export interface OpportunityVerdict {
   // the deal's approvals (opportunity-evaluation.ts, checkTerms).
   terms?: CheckedTerm[];
   // The customer's people the material shows a part for, matched to the
-  // account's contacts: a role to set or change on the deal, a contact to
-  // add to it, or a person to create as the account's contact and add.
+  // company's contacts: a role to set or change on the deal, a contact to
+  // add to it, or a person to create as the company's contact and add.
   contacts?: ProposedContact[];
 }
 
 export interface ProposedContact {
   name: string;
   role: string;
-  // The account's contact they are; null for one to create.
+  // The company's contact they are; null for one to create.
   contactId: string | null;
   // The contact's name when it differs from how the material writes it.
   contactName?: string;

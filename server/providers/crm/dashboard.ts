@@ -100,12 +100,12 @@ export async function dashboard(
 
   // Every object's numbers, with the list pages' rules, so the workspace is
   // the one place that reads them.
-  const [leads, accounts, contacts, opportunities, tasks, approvals] =
+  const [leads, companies, contacts, opportunities, tasks, approvals] =
     await Promise.all(
       (
         [
           'leads',
-          'accounts',
+          'companies',
           'contacts',
           'opportunities',
           'tasks',
@@ -114,7 +114,7 @@ export async function dashboard(
       ).map((entity) => statistics(service, actor, entity, { ownerId })),
     );
   const leadMetrics = leads.metrics as Row;
-  const accountMetrics = accounts.metrics as Row;
+  const companyMetrics = companies.metrics as Row;
   const contactMetrics = contacts.metrics as Row;
   const dealMetrics = opportunities.metrics as Row;
   const taskMetrics = tasks.metrics as Row;
@@ -156,7 +156,7 @@ export async function dashboard(
   const sellers = await Promise.all(
     users.map(async (u) => {
       const [l, a, o, act] = await Promise.all(
-        (['leads', 'accounts', 'opportunities', 'tasks'] as const).map(
+        (['leads', 'companies', 'opportunities', 'tasks'] as const).map(
           (entity) =>
             statistics(service, actor, entity, { ownerId: toText(u.id) }),
         ),
@@ -168,7 +168,7 @@ export async function dashboard(
         wonThisMonth: (o.metrics as Row).wonThisMonth,
         uncontacted: (l.metrics as Row).uncontacted,
         staleLeads: (l.metrics as Row).stale,
-        staleAccounts: (a.metrics as Row).stale,
+        staleCompanies: (a.metrics as Row).stale,
         staleOpportunities: (o.metrics as Row).stale,
         overdueTasks: (act.metrics as Row).overdueTasks,
       };
@@ -237,9 +237,9 @@ export async function dashboard(
     attention: {
       uncontacted: leadMetrics.uncontacted,
       staleLeads: leadMetrics.stale,
-      staleAccounts: accountMetrics.stale,
+      staleCompanies: companyMetrics.stale,
       staleOpportunities: dealMetrics.stale,
-      noContacts: accountMetrics.noContacts,
+      noContacts: companyMetrics.noContacts,
       missingContact: contactMetrics.missingContact,
       closingSoon: dealMetrics.closingSoon,
       overdueOpportunities: dealMetrics.overdueOpportunities,
@@ -251,8 +251,8 @@ export async function dashboard(
       pipeline: dealMetrics.pipeline,
       weighted: dealMetrics.weighted,
       wonThisMonth: dealMetrics.wonThisMonth,
-      churnedThisMonth: accountMetrics.churnedThisMonth,
-      newAccounts: accountMetrics.newThisMonth,
+      churnedThisMonth: companyMetrics.churnedThisMonth,
+      newCompanies: companyMetrics.newThisMonth,
       completedThisMonth: taskMetrics.completedThisMonth,
       approvedThisMonth: approvalMetrics.approvedThisMonth,
       rejectedThisMonth: approvalMetrics.rejectedThisMonth,
@@ -263,8 +263,8 @@ export async function dashboard(
     overall: {
       conversionRate: leadMetrics.conversionRate,
       winRate: dealMetrics.winRate,
-      customers: accountMetrics.customers,
-      accounts: accountMetrics.total,
+      customers: companyMetrics.customers,
+      companies: companyMetrics.total,
     },
     funnel,
     sellers,

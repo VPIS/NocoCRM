@@ -27,7 +27,7 @@ import {
 
 // The demo dataset: NocoBase selling its own licences and services (the
 // editions and prices of nocobase.com/cn/commercial) to fictional customers,
-// with accounts, contacts, leads, opportunities, tasks and approvals
+// with companies, contacts, leads, opportunities, tasks and approvals
 // dated relative to the day it is imported. It follows the business guidance
 // in server/ai/employees/crm-guidance.ts. Imported and removed from the settings
 // page by an administrator; a manifest row in crm_settings records exactly
@@ -386,10 +386,10 @@ export async function populateDemo(
       return service.get(prepared, entity, toText(record.id), q);
     };
 
-  // Who owns which account (by index): the first seller 0,1,4 · the second
+  // Who owns which company (by index): the first seller 0,1,4 · the second
   // seller 2,5 · the manager 3 · the importing administrator 6,7.
   // Leads rotate among the four by position; tasks follow their record.
-  const accountOwner = (i: number): Actor =>
+  const companyOwner = (i: number): Actor =>
     [0, 1, 4].includes(i)
       ? sellerActors[0]
       : [2, 5].includes(i)
@@ -399,7 +399,7 @@ export async function populateDemo(
           : owner;
   const leadOwner = (i: number): Actor =>
     [sellerActors[0], sellerActors[1], managerActor, owner][i % 4];
-  const accounts_: Row[] = [];
+  const companies_: Row[] = [];
   const contacts: Row[][] = [];
   const opportunities: Row[] = [];
   const leads: Row[] = [];
@@ -415,7 +415,7 @@ export async function populateDemo(
     ['energy', 'nanjing', 'inactive', 'search', '201-500'],
     ['foodAndBeverage', 'guangzhou', 'qualified', 'partner', '501-1000'],
   ];
-  // [account, amount, stage, close day, business type, created day, last
+  // [company, amount, stage, close day, business type, created day, last
   // change day, lost reason]; the names are the language's, by index.
   const deals: [
     number,
@@ -502,9 +502,9 @@ export async function populateDemo(
     for (let i = 0; i < companies.length; i++) {
       const [industry, city, status, source, employees] = companies[i];
       const { name, domain, description } = text.companies[i];
-      const ownerId = accountOwner(i).id;
-      const account = await save(
-        'accounts',
+      const ownerId = companyOwner(i).id;
+      const company = await save(
+        'companies',
         {
           name,
           ownerId,
@@ -521,7 +521,7 @@ export async function populateDemo(
         },
         -75 + i * 5,
       );
-      accounts_.push(account);
+      companies_.push(company);
       const pair: Row[] = [];
       for (let j = 0; j < 2; j++) {
         const { name: personName, mailbox } = text.people[i][j];
@@ -531,7 +531,7 @@ export async function populateDemo(
             {
               name: personName,
               ownerId,
-              accountId: account.id,
+              companyId: company.id,
               jobTitle: text.contactJobTitles[j],
               gender: j === 0 ? 'female' : 'male',
               source,
@@ -560,13 +560,13 @@ export async function populateDemo(
       ],
     ] of deals.entries()) {
       const name = text.deals[d];
-      const ownerId = accountOwner(a).id;
+      const ownerId = companyOwner(a).id;
       let deal = await save(
         'opportunities',
         {
           name,
           ownerId,
-          accountId: accounts_[a].id,
+          companyId: companies_[a].id,
           amount,
           currency: 'CNY',
           source: companies[a][3],
@@ -604,23 +604,23 @@ export async function populateDemo(
       opportunities.push(deal);
     }
     await save(
-      'accounts',
+      'companies',
       {
         status: 'churned',
         churnReason: 'toCompetitor',
       },
       -20,
-      toText(accounts_[7].id),
+      toText(companies_[7].id),
     );
-    // Chronology on automatically promoted accounts follows the associated won deal.
+    // Chronology on automatically promoted companies follows the associated won deal.
     for (const [i, day] of [
       [5, -18],
       [1, -3],
     ] as const)
       await q
-        .updateTable('crmAccounts')
+        .updateTable('crmCompanies')
         .set({ updatedAt: at(day) })
-        .where('id', '=', accounts_[i].id)
+        .where('id', '=', companies_[i].id)
         .execute();
     const leadCities: DemoCity[] = [
       'shanghai',
@@ -684,7 +684,7 @@ export async function populateDemo(
     // about, written by whoever held it, at the time it ended, headed by
     // what it was without the customer's name.
     const note = async (
-      entity: 'leads' | 'opportunities' | 'accounts' | 'contacts',
+      entity: 'leads' | 'opportunities' | 'companies' | 'contacts',
       recordId: unknown,
       authorId: unknown,
       heading: string,
@@ -707,7 +707,7 @@ export async function populateDemo(
         })
         .execute();
     };
-    // What is known of each contact, and why the churned account left: notes
+    // What is known of each contact, and why the churned company left: notes
     // by their owners, written when the record was.
     for (const [i, pair] of contacts.entries())
       for (const [j, contact] of pair.entries())
@@ -721,9 +721,9 @@ export async function populateDemo(
           9,
         );
     await note(
-      'accounts',
-      accounts_[7].id,
-      accounts_[7].ownerId,
+      'companies',
+      companies_[7].id,
+      companies_[7].ownerId,
       '',
       text.churnNotes,
       -20,
@@ -751,7 +751,7 @@ export async function populateDemo(
       -5,
       14,
     );
-    for (const [i, accountIndex, contactIndex, day] of [
+    for (const [i, companyIndex, contactIndex, day] of [
       [0, 0, 0, -10],
       [1, 4, 0, -4],
     ] as const) {
@@ -760,8 +760,8 @@ export async function populateDemo(
         prepared,
         toText(leads[i].id),
         {
-          accountId: accounts_[accountIndex].id,
-          contactId: contacts[accountIndex][contactIndex].id,
+          companyId: companies_[companyIndex].id,
+          contactId: contacts[companyIndex][contactIndex].id,
           createOpportunity: false,
         },
         q,
@@ -783,9 +783,9 @@ export async function populateDemo(
     for (let i = 0; i < 6; i++) {
       const a = deals[i][0];
       const links: Row = {
-        accountId: accounts_[a].id,
+        companyId: companies_[a].id,
         opportunityId: opportunities[i].id,
-        ownerId: accountOwner(a).id,
+        ownerId: companyOwner(a).id,
       };
       await note(
         'opportunities',
@@ -810,9 +810,9 @@ export async function populateDemo(
     await task(
       text.eveningCall,
       {
-        accountId: accounts_[0].id,
+        companyId: companies_[0].id,
         opportunityId: opportunities[0].id,
-        ownerId: accountOwner(0).id,
+        ownerId: companyOwner(0).id,
       },
       0,
       21.5,
@@ -821,9 +821,9 @@ export async function populateDemo(
     await task(
       text.ssoConfirmation,
       {
-        accountId: accounts_[1].id,
+        companyId: companies_[1].id,
         opportunityId: opportunities[1].id,
-        ownerId: accountOwner(1).id,
+        ownerId: companyOwner(1).id,
       },
       0,
       23.5,
@@ -932,7 +932,7 @@ export async function populateDemo(
             await note(
               'opportunities',
               deal.id,
-              accountOwner(a).id,
+              companyOwner(a).id,
               name,
               feedback,
               day,
@@ -942,9 +942,9 @@ export async function populateDemo(
             await task(
               name,
               {
-                accountId: accounts_[a].id,
+                companyId: companies_[a].id,
                 opportunityId: deal.id,
-                ownerId: accountOwner(a).id,
+                ownerId: companyOwner(a).id,
               },
               day,
               hour,
@@ -987,7 +987,7 @@ export async function populateDemo(
       return record;
     });
   await raise(
-    accountOwner(0),
+    companyOwner(0),
     {
       name: text.approvals.discount.name,
       opportunityId: opportunities[0].id,
@@ -999,7 +999,7 @@ export async function populateDemo(
     -1,
   );
   const paymentTerms = await raise(
-    accountOwner(1),
+    companyOwner(1),
     {
       name: text.approvals.paymentTerms.name,
       opportunityId: opportunities[1].id,
@@ -1111,7 +1111,7 @@ export async function populateDemo(
       address: toText(row.email).toLowerCase(),
       name: toText(row.name),
     });
-    // A deal's conversation with one of its account's contacts.
+    // A deal's conversation with one of its company's contacts.
     const aboutDeal = (
       topic: DemoMailTopic,
       d: number,
@@ -1338,7 +1338,7 @@ export async function resetDemo(
       ['opportunities', 'crmOpportunities'],
       ['contacts', 'crmContacts'],
       ['leads', 'crmLeads'],
-      ['accounts', 'crmAccounts'],
+      ['companies', 'crmCompanies'],
     ] as const) {
       const ids = byEntity.get(entity) ?? [];
       if (ids.length)

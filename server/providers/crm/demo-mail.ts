@@ -68,7 +68,7 @@ const CURSOR = { value: 'demo', version: '1' };
 const PAGE = 50;
 
 // The addresses a demo mailbox sends to: the demo data's own, all at
-// .example domains (the demo accounts, its accounts' contacts, its leads),
+// .example domains (the demo accounts, its companies' contacts, its leads),
 // which no real mail reaches. Anyone else is refused, so mail meant for a
 // real customer is never filed as sent while going nowhere.
 export const isDemoAddress = (address: string): boolean =>

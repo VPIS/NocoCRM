@@ -426,7 +426,7 @@ function DecisionEntry({
         facts={[
           ...(entry.opportunity
             ? ([
-                ['fields.accountId', toText(entry.opportunity.account)],
+                ['fields.companyId', toText(entry.opportunity.company)],
                 [
                   'fields.stage',
                   toText(text(`options.${entry.opportunity.stage}`)),

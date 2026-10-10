@@ -183,7 +183,7 @@ export function StageField({
   const clearedReasons: Data =
     entity === 'leads'
       ? { invalidReason: null }
-      : entity === 'accounts'
+      : entity === 'companies'
         ? { churnReason: null }
         : entity === 'opportunities'
           ? { lostReason: null, pauseReason: null, resumeAt: null }

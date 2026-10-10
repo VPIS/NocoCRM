@@ -15,7 +15,7 @@ export function toText(value: unknown): string {
 }
 
 export type Entity =
-  'leads' | 'accounts' | 'contacts' | 'opportunities' | 'tasks' | 'approvals';
+  'leads' | 'companies' | 'contacts' | 'opportunities' | 'tasks' | 'approvals';
 export interface CrmRecord extends Row {
   id: string;
   name: string;
@@ -160,12 +160,12 @@ const field = (
 const owner: Field = field('ownerId', 'relation', true, undefined, 'users');
 const source: Field = field('source', 'select', true, sources);
 const attachments: Field = field('attachments', 'files');
-const account: Field = field(
-  'accountId',
+const company: Field = field(
+  'companyId',
   'relation',
   true,
   undefined,
-  'accounts',
+  'companies',
 );
 // Country and subdivision carry ISO 3166 codes; the client renders localized
 // labels. City stays free text because no bounded, authoritative city list exists.
@@ -224,16 +224,16 @@ export const definitions: Record<Entity, EntityDefinition> = {
       ...geography.slice(1),
       field('address'),
       // A lead carries the enquiry as it arrived, which is not the same thing
-      // as the description an account or opportunity is given later.
+      // as the description a company or opportunity is given later.
       field('message', 'textarea'),
-      // What the company is, found by research; becomes the account's
+      // What the company is, found by research; becomes the company's
       // introduction on conversion.
       field('companyDescription', 'textarea'),
       attachments,
     ],
   },
-  accounts: {
-    table: 'crmAccounts',
+  companies: {
+    table: 'crmCompanies',
     statusField: 'status',
     statuses: ['prospect', 'qualified', 'customer', 'inactive', 'churned'],
     columns: ['name', 'status', 'industry', 'source', 'ownerId', 'updatedAt'],
@@ -268,7 +268,7 @@ export const definitions: Record<Entity, EntityDefinition> = {
     statuses: [],
     columns: [
       'name',
-      'accountId',
+      'companyId',
       'jobTitle',
       'email',
       'phone',
@@ -277,13 +277,13 @@ export const definitions: Record<Entity, EntityDefinition> = {
     ],
     fields: [
       field('name', 'text', true),
-      account,
+      company,
       ...person,
       owner,
       { ...source, required: false },
       field('gender', 'select', true, ['male', 'female', 'unknown']),
       field('employed', 'boolean'),
-      // The main person to reach at the account; false unless chosen.
+      // The main person to reach at the company; false unless chosen.
       field('primary', 'boolean'),
     ],
   },
@@ -294,7 +294,7 @@ export const definitions: Record<Entity, EntityDefinition> = {
     // The amount column is formatted in its currency, so no currency column.
     columns: [
       'name',
-      'accountId',
+      'companyId',
       'stage',
       'amount',
       'expectedCloseAt',
@@ -302,7 +302,7 @@ export const definitions: Record<Entity, EntityDefinition> = {
     ],
     fields: [
       field('name', 'text', true),
-      account,
+      company,
       owner,
       field('stage', 'select', true, stages),
       field('amount', 'number'),
@@ -329,7 +329,7 @@ export const definitions: Record<Entity, EntityDefinition> = {
     table: 'crmTasks',
     statusField: 'status',
     statuses: ['open', 'completed', 'cancelled'],
-    columns: ['name', 'dueAt', 'status', 'accountId', 'ownerId'],
+    columns: ['name', 'dueAt', 'status', 'companyId', 'ownerId'],
     fields: [
       // What to do, in the person's words: no type to pick.
       field('name', 'text', true),
@@ -341,7 +341,7 @@ export const definitions: Record<Entity, EntityDefinition> = {
       field('dueAt', 'datetime', false),
       // Optional: a task may stand on its own.
       field('leadId', 'relation', false, undefined, 'leads'),
-      { ...account, required: false },
+      { ...company, required: false },
       field('opportunityId', 'relation', false, undefined, 'opportunities'),
       field('internalParticipants', 'multi', false, undefined, 'users'),
       field('description', 'textarea'),
@@ -391,7 +391,7 @@ export const systemFields: string[] = [
 export const extraFields: Partial<Record<Entity, string[]>> = {
   leads: [
     'convertedAt',
-    'convertedAccountId',
+    'convertedCompanyId',
     'convertedContactId',
     'convertedOpportunityId',
   ],
@@ -454,7 +454,7 @@ export const defaultSettings: CrmSettings = {
       'tender',
       'other',
     ],
-    accountType: ['direct', 'partner', 'reseller', 'other'],
+    companyType: ['direct', 'partner', 'reseller', 'other'],
     churnReason: churnReasons,
     currency: currencies,
     lostReason: lostReasons,

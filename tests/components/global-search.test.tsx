@@ -36,7 +36,7 @@ const lead = {
   company: 'Orbit Kitchen',
   status: 'new',
 };
-const account = { id: 'a1', name: 'Orbit Group', industry: 'retail' };
+const company = { id: 'a1', name: 'Orbit Group', industry: 'retail' };
 
 vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
   const actual =
@@ -48,7 +48,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
         assistant: state.assistant,
         definitions: {
           leads: { fields: [{ key: 'status', type: 'select' }] },
-          accounts: { fields: [{ key: 'industry', type: 'select' }] },
+          companies: { fields: [{ key: 'industry', type: 'select' }] },
         },
         settings: { timeZone: 'Asia/Shanghai' },
       },
@@ -70,9 +70,9 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
                 names: {},
               },
               {
-                entity: 'accounts',
+                entity: 'companies',
                 total: 1,
-                rows: [account],
+                rows: [company],
                 titles: {},
                 names: {},
               },
@@ -197,7 +197,7 @@ describe('the global search', () => {
       await within(dialog).findByText(`${english('entities.leads')} · 7`),
     ).toBeTruthy();
     expect(
-      within(dialog).getByText(`${english('entities.accounts')} · 1`),
+      within(dialog).getByText(`${english('entities.companies')} · 1`),
     ).toBeTruthy();
     expect(state.requests).toContain('search?q=orbit');
     // The typed word in bold, in the name and on the detail line.

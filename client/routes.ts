@@ -114,14 +114,14 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       componentLoader: () => import('./pages/crm-agents.js'),
     })),
   },
-  // The records: leads and deals, then the accounts and their people.
+  // The records: leads and deals, then the companies and their people.
   {
     name: 'crm-records',
     navigation: { title: 'crm.navigation.records' },
     children: [
       ['leads', Radar],
       ['opportunities', Handshake],
-      ['accounts', Building2],
+      ['companies', Building2],
       ['contacts', UserRound],
     ].map(([entity, icon]) => ({
       name: `crm-${String(entity)}`,
@@ -170,13 +170,36 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     auth: 'required',
     authz: page('crm-record'),
     componentLoader: () => import('./pages/crm-detail.js'),
-    // A tab has an address of its own (/crm/accounts/<id>/contacts), read by
+    // A tab has an address of its own (/crm/companies/<id>/contacts), read by
     // useDetailTab; the page draws the tab, see pages/crm-record-tab.tsx.
     children: [
       {
         name: 'crm-record-tab',
         path: ':tab',
         componentLoader: () => import('./pages/crm-record-tab.js'),
+      },
+    ],
+  },
+  // Accounts became companies: the old list, record and tab addresses lead
+  // to the new ones, whose own routes check access.
+  {
+    name: 'crm-accounts-redirect',
+    path: '/crm/accounts',
+    auth: 'required',
+    authz: 'skip',
+    componentLoader: () => import('./pages/crm-companies-redirect.js'),
+    children: [
+      {
+        name: 'crm-accounts-redirect-record',
+        path: ':id',
+        componentLoader: () => import('./pages/crm-companies-redirect.js'),
+        children: [
+          {
+            name: 'crm-accounts-redirect-tab',
+            path: ':tab',
+            componentLoader: () => import('./pages/crm-companies-redirect.js'),
+          },
+        ],
       },
     ],
   },

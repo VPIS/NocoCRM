@@ -120,7 +120,7 @@ export function registerCrmResources(authz: AppAuthorization): void {
   );
 }
 
-// The accounts that can hold a CRM role: every user that has not been deleted.
+// The companies that can hold a CRM role: every user that has not been deleted.
 export async function listUsers(
   database: DatabaseManager,
 ): Promise<
@@ -342,6 +342,17 @@ export async function provisionCrm(
     }
     await mark('crm-tasks-v1');
   }
+  // Accounts became companies (202610100001_crm_companies): every set's
+  // grants on the accounts operation, page and table are renamed once, the
+  // same way and for the same reason.
+  if (!(await marker('crm-companies-v1'))) {
+    for (const set of await authz.permissionSets.list()) {
+      const grants = companyGrants(set.grants);
+      if (grants)
+        await authz.permissionSets.update(set.key, { ...set, grants });
+    }
+    await mark('crm-companies-v1');
+  }
   // The sales skills page and the capability to add the company's notes to
   // the skills were removed: the skills are their SKILL.md files alone.
   // Every set loses its grant of the page and the capability once, in boot,
@@ -399,9 +410,30 @@ const TASK_RENAMES: Record<string, Record<string, string>> = {
 export function taskGrants(
   grants: readonly PermissionGrant[],
 ): PermissionGrant[] | undefined {
+  return renamedGrants(grants, TASK_RENAMES);
+}
+
+// Renames grants on the former accounts to the companies: the operation
+// `crm.accounts`, the page `crm-accounts` and the table `crmAccounts`.
+// Returns undefined when nothing needed it.
+const COMPANY_RENAMES: Record<string, Record<string, string>> = {
+  composite: { 'crm.accounts': 'crm.companies' },
+  page: { 'crm-accounts': 'crm-companies' },
+  collection: { crmAccounts: 'crmCompanies' },
+};
+export function companyGrants(
+  grants: readonly PermissionGrant[],
+): PermissionGrant[] | undefined {
+  return renamedGrants(grants, COMPANY_RENAMES);
+}
+
+function renamedGrants(
+  grants: readonly PermissionGrant[],
+  renames: Record<string, Record<string, string>>,
+): PermissionGrant[] | undefined {
   let changed = false;
   const result = grants.map((grant) => {
-    const id = TASK_RENAMES[grant.resource.type]?.[grant.resource.id];
+    const id = renames[grant.resource.type]?.[grant.resource.id];
     if (!id) return grant;
     changed = true;
     return { ...grant, resource: { ...grant.resource, id } };

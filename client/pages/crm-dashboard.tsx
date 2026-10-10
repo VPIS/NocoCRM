@@ -88,8 +88,8 @@ const attentionCards: {
     days: 'leadStaleDays',
   },
   {
-    key: 'staleAccounts',
-    entity: 'accounts',
+    key: 'staleCompanies',
+    entity: 'companies',
     metric: 'stale',
     icon: Hourglass,
     days: 'staleDays',
@@ -115,7 +115,7 @@ const attentionCards: {
     icon: AlertCircle,
   },
   // Gaps in the book itself, and one's own unfinished requests.
-  { key: 'noContacts', entity: 'accounts', metric: 'noContacts', icon: UserX },
+  { key: 'noContacts', entity: 'companies', metric: 'noContacts', icon: UserX },
   {
     key: 'missingContact',
     entity: 'contacts',

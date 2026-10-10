@@ -48,7 +48,7 @@ const workflow: WorkflowSourceAst = defineWorkflow({
         type: 'string',
         enum: [
           'leads',
-          'accounts',
+          'companies',
           'contacts',
           'opportunities',
           'tasks',

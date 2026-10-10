@@ -136,7 +136,7 @@ export interface DealVerdict {
   lostReason: string | null;
   revisitInDays: number | null;
   changes: string[];
-  // What the web says about the deal's account, for its fields.
+  // What the web says about the deal's company, for its fields.
   enrich?: Verdict['enrich'];
   // Approvals to request before promising the customer what needs them.
   approvals?: { topic: string; name: string; description: string }[];
@@ -436,7 +436,7 @@ export function VerdictPanel({
   const [instruction, setInstruction] = useState('');
   // The web findings ticked, all to start with: written on their own with
   // "Write picked", or with the accept (a lead's into the lead, a deal's
-  // into its account). A deal's proposed updates likewise, written with the
+  // into its company). A deal's proposed updates likewise, written with the
   // accept.
   const [picked, setPicked] = useState<ReadonlySet<string>>(
     () =>
@@ -540,7 +540,7 @@ export function VerdictPanel({
       }),
     );
   // A conversion writes them first: the lead is read-only once converted,
-  // and the account it becomes takes the corrected particulars.
+  // and the company it becomes takes the corrected particulars.
   const convert = (): Promise<void> =>
     act('accept', async () => {
       if (unwritten.length)
@@ -863,7 +863,7 @@ export function VerdictPanel({
         />
       )}
       {/* What the web says about the company, to fill the lead (or the
-          deal's account) with. */}
+          deal's company) with. */}
       {verdict && (verdict.enrich?.length ?? 0) > 0 && (
         <Findings
           entry={entry}
@@ -1606,7 +1606,7 @@ function Findings({
   onPick,
 }: {
   entry: EvaluationEntry;
-  // A lead's findings fill the lead; a deal's fill its account.
+  // A lead's findings fill the lead; a deal's fill its company.
   entity: FollowedEntity;
   recordId: string;
   editable: boolean;
@@ -1621,7 +1621,7 @@ function Findings({
   const result = entry.ai.result;
   const findings = result?.enrich ?? [];
   // The object the findings are written into.
-  const target = entity === 'leads' ? 'leads' : 'accounts';
+  const target = entity === 'leads' ? 'leads' : 'companies';
   // The ticked findings (a deal's card ticks its updates in the same set).
   const chosen = findings
     .filter((f) => picked.has(f.field))
@@ -1660,7 +1660,7 @@ function Findings({
         )}
         {text(
           entity !== 'leads'
-            ? 'evaluation.findingsAccount'
+            ? 'evaluation.findingsCompany'
             : findings.every((finding) => finding.source)
               ? 'evaluation.findings'
               : 'evaluation.fieldSuggestions',
@@ -1704,7 +1704,7 @@ function Findings({
             {text(
               entity === 'leads'
                 ? 'evaluation.writePicked'
-                : 'evaluation.writePickedAccount',
+                : 'evaluation.writePickedCompany',
               { count: chosen.length },
             )}
           </Button>
@@ -1809,7 +1809,7 @@ function EmailDraft({
 }
 
 // What accepting a conversion would create, as the conversion dialog will
-// start: the one matching account linked, else a new one from the lead's
+// start: the one matching company linked, else a new one from the lead's
 // company, and likewise the contact at it; the proposed opportunity; and
 // what the duplicate check found, so an empty check reads as done. The
 // dialog confirms it all before anything is saved.
@@ -1824,7 +1824,7 @@ function ConversionPlan({
   const { data: meta } = useMetadata();
   const lead = useRecord('leads', leadId).data?.record;
   const preview = useCrmQuery<{
-    accounts: CrmRecord[];
+    companies: CrmRecord[];
     contacts: CrmRecord[];
     opportunities: CrmRecord[];
     titles: Record<string, string>;
@@ -1833,15 +1833,15 @@ function ConversionPlan({
   const quoted = (value: unknown): string =>
     zh ? `「${toText(value)}」` : `“${toText(value)}”`;
   const titles = preview.data?.titles ?? {};
-  const accounts = preview.data?.accounts ?? [];
-  const account = accounts.length === 1 ? accounts[0] : undefined;
+  const companies = preview.data?.companies ?? [];
+  const company = companies.length === 1 ? companies[0] : undefined;
   const contacts = (preview.data?.contacts ?? []).filter(
-    (c) => !account || c.accountId === account.id,
+    (c) => !company || c.companyId === company.id,
   );
-  const contact = account && contacts.length === 1 ? contacts[0] : undefined;
+  const contact = company && contacts.length === 1 ? contacts[0] : undefined;
   const deals = preview.data?.opportunities ?? [];
   const links = (
-    entity: 'accounts' | 'contacts' | 'opportunities',
+    entity: 'companies' | 'contacts' | 'opportunities',
     records: CrmRecord[],
   ): ReactNode =>
     records.map((record, index) => (
@@ -1857,7 +1857,7 @@ function ConversionPlan({
       </Fragment>
     ));
   const possible = (
-    entity: 'accounts' | 'contacts',
+    entity: 'companies' | 'contacts',
     records: CrmRecord[],
   ): ReactNode =>
     records.length > 0 && (
@@ -1873,7 +1873,7 @@ function ConversionPlan({
     </>
   );
   const link = (
-    entity: 'accounts' | 'contacts',
+    entity: 'companies' | 'contacts',
     record: CrmRecord,
   ): ReactNode => (
     <span className='inline-flex max-w-full min-w-0 items-center gap-1'>
@@ -1882,9 +1882,9 @@ function ConversionPlan({
   );
   return (
     <>
-      <Row label={text('evaluation.conversion.account')}>
-        {account ? link('accounts', account) : create(lead?.company)}
-        {!account && possible('accounts', accounts)}
+      <Row label={text('evaluation.conversion.company')}>
+        {company ? link('companies', company) : create(lead?.company)}
+        {!company && possible('companies', companies)}
       </Row>
       <Row label={text('evaluation.conversion.contact')}>
         {contact ? link('contacts', contact) : create(lead?.name)}
@@ -1913,7 +1913,7 @@ function ConversionPlan({
         </Row>
       )}
       {preview.data &&
-        !accounts.length &&
+        !companies.length &&
         !preview.data.contacts.length &&
         !deals.length && (
           <Row label={text('evaluation.conversion.duplicates')}>
@@ -2103,7 +2103,7 @@ function VerdictList({
 // changeable; submitted with the accept, then marked.
 // The customer's people the follow-up gives a part in the deal: each a role
 // to set or change, a contact to add to the deal, or a person to create as
-// the account's contact, with what shows it; ticked ones are written with
+// the company's contact, with what shows it; ticked ones are written with
 // the accept.
 function DealContacts({
   entry,

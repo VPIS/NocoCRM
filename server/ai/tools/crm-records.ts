@@ -111,7 +111,7 @@ const filterProperties = {
     type: 'string',
     description: 'Filter by owning user id.',
   },
-  accountId: { type: 'string' },
+  companyId: { type: 'string' },
   leadId: { type: 'string' },
   opportunityId: { type: 'string' },
   source: { type: 'string' },
@@ -139,7 +139,7 @@ function filtersOf(args: Row): ListOptions {
     search: text(args.search),
     status: text(args.status),
     ownerId: text(args.ownerId),
-    accountId: text(args.accountId),
+    companyId: text(args.companyId),
     leadId: text(args.leadId),
     opportunityId: text(args.opportunityId),
     source: text(args.source),
@@ -164,12 +164,12 @@ export function crmRecordTools(
       introduction: {
         title: 'Search CRM records',
         about:
-          'Finds leads, accounts, contacts, opportunities, tasks and approvals the current user may read, a page at a time.',
+          'Finds leads, companies, contacts, opportunities, tasks and approvals the current user may read, a page at a time.',
       },
       definition: {
         name: 'search_records',
         description:
-          'Search one CRM object. Returns {total, showing, page, records, names}: total is every record matching the filter that this user may read, records holds that page only, names maps the ids in the records (owners, accounts, ...) to display names — use those names, never show an id to the user. Use this instead of guessing when you need older records, or when you need to filter by owner, status, account or date.',
+          'Search one CRM object. Returns {total, showing, page, records, names}: total is every record matching the filter that this user may read, records holds that page only, names maps the ids in the records (owners, companies, ...) to display names — use those names, never show an id to the user. Use this instead of guessing when you need older records, or when you need to filter by owner, status, company or date.',
         schema: {
           type: 'object',
           properties: {
@@ -198,7 +198,7 @@ export function crmRecordTools(
             ),
           });
           // Display names for the records and the ids they refer to
-          // (owners, accounts), so the model reads names instead of ids.
+          // (owners, companies), so the model reads names instead of ids.
           const { names } = await resolveTitles(service, actor, {
             [entity]: page.data,
           });
@@ -225,7 +225,7 @@ export function crmRecordTools(
       definition: {
         name: 'summarize_records',
         description:
-          'Count and total the records of one CRM object that this user may read, with the same filters as search_records, optionally grouped by a field (stage, status, source, industry, ownerId, accountId, a country ...) or by a period of a date field (createdAt, closedAt, expectedCloseAt, dueAt ...; period day, week, month, quarter or year, in the business time zone), with sum, average, min and max of number fields (measures, such as amount). Returns {total, truncated, groupBy, period, groups: [{key, count, measures}], overall, names}: total is every matching record, a group key is the field value (an enum value to put in words, or an id whose display name is in names) or the period ("2026-09", "2026-Q3", a week by its Monday), null for records without one; measures and overall hold {field, currency, sum, average, min, max, counted}, one entry per currency, since amounts in different currencies are never added together. A participants field counts a record once for each participant. Use it for every count, total, breakdown or trend instead of paging through search_records.',
+          'Count and total the records of one CRM object that this user may read, with the same filters as search_records, optionally grouped by a field (stage, status, source, industry, ownerId, companyId, a country ...) or by a period of a date field (createdAt, closedAt, expectedCloseAt, dueAt ...; period day, week, month, quarter or year, in the business time zone), with sum, average, min and max of number fields (measures, such as amount). Returns {total, truncated, groupBy, period, groups: [{key, count, measures}], overall, names}: total is every matching record, a group key is the field value (an enum value to put in words, or an id whose display name is in names) or the period ("2026-09", "2026-Q3", a week by its Monday), null for records without one; measures and overall hold {field, currency, sum, average, min, max, counted}, one entry per currency, since amounts in different currencies are never added together. A participants field counts a record once for each participant. Use it for every count, total, breakdown or trend instead of paging through search_records.',
         schema: {
           type: 'object',
           properties: {

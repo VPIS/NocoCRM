@@ -19,7 +19,7 @@ export interface SearchOption {
 }
 
 // A chip that searches, as Clarify's record chip does: a box to type in, and
-// the matches under it, grouped (leads, accounts, opportunities) when there
+// the matches under it, grouped (leads, companies, opportunities) when there
 // are several kinds. A pick is marked; picking a marked one takes it out.
 // One pick closes it; several stay open for more.
 export function TaskSearchChip({

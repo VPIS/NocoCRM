@@ -266,7 +266,7 @@ export function RecordForm({
   // A new lead's follow-up by the AI, at once unless unticked.
   const [followUp, setFollowUp] = useState(true);
   // The bare names of records picked in this form, for the deal name a new
-  // opportunity takes from its account.
+  // opportunity takes from its company.
   const pickedNamesRef = useRef<Record<string, string>>({});
   // The record once created here, so a retry after a failed follow-up
   // updates it instead of creating a second one.
@@ -290,7 +290,7 @@ export function RecordForm({
       : undefined,
     ...(entity === 'leads'
       ? { status: 'new' }
-      : entity === 'accounts'
+      : entity === 'companies'
         ? { status: 'prospect' }
         : entity === 'contacts'
           ? { employed: true, primary: false, gender: 'unknown' }
@@ -310,7 +310,7 @@ export function RecordForm({
     setInput((current) => ({
       ...current,
       [key]: value,
-      ...(key === 'accountId'
+      ...(key === 'companyId'
         ? {
             contacts: [],
             opportunityId: null,
@@ -345,12 +345,12 @@ export function RecordForm({
           entity === 'tasks' &&
           !id &&
           initial.leadId &&
-          ['accountId', 'opportunityId'].includes(f.key)
+          ['companyId', 'opportunityId'].includes(f.key)
         ) &&
         !(
           entity === 'tasks' &&
           !id &&
-          initial.accountId &&
+          initial.companyId &&
           f.key === 'leadId'
         ) &&
         // A reason field exists only for the status it explains; hidden
@@ -502,7 +502,7 @@ export function RecordForm({
         )
         .map((u) => ({ value: u.id, label: u.name }));
     const key =
-      field.key === 'type' && entity === 'accounts' ? 'accountType' : field.key;
+      field.key === 'type' && entity === 'companies' ? 'companyType' : field.key;
     return (meta?.settings.options[key] ?? field.options ?? []).map((v) => ({
       value: v,
       label: text(`options.${toText(v)}`, { defaultValue: v }),
@@ -546,7 +546,7 @@ export function RecordForm({
         />
       );
     // A related record is searched for, a page at a time. Contacts and deals
-    // are looked for within the chosen account; a converted lead is not
+    // are looked for within the chosen company; a converted lead is not
     // offered, since its work has moved on to what it became.
     if (
       field.type === 'relation' &&
@@ -561,8 +561,8 @@ export function RecordForm({
           titles={titles}
           filter={{
             ...(['contacts', 'opportunities'].includes(field.relation) &&
-            input.accountId
-              ? { accountId: toText(input.accountId) }
+            input.companyId
+              ? { companyId: toText(input.companyId) }
               : {}),
             // An approval is raised for a deal its applicant may edit, which
             // for a salesperson means their own: the picker offers only
@@ -591,7 +591,7 @@ export function RecordForm({
           disabled={
             !id &&
             !embedded &&
-            ['leadId', 'accountId', 'opportunityId'].includes(field.key) &&
+            ['leadId', 'companyId', 'opportunityId'].includes(field.key) &&
             Boolean(initial[field.key])
           }
         />
@@ -604,7 +604,7 @@ export function RecordForm({
           value={arrayValues(value).map(toText)}
           names={titles}
           filter={
-            input.accountId ? { accountId: toText(input.accountId) } : undefined
+            input.companyId ? { companyId: toText(input.companyId) } : undefined
           }
           onChange={(v) => set(field.key, v)}
         />
@@ -621,7 +621,7 @@ export function RecordForm({
           disabled={
             (field.key === 'ownerId' && !meta?.assign) ||
             (!id &&
-              ['leadId', 'accountId', 'opportunityId'].includes(field.key) &&
+              ['leadId', 'companyId', 'opportunityId'].includes(field.key) &&
               Boolean(initial[field.key]))
           }
         />
@@ -664,12 +664,12 @@ export function RecordForm({
                   }
                 >
                   {/* A person the AI capture found who is not yet the
-                      account's contact (opportunity-capture.tsx): created
+                      company's contact (opportunity-capture.tsx): created
                       with the opportunity, in the list it is linked from. */}
                   {contact.person ? (
                     <NewContact
                       person={contact.person as Data}
-                      account={Boolean(input.accountId)}
+                      company={Boolean(input.companyId)}
                     />
                   ) : (
                     <RecordPicker
@@ -683,8 +683,8 @@ export function RecordForm({
                         .filter(Boolean)}
                       titles={titles}
                       filter={
-                        input.accountId
-                          ? { accountId: toText(input.accountId) }
+                        input.companyId
+                          ? { companyId: toText(input.companyId) }
                           : undefined
                       }
                       onChange={(v) =>
@@ -744,7 +744,7 @@ export function RecordForm({
           <Button
             type='button'
             variant='outline'
-            disabled={!input.accountId}
+            disabled={!input.companyId}
             onClick={() =>
               set(field.key, [
                 ...rows(value),
@@ -1387,14 +1387,14 @@ export function RecordForm({
   );
 }
 
-// A person to create as the account's contact with the opportunity: what
+// A person to create as the company's contact with the opportunity: what
 // the text gave, marked new, in place of the picker.
 function NewContact({
   person,
-  account,
+  company,
 }: {
   person: Data;
-  account: boolean;
+  company: boolean;
 }): ReactElement {
   const { text } = useCrmText();
   const details = [person.jobTitle, person.phone, person.email]
@@ -1405,12 +1405,12 @@ function NewContact({
     <div
       className='flex min-w-0 items-center gap-2 px-1 text-sm'
       title={text(
-        account
+        company
           ? 'dealCapture.newContactHint'
-          : 'dealCapture.newContactNeedsAccount',
+          : 'dealCapture.newContactNeedsCompany',
       )}
     >
-      <Badge variant={account ? 'ai' : 'warning'} className='shrink-0'>
+      <Badge variant={company ? 'ai' : 'warning'} className='shrink-0'>
         {text('dealCapture.newContact')}
       </Badge>
       <span className='shrink-0 font-medium'>{toText(person.name)}</span>

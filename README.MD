@@ -1,16 +1,16 @@
 # NocoCRM
 
-A CRM for B2B sales built on [NocoBase 3](https://www.nocobase.com), the open-source enterprise application development platform built for AI: leads, accounts, contacts, opportunities, tasks, approvals, a team workspace, in-app notifications, and an AI assistant that works from the records a user may see and proposes every change for the user to confirm.
+A CRM for B2B sales built on [NocoBase 3](https://www.nocobase.com), the open-source enterprise application development platform built for AI: leads, companies, contacts, opportunities, tasks, approvals, a team workspace, in-app notifications, and an AI assistant that works from the records a user may see and proposes every change for the user to confirm.
 
 ## What NocoCRM does
 
-- **Records.** Leads, accounts, contacts, opportunities (with each contact's role and the sales stages from first contact to won, lost or paused), tasks (anything to do, with or without a time, a record or participants) and approvals (discounts, payment terms, contract terms and commitments), with lists, boards, record pages, timelines, notes (calls and meetings that took place) and attachments.
+- **Records.** Leads, companies, contacts, opportunities (with each contact's role and the sales stages from first contact to won, lost or paused), tasks (anything to do, with or without a time, a record or participants) and approvals (discounts, payment terms, contract terms and commitments), with lists, boards, record pages, timelines, notes (calls and meetings that took place) and attachments.
 - **Workspace.** Today's and overdue work, the pipeline and the month's trends, for the reader's own records or the team's.
-- **Lead conversion and duplicates.** A lead converts into an account, a contact and an opportunity, checked against existing ones; duplicate leads are found and merged.
+- **Lead conversion and duplicates.** A lead converts into a company, a contact and an opportunity, checked against existing ones; duplicate leads are found and merged.
 - **Roles and access.** Administrator, sales manager and salesperson, enforced per record and per field by the server.
 - **The AI assistant, Noco.** A chat panel on every page that answers from the records the user may read, builds reports, searches the web where the model supports it, reads attached files, and proposes changes as cards the user confirms; it writes as that user, never beyond their permissions.
 - **AI follow-ups.** New leads, new opportunities, completed tasks and customers' replies get an AI follow-up card with the next step, the gaps, the fields to fill and the terms that need approval, decided under **Waiting on me**. Approvers get a review of each request, and a daily check picks up work that has gone quiet. Pasted text can be organised into new leads or an opportunity.
-- **Mail.** Each user connects their own mailbox (IMAP/SMTP, Gmail or Microsoft 365) and reads, writes and sends mail in the CRM. Lead, contact, account and opportunity pages show the user's mail with that customer, and every conversation with a record's people appears on its timeline by itself, as a summary the team sees while the messages stay in their owner's mailbox. An email the AI proposes as the next step opens in the composer, drafted, for the user to send.
+- **Mail.** Each user connects their own mailbox (IMAP/SMTP, Gmail or Microsoft 365) and reads, writes and sends mail in the CRM. Lead, contact, company and opportunity pages show the user's mail with that customer, and every conversation with a record's people appears on its timeline by itself, as a summary the team sees while the messages stay in their owner's mailbox. An email the AI proposes as the next step opens in the composer, drafted, for the user to send.
 - **Sales skills.** The method the AI follows is readable by everyone on **AI → Sales skills**, where a sales manager adds the company's own practice.
 - **Languages.** The interface is in English or Chinese. The chat answers in the language of the question; what the AI writes on its own follows the **AI working language** setting.
 

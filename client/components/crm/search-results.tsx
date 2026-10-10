@@ -17,9 +17,9 @@ import {
 // The particulars on each kind's line, the ones the reader may read.
 const DETAILS: Record<Entity, readonly string[]> = {
   leads: ['company', 'status'],
-  opportunities: ['accountId', 'stage', 'amount'],
-  accounts: ['industry', 'city'],
-  contacts: ['accountId', 'jobTitle'],
+  opportunities: ['companyId', 'stage', 'amount'],
+  companies: ['industry', 'city'],
+  contacts: ['companyId', 'jobTitle'],
   tasks: ['dueAt', 'status'],
   approvals: ['topic', 'status'],
 };
@@ -32,7 +32,7 @@ export function SearchRow({
 }: {
   entity: Entity;
   record: CrmRecord;
-  // The names of the records it refers to (a deal's account).
+  // The names of the records it refers to (a deal's company).
   titles: Record<string, string>;
   // The words to set in bold.
   words: readonly string[];

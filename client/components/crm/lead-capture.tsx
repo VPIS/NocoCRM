@@ -44,7 +44,7 @@ export interface CapturedLead {
   uncertain: string[];
   // What the CRM may already hold (lead-merge.ts, findDuplicates): a lead
   // of the same person, which the new one may be merged into
-  // (`mergeable`), or of the same company, a contact, an account.
+  // (`mergeable`), or of the same company, a contact, a company.
   duplicates: {
     entity: string;
     id: string;

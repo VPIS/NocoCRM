@@ -91,7 +91,7 @@ export function EditablePreview({
   disabled = false,
   required = [],
 }: {
-  entity: 'accounts' | 'contacts' | 'opportunities';
+  entity: 'companies' | 'contacts' | 'opportunities';
   record: Data;
   keys: readonly string[];
   names: Record<string, string>;
@@ -362,7 +362,7 @@ export function ConvertDialog({
   const refresh = useRefresh();
   const scopeKey = useCrmScopeKey();
   const preview = useCrmQuery<{
-    accounts: CrmRecord[];
+    companies: CrmRecord[];
     contacts: CrmRecord[];
     opportunities: CrmRecord[];
     titles: Record<string, string>;
@@ -375,7 +375,7 @@ export function ConvertDialog({
       api<{ total: number }>(`tasks?leadId=${toText(lead.id)}&pageSize=1`),
   });
   const [input, setInput] = useState<Data>(() => ({
-    accountName: lead.company ?? '',
+    companyName: lead.company ?? '',
     createOpportunity: Boolean(initial),
     // "Company + opportunity", per the specification's default.
     opportunityName:
@@ -387,9 +387,9 @@ export function ConvertDialog({
   const [busy, setBusy] = useState(false);
   // Whether the AI follows up the opportunity the conversion opens at once.
   const [followUp, setFollowUp] = useState(true);
-  // What the person changed on the new account and the new contact, over
+  // What the person changed on the new company and the new contact, over
   // what the lead supplies, and on the deal beside its name and amount.
-  const [accountEdits, setAccountEdits] = useState<Data>({});
+  const [companyEdits, setCompanyEdits] = useState<Data>({});
   const [contactEdits, setContactEdits] = useState<Data>({});
   const [dealEdits, setDealEdits] = useState<Data>(() =>
     initial?.currency ? { currency: initial.currency } : {},
@@ -398,49 +398,49 @@ export function ConvertDialog({
     setInput((v) => ({
       ...v,
       [key]: value,
-      // A different account invalidates the contact choice and any overwrite
+      // A different company invalidates the contact choice and any overwrite
       // decisions made against the previous records.
-      // Back to "untouched" for the contact, so the new account's own single
+      // Back to "untouched" for the contact, so the new company's own single
       // match can become the default again.
-      ...(key === 'accountId'
+      ...(key === 'companyId'
         ? {
             contactId: undefined,
-            overwriteAccountFields: [],
+            overwriteCompanyFields: [],
             overwriteContactFields: [],
           }
         : {}),
     }));
 
-  const suggestedAccounts = preview.data?.accounts ?? [];
+  const suggestedCompanies = preview.data?.companies ?? [];
   // Until the user chooses, exactly one match is taken as the choice: a
   // single strong hit is more likely the same company than a new one, and a
   // wrong guess is one click away from "create new". Zero or several matches
   // leave "create new". `undefined` is untouched; `null` is an explicit new.
-  const accountId =
-    input.accountId === undefined
-      ? suggestedAccounts.length === 1
-        ? suggestedAccounts[0].id
+  const companyId =
+    input.companyId === undefined
+      ? suggestedCompanies.length === 1
+        ? suggestedCompanies[0].id
         : null
-      : input.accountId;
+      : input.companyId;
   // The chosen records: a suggestion the preview brought, or one picked by
   // search and read on its own.
-  const pickedAccount = useRecord(
-    accountId && !suggestedAccounts.some((r) => r.id === accountId)
-      ? 'accounts'
+  const pickedCompany = useRecord(
+    companyId && !suggestedCompanies.some((r) => r.id === companyId)
+      ? 'companies'
       : undefined,
-    accountId,
+    companyId,
   );
-  const account =
-    suggestedAccounts.find((r) => r.id === accountId) ??
-    (pickedAccount.data?.record?.id === accountId
-      ? pickedAccount.data.record
+  const company =
+    suggestedCompanies.find((r) => r.id === companyId) ??
+    (pickedCompany.data?.record?.id === companyId
+      ? pickedCompany.data.record
       : undefined);
   const suggestedContacts = (preview.data?.contacts ?? []).filter(
-    (c) => !account || c.accountId === account.id,
+    (c) => !company || c.companyId === company.id,
   );
   const contactId =
     input.contactId === undefined
-      ? account && suggestedContacts.length === 1
+      ? company && suggestedContacts.length === 1
         ? suggestedContacts[0].id
         : null
       : input.contactId;
@@ -458,28 +458,28 @@ export function ConvertDialog({
   // Names for the lead, the suggestions and whatever was picked by search.
   const names: Record<string, string> = {
     ...(preview.data?.titles ?? {}),
-    ...(pickedAccount.data?.titles ?? {}),
+    ...(pickedCompany.data?.titles ?? {}),
     ...(pickedContact.data?.titles ?? {}),
   };
   // What is actually submitted: the derived choices, not the raw state.
   const resolved: Data = {
     ...input,
-    accountId,
+    companyId,
     contactId,
     // Changes to a record only when it is created here; one linked keeps
     // its own values, bar the overwrites ticked.
-    ...(accountId ? {} : { account: accountEdits }),
+    ...(companyId ? {} : { company: companyEdits }),
     ...(contactId ? {} : { contact: contactEdits }),
     ...(input.createOpportunity === true ? { opportunity: dealEdits } : {}),
   };
-  // The deals still open at the chosen account: a new opportunity beside
+  // The deals still open at the chosen company: a new opportunity beside
   // them may duplicate one already being worked.
-  const accountDeals = useCrmQuery<CrmRecord[]>(
-    `opportunities?accountId=${toText(accountId ?? '')}&pageSize=50`,
-    Boolean(accountId),
+  const companyDeals = useCrmQuery<CrmRecord[]>(
+    `opportunities?companyId=${toText(companyId ?? '')}&pageSize=50`,
+    Boolean(companyId),
   );
-  const openDeals = accountId
-    ? (accountDeals.data ?? []).filter(
+  const openDeals = companyId
+    ? (companyDeals.data ?? []).filter(
         (o) => !['won', 'lost'].includes(toText(o.stage)),
       )
     : [];
@@ -488,7 +488,7 @@ export function ConvertDialog({
   // Conflicts: fields where the lead and the chosen record both have a value
   // and disagree; the user opts into each overwrite.
   const conflicts = (
-    entity: 'accounts' | 'contacts',
+    entity: 'companies' | 'contacts',
     current: CrmRecord | undefined,
   ): string[] => {
     if (!current) return [];
@@ -499,10 +499,10 @@ export function ConvertDialog({
   };
 
   const modeToggle = (
-    entity: 'accounts' | 'contacts',
+    entity: 'companies' | 'contacts',
     canLink: boolean,
   ): ReactElement => {
-    const key = entity === 'accounts' ? 'accountId' : 'contactId';
+    const key = entity === 'companies' ? 'companyId' : 'contactId';
     // Linking without a pick yet is the empty string: the picker is open,
     // nothing chosen. Null is an explicit "create new".
     const linking = resolved[key] !== null && resolved[key] !== undefined;
@@ -523,8 +523,8 @@ export function ConvertDialog({
           disabled={!canLink}
           onClick={() => {
             const first =
-              entity === 'accounts'
-                ? suggestedAccounts[0]
+              entity === 'companies'
+                ? suggestedCompanies[0]
                 : suggestedContacts[0];
             set(key, first ? first.id : '');
           }}
@@ -536,14 +536,14 @@ export function ConvertDialog({
   };
 
   const overwriteList = (
-    entity: 'accounts' | 'contacts',
+    entity: 'companies' | 'contacts',
     current: CrmRecord | undefined,
   ): ReactElement | null => {
     const fields = conflicts(entity, current);
     if (!current || !fields.length) return null;
     const key =
-      entity === 'accounts'
-        ? 'overwriteAccountFields'
+      entity === 'companies'
+        ? 'overwriteCompanyFields'
         : 'overwriteContactFields';
     const proposed = proposalFor(lead, entity);
     const chosen = arrayValues(input[key]);
@@ -586,7 +586,7 @@ export function ConvertDialog({
 
   const chips = (
     records: CrmRecord[],
-    entity: 'accounts' | 'contacts',
+    entity: 'companies' | 'contacts',
   ): ReactElement | null =>
     records.length ? (
       <div className='flex flex-wrap items-center gap-1.5'>
@@ -594,7 +594,7 @@ export function ConvertDialog({
           {text('possibleDuplicates')}
         </span>
         {records.map((r) => {
-          const key = entity === 'accounts' ? 'accountId' : 'contactId';
+          const key = entity === 'companies' ? 'companyId' : 'contactId';
           const active = resolved[key] === r.id;
           return (
             <Button
@@ -654,47 +654,47 @@ export function ConvertDialog({
           }}
         >
           <Section
-            title={text('entities.accounts')}
+            title={text('entities.companies')}
             note={
-              preview.data && !suggestedAccounts.length ? (
-                <Checked>{text('noDuplicateAccounts')}</Checked>
+              preview.data && !suggestedCompanies.length ? (
+                <Checked>{text('noDuplicateCompanies')}</Checked>
               ) : undefined
             }
-            aside={modeToggle('accounts', true)}
+            aside={modeToggle('companies', true)}
           >
-            {accountId !== null && accountId !== undefined && (
+            {companyId !== null && companyId !== undefined && (
               <RecordPicker
-                entity='accounts'
-                label={text('entities.accounts')}
-                value={toText(accountId)}
+                entity='companies'
+                label={text('entities.companies')}
+                value={toText(companyId)}
                 titles={names}
-                onChange={(v) => set('accountId', v || null)}
+                onChange={(v) => set('companyId', v || null)}
               />
             )}
-            {chips(suggestedAccounts, 'accounts')}
+            {chips(suggestedCompanies, 'companies')}
             {/* Linking: the overwrites once one is picked, nothing before;
-                creating: the new account's fields. */}
-            {accountId !== null ? (
-              accountId ? (
-                overwriteList('accounts', account)
+                creating: the new company's fields. */}
+            {companyId !== null ? (
+              companyId ? (
+                overwriteList('companies', company)
               ) : null
             ) : (
-              // The name first, as the conversion sends it (accountName),
-              // then what the account takes from the lead.
+              // The name first, as the conversion sends it (companyName),
+              // then what the company takes from the lead.
               <EditablePreview
-                entity='accounts'
+                entity='companies'
                 record={{
-                  ...proposalFor(lead, 'accounts'),
-                  ...accountEdits,
-                  name: input.accountName,
+                  ...proposalFor(lead, 'companies'),
+                  ...companyEdits,
+                  name: input.companyName,
                 }}
-                keys={inherited.accounts}
+                keys={inherited.companies}
                 required={['name']}
                 names={names}
                 disabled={busy}
                 onChange={({ name, ...changes }) => {
-                  if (name !== undefined) set('accountName', name ?? '');
-                  setAccountEdits((edits) => ({ ...edits, ...changes }));
+                  if (name !== undefined) set('companyName', name ?? '');
+                  setCompanyEdits((edits) => ({ ...edits, ...changes }));
                 }}
               />
             )}
@@ -707,7 +707,7 @@ export function ConvertDialog({
                 <Checked>{text('noDuplicateContacts')}</Checked>
               ) : undefined
             }
-            aside={modeToggle('contacts', Boolean(account))}
+            aside={modeToggle('contacts', Boolean(company))}
           >
             {contactId !== null && contactId !== undefined && (
               <RecordPicker
@@ -716,7 +716,7 @@ export function ConvertDialog({
                 label={text('entities.contacts')}
                 value={toText(contactId)}
                 titles={names}
-                filter={account ? { accountId: toText(account.id) } : undefined}
+                filter={company ? { companyId: toText(company.id) } : undefined}
                 onChange={(v) => set('contactId', v || null)}
               />
             )}
@@ -764,8 +764,8 @@ export function ConvertDialog({
             )}
             {input.createOpportunity === true && (
               // Its name, amount in its currency and when it is expected
-              // to close, as the account's and the contact's fields are;
-              // the rest the deal takes from the lead and the account.
+              // to close, as the company's and the contact's fields are;
+              // the rest the deal takes from the lead and the company.
               <EditablePreview
                 entity='opportunities'
                 record={{
@@ -816,12 +816,12 @@ export function ConvertDialog({
             <Button
               type='submit'
               // Linking was chosen but nothing picked yet: nothing to submit.
-              // A new account and a new deal need their names.
+              // A new company and a new deal need their names.
               disabled={
                 busy ||
-                accountId === '' ||
+                companyId === '' ||
                 contactId === '' ||
-                (!accountId && !toText(input.accountName).trim()) ||
+                (!companyId && !toText(input.companyName).trim()) ||
                 (input.createOpportunity === true &&
                   !toText(input.opportunityName).trim())
               }

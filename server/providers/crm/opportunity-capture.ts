@@ -33,9 +33,9 @@ import type { CrmService } from './service.js';
 // salesperson pastes what they have (a customer's email about buying more,
 // a renewal, a tender notice) and the CRM assistant turns it into one
 // opportunity, filling only what the text states. A deal belongs to an
-// account, so the company the text names is matched against the accounts
+// company, so the company the text names is matched against the companies
 // here, not by the model; the people it names are matched against that
-// account's contacts, the rest offered to create; and the account's open
+// company's contacts, the rest offered to create; and the company's open
 // deals are shown, so the same business is not opened twice. Nothing is
 // saved: the result prefills the opportunity form, which the salesperson
 // checks and submits. They may then tell the AI what to change.
@@ -106,7 +106,7 @@ const dealShape = z.object({
 const RULES = `- Make one opportunity: the business the text is about. When the text covers several, take the main one and say so in reply.
 - Fill only what the text states or plainly shows; leave every other field null. Do not guess, do not invent.
 - Write every value in the language the user's text uses, as the text writes it: never translate a name, a company or a description, unless the user later asks for another language.
-- company is the customer, as written; it is matched against the CRM's accounts afterwards, so never make one up.
+- company is the customer, as written; it is matched against the CRM's companies afterwards, so never make one up.
 - name says what is being built or bought, with the edition when the text gives it, in the text's language (e.g. "Field service ticketing system (Professional)").
 - businessType: newBusiness for a first purchase; expansion when an existing customer buys more of the same; crossSell when they buy something else; renewal for a renewal; tender for a bid or tender; other otherwise; null when the text does not show it.
 - amount only when the text gives a figure for this business (a budget or a quoted price), as a number in the currency's units (a Chinese figure in wan is ten thousands: 50 wan → 500000); currency only when the text names it (yuan, RMB or ¥ → CNY; US dollars or $ → USD), else null.
@@ -174,7 +174,7 @@ The user's request:
 ${instruction}`;
 }
 
-// A person the text names: a contact of the chosen account when they match
+// A person the text names: a contact of the chosen company when they match
 // one (by email, phone or name), else someone to create.
 export interface CapturedPerson {
   name: string;
@@ -188,22 +188,22 @@ export interface CapturedPerson {
 }
 
 export interface CapturedDeal {
-  // The opportunity form's values, the account and the matched contacts
+  // The opportunity form's values, the company and the matched contacts
   // included.
   input: Row;
   // The company as the text writes it.
   company: string | null;
-  // The CRM's accounts it may be.
-  accounts: { id: string; name: string }[];
+  // The CRM's companies it may be.
+  companies: { id: string; name: string }[];
   people: CapturedPerson[];
-  // The chosen account's open deals.
+  // The chosen company's open deals.
   duplicates: { id: string; name: string; stage: string }[];
   uncertain: string[];
 }
 
 // The opportunity's contacts as the review's form holds them: a contact of
-// the account by its id, a person new to the CRM by what the text gives,
-// created as the account's contact when the opportunity is.
+// the company by its id, a person new to the CRM by what the text gives,
+// created as the company's contact when the opportunity is.
 export function contactRows(people: readonly CapturedPerson[]): Row[] {
   return people.map((p) =>
     p.contactId
@@ -256,12 +256,12 @@ const bare = (value: unknown): string =>
     .toLowerCase()
     .replace(/[\s\p{P}\p{S}]/gu, '');
 
-// The people matched against an account's contacts, and its open deals: on
-// the capture, and again whenever the user picks another account.
-export async function matchAccount(
+// The people matched against a company's contacts, and its open deals: on
+// the capture, and again whenever the user picks another company.
+export async function matchCompany(
   service: CrmService,
   actor: Actor,
-  accountId: string,
+  companyId: string,
   people: readonly (Omit<CapturedPerson, 'contactId' | 'contactName'> & {
     contactId?: string | null;
   })[],
@@ -270,14 +270,14 @@ export async function matchAccount(
   contacts: Row[];
   duplicates: CapturedDeal['duplicates'];
 }> {
-  const contacts = accountId
+  const contacts = companyId
     ? await service
-        .list(actor, 'contacts', { accountId, pageSize: 500 })
+        .list(actor, 'contacts', { companyId, pageSize: 500 })
         .then((r) => r.data)
         .catch(() => [])
     : [];
   const matched = people.flatMap((p): CapturedPerson[] => {
-    // A contact already chosen stays when it is the account's.
+    // A contact already chosen stays when it is the company's.
     const chosen = p.contactId
       ? contacts.find((c) => toText(c.id) === p.contactId)
       : undefined;
@@ -307,9 +307,9 @@ export async function matchAccount(
       },
     ];
   });
-  const duplicates = accountId
+  const duplicates = companyId
     ? await service
-        .list(actor, 'opportunities', { accountId, pageSize: 50 })
+        .list(actor, 'opportunities', { companyId, pageSize: 50 })
         .then((r) =>
           r.data
             .filter((d) => !['won', 'lost'].includes(toText(d.stage)))
@@ -354,11 +354,11 @@ export async function captureOpportunity(
   if (adjusting && !Object.keys(current).length)
     throw new CrmError('required', 400, 'deal');
   // The people on the opportunity as the review has them, a contact named
-  // by the account's record, for the model to keep or change by name.
+  // by the company's record, for the model to keep or change by name.
   const onDeal = peopleOf(rows);
-  const accountOf = toText(input.accountId ?? current.accountId ?? '');
+  const companyOf = toText(input.companyId ?? current.companyId ?? '');
   const known = onDeal.some((p) => p.contactId && !p.name)
-    ? (await matchAccount(service, actor, accountOf, onDeal)).people
+    ? (await matchCompany(service, actor, companyOf, onDeal)).people
     : onDeal;
   const language = (await service.settings()).aiLanguage;
   const zh = language === 'zh-CN';
@@ -475,14 +475,14 @@ export async function captureOpportunity(
       .trim()
       .slice(0, limit) || null;
   const company = line(d.company);
-  // The account: the one the user picked, else the only one the company
-  // name matches.
-  const accounts = company
+  // The company: the one the user picked, else the only one the name
+  // matches.
+  const companies = company
     ? (await findDuplicates(service, actor, { company }))
-        .filter((found) => found.entity === 'accounts')
+        .filter((found) => found.entity === 'companies')
         .map((found) => ({ id: found.id, name: found.name }))
     : [];
-  const accountId = accountOf || (accounts.length === 1 ? accounts[0].id : '');
+  const companyId = companyOf || (companies.length === 1 ? companies[0].id : '');
   const people = d.people
     .map((p) => ({
       name: toText(p.name).trim().slice(0, TEXT_LIMIT),
@@ -493,14 +493,14 @@ export async function captureOpportunity(
     }))
     .filter((p) => p.name)
     .slice(0, 20);
-  const match = await matchAccount(service, actor, accountId, people);
+  const match = await matchCompany(service, actor, companyId, people);
   const expectedCloseAt =
     d.expectedCloseAt && /^\d{4}-\d{2}-\d{2}$/.test(d.expectedCloseAt)
       ? d.expectedCloseAt
       : null;
   const values: Row = {
     name: line(d.name),
-    ...(accountId ? { accountId } : {}),
+    ...(companyId ? { companyId } : {}),
     businessType: d.businessType,
     amount: amountOf(d.amount),
     currency: d.currency,
@@ -525,7 +525,7 @@ export async function captureOpportunity(
     deal: {
       input: filled,
       company,
-      accounts,
+      companies,
       people: match.people,
       duplicates: match.duplicates,
       uncertain: [...new Set(d.uncertain)].filter((key) => key in filled),

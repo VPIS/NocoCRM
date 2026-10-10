@@ -62,7 +62,7 @@ export const SEARCH_SHORTCUT =
 export const SEARCH_KINDS: readonly Entity[] = [
   'leads',
   'opportunities',
-  'accounts',
+  'companies',
   'contacts',
   'tasks',
   'approvals',

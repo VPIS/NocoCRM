@@ -360,7 +360,7 @@ function CrmAssistantPanel(): ReactElement | null {
   // Expand and close, as the plugin's ChatSurfaceActions offers them but
   // without its tooltips, in the chat window's toolbar row as the plugin's
   // floating demo places them. In the top-right corner they sat exactly
-  // where the account avatar lands once the page widens again, so closing
+  // where the company avatar lands once the page widens again, so closing
   // left the pointer on it and its hover menu opened.
   const actions = (
     <>
@@ -704,7 +704,7 @@ function RememberConversation(): null {
       return;
     }
     // Only a conversation of this user's, as the catalog lists them; a
-    // stale id from another account or a deleted conversation is dropped.
+    // stale id from another company or a deleted conversation is dropped.
     if (remembered && conversations.some((item) => item.id === remembered))
       selectConversation(remembered);
   }, [

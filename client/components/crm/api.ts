@@ -58,7 +58,7 @@ export interface Metadata {
   >;
 }
 // Display names for every record a response refers to, resolved by the
-// server: `titles` are composed ("account / deal"), `names` bare.
+// server: `titles` are composed ("company / deal"), `names` bare.
 export interface Titled {
   titles: Record<string, string>;
   names: Record<string, string>;
@@ -459,14 +459,14 @@ export function fieldLabelKey(entity: Entity, field: string): string {
   // An approval's deal is the one it was asked about.
   if (entity === 'approvals' && field === 'opportunityId')
     return 'fields.related.opportunityId';
-  // The specification calls an account's description its introduction.
-  if (entity === 'accounts' && field === 'description')
-    return 'fields.accountDescription';
-  // On a task the record links are "related lead / account /
+  // The specification calls a company's description its introduction.
+  if (entity === 'companies' && field === 'description')
+    return 'fields.companyIntro';
+  // On a task the record links are "related lead / company /
   // opportunity", not the bare object names.
   if (
     entity === 'tasks' &&
-    ['leadId', 'accountId', 'opportunityId'].includes(field)
+    ['leadId', 'companyId', 'opportunityId'].includes(field)
   )
     return `fields.related.${field}`;
   return `fields.${field}`;

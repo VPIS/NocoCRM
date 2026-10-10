@@ -288,11 +288,11 @@ export default function ReportsPage(): ReactElement {
                   icon={Building2}
                   value={Number(overall.customers ?? 0)}
                   note={text('metricNotes.customers', {
-                    share: Number(overall.accounts)
-                      ? `${toText(Math.round((Number(overall.customers ?? 0) / Number(overall.accounts)) * 100))}%`
+                    share: Number(overall.companies)
+                      ? `${toText(Math.round((Number(overall.customers ?? 0) / Number(overall.companies)) * 100))}%`
                       : '0%',
                   })}
-                  onClick={() => openList('accounts', 'customers')}
+                  onClick={() => openList('companies', 'customers')}
                 />
               </div>
               <Card className={FRAME}>
@@ -397,9 +397,9 @@ export default function ReportsPage(): ReactElement {
                       : 'neutral'
                   }
                   note={text('metricNotes.churnedThisMonth', {
-                    added: Number(business.newAccounts ?? 0),
+                    added: Number(business.newCompanies ?? 0),
                   })}
-                  onClick={() => openList('accounts', 'churnedThisMonth')}
+                  onClick={() => openList('companies', 'churnedThisMonth')}
                 />
                 <Metric
                   title={text('approvedThisMonth')}
@@ -459,7 +459,7 @@ export default function ReportsPage(): ReactElement {
                     // Named as the overview's attention cards are.
                     ['uncontacted', 'uncontactedCard'],
                     ['staleLeads', 'staleLeads'],
-                    ['staleAccounts', 'staleAccounts'],
+                    ['staleCompanies', 'staleCompanies'],
                     ['staleOpportunities', 'staleOpportunities'],
                     ['overdueTasks', 'overdueTasks'],
                   ],

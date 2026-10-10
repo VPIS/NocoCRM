@@ -90,7 +90,7 @@ const wording = {
         'Ask anything about this opportunity…',
         '关于此商机，问任何问题…',
       ],
-      accounts: ['Ask anything about this account…', '关于此客户，问任何问题…'],
+      companies: ['Ask anything about this company…', '关于此公司，问任何问题…'],
       contacts: [
         'Ask anything about this contact…',
         '关于此联系人，问任何问题…',
@@ -124,10 +124,10 @@ const wording = {
         ],
         risk: ['Which opportunities are at risk?', '哪些商机有风险？'],
       },
-      accounts: {
+      companies: {
         quiet: [
-          "Which accounts haven't been contacted lately?",
-          '哪些客户最近没有联系？',
+          "Which companies haven't been contacted lately?",
+          '哪些公司最近没有联系？',
         ],
       },
       contacts: {
@@ -162,10 +162,10 @@ const wording = {
         ],
         progress: ['Summarize recent progress', '总结最近的进展'],
       },
-      account: {
+      company: {
         latest: [
-          "What's the latest with this account?",
-          '这个客户最近有什么进展？',
+          "What's the latest with this company?",
+          '这个公司最近有什么进展？',
         ],
         contacts: ['Who are the key contacts?', '主要联系人是谁？'],
         deals: ['Which opportunities are open?', '有哪些进行中的商机？'],
@@ -195,8 +195,8 @@ const wording = {
     label: ['Search', '搜索'],
     dialogTitle: ['Search the CRM', '搜索 CRM'],
     placeholder: [
-      'Search leads, opportunities, accounts, contacts, tasks, approvals…',
-      '搜索线索、商机、客户、联系人、任务、审批…',
+      'Search leads, opportunities, companies, contacts, tasks, approvals…',
+      '搜索线索、商机、公司、联系人、任务、审批…',
     ],
     askPlaceholder: [
       'Describe what you are looking for, or ask a question…',
@@ -349,7 +349,7 @@ const wording = {
     ],
     loadFailed: ['Mail could not be loaded.', '邮件加载失败。'],
     scope: ['Your mail with {{terms}}', '你与 {{terms}} 的往来邮件'],
-    scopeAccount: ['Your mail with {{name}}', '你与{{name}}的往来邮件'],
+    scopeCompany: ['Your mail with {{name}}', '你与{{name}}的往来邮件'],
     scopeContacts: ['{{count}} contacts', '{{count}} 位联系人'],
     scopeDomain: ['everyone at @{{domain}}', '@{{domain}} 的所有人'],
     scopeAnd: [' and ', '和'],
@@ -357,9 +357,9 @@ const wording = {
       "Your mail with the deal's {{count}} contacts",
       '你与本商机 {{count}} 位联系人的往来邮件',
     ],
-    scopeDealAccount: [
-      "Your mail with the account's {{count}} contacts",
-      '你与客户的 {{count}} 位联系人的往来邮件',
+    scopeDealCompany: [
+      "Your mail with the company's {{count}} contacts",
+      '你与公司的 {{count}} 位联系人的往来邮件',
     ],
   },
   notes: {
@@ -406,8 +406,8 @@ const wording = {
     record: ['Record', '关联记录'],
     clear: ['Clear', '清除'],
     searchRecords: [
-      'Search leads, accounts, opportunities…',
-      '搜索线索、客户、商机…',
+      'Search leads, companies, opportunities…',
+      '搜索线索、公司、商机…',
     ],
     searchPeople: ['Search colleagues…', '搜索同事…'],
     searchContacts: ['Search contacts…', '搜索联系人…'],
@@ -484,8 +484,8 @@ const wording = {
     opportunities: {
       title: ['Opportunity follow-up', '商机跟进'],
       description: [
-        'Reads a deal with its account, contacts, tasks, notes, approvals and mail, checks its terms against the approval standards, and recommends advancing, keeping at it, pausing or losing it, with the approvals to submit and the next step.',
-        '读取商机及其客户、联系人、任务、备注、审批和邮件，按审批标准核对商务条款，给出推进、继续、暂停或输单的建议，以及需要提交的审批和下一步。',
+        'Reads a deal with its company, contacts, tasks, notes, approvals and mail, checks its terms against the approval standards, and recommends advancing, keeping at it, pausing or losing it, with the approvals to submit and the next step.',
+        '读取商机及其公司、联系人、任务、备注、审批和邮件，按审批标准核对商务条款，给出推进、继续、暂停或输单的建议，以及需要提交的审批和下一步。',
       ],
       skill: ['Skill: Follow up an opportunity', '技能：跟进商机'],
     },
@@ -667,8 +667,8 @@ const wording = {
     approverFirst: ['Choose an approver to submit', '选择审批人后才能提交'],
   },
   // The opportunity page's particulars, grouped as the lead's.
-  // The account, contact and approval pages' particulars, likewise.
-  accountGroups: {
+  // The company, contact and approval pages' particulars, likewise.
+  companyGroups: {
     general: ['General', '概况'],
     company: ['Company', '公司'],
   },
@@ -687,8 +687,8 @@ const wording = {
     ],
     leads: ['Leads converted into this {{entity}}', '转化为此{{entity}}的线索'],
     dealContacts: [
-      'The people on this opportunity and the others at its account',
-      '参与此商机的人，以及其客户的其他联系人',
+      'The people on this opportunity and the others at its company',
+      '参与此商机的人，以及其公司的其他联系人',
     ],
   },
   // The heading over a record page's particulars when they are one list.
@@ -808,14 +808,14 @@ const wording = {
     findingsDone: ['written by {{name}}, {{time}}', '{{name}} {{time}} 已写入'],
     source: ['Source', '来源'],
     writePicked: ['Write {{count}} into the lead', '写入所选 {{count}} 项'],
-    // A deal's: about its account, written into the account.
-    findingsAccount: [
-      'Found on the web about the account',
-      '联网查到的客户信息',
+    // A deal's: about its company, written into the company.
+    findingsCompany: [
+      'Found on the web about the company',
+      '联网查到的公司信息',
     ],
-    writePickedAccount: [
-      'Write {{count}} into the account',
-      '写入客户 {{count}} 项',
+    writePickedCompany: [
+      'Write {{count}} into the company',
+      '写入公司 {{count}} 项',
     ],
     written: ['Written', '已写入'],
     nextStep: ['Next step', '下一步'],
@@ -830,17 +830,17 @@ const wording = {
     // What accepting a conversion would create, before the dialog confirms
     // it, and what the duplicate check found.
     conversion: {
-      account: ['Account', '客户'],
+      company: ['Company', '公司'],
       contact: ['Contact', '联系人'],
       create: ['New', '新建'],
       link: ['Link to', '关联'],
       duplicates: ['Duplicates', '查重'],
       noDuplicates: [
-        'No possible duplicate account, contact or opportunity',
-        '没有可能重复的客户、联系人或商机',
+        'No possible duplicate company, contact or opportunity',
+        '没有可能重复的公司、联系人或商机',
       ],
       possible: ['Possible duplicates:', '可能重复：'],
-      openDeals: ['Open at this account:', '该客户进行中的商机：'],
+      openDeals: ['Open at this company:', '该公司进行中的商机：'],
       confirm: [
         'Accepting opens the conversion, where these can be checked and changed before anything is saved.',
         '采纳后先打开转化窗口，确认或修改后才保存。',
@@ -1041,10 +1041,10 @@ const wording = {
   newRecord: ['New {{entity}}', '新建{{entity}}'],
   editRecord: ['Edit {{entity}}', '编辑{{entity}}'],
   deleteRecord: ['Delete {{entity}}', '删除{{entity}}'],
-  changeAccountTitle: ['Change the account?', '更换所属客户？'],
-  changeAccountContacts: [
-    "The deal's contacts belong to the current account and will be removed from it: {{names}}.",
-    '此商机的联系人属于原客户，更换后将从此商机移除：{{names}}。',
+  changeCompanyTitle: ['Change the company?', '更换所属公司？'],
+  changeCompanyContacts: [
+    "The deal's contacts belong to the current company and will be removed from it: {{names}}.",
+    '此商机的联系人属于原公司，更换后将从此商机移除：{{names}}。',
   ],
   deleteRecordTitle: [
     'Delete {{entity}} "{{name}}"?',
@@ -1062,8 +1062,8 @@ const wording = {
     '请按 yyyy-mm-dd HH:mm 输入日期时间，如 2026-09-24 14:30。',
   ],
   noRelatedRecords: [
-    'No eligible records. Select the account first, or create a related record.',
-    '没有可选记录。请先选择客户，或创建相关记录。',
+    'No eligible records. Select the company first, or create a related record.',
+    '没有可选记录。请先选择公司，或创建相关记录。',
   ],
   addContact: ['Add contact role', '添加联系人角色'],
   attachment: ['Attachment', '附件'],
@@ -1088,11 +1088,11 @@ const wording = {
     '来自关联商机的附件',
   ],
   attachmentsFromApprovals: ['From linked approvals', '来自关联审批的附件'],
-  deleteAccountTasks: [
+  deleteCompanyTasks: [
     'This also deletes {{count}} task record(s) linked only to this {{entity}}.',
     '将同时删除 {{count}} 条仅关联此{{entity}}的任务。',
   ],
-  deleteAccountKeptTasks: [
+  deleteCompanyKeptTasks: [
     '{{count}} task record(s) also linked to another record are kept; only the {{entity}} link is cleared.',
     '{{count}} 条同时关联其他记录的任务将保留，只清空{{entity}}关联。',
   ],
@@ -1109,8 +1109,8 @@ const wording = {
     '这条申请已提交或已有审批结果。删除后申请人和审批人都不再看到它及其审批记录，所属商机不受影响。此操作无法撤销。',
   ],
   deleteTaskHint: [
-    'This task and its attachments and history are deleted; the lead, account or opportunity it was linked to is untouched. This cannot be undone.',
-    '这条任务及其附件、变更记录将被删除，关联的线索、客户或商机不受影响。此操作无法撤销。',
+    'This task and its attachments and history are deleted; the lead, company or opportunity it was linked to is untouched. This cannot be undone.',
+    '这条任务及其附件、变更记录将被删除，关联的线索、公司或商机不受影响。此操作无法撤销。',
   ],
   deleteContactHint: [
     'This permanently deletes the contact and cannot be undone.',
@@ -1129,8 +1129,8 @@ const wording = {
     '将同时删除 {{count}} 条仅属于此线索的任务记录。',
   ],
   deleteLeadKeptTasks: [
-    '{{count}} task record(s) are kept and unlinked from this lead, because they are also linked to an account or opportunity.',
-    '另有 {{count}} 条任务因同时关联客户或商机而保留，仅解除与此线索的关联。',
+    '{{count}} task record(s) are kept and unlinked from this lead, because they are also linked to a company or opportunity.',
+    '另有 {{count}} 条任务因同时关联公司或商机而保留，仅解除与此线索的关联。',
   ],
   timeline: ['History', '变更记录'],
   related: ['Related records', '关联记录'],
@@ -1151,8 +1151,8 @@ const wording = {
     '此线索已转化，为只读状态，请在转化的记录中继续跟进。',
   ],
   conversionHint: [
-    'Create or link an account and contact. Existing values are preserved unless you select fields to overwrite. All changes are saved together.',
-    '创建或关联客户与联系人。已有值默认保留，勾选的字段将被覆盖。所有变更将在同一事务中保存。',
+    'Create or link a company and contact. Existing values are preserved unless you select fields to overwrite. All changes are saved together.',
+    '创建或关联公司与联系人。已有值默认保留，勾选的字段将被覆盖。所有变更将在同一事务中保存。',
   ],
   possibleDuplicates: ['Possible matches', '可能重复的记录'],
   // Leads that repeat a lead, and their merge (lead-merge.tsx).
@@ -1252,17 +1252,17 @@ const wording = {
     applicant: ['Applicant', '申请人'],
   },
   // The conversion dialog's duplicate check, when it found nothing.
-  noDuplicateAccounts: [
-    'Checked: no possible duplicate account',
-    '已查重：没有可能重复的客户',
+  noDuplicateCompanies: [
+    'Checked: no possible duplicate company',
+    '已查重：没有可能重复的公司',
   ],
   noDuplicateContacts: [
     'Checked: no possible duplicate contact',
     '已查重：没有可能重复的联系人',
   ],
   openOpportunities: [
-    'This account already has open opportunities:',
-    '该客户已有进行中的商机：',
+    'This company already has open opportunities:',
+    '该公司已有进行中的商机：',
   ],
   // An empty field the conversion needs, in its row.
   requiredEmpty: ['Required', '必填'],
@@ -1317,7 +1317,7 @@ const wording = {
   newLeads: ['New leads this month', '本月新增线索'],
   convertedLeads: ['Converted this month', '本月转化'],
   staleLeads: ['Stalled leads', '停滞线索'],
-  staleAccounts: ['Quiet accounts', '客户久未联系'],
+  staleCompanies: ['Quiet companies', '公司久未联系'],
   amount: ['Amount', '金额'],
   count: ['Count', '数量'],
   overdueApprovalHint: ['Nothing waiting for you', '没有待你审批的申请'],
@@ -1459,29 +1459,29 @@ const wording = {
   // New opportunity with the AI (opportunity-capture.tsx).
   dealCapture: {
     placeholder: [
-      'Paste anything: a customer email about buying more, a renewal, a tender notice, call notes. The AI fills in the opportunity, matches the account and its contacts, and you check it before saving.',
-      '粘贴任何内容：客户要增购的邮件、续约、招标公告、沟通记录。AI 会整理成一个商机，匹配客户和联系人，你核对后再保存。',
+      'Paste anything: a customer email about buying more, a renewal, a tender notice, call notes. The AI fills in the opportunity, matches the company and its contacts, and you check it before saving.',
+      '粘贴任何内容：客户要增购的邮件、续约、招标公告、沟通记录。AI 会整理成一个商机，匹配公司和联系人，你核对后再保存。',
     ],
-    noAccount: [
-      'The account “{{company}}” in the text is not in the CRM: pick an account, or create it first.',
-      '原文里的客户「{{company}}」在 CRM 里没有找到：请选择客户，没有的话先新建客户。',
+    noCompany: [
+      'The company “{{company}}” in the text is not in the CRM: pick a company, or create it first.',
+      '原文里的公司「{{company}}」在 CRM 里没有找到：请选择公司，没有的话先新建公司。',
     ],
-    severalAccounts: [
-      'Several accounts may be “{{company}}”: pick the right one.',
-      '有几个客户可能是「{{company}}」：请选择正确的那个。',
+    severalCompanies: [
+      'Several companies may be “{{company}}”: pick the right one.',
+      '有几个公司可能是「{{company}}」：请选择正确的那个。',
     ],
     duplicates: [
-      'This account already has open opportunities:',
-      '这个客户已有进行中的商机：',
+      'This company already has open opportunities:',
+      '这个公司已有进行中的商机：',
     ],
     newContact: ['New', '新建'],
     newContactHint: [
-      'Created as the account’s contact with the opportunity; remove the row to leave them out.',
-      '创建商机时新建为这个客户的联系人；不需要就删掉这一行。',
+      'Created as the company’s contact with the opportunity; remove the row to leave them out.',
+      '创建商机时新建为这个公司的联系人；不需要就删掉这一行。',
     ],
-    newContactNeedsAccount: [
-      'Pick the account first: new people become its contacts.',
-      '先选择客户：新联系人会建在这个客户下。',
+    newContactNeedsCompany: [
+      'Pick the company first: new people become its contacts.',
+      '先选择公司：新联系人会建在这个公司下。',
     ],
     reorganiseHint: [
       'The text changed: organise it again to replace the opportunity.',
@@ -1501,8 +1501,8 @@ const wording = {
   clearChoice: ['Clear', '清除选择'],
   demoData: ['Demo data', '演示数据'],
   demoDescription: [
-    'A dataset of NocoBase selling its own licences and services to fictional customers, in Chinese or in English: leads, accounts, contacts, opportunities, tasks and approvals, and mail in demo mailboxes, dated relative to the day it is imported. Importing creates the demo accounts below when they do not exist; the password is the username followed by 123.',
-    '一套以 NocoBase 自己的销售（商业授权与服务，客户均为虚构）为背景的演示数据，有中文和英文两种，包含线索、客户、联系人、商机、任务和审批，以及演示邮箱里的往来邮件，日期以导入当天为基准。导入时会自动创建下列演示账号（已存在的直接使用），密码为用户名加 123。',
+    'A dataset of NocoBase selling its own licences and services to fictional customers, in Chinese or in English: leads, companies, contacts, opportunities, tasks and approvals, and mail in demo mailboxes, dated relative to the day it is imported. Importing creates the demo companies below when they do not exist; the password is the username followed by 123.',
+    '一套以 NocoBase 自己的销售（商业授权与服务，客户均为虚构）为背景的演示数据，有中文和英文两种，包含线索、公司、联系人、商机、任务和审批，以及演示邮箱里的往来邮件，日期以导入当天为基准。导入时会自动创建下列演示账号（已存在的直接使用），密码为用户名加 123。',
   ],
   demoLanguage: ['Demo data language', '演示数据语言'],
   demoAbsent: ['No demo data has been imported.', '尚未导入演示数据。'],
@@ -1556,8 +1556,8 @@ const wording = {
   linkExisting: ['Link existing', '关联已有'],
   opportunitySuffix: [' opportunity', '商机'],
   conversionImpact: [
-    'On conversion the lead becomes read-only, {{tasks}} linked tasks move to the account, and the contact and opportunity are attached to it.',
-    '转化后线索永久只读；{{tasks}} 条关联任务将挂到客户下；联系人和商机归属该客户。',
+    'On conversion the lead becomes read-only, {{tasks}} linked tasks move to the company, and the contact and opportunity are attached to it.',
+    '转化后线索永久只读；{{tasks}} 条关联任务将挂到公司下；联系人和商机归属该公司。',
   ],
   noRecords: ['None yet', '暂无'],
   showing: ['Showing', '当前显示'],
@@ -1568,7 +1568,7 @@ const wording = {
       '全部时间：已转化 ÷ 无效外的全部线索',
     ],
     customers: [
-      'Status is customer; {{share}} of all accounts',
+      'Status is customer; {{share}} of all companies',
       '状态为成交客户，占全部 {{share}}',
     ],
     contactsNewThisMonth: ['Contacts created this month', '本月创建的联系人'],
@@ -1576,7 +1576,7 @@ const wording = {
       'Moved to churned this month; {{added}} new this month',
       '本月转为流失；本月新增 {{added}}',
     ],
-    noContacts: ['Accounts with no contacts yet', '客户下还没有联系人'],
+    noContacts: ['Companies with no contacts yet', '公司下还没有联系人'],
     noOpenOpportunity: [
       'Qualified or customer, no open opportunity',
       '有意向或已成交，但没有进行中的商机',
@@ -1585,7 +1585,7 @@ const wording = {
       'No contact for {{days}}+ days, nothing planned',
       '{{days}} 天没联系，也没安排下一步',
     ],
-    staleAccounts: ['No contact for {{days}}+ days', '{{days}} 天没联系'],
+    staleCompanies: ['No contact for {{days}}+ days', '{{days}} 天没联系'],
     staleOpportunities: [
       'No contact for {{days}}+ days, nothing planned',
       '{{days}} 天没联系，也没安排下一步',
@@ -1633,7 +1633,7 @@ const wording = {
   leadTitle: ['Name / Company', '姓名 / 公司'],
   leftCompany: ['Left the company', '已离职'],
   onThisOpportunity: ['On this opportunity', '参与此商机'],
-  otherAccountContacts: ['Other contacts at the account', '客户的其他联系人'],
+  otherCompanyContacts: ['Other contacts at the company', '公司的其他联系人'],
   addToOpportunity: ['Add', '加入'],
   yourDecision: ['Waiting for you', '待你审批'],
   youApprove: ['You are the approver', '你是审批人'],
@@ -1654,26 +1654,26 @@ const wording = {
     '联系人本身保留，只移除其在本商机中的角色。',
   ],
   convertedFrom: ['Converted from lead', '转化自线索'],
-  accountPrimary: ["The account's primary contact", '客户的主要联系人'],
+  companyPrimary: ["The company's primary contact", '公司的主要联系人'],
   setPrimary: ['Set as primary contact', '设为主要联系人'],
   unsetPrimary: ['Primary contact (click to clear)', '主要联系人（点击取消）'],
   setPrimaryTitle: ['Set primary contact', '设为主要联系人'],
   unsetPrimaryTitle: ['Clear primary contact', '取消主要联系人'],
   setPrimaryDetail: [
-    '{{name}} becomes the primary contact of this account.',
-    '{{name}} 将成为本客户的主要联系人。',
+    '{{name}} becomes the primary contact of this company.',
+    '{{name}} 将成为本公司的主要联系人。',
   ],
   replacePrimaryDetail: [
     '{{name}} becomes the primary contact; {{previous}} no longer is.',
     '{{name}} 将成为主要联系人，{{previous}} 不再是主要联系人。',
   ],
   unsetPrimaryDetail: [
-    '{{name}} will no longer be the primary contact; this account will have none.',
-    '{{name}} 将不再是主要联系人，本客户将没有主要联系人。',
+    '{{name}} will no longer be the primary contact; this company will have none.',
+    '{{name}} 将不再是主要联系人，本公司将没有主要联系人。',
   ],
   moveTo: ['Move to {{stage}}', '移到「{{stage}}」'],
   moveToDetail: ['{{name}}: a reason is required.', '{{name}}：必须填写原因。'],
-  noContacts: ['No contacts', '客户无联系人'],
+  noContacts: ['No contacts', '公司无联系人'],
   noOpenOpportunity: ['No open opportunity', '无进行中商机'],
   staleOpportunities: ['Stalled opportunities', '商机停滞'],
   closingSoon: ['Closing soon', '商机即将到期'],
@@ -1692,13 +1692,13 @@ const wording = {
       'Analyze the sales situation and build it as a report, with charts: the funnel by stage, this month against the pipeline, where deals are stuck, and the three most useful next actions. Look the records up rather than guessing.',
       '分析销售情况，生成一份带图表的报告：各阶段商机分布、本月进展与在手商机、卡在哪里、最有价值的三项下一步行动。需要的记录先查再说，不要猜。',
     ],
-    accounts: [
-      'Summarize this account and suggest opportunities to deepen the relationship.',
-      '总结此客户，并建议深化客户关系的机会。',
+    companies: [
+      'Summarize this company and suggest opportunities to deepen the relationship.',
+      '总结此公司，并建议深化客户关系的机会。',
     ],
     contacts: [
-      'Prepare a conversation brief for this contact using their account and opportunity history.',
-      '根据此联系人的客户和商机记录，准备一份沟通简报。',
+      'Prepare a conversation brief for this contact using their company and opportunity history.',
+      '根据此联系人的公司和商机记录，准备一份沟通简报。',
     ],
     opportunities: [
       'Review this opportunity, its contacts, tasks and approvals. Suggest the next actions to move it forward.',
@@ -1716,7 +1716,7 @@ const wording = {
   // Singular, for "New lead" / "Delete contact"; Chinese has no plural.
   entity: {
     leads: ['lead', '线索'],
-    accounts: ['account', '客户'],
+    companies: ['company', '公司'],
     contacts: ['contact', '联系人'],
     opportunities: ['opportunity', '商机'],
     tasks: ['task', '任务'],
@@ -1735,7 +1735,7 @@ const wording = {
   },
   entities: {
     leads: ['Leads', '线索'],
-    accounts: ['Accounts', '客户'],
+    companies: ['Companies', '公司'],
     contacts: ['Contacts', '联系人'],
     opportunities: ['Opportunities', '商机'],
     tasks: ['Tasks', '任务'],
@@ -1746,7 +1746,6 @@ const wording = {
     id: ['Record ID', '记录 ID'],
     name: ['Name', '名称'],
     leadName: ['Name', '姓名'],
-    accountDescription: ['Introduction', '介绍'],
     companyDescription: ['Introduction', '公司介绍'],
     taskName: ['Title', '标题'],
     approvalSubject: ['Subject', '审批主题'],
@@ -1778,14 +1777,14 @@ const wording = {
     employees: ['Employees', '员工数'],
     address: ['Address', '地址'],
     notes: ['Notes', '备注'],
-    accountId: ['Account', '所属客户'],
+    companyId: ['Company', '所属公司'],
     related: {
       leadId: ['Related lead', '关联线索'],
-      accountId: ['Related account', '关联客户'],
+      companyId: ['Related company', '关联公司'],
       opportunityId: ['Related opportunity', '关联商机'],
     },
     contactId: ['Contact', '联系人'],
-    accountName: ['New account name', '新客户名称'],
+    newCompanyName: ['New company name', '新公司名称'],
     opportunityName: ['Opportunity name', '商机名称'],
     createOpportunity: ['Create opportunity', '创建商机'],
     gender: ['Gender', '性别'],
@@ -1819,7 +1818,7 @@ const wording = {
     decidedAt: ['Decided', '审批时间'],
     decisionComment: ['Decision comment', '审批意见'],
     convertedAt: ['Converted', '转化时间'],
-    convertedAccountId: ['Converted account', '转化客户'],
+    convertedCompanyId: ['Converted company', '转化后的公司'],
     convertedContactId: ['Converted contact', '转化联系人'],
     convertedOpportunityId: ['Converted opportunity', '转化商机'],
     role: ['Contact role', '联系人角色'],
@@ -1847,11 +1846,11 @@ const wording = {
       '线索、商机停滞阈值（天）',
     ],
     staleDays: [
-      'Account inactivity threshold (days)',
-      '客户长期未联系阈值（天）',
+      'Company inactivity threshold (days)',
+      '公司长期未联系阈值（天）',
     ],
     nurtureReviewDays: ['Nurture review after (days)', '培育复查间隔（天）'],
-    accountType: ['Account type', '客户类型'],
+    companyType: ['Company type', '公司类型'],
   },
   options: {
     manufacturing: ['Manufacturing', '制造业'],
@@ -2036,17 +2035,17 @@ const wording = {
       'Related records prevent this change. Unlink them first.',
       '存在关联记录，请先解除关联。',
     ],
-    accountMismatch: [
-      'The related contacts and opportunities must belong to the same account.',
-      '关联联系人和商机必须属于同一客户。',
+    companyMismatch: [
+      'The related contacts and opportunities must belong to the same company.',
+      '关联联系人和商机必须属于同一公司。',
     ],
-    leadOrAccount: [
-      'A task concerns a lead, or an account and its opportunity, not both.',
-      '任务关联线索，或关联客户及其商机，二者不能同时关联。',
+    leadOrCompany: [
+      'A task concerns a lead, or a company and its opportunity, not both.',
+      '任务关联线索，或关联公司及其商机，二者不能同时关联。',
     ],
     opportunityHasTasks: [
-      'This deal has tasks with its current account, so it cannot move to another account.',
-      '此商机已有与当前客户的任务，不能更换到其他客户。',
+      'This deal has tasks with its current company, so it cannot move to another company.',
+      '此商机已有与当前公司的任务，不能更换到其他公司。',
     ],
     endBeforeStart: [
       "The end time must come after the task's time.",

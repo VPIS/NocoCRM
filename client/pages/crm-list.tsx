@@ -112,7 +112,7 @@ type Scope = 'all' | 'mine' | 'participating' | 'approving';
 const scopes: Partial<Record<string, readonly Scope[]>> = {
   leads: ['all', 'mine'],
   opportunities: ['all', 'mine'],
-  accounts: ['all', 'mine'],
+  companies: ['all', 'mine'],
   contacts: ['all', 'mine'],
   approvals: ['all', 'mine', 'approving'],
   tasks: ['all', 'mine', 'participating'],
@@ -126,7 +126,7 @@ const METRIC_TITLES: Partial<Record<string, string>> = {
   'leads.uncontacted': 'uncontactedCard',
   'leads.stale': 'staleLeads',
   'leads.newThisMonth': 'newLeads',
-  'accounts.stale': 'staleAccounts',
+  'companies.stale': 'staleCompanies',
   'opportunities.stale': 'staleOpportunities',
 };
 export default function CrmListPage(): ReactElement {
@@ -637,7 +637,7 @@ function EntityList({
   // their own.
   const views: [string, typeof LayoutList][] = [
     ['list', LayoutList],
-    ...(['leads', 'accounts', 'opportunities'].includes(entity)
+    ...(['leads', 'companies', 'opportunities'].includes(entity)
       ? [['board', Columns3] as [string, typeof LayoutList]]
       : []),
     ...(entity === 'tasks'
@@ -1000,7 +1000,7 @@ function EntityList({
                                   entity={entity}
                                   record={{
                                     id: record.id,
-                                    // A contact's account is its own column
+                                    // A contact's company is its own column
                                     // here, so the link is the bare name.
                                     name:
                                       entity === 'contacts'
@@ -1206,7 +1206,7 @@ function EntityList({
                             />
                           </span>
                         )}
-                        {entity === 'accounts' && (
+                        {entity === 'companies' && (
                           <span className='inline-flex items-center gap-1'>
                             <Factory className='size-3 shrink-0' />
                             <Value

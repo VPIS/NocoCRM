@@ -118,10 +118,10 @@ export async function statistics(
       convertedThisMonth: convertedThisMonth.map((r) => r.id),
     };
   }
-  // An account's or a deal's last exchange with the customer
+  // A company's or a deal's last exchange with the customer
   // (exchanges.ts), from its creation when it has had none.
   const exchanges =
-    entity === 'accounts' || entity === 'opportunities'
+    entity === 'companies' || entity === 'opportunities'
       ? await lastExchanges(service.database.query(), entity)
       : new Map<string, number>();
   const month = today.slice(0, 7);
@@ -130,7 +130,7 @@ export async function statistics(
   const lastExchangeAt = (r: CrmRecord): number =>
     Math.max(exchanges.get(r.id) ?? 0, +new Date(r.createdAt));
 
-  if (entity === 'accounts') {
+  if (entity === 'companies') {
     const contacts = await allRecords(service, actor, 'contacts');
     const opportunities = await allRecords(service, actor, 'opportunities');
     const openStages = new Set([
@@ -141,8 +141,8 @@ export async function statistics(
       'negotiation',
       'contract',
     ]);
-    // The dashboard's staleAccount rule, so the card and the reminder agree.
-    // A scheduled task does not clear it: the account has still not been
+    // The dashboard's staleCompany rule, so the card and the reminder agree.
+    // A scheduled task does not clear it: the company has still not been
     // reached for that long.
     const stale = records.filter(
       (r) =>
@@ -150,20 +150,20 @@ export async function statistics(
         +now - lastExchangeAt(r) > settings.staleDays * 86400000,
     );
     const noContacts = records.filter(
-      (r) => !contacts.some((c) => c.accountId === r.id),
+      (r) => !contacts.some((c) => c.companyId === r.id),
     );
     const noOpenOpportunity = records.filter(
       (r) =>
         ['qualified', 'customer'].includes(toText(r.status)) &&
         !opportunities.some(
-          (o) => o.accountId === r.id && openStages.has(toText(o.stage)),
+          (o) => o.companyId === r.id && openStages.has(toText(o.stage)),
         ),
     );
     const newThisMonth = records.filter((r) => inMonth(r.createdAt));
     const customers = records.filter((r) => r.status === 'customer');
     // Churned this month: churned now, and the move to churned happened this
     // month. The move is read from history, since the record keeps no date
-    // for it; only the churned accounts are looked up.
+    // for it; only the churned companies are looked up.
     const churned = records.filter((r) => r.status === 'churned');
     const churnedThisMonth: CrmRecord[] = [];
     for (let offset = 0; offset < churned.length; offset += 400) {
@@ -172,7 +172,7 @@ export async function statistics(
         .query()
         .selectFrom('crmHistory')
         .select(['recordId', 'createdAt'])
-        .where('entity', '=', 'accounts')
+        .where('entity', '=', 'companies')
         .where('action', '=', 'status')
         .where('toValue', '=', 'churned')
         .where(

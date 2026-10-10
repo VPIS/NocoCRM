@@ -11,12 +11,12 @@ import {
 } from '../../server/providers/crm/schema.js';
 import { crmZh } from '../../client/locales/crm/index.js';
 
-// The account, contact and approval pages are laid out as the lead's: the
+// The company, contact and approval pages are laid out as the lead's: the
 // heading over grouped particulars, every action under it, tabs on the right.
 
 const state = vi.hoisted(() => ({
   api: vi.fn(),
-  entity: 'accounts' as string,
+  entity: 'companies' as string,
   record: {} as Record<string, unknown>,
   related: {} as Record<string, unknown>,
   canDelete: true,
@@ -33,7 +33,7 @@ vi.mock('../../client/components/crm/mail.js', async (importOriginal) => ({
   >()),
   useMailSetup: () => ({
     can: false,
-    accounts: [],
+    companies: [],
     providers: [],
     senders: [],
     loading: false,
@@ -100,7 +100,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
             isLoading: false,
             data: {
               record: state.record,
-              titles: { 'account-1': '沃格光电', 'opp-1': '沃格光电 / 供应链' },
+              titles: { 'company-1': '沃格光电', 'opp-1': '沃格光电 / 供应链' },
               names: {},
               related: state.related,
               relatedTotals: {},
@@ -162,7 +162,7 @@ function renderPage(path = `/crm/${state.entity}/rec-1`): void {
             path='/crm/:entity/:id/*'
             element={
               <>
-                <EntityDetail entity={state.entity as 'accounts'} id='rec-1' />
+                <EntityDetail entity={state.entity as 'companies'} id='rec-1' />
                 <Where />
               </>
             }
@@ -188,9 +188,9 @@ beforeEach(() => {
   state.history = [];
 });
 
-describe('the account page', () => {
+describe('the company page', () => {
   beforeEach(() => {
-    state.entity = 'accounts';
+    state.entity = 'companies';
     state.record = {
       id: 'rec-1',
       name: '杭州海康威视',
@@ -243,9 +243,9 @@ describe('the account page', () => {
   });
 });
 
-describe("the account page's churn reason", () => {
+describe("the company page's churn reason", () => {
   beforeEach(() => {
-    state.entity = 'accounts';
+    state.entity = 'companies';
     state.record = {
       id: 'rec-1',
       name: '丰味食品',
@@ -258,7 +258,7 @@ describe("the account page's churn reason", () => {
     state.related = { contacts: [], opportunities: [] };
   });
 
-  it("keeps a churned account's reason editable as its own row", () => {
+  it("keeps a churned company's reason editable as its own row", () => {
     renderPage();
     expect(screen.getByRole('button', { name: '流失原因' })).toBeTruthy();
   });
@@ -288,7 +288,7 @@ describe('the contact page', () => {
     state.record = {
       id: 'rec-1',
       name: '周晓',
-      accountId: 'account-1',
+      companyId: 'company-1',
       ownerId: 'rep',
       phone: '138 0000 5217',
       ...stamps,
@@ -296,7 +296,7 @@ describe('the contact page', () => {
     state.related = { opportunities: [] };
   });
 
-  it('heads the page with the name and its account, and has no attachments tab', () => {
+  it('heads the page with the name and its company, and has no attachments tab', () => {
     renderPage();
     for (const heading of screen.getAllByRole('heading', { level: 1 })) {
       expect(heading.textContent).toContain('周晓');

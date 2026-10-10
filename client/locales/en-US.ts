@@ -80,22 +80,22 @@ const enUS = {
   'Review everything a lead has now (the lead itself, its tasks, notes, related records in the CRM and public information) and recommend the next step — keep following up, nurture, convert or invalid — with the reasons; when following up, say clearly how to follow up and what exactly to do. Use when a new lead comes in, when the user asks to follow up a lead or follow it up again, or asks "what should I do next with this lead".':
     'Review everything a lead has now (the lead itself, its tasks, notes, related records in the CRM and public information) and recommend the next step — keep following up, nurture, convert or invalid — with the reasons; when following up, say clearly how to follow up and what exactly to do. Use when a new lead comes in, when the user asks to follow up a lead or follow it up again, or asks "what should I do next with this lead".',
   'Opportunity follow-up': 'Opportunity follow-up',
-  'Reviews everything about an opportunity as it now stands (the opportunity itself, the account, contacts and their roles, tasks, notes, approvals, the source lead) and judges whether its stage holds up and what to do next — advance to the next stage, keep at it in the current stage, pause, or mark it lost — with the reasons, risks and gaps to fill; when advancing, spells out exactly what to do. Use when a lead\'s conversion opens a new opportunity, when the outcome of an opportunity\'s task has been recorded, when the user asks for a follow-up, or when asked "what is the next step for this opportunity?".':
-    'Reviews everything about an opportunity as it now stands (the opportunity itself, the account, contacts and their roles, tasks, notes, approvals, the source lead) and judges whether its stage holds up and what to do next — advance to the next stage, keep at it in the current stage, pause, or mark it lost — with the reasons, risks and gaps to fill; when advancing, spells out exactly what to do. Use when a lead\'s conversion opens a new opportunity, when the outcome of an opportunity\'s task has been recorded, when the user asks for a follow-up, or when asked "what is the next step for this opportunity?".',
+  'Reviews everything about an opportunity as it now stands (the opportunity itself, the company, contacts and their roles, tasks, notes, approvals, the source lead) and judges whether its stage holds up and what to do next — advance to the next stage, keep at it in the current stage, pause, or mark it lost — with the reasons, risks and gaps to fill; when advancing, spells out exactly what to do. Use when a lead\'s conversion opens a new opportunity, when the outcome of an opportunity\'s task has been recorded, when the user asks for a follow-up, or when asked "what is the next step for this opportunity?".':
+    'Reviews everything about an opportunity as it now stands (the opportunity itself, the company, contacts and their roles, tasks, notes, approvals, the source lead) and judges whether its stage holds up and what to do next — advance to the next stage, keep at it in the current stage, pause, or mark it lost — with the reasons, risks and gaps to fill; when advancing, spells out exactly what to do. Use when a lead\'s conversion opens a new opportunity, when the outcome of an opportunity\'s task has been recorded, when the user asks for a follow-up, or when asked "what is the next step for this opportunity?".',
   'Approval review': 'Approval review',
   'Helps an approver judge whether an approval request (discount, payment terms, contract terms, delivery commitment) is worth approving — how far the asked terms are from the standard, the effect on the amount and on collection, the opportunity\'s situation and the evidence supporting this concession, the other approvals submitted with it on the same opportunity, how earlier requests of the same kind were decided, the risks and what the applicant left unclear — then recommends approve, approve on conditions, reject or ask for more information, and drafts the decision comment. Use it after an approval is submitted, or when the approver asks "should this approval be approved?".':
     'Helps an approver judge whether an approval request (discount, payment terms, contract terms, delivery commitment) is worth approving — how far the asked terms are from the standard, the effect on the amount and on collection, the opportunity\'s situation and the evidence supporting this concession, the other approvals submitted with it on the same opportunity, how earlier requests of the same kind were decided, the risks and what the applicant left unclear — then recommends approve, approve on conditions, reject or ask for more information, and drafts the decision comment. Use it after an approval is submitted, or when the approver asks "should this approval be approved?".',
   // Display text of the CRM's AI tools (server/ai/tools), keyed by their
   // English source text as the AI Employee plugin requires.
   'Search CRM records': 'Search CRM records',
-  'Finds leads, accounts, contacts, opportunities, tasks and approvals the current user may read, a page at a time.':
-    'Finds leads, accounts, contacts, opportunities, tasks and approvals the current user may read, a page at a time.',
+  'Finds leads, companies, contacts, opportunities, tasks and approvals the current user may read, a page at a time.':
+    'Finds leads, companies, contacts, opportunities, tasks and approvals the current user may read, a page at a time.',
   'Read a CRM record': 'Read a CRM record',
   'Reads one record in full, with its change history, related records and what the current user may do to it.':
     'Reads one record in full, with its change history, related records and what the current user may do to it.',
   'Create a CRM record': 'Create a CRM record',
-  'Creates a lead, account, contact, opportunity, task or approval once the user confirms the values.':
-    'Creates a lead, account, contact, opportunity, task or approval once the user confirms the values.',
+  'Creates a lead, company, contact, opportunity, task or approval once the user confirms the values.':
+    'Creates a lead, company, contact, opportunity, task or approval once the user confirms the values.',
   'Update a CRM record': 'Update a CRM record',
   'Changes the fields of an existing record once the user confirms the new values.':
     'Changes the fields of an existing record once the user confirms the new values.',
@@ -103,8 +103,8 @@ const enUS = {
   'Deletes one record once the user confirms; it cannot be undone.':
     'Deletes one record once the user confirms; it cannot be undone.',
   'Convert a lead': 'Convert a lead',
-  'Turns a lead into an account and a contact, optionally with an opportunity, once the user confirms.':
-    'Turns a lead into an account and a contact, optionally with an opportunity, once the user confirms.',
+  'Turns a lead into a company and a contact, optionally with an opportunity, once the user confirms.':
+    'Turns a lead into a company and a contact, optionally with an opportunity, once the user confirms.',
   'Decide on an approval': 'Decide on an approval',
   'Submits, withdraws, approves or rejects an approval request once the user confirms.':
     'Submits, withdraws, approves or rejects an approval request once the user confirms.',

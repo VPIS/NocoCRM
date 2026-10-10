@@ -141,7 +141,7 @@ import {
 
 const drawerEntities: Entity[] = [
   'leads',
-  'accounts',
+  'companies',
   'contacts',
   'opportunities',
   'tasks',
@@ -360,13 +360,13 @@ function LeadDetail({ id }: { id: string }): ReactElement {
     await refresh();
   };
   // Deleting the lead takes its lead-only tasks with it; ones that also
-  // hang off an account or opportunity survive, so the confirmation can state
+  // hang off a company or opportunity survive, so the confirmation can state
   // both outcomes without asking the server first.
   const cascadedTasks = tasks.filter(
-    (task) => !task.accountId && !task.opportunityId,
+    (task) => !task.companyId && !task.opportunityId,
   );
   const keptTasks = tasks.filter(
-    (task) => task.accountId ?? task.opportunityId,
+    (task) => task.companyId ?? task.opportunityId,
   );
   const inline = (key: string): ReactElement => (
     <InlineField
@@ -607,7 +607,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                 <>
                   {(
                     [
-                      ['accounts', 'convertedAccountId'],
+                      ['companies', 'convertedCompanyId'],
                       ['contacts', 'convertedContactId'],
                       ['opportunities', 'convertedOpportunityId'],
                     ] as const
@@ -962,7 +962,7 @@ export function DetailColumns({
   );
 }
 
-// The part of a record's heading after a slash ("name / company", "account /
+// The part of a record's heading after a slash ("name / company", "company /
 // deal"). The heading flows as text and wraps wherever its line is full.
 export function AfterSlash({
   children,
@@ -1384,7 +1384,7 @@ export function RecordAttachments({
   entity: Entity;
   record: CrmRecord;
   tasks: Data[];
-  // An account's or contact's opportunities: their proposals and contracts
+  // A company's or contact's opportunities: their proposals and contracts
   // are the files most often wanted from the customer's side.
   opportunities?: Data[];
   // An opportunity's approval requests, whose files back the decision.
@@ -1621,8 +1621,8 @@ export function HistoryChanges({
         arrayValues(values[key])
           .map((item) => {
             const row = (item ?? {}) as Data;
-            // A contact's title reads "name / account"; the deal has one
-            // account, so the name alone.
+            // A contact's title reads "name / company"; the deal has one
+            // company, so the name alone.
             const name = (
               names[toText(row.contactId)] ?? toText(row.contactId).slice(0, 8)
             ).split(' / ')[0];
@@ -2847,7 +2847,7 @@ export function HistoryFeed({
   );
 }
 
-// A name's initials, as the account menu draws them: the first letter of
+// A name's initials, as the company menu draws them: the first letter of
 // each of its first two words.
 function initials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
@@ -2901,7 +2901,7 @@ function NoteComposer({
     // side by side, 3.75rem stacked), on the page's background, its gap
     // below its own so entries pass under it.
     <div className='sticky top-[3.75rem] z-[9] grid gap-2 bg-background pb-5 @3xl:top-14'>
-      {/* The writer's avatar before the box, drawn as the account menu's:
+      {/* The writer's avatar before the box, drawn as the company menu's:
           the first letter of each of the name's first two words. */}
       <div className='flex items-start gap-3'>
         <span

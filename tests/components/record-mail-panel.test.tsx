@@ -87,12 +87,12 @@ describe('a record’s Mail tab', () => {
     expect(screen.getByText('mail.write')).toBeInTheDocument();
   });
 
-  it('names an account by its name, its contacts and its domain, the addresses on hover', () => {
+  it('names a company by its name, its contacts and its domain, the addresses on hover', () => {
     show(['xu@zhixing-edu.example', 'jet@gmail.com'], {
       domain: 'zhixing-edu.example',
-      scope: { kind: 'account', name: 'Zhixing' },
+      scope: { kind: 'company', name: 'Zhixing' },
     });
-    const line = screen.getByText(/mail\.scopeAccount/);
+    const line = screen.getByText(/mail\.scopeCompany/);
     expect(line).toHaveTextContent('"name":"Zhixing"');
     expect(line).toHaveTextContent('mail.scopeContacts {"count":2}');
     expect(line).toHaveTextContent('"domain":"zhixing-edu.example"');
@@ -102,18 +102,18 @@ describe('a record’s Mail tab', () => {
     );
   });
 
-  it("names a deal by its contacts, or its account's while it names none", () => {
+  it("names a deal by its contacts, or its company's while it names none", () => {
     show(['a@x.example', 'b@x.example'], {
-      scope: { kind: 'opportunity', fromAccount: false },
+      scope: { kind: 'opportunity', fromCompany: false },
     });
     expect(screen.getByText(/mail\.scopeDeal /)).toHaveTextContent(
       '{"count":2}',
     );
     cleanup();
     show(['a@x.example'], {
-      scope: { kind: 'opportunity', fromAccount: true },
+      scope: { kind: 'opportunity', fromCompany: true },
     });
-    expect(screen.getByText(/mail\.scopeDealAccount/)).toHaveTextContent(
+    expect(screen.getByText(/mail\.scopeDealCompany/)).toHaveTextContent(
       '{"count":1}',
     );
   });

@@ -58,7 +58,7 @@ export interface DecisionItem extends EvaluationEntry {
   opportunity?: {
     id: string;
     name: string;
-    account: string | null;
+    company: string | null;
     ownerId: string | null;
     stage: string;
   };

@@ -19,8 +19,8 @@ Work in this order, not from impressions. When the system has already attached t
 
 1. **The lead itself**: company, job title, source, the fields already filled, and the **Original message** (the lead's own words when it came in). If not attached, read it with `get_record`.
 2. **How far the follow-up has got**: the lead's **tasks** (the "Result" of a completed task is what came of it), its **notes** (what was said in calls and meetings, information from other channels and the team's judgement) and the **mail** exchanged with the lead (what the customer wrote is what they said). They are newer than the original message; where they conflict, they prevail.
-3. **Whether the CRM already has this company or person**: look for the company name (including its short name), the email domain and the phone number among accounts, contacts, leads and opportunities; if not attached, search each with `search_records`. Watch for:
-   - whether it is already an account (has it bought, which edition, who is the owner);
+3. **Whether the CRM already has this company or person**: look for the company name (including its short name), the email domain and the phone number among companies, contacts, leads and opportunities; if not attached, search each with `search_records`. Watch for:
+   - whether it is already a company (has it bought, which edition, who is the owner);
    - whether the same company already has another lead or an open opportunity (possibly a duplicate, or it should go to the existing owner);
    - whether it came before and why it did not close (the lost reason, the invalid reason).
 4. **Public information**: search the web only on the first follow-up, when the company's particulars are empty, or when they have not been updated for a long time; check the company website and public sources: what it does, its size, industry, location, recent news (hiring IT staff, launching new business, raising funds). When the system decides no web search is needed, use the company information already on the lead and state "Not searched online this time" in the conclusion.
@@ -37,7 +37,7 @@ Work in this order, not from impressions. When the system has already attached t
 - They mention a budget, a go-live date or an approved project.
 - They already use the Community edition, at some scale or with several applications.
 - A software company or integrator that will use NocoBase to deliver applications to end customers (needs at least Professional).
-- An existing account raises a new need (upgrade, expansion, custom development).
+- An existing company raises a new need (upgrade, expansion, custom development).
 
 **Weak signals (do not count in favour, but do not make the lead invalid)**
 
@@ -52,7 +52,7 @@ Choose one of four conclusions:
 | Conclusion            | When                                                                                                                                                                                                                                                                                                       |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Keep following up** | Worth pursuing, but there is still something to clarify or move forward. A: an enterprise/institution or integrator with a clear scenario and at least one of a commercial-edition need, a budget or a timeline; B: a clear scenario, but one or two of budget, decision maker or edition need are missing |
-| **Convert**           | Scenario, recommended edition, budget and decision maker are all clear, so it can become an account, a contact and an opportunity; or the company is already an account or has an open opportunity, and the lead should be linked to it                                                                    |
+| **Convert**           | Scenario, recommended edition, budget and decision maker are all clear, so it can become a company, a contact and an opportunity; or the company is already a company or has an open opportunity, and the lead should be linked to it                                                                    |
 | **Nurture**           | Fits the target customer, but the timing is not right: the budget is only approved next quarter, waiting for the project to be approved, early research and comparison, trying the Community edition with no purchase plan for now. The grade is usually C                                                 |
 | **Invalid**           | See the invalid cases below                                                                                                                                                                                                                                                                                |
 
@@ -91,7 +91,7 @@ Quote only the prices published on the website (Standard RMB 5,000, Professional
    - If the customer's latest email is unanswered, answering it comes first.
    - Only when there is no open task, plan a new next step.
    - When the results of completed tasks, the notes or the mail have already made the need, budget, decision maker and timing clear, the conclusion should be convert; when several exchanges have brought no progress, consider nurture.
-1. **First check whether it should go to someone else**: if the company is already an account or has an open opportunity, suggest linking it to the existing account and handing it to that account's owner, rather than starting afresh.
+1. **First check whether it should go to someone else**: if the company is already a company or has an open opportunity, suggest linking it to the existing company and handing it to that company's owner, rather than starting afresh.
 2. **What to do next**: one concrete thing (a call, an email, booking a meeting, sending material, a demo) and when to do it. First contact: A the same day, B within two days; after that at the time agreed with the customer, or if none was agreed, at the pace of the conversation.
    Choose how by the situation, not by habit. When the lead has an email address, weigh an email first; it is often the better step:
    - **An email**: the customer reached out in writing (a website form, an email, a message) and left an address; the step is sending what they asked for or what helps them decide (material, a case, a proposal, a quote); proposing or confirming a time to talk; a recap of a call with what was agreed; the customer wrote by email or asked to be emailed; calls go unanswered or there is no phone number; a light touch for a C-grade lead or a nurtured one. An email is written now and sent from the card, never a task.
@@ -114,7 +114,7 @@ Quote only the prices published on the website (Standard RMB 5,000, Professional
 
 - State why it can be converted now: which conditions are confirmed.
 - **Opportunity**: name it "the system or service to be built + (edition)", for example "Production reporting system (Professional)"; fill in the amount for Standard and Professional at the website prices, and leave it empty for Enterprise and for services.
-- When it is already an account or already has an opportunity, suggest linking to it rather than creating a new one.
+- When it is already a company or already has an opportunity, suggest linking to it rather than creating a new one.
 
 ### Nurture
 
@@ -125,7 +125,7 @@ Quote only the prices published on the website (Standard RMB 5,000, Professional
 ### Invalid
 
 - Schedule no further follow-up. Choose the invalid reason carefully: it is used to measure lead quality by source.
-- **Duplicate**: suggest merging into the existing lead, or linking to the existing account and handing it to the existing owner.
+- **Duplicate**: suggest merging into the existing lead, or linking to the existing company and handing it to the existing owner.
 - **Only a technical support question**: prepare a reply draft pointing them to the community forum and the documentation, in a friendly tone.
 - **Competitor, job seeking, promotion**: record the reason only; do not reply.
 

@@ -68,7 +68,7 @@ export function InlineField({
   lookup?: Record<string, string>;
   label: string;
   choices?: { value: string; label: string }[];
-  // What a related record is searched within (the contacts of one account).
+  // What a related record is searched within (the contacts of one company).
   relationFilter?: Record<string, string | undefined>;
   // Lets a caller save several fields together when one alone would be
   // rejected — a lead going invalid must carry its reason in the same write.
@@ -182,7 +182,7 @@ export function InlineField({
       ? 'font-heading text-xl font-semibold tracking-tight md:text-xl'
       : 'font-heading text-3xl font-semibold tracking-tight md:text-3xl';
   const readText = titled ? titleType : 'text-sm';
-  // A title's parts (a lead's name and company, an account and its deal)
+  // A title's parts (a lead's name and company, a company and its deal)
   // flow as text, one run of words wrapping wherever the line is full, so
   // a title breaks inside a name rather than only between its parts. Its
   // padding and hover shading are drawn on each line it spans.

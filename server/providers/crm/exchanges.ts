@@ -7,11 +7,11 @@ import type { QueryAdapter } from '@nocobase/db';
 // not the reader's scope: a colleague's call still means the customer was
 // reached. Without any, a record counts from its creation.
 
-export type ExchangeEntity = 'leads' | 'accounts' | 'opportunities';
+export type ExchangeEntity = 'leads' | 'companies' | 'opportunities';
 
 const TASK_LINK: Record<ExchangeEntity, string> = {
   leads: 'leadId',
-  accounts: 'accountId',
+  companies: 'companyId',
   opportunities: 'opportunityId',
 };
 

@@ -7,7 +7,7 @@ export interface ReasonField {
 }
 
 // Statuses that must carry a reason, and which fields collect it. Mirrors the
-// server's rules: a lead going invalid, an account churning, an opportunity
+// server's rules: a lead going invalid, a company churning, an opportunity
 // lost or paused. A status not listed here changes in one write.
 export function reasonFor(
   entity: Entity,
@@ -15,7 +15,7 @@ export function reasonFor(
 ): ReasonField[] | undefined {
   if (entity === 'leads' && stage === 'invalid')
     return [{ key: 'invalidReason', type: 'select', required: true }];
-  if (entity === 'accounts' && stage === 'churned')
+  if (entity === 'companies' && stage === 'churned')
     return [{ key: 'churnReason', type: 'select', required: true }];
   if (entity === 'opportunities' && stage === 'lost')
     return [{ key: 'lostReason', type: 'select', required: true }];

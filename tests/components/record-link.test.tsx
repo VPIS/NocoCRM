@@ -24,15 +24,15 @@ describe('RecordLink', () => {
   it('navigates like a plain link where no drawer is available', () => {
     render(
       <MemoryRouter>
-        <RecordLink entity='accounts' record={record} />
+        <RecordLink entity='companies' record={record} />
         <Where />
       </MemoryRouter>,
     );
     const link = screen.getByRole('link', { name: /Acme/ });
-    expect(link).toHaveAttribute('href', '/crm/accounts/acc-1');
+    expect(link).toHaveAttribute('href', '/crm/companies/acc-1');
     fireEvent.click(link);
     expect(screen.getByTestId('where')).toHaveTextContent(
-      '/crm/accounts/acc-1',
+      '/crm/companies/acc-1',
     );
   });
 
@@ -43,15 +43,15 @@ describe('RecordLink', () => {
         <RecordDrawerContext.Provider
           value={{ open, close: vi.fn(), inDrawer: false }}
         >
-          <RecordLink entity='accounts' record={record} />
+          <RecordLink entity='companies' record={record} />
           <Where />
         </RecordDrawerContext.Provider>
       </MemoryRouter>,
     );
     const link = screen.getByRole('link', { name: /Acme/ });
-    expect(link).toHaveAttribute('href', '/crm/accounts/acc-1');
+    expect(link).toHaveAttribute('href', '/crm/companies/acc-1');
     fireEvent.click(link);
-    expect(open).toHaveBeenCalledWith('accounts', 'acc-1');
+    expect(open).toHaveBeenCalledWith('companies', 'acc-1');
     // The page did not navigate: the drawer took the click.
     expect(screen.getByTestId('where')).toHaveTextContent('/');
     // A modified click is the browser's (new tab): the drawer stays out.

@@ -15,7 +15,7 @@ export async function conversionPreview(
   id: string,
 ): Promise<Row> {
   const lead = await service.get(actor, 'leads', id);
-  const accounts = (await service.list(actor, 'accounts', { pageSize: 1000 }))
+  const companies = (await service.list(actor, 'companies', { pageSize: 1000 }))
     .data;
   const contacts = (await service.list(actor, 'contacts', { pageSize: 1000 }))
     .data;
@@ -25,33 +25,33 @@ export async function conversionPreview(
       .toLowerCase();
   const company = normalized(lead.company);
   const domain = toText(lead.email ?? '').split('@')[1];
-  const matchedAccounts = accounts.filter(
+  const matchedCompanies = companies.filter(
     (a) =>
       (company &&
         (normalized(a.name).includes(company) ||
           company.includes(normalized(a.name)))) ||
       (domain && toText(a.website ?? '').includes(domain)),
   );
-  const accountIds = new Set(matchedAccounts.map((a) => toText(a.id)));
+  const companyIds = new Set(matchedCompanies.map((a) => toText(a.id)));
   const name = normalized(lead.name);
   const email = toText(lead.email ?? '').toLowerCase();
   const phone = normalized(lead.phone);
-  // The opportunities still open at those accounts: converting with a new
+  // The opportunities still open at those companies: converting with a new
   // one beside them may duplicate a deal already being worked.
-  const opportunities = accountIds.size
+  const opportunities = companyIds.size
     ? (
         await service.list(actor, 'opportunities', { pageSize: 1000 })
       ).data.filter(
         (o) =>
-          accountIds.has(toText(o.accountId ?? '')) &&
+          companyIds.has(toText(o.companyId ?? '')) &&
           !['won', 'lost'].includes(toText(o.stage)),
       )
     : [];
   return {
     lead,
-    accounts: matchedAccounts,
+    companies: matchedCompanies,
     // The same person: the same e-mail or phone, or the same name at one of
-    // the matching accounts, which finds a contact the lead gave no e-mail
+    // the matching companies, which finds a contact the lead gave no e-mail
     // or phone for.
     contacts: contacts.filter(
       (c) =>
@@ -59,7 +59,7 @@ export async function conversionPreview(
         (phone && normalized(c.phone) === phone) ||
         (name &&
           normalized(c.name) === name &&
-          accountIds.has(toText(c.accountId ?? ''))),
+          companyIds.has(toText(c.companyId ?? ''))),
     ),
     opportunities,
   };
@@ -85,7 +85,7 @@ export async function convertLead(
     throw new CrmError('convertedReadOnly', 409);
   // Only copy fields the person converting the lead may actually read.
   const lead = await service.get(actor, 'leads', id, tx);
-  const accountInput: Row = {
+  const companyInput: Row = {
     name: lead.company,
     ownerId: lead.ownerId,
     source: lead.source,
@@ -98,12 +98,12 @@ export async function convertLead(
       ),
     ),
   };
-  // input.account / input.contact override what the lead supplies, field by
+  // input.company / input.contact override what the lead supplies, field by
   // field: the card lets the user correct an inherited value before
   // confirming, and the assistant can propose corrections the same way.
   // save() validates the merged result like any other write.
-  Object.assign(accountInput, object(input.account ?? {}));
-  if (input.accountName) accountInput.name = toText(input.accountName);
+  Object.assign(companyInput, object(input.company ?? {}));
+  if (input.companyName) companyInput.name = toText(input.companyName);
   const contactInput: Row = {
     name: lead.name,
     phone: lead.phone,
@@ -115,7 +115,7 @@ export async function convertLead(
     ...object(input.contact ?? {}),
   };
   const merge = async (
-    entity: 'accounts' | 'contacts',
+    entity: 'companies' | 'contacts',
     recordId: unknown,
     proposed: Row,
     force: unknown,
@@ -135,13 +135,13 @@ export async function convertLead(
       ? service.save(actor, entity, patch, current.id, tx)
       : current;
   };
-  const account = await merge(
-    'accounts',
-    input.accountId,
-    accountInput,
-    input.overwriteAccountFields,
+  const company = await merge(
+    'companies',
+    input.companyId,
+    companyInput,
+    input.overwriteCompanyFields,
   );
-  contactInput.accountId = account.id;
+  contactInput.companyId = company.id;
   if (input.contactId) {
     const chosen = await service.get(
       actor,
@@ -149,7 +149,7 @@ export async function convertLead(
       toText(input.contactId),
       tx,
     );
-    if (chosen.accountId !== account.id) throw new CrmError('accountMismatch');
+    if (chosen.companyId !== company.id) throw new CrmError('companyMismatch');
   }
   const contact = await merge(
     'contacts',
@@ -163,10 +163,10 @@ export async function convertLead(
       actor,
       'opportunities',
       {
-        name: input.opportunityName || account.name,
+        name: input.opportunityName || company.name,
         ownerId: lead.ownerId,
         source: lead.source,
-        accountId: account.id,
+        companyId: company.id,
         // A lead is converted once its scene, scale and deployment or
         // edition are clear, which is what qualification asks for: the deal
         // starts there rather than at first contact (the opportunity
@@ -174,7 +174,7 @@ export async function convertLead(
         stage: 'qualification',
         amount: input.amount ?? null,
         // What the person set on the deal in the conversion dialog beside
-        // its name and amount; the rest comes from the lead and the account.
+        // its name and amount; the rest comes from the lead and the company.
         ...Object.fromEntries(
           Object.entries(object(input.opportunity ?? {})).filter(([key]) =>
             ['currency', 'expectedCloseAt'].includes(key),
@@ -192,7 +192,7 @@ export async function convertLead(
     .set({
       status: 'converted',
       convertedAt: now,
-      convertedAccountId: account.id,
+      convertedCompanyId: company.id,
       convertedContactId: contact.id,
       convertedOpportunityId: opportunity?.id ?? null,
       updatedAt: now,
@@ -213,7 +213,7 @@ export async function convertLead(
     await tx
       .updateTable('crmTasks')
       .set({
-        accountId: account.id,
+        companyId: company.id,
         opportunityId: opportunity?.id ?? null,
         updatedAt: now,
       })
@@ -228,7 +228,7 @@ export async function convertLead(
     lead.status,
     'converted',
     {
-      accountId: account.id,
+      companyId: company.id,
       contactId: contact.id,
       opportunityId: opportunity?.id ?? null,
     },

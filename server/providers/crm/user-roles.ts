@@ -20,7 +20,7 @@ const ADMINISTRATOR = 'system-administrator';
 // would leave it without its person, so such an account is disabled instead.
 const CRM_TABLES = [
   'crmLeads',
-  'crmAccounts',
+  'crmCompanies',
   'crmContacts',
   'crmOpportunities',
   'crmTasks',

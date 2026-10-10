@@ -5,7 +5,7 @@ introduction:
 scope: SPECIFIED
 i18n:
   namespace: crm
-description: Reviews everything about an opportunity as it now stands (the opportunity itself, the account, contacts and their roles, tasks, notes, approvals, the source lead) and judges whether its stage holds up and what to do next — advance to the next stage, keep at it in the current stage, pause, or mark it lost — with the reasons, risks and gaps to fill; when advancing, spells out exactly what to do. Use when a lead's conversion opens a new opportunity, when the outcome of an opportunity's task has been recorded, when the user asks for a follow-up, or when asked "what is the next step for this opportunity?".
+description: Reviews everything about an opportunity as it now stands (the opportunity itself, the company, contacts and their roles, tasks, notes, approvals, the source lead) and judges whether its stage holds up and what to do next — advance to the next stage, keep at it in the current stage, pause, or mark it lost — with the reasons, risks and gaps to fill; when advancing, spells out exactly what to do. Use when a lead's conversion opens a new opportunity, when the outcome of an opportunity's task has been recorded, when the user asks for a follow-up, or when asked "what is the next step for this opportunity?".
 tools: []
 ---
 
@@ -20,7 +20,7 @@ An opportunity differs from a lead: when unsure about a lead, rate it one grade 
 Work through these in order, not from impressions. When the system has already attached the material, use what is attached and do not look it up again; for anything not attached, use the tools:
 
 1. **The opportunity itself**: stage, amount and currency, expected close date, business type (New business, Expansion, Cross-sell, Renewal, Tender), description; for a paused one, the pause reason and the expected resume date. When it is not attached, read it with `get_record`.
-2. **Account**: whether it is an existing customer (which edition it bought, when, and who owns it); whether the account has other opportunities in progress (possible duplicates); why its earlier opportunities were won or lost.
+2. **Company**: whether it is an existing customer (which edition it bought, when, and who owns it); whether the company has other opportunities in progress (possible duplicates); why its earlier opportunities were won or lost.
 3. **Contacts and roles**: which contacts are linked to the opportunity, and whether each one's role is Decision maker, Champion, Evaluator, Influencer, End user or Blocker.
 4. **How far the follow-up has got**: the opportunity's **tasks** (the "Result" of a completed task is what came of it), its **notes** (what was said in calls and meetings, and the team's judgement) and the **mail** exchanged with its contacts (what the customer wrote is what they said); the source lead's original message and its latest follow-up (why it was converted, what was missing then). Tasks, notes and mail are newer than the lead; where they conflict, they prevail.
 5. **Approvals**: the approvals submitted on this opportunity (discount, payment terms, contract terms, delivery commitments) and their outcomes.
@@ -55,7 +55,7 @@ Go through each item; write any problem into the risks, and nothing when there i
 - **Edition**: the capabilities the customer wants do not match the edition quoted (for example SSO, approvals and multiple environments wanted but Standard quoted; clustering, full auditing and the complete source code wanted but Enterprise not quoted).
 - **Approvals**: when a term the customer wants goes beyond the "Approval standards" below, get it approved before agreeing to it. List the approvals to submit in the suggestion, one per term: what the customer wants, what the standard is, why it is worth asking for, with the source; once the salesperson confirms, they are submitted to the approver. Do not list one of a kind already pending or approved; a rejected term cannot be negotiated again as it stood — switch to a term within the standard or another concession; for one rejected for missing material, the next step is to supply what is missing first, and only when the material shows it has been supplied suggest submitting again, saying in the explanation what was supplied — never say something was supplied when it was not. A term the customer has already agreed still needs approval if it goes beyond the approval standards: an earlier request that was rejected or withdrawn does not cover a newly agreed term (for example payment terms negotiated down from 90 days to 60 still exceed 30 days), so list an approval for the new term; an approved request of the same kind does not cover a larger concession. When suggesting again one that was withdrawn, consider first an alternative within the standard or another concession (for example source code escrow instead of source code delivery, a cap on delay penalties); apply again on the original term only when the customer insists on it and there is a new reason, saying in the explanation how this request differs from the last. While approvals are pending, the next step cannot be promising the customer those terms; accepting the suggestion submits the approvals, so the next step cannot be "submit the approval" either. When what a planned task was for has already happened (for example the approval it was to submit has been submitted or decided), do not carry it on; plan what really needs doing now.
 - **Competition**: the customer mentions comparing other platforms or building in-house — write down what they value.
-- **Duplicates**: the same account already has a similar opportunity in progress — suggest merging them or explaining the difference.
+- **Duplicates**: the same company already has a similar opportunity in progress — suggest merging them or explaining the difference.
 
 ## 4. Recommendation and confidence
 
@@ -144,7 +144,7 @@ When giving a follow-up in the conversation, write it in the structure below, wi
 
 ## Task and note conventions
 
-- Task title: what to do, without the account's name (the task is linked to the deal, which shows beside it), for example "Solution demo". A task has no type.
+- Task title: what to do, without the company's name (the task is linked to the deal, which shows beside it), for example "Solution demo". A task has no type.
 - A task's result, and a note of a call or meeting, record the gist of what the customer said and the facts confirmed, with speculation marked separately, plus the next step and who owns it.
 
 ## Boundaries

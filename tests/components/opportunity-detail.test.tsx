@@ -11,7 +11,7 @@ import {
 } from '../../server/providers/crm/schema.js';
 import { crmZh } from '../../client/locales/crm/index.js';
 
-// The opportunity page is laid out as the lead's: account / name heading
+// The opportunity page is laid out as the lead's: company / name heading
 // the particulars, the stage a row among them, the tabs on the right.
 
 const state = vi.hoisted(() => ({
@@ -28,7 +28,7 @@ vi.mock('../../client/components/crm/mail.js', async (importOriginal) => ({
   >()),
   useMailSetup: () => ({
     can: false,
-    accounts: [],
+    companies: [],
     providers: [],
     senders: [],
     loading: false,
@@ -92,7 +92,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
             isLoading: false,
             data: {
               record: state.record,
-              titles: { 'account-1': '沃格光电' },
+              titles: { 'company-1': '沃格光电' },
               names: {},
               related: { approvals: [] },
               relatedTotals: {},
@@ -167,7 +167,7 @@ function renderPage(path = '/crm/opportunities/opp-1'): void {
 const deal = {
   id: 'opp-1',
   name: '供应链集成系统',
-  accountId: 'account-1',
+  companyId: 'company-1',
   stage: 'contact',
   ownerId: 'rep',
   amount: 300000,
@@ -187,7 +187,7 @@ beforeEach(() => {
 });
 
 describe('the opportunity page', () => {
-  it('heads the column with the account and the name, the particulars in one card', () => {
+  it('heads the column with the company and the name, the particulars in one card', () => {
     renderPage();
     for (const heading of screen.getAllByRole('heading', { level: 1 })) {
       expect(heading.textContent).toContain('沃格光电');

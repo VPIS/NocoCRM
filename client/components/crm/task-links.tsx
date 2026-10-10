@@ -13,7 +13,7 @@ import { useDebounced, useMatches } from './record-search.js';
 import { TaskSearchChip, type SearchOption } from './task-quick.js';
 
 // A new task's chips that search (RecordForm's quick mode): the record it
-// concerns, one lead, account or opportunity found by one search across the
+// concerns, one lead, company or opportunity found by one search across the
 // three, as Clarify's record chip does; and the colleagues taking part.
 
 // The colleagues listed before a name is typed.
@@ -44,14 +44,14 @@ export function TaskLinkChips({
   const leadMatches = useMatches('leads', recordQuery, looking, {
     excludeStatus: 'converted',
   });
-  const accountMatches = useMatches('accounts', recordQuery, looking);
+  const companyMatches = useMatches('companies', recordQuery, looking);
   const dealMatches = useMatches('opportunities', recordQuery, looking);
   const leads = leadMatches.rows;
-  const accounts = accountMatches.rows;
+  const companies = companyMatches.rows;
   const opportunities = dealMatches.rows;
   const listTitles = {
     ...leadMatches.titles,
-    ...accountMatches.titles,
+    ...companyMatches.titles,
     ...dealMatches.titles,
   };
   if (!meta) return null;
@@ -68,16 +68,16 @@ export function TaskLinkChips({
     }));
   const remember = (option: SearchOption): void =>
     setKnown((current) => ({ ...current, [option.id]: option.label }));
-  // One record: a lead, an account, or a deal (which carries its account),
+  // One record: a lead, a company, or a deal (which carries its company),
   // shown with its kind's menu icon.
   const linked = nameOf(
-    input.opportunityId || input.leadId || input.accountId || '',
+    input.opportunityId || input.leadId || input.companyId || '',
   );
   const LinkedIcon = input.opportunityId
     ? Handshake
     : input.leadId
       ? Radar
-      : input.accountId
+      : input.companyId
         ? Building2
         : Link2;
   const colleagues = arrayOf(input.internalParticipants);
@@ -104,9 +104,9 @@ export function TaskLinkChips({
             options: options('leads', leads),
           },
           {
-            key: 'accounts',
-            title: toText(text('entities.accounts')),
-            options: options('accounts', accounts),
+            key: 'companies',
+            title: toText(text('entities.companies')),
+            options: options('companies', companies),
           },
           {
             key: 'opportunities',
@@ -116,7 +116,7 @@ export function TaskLinkChips({
         ]}
         selected={
           new Set(
-            [input.leadId, input.accountId, input.opportunityId]
+            [input.leadId, input.companyId, input.opportunityId]
               .map((v) => toText(v ?? ''))
               .filter(Boolean),
           )
@@ -129,7 +129,7 @@ export function TaskLinkChips({
         onClear={() =>
           onChange({
             leadId: null,
-            accountId: null,
+            companyId: null,
             opportunityId: null,
           })
         }
@@ -138,27 +138,27 @@ export function TaskLinkChips({
           const key =
             group === 'leads'
               ? 'leadId'
-              : group === 'accounts'
-                ? 'accountId'
+              : group === 'companies'
+                ? 'companyId'
                 : 'opportunityId';
           // One record: picking the one linked takes it out.
           if (toText(input[key] ?? '') === option.id)
             return onChange({
               leadId: null,
-              accountId: null,
+              companyId: null,
               opportunityId: null,
             });
-          // A deal carries its account, so the task shows on the account too.
+          // A deal carries its company, so the task shows on the company too.
           const deal = opportunities.find((r) => toText(r.id) === option.id);
-          const account =
-            key === 'accountId'
+          const company =
+            key === 'companyId'
               ? option.id
               : key === 'opportunityId'
-                ? toText(deal?.accountId ?? '') || null
+                ? toText(deal?.companyId ?? '') || null
                 : null;
           onChange({
             leadId: key === 'leadId' ? option.id : null,
-            accountId: account,
+            companyId: company,
             opportunityId: key === 'opportunityId' ? option.id : null,
           });
         }}

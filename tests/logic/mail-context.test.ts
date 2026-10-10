@@ -176,7 +176,7 @@ describe('mail with a record, for an AI follow-up', () => {
     });
   });
 
-  it('finds anyone at the account’s domain, but not a shared mail service', async () => {
+  it('finds anyone at the company’s domain, but not a shared mail service', async () => {
     expect(domainOf('https://www.wg.example/about')).toBe('wg.example');
     expect(domainOf('qq.com')).toBeUndefined();
     const target = { addresses: [], domain: 'wg.example' };

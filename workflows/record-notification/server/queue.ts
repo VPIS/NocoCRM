@@ -21,7 +21,7 @@ function database(): DatabaseManager {
 }
 const tables: Record<string, string> = {
   leads: 'crmLeads',
-  accounts: 'crmAccounts',
+  companies: 'crmCompanies',
   contacts: 'crmContacts',
   opportunities: 'crmOpportunities',
   tasks: 'crmTasks',

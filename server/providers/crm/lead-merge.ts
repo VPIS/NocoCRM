@@ -219,7 +219,7 @@ function sameCompany(a: unknown, b: unknown): boolean {
 }
 
 export interface FoundDuplicate {
-  entity: 'leads' | 'contacts' | 'accounts';
+  entity: 'leads' | 'contacts' | 'companies';
   id: string;
   name: string;
   matched: (MatchReason | 'company')[];
@@ -231,7 +231,7 @@ export interface FoundDuplicate {
 // What a lead not yet created may repeat (the AI's capture review): open
 // leads by the same rules as a lead's page, and also those of the same
 // company, which are worth knowing though not mergeable; contacts by email
-// or phone; accounts by company. As the reader may see them, at most five,
+// or phone; companies by name. As the reader may see them, at most five,
 // the leads first.
 export async function findDuplicates(
   service: CrmService,
@@ -240,7 +240,7 @@ export async function findDuplicates(
 ): Promise<FoundDuplicate[]> {
   const found: FoundDuplicate[] = [];
   const readable = async (
-    entity: 'leads' | 'contacts' | 'accounts',
+    entity: 'leads' | 'contacts' | 'companies',
     table: string,
     columns: string[],
   ): Promise<Row[]> => {
@@ -302,10 +302,10 @@ export async function findDuplicates(
         matched,
       });
   }
-  for (const row of await readable('accounts', 'crmAccounts', ['id', 'name']))
+  for (const row of await readable('companies', 'crmCompanies', ['id', 'name']))
     if (sameCompany(input.company, row.name))
       found.push({
-        entity: 'accounts',
+        entity: 'companies',
         id: toText(row.id),
         name: toText(row.name ?? ''),
         matched: ['company'],

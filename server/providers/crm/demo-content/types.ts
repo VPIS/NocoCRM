@@ -35,7 +35,7 @@ export type DemoCity =
   | 'chengdu';
 
 export interface DemoCompany {
-  // The account's name.
+  // The company's name.
   readonly name: string;
   // The website's and the email addresses' domain, before .example.
   readonly domain: string;
@@ -134,13 +134,13 @@ export interface DemoContent {
   // The demo accounts.
   readonly accounts: Readonly<Record<DemoSeat, DemoAccountText>>;
   readonly cities: Readonly<Record<DemoCity, string>>;
-  // The eight accounts, by index.
+  // The eight companies, by index.
   readonly companies: readonly DemoCompany[];
-  // Each account's two contacts: the decision maker, then the technical one.
+  // Each company's two contacts: the decision maker, then the technical one.
   readonly people: readonly (readonly [DemoPerson, DemoPerson])[];
   readonly contactJobTitles: readonly [string, string];
   readonly contactNotes: readonly [string, string];
-  // The notes on the account that churned.
+  // The notes on the company that churned.
   readonly churnNotes: string;
   // The opportunities' names, by index.
   readonly deals: readonly string[];

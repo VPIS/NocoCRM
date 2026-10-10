@@ -11,7 +11,7 @@ export const dealCaptureTitles = {
 // model to call the fields by in its reply.
 export const dealCaptureFormLabels: readonly Pair[] = [
   ['商机名称', 'Opportunity name'],
-  ['客户', 'Account'],
+  ['公司', 'Company'],
   ['阶段', 'Stage'],
   ['金额', 'Amount'],
   ['预计成交日期', 'Expected close date'],

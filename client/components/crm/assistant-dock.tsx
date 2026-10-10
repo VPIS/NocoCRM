@@ -53,7 +53,7 @@ const RECORD_QUESTIONS: Record<string, readonly string[]> = {
     'opportunity.risk',
     'opportunity.progress',
   ],
-  accounts: ['account.latest', 'account.contacts', 'account.deals'],
+  companies: ['company.latest', 'company.contacts', 'company.deals'],
   contacts: ['contact.exchanges', 'contact.deals', 'contact.email'],
   tasks: ['task.prepare'],
   approvals: ['approval.decide'],
@@ -61,7 +61,7 @@ const RECORD_QUESTIONS: Record<string, readonly string[]> = {
 const PAGE_QUESTIONS: Record<string, readonly string[]> = {
   '/crm/leads': ['leads.first', 'leads.quiet'],
   '/crm/opportunities': ['opportunities.closing', 'opportunities.risk'],
-  '/crm/accounts': ['accounts.quiet'],
+  '/crm/companies': ['companies.quiet'],
   '/crm/contacts': ['contacts.quiet'],
   '/crm/tasks': ['tasks.overdue', 'tasks.week'],
   '/crm/approvals': ['approvals.waiting'],

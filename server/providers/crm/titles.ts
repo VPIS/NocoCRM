@@ -5,9 +5,9 @@ import type { CrmService } from './service.js';
 
 // Display names for the records a response refers to, resolved on the server
 // so the client never has to load whole objects to label a link. A lead is
-// "name / company", a contact "name / account", an opportunity "account /
+// "name / company", a contact "name / company", an opportunity "company /
 // name"; everything else is its name. `names` keeps the bare name for the
-// places that already say which account a person belongs to.
+// places that already say which company a person belongs to.
 export interface Titles {
   titles: Record<string, string>;
   names: Record<string, string>;
@@ -19,11 +19,11 @@ export interface Titles {
 type Wanted = Partial<Record<Entity, Set<string>>>;
 
 const relationFields: Record<string, Entity> = {
-  accountId: 'accounts',
+  companyId: 'companies',
   leadId: 'leads',
   opportunityId: 'opportunities',
   contactId: 'contacts',
-  convertedAccountId: 'accounts',
+  convertedCompanyId: 'companies',
   convertedContactId: 'contacts',
   convertedOpportunityId: 'opportunities',
 };
@@ -47,7 +47,7 @@ export function referencedIds(wanted: Wanted, row: Row): void {
 export function titleOf(
   entity: Entity,
   record: Row,
-  accountNames: Record<string, string> = {},
+  companyNames: Record<string, string> = {},
 ): string {
   if (entity === 'leads')
     return [record.name, record.company]
@@ -55,12 +55,12 @@ export function titleOf(
       .filter(Boolean)
       .join(' / ');
   if (entity === 'contacts')
-    return [record.name, accountNames[toText(record.accountId ?? '')]]
+    return [record.name, companyNames[toText(record.companyId ?? '')]]
       .map((v) => toText(v ?? ''))
       .filter(Boolean)
       .join(' / ');
   if (entity === 'opportunities')
-    return [accountNames[toText(record.accountId ?? '')], record.name]
+    return [companyNames[toText(record.companyId ?? '')], record.name]
       .map((v) => toText(v ?? ''))
       .filter(Boolean)
       .join(' / ');
@@ -103,7 +103,7 @@ export async function resolveTitles(
       'id',
       'name',
       'company',
-      'accountId',
+      'companyId',
       'amount',
       'currency',
     ].filter(
@@ -126,24 +126,24 @@ export async function resolveTitles(
   };
   for (const [entity, ids] of Object.entries(wanted))
     await fetch(entity as Entity, ids);
-  // A contact or a deal is titled with its account, which may not itself
-  // be on the page: one more round for those accounts.
-  const accountIds = new Set<string>();
+  // A contact or a deal is titled with its company, which may not itself
+  // be on the page: one more round for those companies.
+  const companyIds = new Set<string>();
   for (const entity of ['contacts', 'opportunities'] as const)
     for (const row of fetched[entity] ?? [])
-      if (row.accountId) accountIds.add(toText(row.accountId));
-  if (accountIds.size) await fetch('accounts', accountIds);
+      if (row.companyId) companyIds.add(toText(row.companyId));
+  if (companyIds.size) await fetch('companies', companyIds);
 
-  const accountNames: Record<string, string> = {};
-  for (const row of fetched.accounts ?? [])
-    accountNames[toText(row.id)] = toText(row.name ?? '');
+  const companyNames: Record<string, string> = {};
+  for (const row of fetched.companies ?? [])
+    companyNames[toText(row.id)] = toText(row.name ?? '');
   const titles: Record<string, string> = {};
   const names: Record<string, string> = {};
   let opportunities: Titles['opportunities'];
   for (const [entity, list] of Object.entries(fetched))
     for (const row of list ?? []) {
       const id = toText(row.id);
-      titles[id] = titleOf(entity as Entity, row, accountNames);
+      titles[id] = titleOf(entity as Entity, row, companyNames);
       names[id] = toText(row.name ?? '');
       if (entity === 'opportunities' && row.amount !== undefined)
         (opportunities ??= {})[id] = {

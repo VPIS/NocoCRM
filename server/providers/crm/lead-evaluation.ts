@@ -73,7 +73,7 @@ import { lang, pick } from '../../locales/crm-ai/index.js';
 //
 // The run is the CRM assistant's, unattended, as the lead's owner, so it
 // reads what the owner may; the facts it needs from the CRM (the lead, and
-// the accounts, contacts, leads and deals it may concern) are gathered here
+// the companies, contacts, leads and deals it may concern) are gathered here
 // and given to it, with its tools off, and its method is the lead-follow-up
 // skill (ai/skills), company notes included. Runs queue in this process one
 // at a time; a restart loses those waiting, and an entry left running is
@@ -330,7 +330,7 @@ export async function pendingDecisions(
   // or a deal is closed.
   const readable = new Map<string, CrmRecord>();
   const editable = new Set<string>();
-  const accounts: Record<string, string> = {};
+  const companies: Record<string, string> = {};
   for (const entity of ['leads', 'opportunities'] as const) {
     const ids = [
       ...new Set(
@@ -364,15 +364,15 @@ export async function pendingDecisions(
     }
     if (entity === 'opportunities')
       Object.assign(
-        accounts,
+        companies,
         (
           await resolveTitles(
             service,
             actor,
             {},
             {
-              accounts: records
-                .map((record) => toText(record.accountId ?? ''))
+              companies: records
+                .map((record) => toText(record.companyId ?? ''))
                 .filter(Boolean),
             },
           )
@@ -453,7 +453,7 @@ export async function pendingDecisions(
             opportunity: {
               id: record.id,
               name: record.name,
-              account: accounts[toText(record.accountId ?? '')] ?? null,
+              company: companies[toText(record.companyId ?? '')] ?? null,
               ownerId: record.ownerId ?? null,
               stage: record.stage,
             },
@@ -494,7 +494,7 @@ export async function aiStates(
 }
 
 // What the lead may concern in the CRM: the same company, e-mail domain,
-// phone or person among accounts, contacts, other leads and deals, as the
+// phone or person among companies, contacts, other leads and deals, as the
 // owner sees them, with what matters about each.
 async function related(
   service: CrmService,
@@ -503,7 +503,7 @@ async function related(
 ): Promise<Row[]> {
   const domain = /@([^@\s]+)$/.exec(toText(lead.email ?? ''))?.[1];
   const probes: [string, string | undefined][] = [
-    ['accounts', toText(lead.company ?? '') || undefined],
+    ['companies', toText(lead.company ?? '') || undefined],
     ['leads', toText(lead.company ?? '') || undefined],
     ['contacts', toText(lead.phone ?? '') || undefined],
     // The person at a company the CRM knows, when the lead gave no phone or
@@ -534,7 +534,7 @@ async function related(
           name: record.name ?? null,
           company: record.company ?? null,
           // A contact's or a deal's company, named below.
-          account: record.accountId ?? null,
+          linkedCompany: record.companyId ?? null,
           status: record.status ?? record.stage ?? null,
           invalidReason: record.invalidReason ?? null,
           lostReason: record.lostReason ?? null,
@@ -549,15 +549,15 @@ async function related(
     }
   }
   const rows = [...found.values()].slice(0, 12);
-  const accountIds = rows
-    .map((row) => toText(row.account ?? ''))
+  const companyIds = rows
+    .map((row) => toText(row.linkedCompany ?? ''))
     .filter(Boolean);
-  const { titles } = accountIds.length
-    ? await resolveTitles(service, actor, {}, { accounts: accountIds })
+  const { titles } = companyIds.length
+    ? await resolveTitles(service, actor, {}, { companies: companyIds })
     : { titles: {} as Record<string, string> };
   return rows.map((row) =>
-    row.account
-      ? { ...row, account: titles[toText(row.account)] ?? null }
+    row.linkedCompany
+      ? { ...row, linkedCompany: titles[toText(row.linkedCompany)] ?? null }
       : row,
   );
 }
@@ -1889,7 +1889,7 @@ export async function planTask(
 }
 
 // What the web told the AI about the company, as values the lead (or a
-// deal's account, opportunity-evaluation.ts) can take: options from their
+// deal's company, opportunity-evaluation.ts) can take: options from their
 // lists, a country by its code, a province resolved in it; a value the
 // record already holds is dropped, one that differs keeps the record's
 // (`current`) beside it, so the person can see the conflict.

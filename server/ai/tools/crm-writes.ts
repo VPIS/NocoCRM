@@ -17,7 +17,7 @@ import { actorFrom, guarded } from './crm-records.js';
 // plugin holds until the user allows it in the conversation (ASK), and
 // then a write through CrmService under the signed-in user's own
 // permissions, inside the same transactions the pages use: the business
-// invariants (a won deal's account turning customer, a converted lead
+// invariants (a won deal's company turning customer, a converted lead
 // locked) and the notifications hold exactly as for a form. A refusal —
 // a record this user may not edit, a state that rules the step out — ends
 // the call with the CRM's error body, so the employee can say who could do
@@ -32,7 +32,7 @@ const entityProperty = {
 const inputProperty = {
   type: 'object',
   description:
-    'Field values keyed by field name, using the field names and enum values from the schema in your instructions. Relations take the related record id (ownerId a user id, accountId an account id). Dates are ISO 8601.',
+    'Field values keyed by field name, using the field names and enum values from the schema in your instructions. Relations take the related record id (ownerId a user id, companyId a company id). Dates are ISO 8601.',
   additionalProperties: true,
 };
 
@@ -74,7 +74,7 @@ export function crmWriteTools(
       introduction: {
         title: 'Create a CRM record',
         about:
-          'Creates a lead, account, contact, opportunity, task or approval once the user confirms the values.',
+          'Creates a lead, company, contact, opportunity, task or approval once the user confirms the values.',
       },
       definition: {
         name: 'create_record',
@@ -204,39 +204,39 @@ export function crmWriteTools(
       introduction: {
         title: 'Convert a lead',
         about:
-          'Turns a lead into an account and a contact, optionally with an opportunity, once the user confirms.',
+          'Turns a lead into a company and a contact, optionally with an opportunity, once the user confirms.',
       },
       definition: {
         name: 'convert_lead',
         description:
-          'Convert a lead into an account and a contact, and optionally an opportunity. Before proposing it, search accounts for the same company and contacts for the same email or phone: pass accountId or contactId to link existing records instead of creating duplicates. Fields under "account" and "contact" override what the new records inherit from the lead. Include a one-line "title".',
+          'Convert a lead into a company and a contact, and optionally an opportunity. Before proposing it, search companies for the same company and contacts for the same email or phone: pass companyId or contactId to link existing records instead of creating duplicates. Fields under "company" and "contact" override what the new records inherit from the lead. Include a one-line "title".',
         schema: {
           type: 'object',
           properties: {
             id: { type: 'string', description: 'The lead id.' },
             title: { type: 'string', description: 'What this converts.' },
-            accountId: {
+            companyId: {
               type: 'string',
               description:
-                'An existing account to link instead of creating one.',
+                'An existing company to link instead of creating one.',
             },
-            accountName: {
+            companyName: {
               type: 'string',
               description:
-                "The name for a new account when it differs from the lead's company.",
+                "The name for a new company when it differs from the lead's company.",
             },
             contactId: {
               type: 'string',
               description:
-                'An existing contact of that account to link instead of creating one.',
+                'An existing contact of that company to link instead of creating one.',
             },
             createOpportunity: { type: 'boolean' },
             opportunityName: { type: 'string' },
             amount: { type: 'number' },
-            account: {
+            company: {
               type: 'object',
               additionalProperties: true,
-              description: 'Account fields overriding what the lead supplies.',
+              description: 'Company fields overriding what the lead supplies.',
             },
             contact: {
               type: 'object',
