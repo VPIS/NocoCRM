@@ -14,6 +14,7 @@ import { crmToken } from '../providers/crm/index.js';
 import { entities } from '../providers/crm/schema.js';
 import { crmErrorHandler, crmGuard, type CrmEnv } from './context.js';
 import { registerOperationRoutes } from './operations.js';
+import { registerPlanRoutes } from './plans.js';
 import { registerRecordRoutes } from './records.js';
 import { registerWorkspaceRoutes, WORKSPACE_PATHS } from './workspace.js';
 import { HistoryEntry } from './schemas/common.js';
@@ -28,11 +29,12 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
   (app) => {
     const router = new Hono<CrmEnv>();
     const service = app.container.resolve(crmToken);
-    for (const path of [...entities, 'comments', ...WORKSPACE_PATHS])
+    for (const path of [...entities, 'comments', 'plans', ...WORKSPACE_PATHS])
       router.use(`/${path}/*`, ...crmGuard(app));
     router.onError(crmErrorHandler);
 
     registerWorkspaceRoutes(app, router);
+    registerPlanRoutes(app, router);
     registerOperationRoutes(app, router);
     for (const entity of entities) registerRecordRoutes(app, router, entity);
 

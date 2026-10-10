@@ -339,3 +339,21 @@ export const ContentQuery = z.object({
       'Shown in the browser rather than downloaded, for the types a browser renders safely itself.',
   }),
 });
+
+export const ColleaguesQuery = z.object({
+  q: z.string().max(100).optional().meta({
+    description: 'Part of a name or a username.',
+  }),
+});
+export const Colleague = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    roles: z.array(z.string()).meta({
+      description:
+        'CRM roles: sales-representative and sales-manager may own records; root administers.',
+    }),
+    canApprove: z.boolean(),
+    current: z.boolean().optional(),
+  })
+  .meta({ ref: 'CrmColleague' });

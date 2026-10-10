@@ -30,7 +30,8 @@ import {
 import { latestOpportunityEvaluation } from '../providers/crm/opportunity-evaluation.js';
 import { CrmError, toText } from '../providers/crm/schema.js';
 import { resolveTitles } from '../providers/crm/titles.js';
-import { aiWorkers, type CrmEnv } from './context.js';
+import { aiWorkers, runCommand, type CrmEnv } from './context.js';
+import { recordAction } from '../providers/crm-agents/actions.js';
 import {
   AiEntry,
   ApprovalActionInput,
@@ -126,6 +127,9 @@ export function registerOperationRoutes(
       tags: leadTags,
       summary: "List a lead's duplicates",
       operationId: 'listLeadDuplicates',
+      ...runCommand(recordAction('leads', 'view'), {
+        command: 'leads duplicates',
+      }),
       description: 'Open leads the same person or contact details appear on.',
       responses: {
         '200': listResponse(
@@ -221,6 +225,9 @@ export function registerOperationRoutes(
       tags: leadTags,
       summary: "Preview a lead's conversion",
       operationId: 'previewLeadConversion',
+      ...runCommand(recordAction('leads', 'view'), {
+        command: 'leads preview-conversion',
+      }),
       description:
         'The companies, contacts and open opportunities a conversion may duplicate.',
       responses: {
@@ -254,6 +261,9 @@ export function registerOperationRoutes(
       tags: leadTags,
       summary: 'Convert a lead',
       operationId: 'convertLead',
+      ...runCommand(recordAction('leads', 'edit'), {
+        command: 'leads convert',
+      }),
       description:
         'Creates or links its company and contact, and an opportunity when asked; the lead becomes read-only.',
       responses: {
@@ -294,6 +304,9 @@ export function registerOperationRoutes(
       tags: leadTags,
       summary: "Get a lead's latest AI follow-up",
       operationId: 'getLatestLeadEvaluation',
+      ...runCommand(recordAction('leads', 'view'), {
+        command: 'leads follow-up',
+      }),
       responses: {
         '200': dataResponse(AiEntry.nullable(), 'Null when there is none.'),
         ...apiErrorResponses,
@@ -484,6 +497,9 @@ export function registerOperationRoutes(
       tags: dealTags,
       summary: "Get an opportunity's latest AI follow-up",
       operationId: 'getLatestOpportunityEvaluation',
+      ...runCommand(recordAction('opportunities', 'view'), {
+        command: 'opportunities follow-up',
+      }),
       responses: {
         '200': dataResponse(AiEntry.nullable(), 'Null when there is none.'),
         ...apiErrorResponses,
@@ -653,6 +669,9 @@ export function registerOperationRoutes(
       tags: taskTags,
       summary: "Record a task's outcome",
       operationId: 'recordTaskOutcome',
+      ...runCommand(recordAction('tasks', 'edit'), {
+        command: 'tasks record-outcome',
+      }),
       description:
         'Completes the task with what came of it, and has the AI follow its opportunity or lead up anew unless `followUp` is false.',
       responses: {
@@ -723,6 +742,13 @@ export function registerOperationRoutes(
       describeRoute({
         tags: approvalTags,
         ...route,
+        // Submitting and withdrawing are the applicant's; deciding is the
+        // approver's alone and never an agent's.
+        ...(action === 'submit' || action === 'withdraw'
+          ? runCommand(recordAction('approvals', 'edit'), {
+              command: `approvals ${action}`,
+            })
+          : {}),
         responses: {
           '200': dataResponse(RecordSchemas.approvals),
           ...apiErrorResponses,

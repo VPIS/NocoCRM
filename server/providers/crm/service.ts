@@ -1945,6 +1945,7 @@ export class CrmService {
         changes: JSON.stringify(changes ?? {}),
         previous: previousValues ? JSON.stringify(previousValues) : null,
         source: actor.via ?? null,
+        origin: actor.origin ? JSON.stringify(actor.origin) : null,
         createdAt: new Date().toISOString(),
       })
       .execute();
@@ -1984,6 +1985,7 @@ export class CrmService {
       changes: JSON.stringify(commentChanges(body, mentioned, files)),
       previous: null,
       source: actor.via ?? null,
+      origin: actor.origin ? JSON.stringify(actor.origin) : null,
       replyToId: thread?.parentId ?? null,
       createdAt: new Date().toISOString(),
     };
@@ -2034,6 +2036,62 @@ export class CrmService {
   // The files on a record's comments and replies, newest first, each with
   // the comment that carries it and who wrote it: the record's attachments
   // tab lists them beside its own.
+  // A comment written inside a transaction already open (a plan's steps,
+  // plans/engine.ts): plain text with mentions, read through that
+  // transaction, the colleagues it names told only once it commits (through
+  // the prepared actor's `after`), so a rolled-back rehearsal tells no one.
+  async addCommentIn(
+    actor: Actor,
+    query: QueryAdapter,
+    entity: Entity,
+    id: string,
+    text: unknown,
+    mentions?: unknown,
+  ): Promise<Row> {
+    const body = commentText(text, false);
+    await this.get(actor, entity, id, query);
+    const active = new Set(
+      (actor.users ?? (await this.users(actor)))
+        .filter((user) => !user.disabled)
+        .map((user) => toText(user.id)),
+    );
+    const mentioned = [
+      ...new Set(
+        (Array.isArray(mentions) ? mentions : [])
+          .map((person) => toText(person))
+          .filter((person) => person && person !== actor.id),
+      ),
+    ]
+      .filter((person) => active.has(person))
+      .slice(0, 20);
+    const comment = {
+      id: randomUUID(),
+      entity,
+      recordId: id,
+      actorId: actor.id,
+      action: 'comment',
+      fromValue: null,
+      toValue: null,
+      changes: JSON.stringify(commentChanges(body, mentioned, [])),
+      previous: null,
+      source: actor.via ?? null,
+      origin: actor.origin ? JSON.stringify(actor.origin) : null,
+      replyToId: null,
+      createdAt: new Date().toISOString(),
+    };
+    await query.insertInto('crmHistory').values(comment).execute();
+    if (entity === 'leads')
+      await this.leadWorked(query, actor, id, comment.createdAt);
+    actor.after?.(() => {
+      this.mentioned(actor, entity, id, comment.id, mentioned);
+      return Promise.resolve();
+    });
+    return {
+      ...comment,
+      changes: commentChanges(body, mentioned, []),
+      editedAt: null,
+    };
+  }
   async commentFiles(
     actor: Actor,
     entity: Entity,
@@ -2251,6 +2309,7 @@ export class CrmService {
           changes: JSON.stringify({ text: body, commentId }),
           previous: null,
           source: actor.via ?? null,
+          origin: actor.origin ? JSON.stringify(actor.origin) : null,
           createdAt: editedAt,
         })
         .execute();
@@ -2340,6 +2399,7 @@ export class CrmService {
           changes: JSON.stringify({}),
           previous: null,
           source: actor.via ?? null,
+          origin: actor.origin ? JSON.stringify(actor.origin) : null,
           createdAt: new Date().toISOString(),
         })
         .execute();

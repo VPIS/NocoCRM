@@ -10,10 +10,10 @@ import {
 } from '../../providers/crm/schema.js';
 import type { CrmService, ListOptions } from '../../providers/crm/service.js';
 import {
-  groupRelation,
   summaryPeriods,
   type SummaryPeriod,
 } from '../../providers/crm/summary.js';
+import { namedSummary } from '../../providers/crm/summary-names.js';
 import { resolveTitles } from '../../providers/crm/titles.js';
 import { accessLines } from '../screen.js';
 
@@ -257,39 +257,13 @@ export function crmRecordTools(
         return guarded(async () => {
           const args = (input ?? {}) as Row;
           const entity = asEntity(toText(args.entity));
-          const summary = await service.summarize(
-            actor,
-            entity,
-            filtersOf(args),
-            {
-              groupBy: text(args.groupBy),
-              period: text(args.period) as SummaryPeriod | undefined,
-              measures: Array.isArray(args.measures)
-                ? args.measures.map((m) => toText(m)).filter(Boolean)
-                : undefined,
-            },
-          );
-          // Group keys that are ids get their display names, like the
-          // records search_records returns.
-          const relation = summary.groupBy
-            ? groupRelation(entity, summary.groupBy)
-            : undefined;
-          const keys = summary.groups
-            .map((g) => g.key)
-            .filter((k): k is string => k !== null);
-          let names: Record<string, string> = {};
-          if (relation === 'users') {
-            const wanted = new Set(keys);
-            names = Object.fromEntries(
-              (await service.users(actor))
-                .filter((u) => wanted.has(toText(u.id)))
-                .map((u) => [toText(u.id), toText(u.name ?? u.id)]),
-            );
-          } else if (relation && keys.length)
-            names = (
-              await resolveTitles(service, actor, {}, { [relation]: keys })
-            ).names;
-          return { ...summary, names };
+          return namedSummary(service, actor, entity, filtersOf(args), {
+            groupBy: text(args.groupBy),
+            period: text(args.period) as SummaryPeriod | undefined,
+            measures: Array.isArray(args.measures)
+              ? args.measures.map((m) => toText(m)).filter(Boolean)
+              : undefined,
+          });
         });
       },
     }),

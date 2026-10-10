@@ -11,20 +11,31 @@ import {
 import type { Row } from '@nocobase/db';
 import type { Hono } from 'hono';
 import { z } from 'zod';
-import { agentOn } from '../providers/crm/agents.js';
+import {
+  afterCreate,
+  afterUpdate,
+  beforeUpdate,
+} from '../providers/crm/record-hooks.js';
 import { capability } from '../providers/crm/authorization.js';
 import { crmToken } from '../providers/crm/index.js';
 import { aiStates } from '../providers/crm/lead-evaluation.js';
 import {
   CrmError,
+  definitions,
   object,
   toText,
   type Entity,
 } from '../providers/crm/schema.js';
 import { array, type ListOptions } from '../providers/crm/service.js';
 import { allRecords, statistics } from '../providers/crm/statistics.js';
+import { namedSummary } from '../providers/crm/summary-names.js';
+import type { SummaryPeriod } from '../providers/crm/summary.js';
 import { resolveTitles } from '../providers/crm/titles.js';
-import { aiWorkers, type CrmEnv } from './context.js';
+import { aiWorkers, runCommand, type CrmEnv } from './context.js';
+import {
+  COMMENT_ACTION,
+  recordAction,
+} from '../providers/crm-agents/actions.js';
 import { CommentAttachment, CreateCommentInput } from './schemas/comments.js';
 import { HistoryEntry, HistoryMeta, ListMeta } from './schemas/common.js';
 import {
@@ -39,6 +50,8 @@ import {
   RecordParams,
   RecordSchemas,
   Statistics,
+  SummaryQueries,
+  SummarySchema,
 } from './schemas/records.js';
 
 // The six objects' standard methods and what every one of them has: list,
@@ -80,6 +93,8 @@ export function registerRecordRoutes(
   const Record_ = RecordSchemas[entity];
   const Detail = RecordDetail(entity);
   const read = `Returns only what the reader's permission set lets them read.`;
+  const command = runCommand;
+  const view = recordAction(entity, 'view');
   const notFound = apiErrorResponse(
     404,
     `The ${one} does not exist or the reader may not see it.`,
@@ -91,6 +106,7 @@ export function registerRecordRoutes(
       tags,
       summary: `Get ${one} statistics`,
       operationId: `get${names.one}Statistics`,
+      ...command(view, { command: `${entity} statistics` }),
       description: `Counts per status and the figures the ${one} list's cards show, over the ${entity} the filters match. ${read}`,
       responses: { '200': dataResponse(Statistics), ...apiErrorResponses },
     }),
@@ -104,6 +120,42 @@ export function registerRecordRoutes(
           listOptions(c.req.valid('query')),
         ),
       }),
+  );
+
+  router.get(
+    `${base}/summary`,
+    describeRoute({
+      tags,
+      summary: `Summarize ${entity}`,
+      operationId: `summarize${names.many}`,
+      description: `Counts and totals over the ${entity} the filters match, grouped by a field or a period, with sums per currency. ${read}`,
+      ...command(view, { command: `${entity} summary` }),
+      responses: { '200': dataResponse(SummarySchema), ...apiErrorResponses },
+    }),
+    apiValidator('query', SummaryQueries[entity]),
+    async (c) => {
+      const { groupBy, period, measures, ...filters } = c.req.valid('query');
+      return c.json({
+        data: await namedSummary(
+          service,
+          c.get('actor'),
+          entity,
+          listOptions(filters),
+          {
+            ...(groupBy ? { groupBy: toText(groupBy) } : {}),
+            ...(period ? { period: period as SummaryPeriod } : {}),
+            ...(measures
+              ? {
+                  measures: toText(measures)
+                    .split(',')
+                    .map((m) => m.trim())
+                    .filter(Boolean),
+                }
+              : {}),
+          },
+        ),
+      });
+    },
   );
 
   // Tasks are neither exported nor imported.
@@ -182,6 +234,10 @@ export function registerRecordRoutes(
       tags,
       summary: `List ${entity}`,
       operationId: `list${names.many}`,
+      ...command(view, {
+        command: `${entity} list`,
+        columns: ['id', ...definitions[entity].columns],
+      }),
       description: `${read} \`meta\` names the records the page refers to.`,
       responses: {
         '200': listResponse(Record_, ListMeta),
@@ -229,6 +285,9 @@ export function registerRecordRoutes(
       tags,
       summary: `Create ${a}`,
       operationId: `create${names.one}`,
+      ...command(recordAction(entity, 'create'), {
+        command: `${entity} create`,
+      }),
       description:
         entity === 'leads' || entity === 'opportunities'
           ? `The AI follows the new ${one} up at once unless \`followUp=false\` or its agent is switched off.`
@@ -253,25 +312,14 @@ export function registerRecordRoutes(
           ? { ...c.get('actor'), via: 'capture' as const }
           : c.get('actor');
       const record = await service.save(actor, entity, c.req.valid('json'));
-      // A new lead or opportunity is followed up by the AI in the
-      // background, unless the person creating it unticked that; the
-      // record is created whether or not that can start. Only while its
-      // agent runs on that trigger (agents.ts).
-      if (query.followUp !== 'false') {
-        if (entity === 'leads' && (await agentOn(service, 'leads', 'created')))
-          await ai
-            .leads()
-            ?.request(actor, toText(record.id), undefined, 'created')
-            .catch(() => undefined);
-        if (
-          entity === 'opportunities' &&
-          (await agentOn(service, 'opportunities', 'opened'))
-        )
-          await ai
-            .opportunities()
-            ?.request(actor, toText(record.id), undefined, 'opened')
-            .catch(() => undefined);
-      }
+      await afterCreate(
+        service,
+        ai,
+        actor,
+        entity,
+        record,
+        query.followUp !== 'false',
+      );
       return c.json({ data: record }, 201);
     },
   );
@@ -282,6 +330,7 @@ export function registerRecordRoutes(
       tags,
       summary: `List ${a}'s history`,
       operationId: `list${names.one}History`,
+      ...command(view, { command: `${entity} history` }),
       description: `The ${one}'s activity feed, newest first: changes, comments, mail and the AI's work.`,
       responses: {
         '200': listResponse(HistoryEntry, HistoryMeta),
@@ -345,6 +394,7 @@ export function registerRecordRoutes(
       tags,
       summary: `Comment on ${a}`,
       operationId: `create${names.one}Comment`,
+      ...command(COMMENT_ACTION, { command: `${entity} comment` }),
       description: `Anyone who may read the ${one} may comment on it. The colleagues it mentions are told.`,
       responses: {
         '201': dataResponse(HistoryEntry, 'The comment.'),
@@ -376,6 +426,7 @@ export function registerRecordRoutes(
       tags,
       summary: `Get ${a}`,
       operationId: `get${names.one}`,
+      ...command(view, { command: `${entity} get` }),
       description: `The ${one} with the first page of its history and of each related list, the names of everything they refer to, and what the reader may do with it.`,
       responses: {
         '200': dataResponse(Detail),
@@ -415,6 +466,9 @@ export function registerRecordRoutes(
       tags,
       summary: `Update ${a}`,
       operationId: `update${names.one}`,
+      ...command(recordAction(entity, 'edit'), {
+        command: `${entity} update`,
+      }),
       description: 'Send only the fields that change.',
       responses: {
         '200': dataResponse(Record_, `The ${one} as saved.`),
@@ -431,32 +485,9 @@ export function registerRecordRoutes(
     async (c) => {
       const actor = c.get('actor');
       const id = idOf(c.req.valid('param'));
-      // What the change is measured against: a task marked done, a lead's
-      // company changed.
-      const before =
-        entity === 'tasks' || entity === 'leads'
-          ? await service.get(actor, entity, id).catch(() => undefined)
-          : undefined;
+      const before = await beforeUpdate(service, actor, entity, id);
       const record = await service.save(actor, entity, c.req.valid('json'), id);
-      if (
-        entity === 'tasks' &&
-        before &&
-        before.status !== 'completed' &&
-        record.status === 'completed'
-      )
-        service.taskCompleted?.(actor, record);
-      if (
-        entity === 'leads' &&
-        before &&
-        ['new', 'working', 'nurturing'].includes(toText(record.status)) &&
-        (['company', 'website'] as const).some(
-          (key) =>
-            toText(record[key] ?? '').trim() !== '' &&
-            toText(record[key] ?? '').trim() !==
-              toText(before[key] ?? '').trim(),
-        )
-      )
-        service.leadCompanyChanged?.(actor, id);
+      afterUpdate(service, actor, entity, id, before, record);
       return c.json({ data: record });
     },
   );

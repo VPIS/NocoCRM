@@ -51,7 +51,11 @@ import {
 import { searchAll } from '../providers/crm/search.js';
 import { array } from '../providers/crm/service.js';
 import { resolveTitles } from '../providers/crm/titles.js';
-import type { CrmEnv } from './context.js';
+import { runCommand, type CrmEnv } from './context.js';
+import {
+  COLLEAGUES_ACTION,
+  SEARCH_ACTION,
+} from '../providers/crm-agents/actions.js';
 import { demoServices } from './demo-services.js';
 import { CRM_ERROR_DOMAIN } from './errors.js';
 import { JsonObject, ListMeta } from './schemas/common.js';
@@ -66,6 +70,8 @@ import {
   Attachment,
   AttachmentParams,
   AttachmentsQuery,
+  Colleague,
+  ColleaguesQuery,
   ContentQuery,
   Dashboard,
   Decision,
@@ -102,6 +108,7 @@ export const WORKSPACE_PATHS = [
   'screenProposal',
   'attachments',
   'mailTimeline',
+  'colleagues',
 ];
 
 const MAX_FILE = 20 * 1024 * 1024;
@@ -359,6 +366,7 @@ export function registerWorkspaceRoutes(
       tags: ['Workspace'],
       summary: 'Search the records',
       operationId: 'searchRecords',
+      ...runCommand(SEARCH_ACTION, { command: 'search' }),
       description:
         'The first five matches of each kind the reader may read, with the total of each.',
       responses: {
@@ -373,6 +381,51 @@ export function registerWorkspaceRoutes(
         c.get('actor'),
         c.req.valid('query').q,
       );
+      return c.json({ data, meta: { total: data.length } });
+    },
+  );
+
+  // The colleagues a record may be given to or an approval sent to: the
+  // active users with their CRM roles, for an agent to turn a name into the
+  // id ownerId, approverId and internalParticipants take.
+  router.get(
+    '/colleagues',
+    describeRoute({
+      tags: ['Workspace'],
+      summary: 'List colleagues',
+      operationId: 'listColleagues',
+      description:
+        'The active users, their CRM roles and whether each may decide approvals; `current` marks the caller.',
+      ...runCommand(COLLEAGUES_ACTION, {
+        command: 'colleagues list',
+        columns: ['id', 'name', 'roles', 'canApprove'],
+      }),
+      responses: {
+        '200': listResponse(Colleague, total),
+        ...apiErrorResponses,
+      },
+    }),
+    apiValidator('query', ColleaguesQuery),
+    async (c) => {
+      const actor = c.get('actor');
+      const q = (c.req.valid('query').q ?? '').trim().toLowerCase();
+      const data = (await service.users(actor))
+        .filter((user) => !user.disabled)
+        .filter(
+          (user) =>
+            !q ||
+            toText(user.name).toLowerCase().includes(q) ||
+            toText(user.username ?? '')
+              .toLowerCase()
+              .includes(q),
+        )
+        .map((user) => ({
+          id: toText(user.id),
+          name: toText(user.name),
+          roles: array(user.roles).map(toText),
+          canApprove: user.canApprove === true,
+          ...(toText(user.id) === actor.id ? { current: true } : {}),
+        }));
       return c.json({ data, meta: { total: data.length } });
     },
   );

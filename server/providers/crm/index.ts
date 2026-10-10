@@ -21,6 +21,7 @@ import { scheduleTexts } from '../../locales/crm-ai/schedules.js';
 import { jobExecutorServiceToken } from '@nocobase/app-server/jobs';
 import type { JobExecutor } from '@nocobase/jobs';
 import { createFollowUpJob, FOLLOW_UP_JOBS } from './follow-up-jobs.js';
+import { CrmPlans, crmPlansToken } from './plans/engine.js';
 import { MailTimeline, mailTimelineToken } from './mail-timeline.js';
 import { mailProviderRegistryToken } from '@nocobase/app-plugin-mail/server';
 import {
@@ -90,6 +91,18 @@ export default class CrmProvider extends ServiceProvider<Application> {
           this.app.container.resolve(databaseManagerToken),
           this.app.container.resolve(authorizationToken),
         ),
+    );
+    // Changes an agent proposes, carried out once a person confirms them
+    // (plans/engine.ts); the AI's follow-ups a confirmed change starts are
+    // resolved when it runs.
+    this.app.container.singleton(
+      crmPlansToken,
+      () =>
+        new CrmPlans(this.app.container.resolve(crmToken), {
+          leads: () => this.app.container.resolve(leadEvaluatorToken),
+          opportunities: () =>
+            this.app.container.resolve(opportunityEvaluatorToken),
+        }),
     );
     // New leads evaluated by the AI (lead-evaluation.ts).
     this.app.container.singleton(

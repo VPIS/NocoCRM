@@ -1446,6 +1446,46 @@ const wording = {
       '确认后将立即删除这条记录，无法撤销；关联它的记录会解除关联。',
     ],
   },
+  // The CRM's business actions in the Agents plugin's agent editor
+  // (server/providers/crm-agents/actions.ts); the action titles are the
+  // Permission Sets page's own, under authz.
+  agentActions: {
+    throughPlan: [
+      'Proposed as a plan the person confirms.',
+      '以计划提出，由本人确认后执行。',
+    ],
+    plans: ['Plans', '计划'],
+    workspace: ['Workspace', '工作台'],
+    search: ['Search records', '搜索记录'],
+    colleagues: ['See colleagues', '查看同事'],
+    comment: ['Comment on records', '评论记录'],
+    planCreate: ['Propose plans', '提出计划'],
+    planCreateDescription: [
+      'Proposes changes to records as one plan, carried out once the person confirms it.',
+      '把对记录的改动整理成一份计划，本人确认后执行。',
+    ],
+    deleteReason: [
+      'Deleting records is left to people.',
+      '删除记录只能由人来做。',
+    ],
+    approveReason: [
+      'Deciding approvals is left to people.',
+      '审批只能由人来做。',
+    ],
+    exportReason: [
+      'Taking data out of the CRM is left to people.',
+      '导出数据只能由人来做。',
+    ],
+  },
+  // The preset a CRM agent starts from in the Agents plugin.
+  agentPreset: {
+    name: ['CRM assistant', 'CRM 助手'],
+    description: [
+      'Looks records up across the CRM and proposes changes as plans the person confirms.',
+      '在 CRM 里查询记录，把改动整理成计划交本人确认。',
+    ],
+  },
+  agentConversationSource: ['CRM', 'CRM'],
   // The CRM's permission model as the Permission Sets page shows it.
   authz: {
     group: ['CRM', 'CRM'],
@@ -2093,6 +2133,18 @@ const wording = {
     evaluationDecided: [
       'This recommendation has already been decided.',
       '这条建议已经处理过了。',
+    ],
+    planDecided: [
+      'This plan has already been decided.',
+      '这份计划已经处理过了。',
+    ],
+    planExpired: [
+      'This plan waited more than a day and has expired. Ask the agent again if the change is still needed.',
+      '这份计划超过一天未处理，已过期。如仍需要，请让 Agent 重新提出。',
+    ],
+    planStepRefused: [
+      'A step of the plan would be refused.',
+      '计划中有一步无法执行。',
     ],
     taskChanged: [
       'The task has changed since this suggestion. Follow up again.',

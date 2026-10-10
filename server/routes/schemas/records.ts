@@ -6,6 +6,7 @@ import {
   type Field,
 } from '../../providers/crm/schema.js';
 import { ROLES } from '../../providers/crm/opportunity-capture.js';
+import { summaryPeriods } from '../../providers/crm/summary.js';
 import {
   AiStates,
   HistoryEntry,
@@ -251,11 +252,9 @@ export const RecordDetail = (entity: Entity) =>
       record: RecordSchemas[entity],
       history: z.array(HistoryEntry),
       historyTotal: z.number().int().optional(),
-      related: z
-        .record(z.string(), z.array(JsonObject))
-        .meta({
-          description: 'The first page of each related list, by object.',
-        }),
+      related: z.record(z.string(), z.array(JsonObject)).meta({
+        description: 'The first page of each related list, by object.',
+      }),
       relatedTotals: z.record(z.string(), z.number().int()).optional(),
       blockers: z.record(z.string(), z.number().int()).optional().meta({
         description: 'What a delete would orphan, counted per object.',
@@ -304,3 +303,59 @@ export const HistoryQuery = z.object({
 });
 
 export { AiStates };
+
+// Counts and totals over what the filters match (CrmService.summarize).
+export const SummaryQueries = Object.fromEntries(
+  entityList.map((entity) => [
+    entity,
+    z.object({
+      ...filterShape(entity),
+      groupBy: z.string().optional().meta({
+        description:
+          'A field to group by (status, stage, source, ownerId, companyId, a country …), or a date field with period.',
+      }),
+      period: z.enum(summaryPeriods).optional().meta({
+        description:
+          'For a date field in groupBy: the period records fall into, in the business time zone; month by default.',
+      }),
+      measures: z.string().optional().meta({
+        description:
+          'Number fields to sum, average and bound, comma-separated (amount).',
+      }),
+    }),
+  ]),
+) as unknown as Record<Entity, z.ZodObject>;
+
+const MeasureValue = z.object({
+  field: z.string(),
+  currency: z.string().optional().meta({
+    description: 'Amounts in different currencies are never added together.',
+  }),
+  sum: z.number(),
+  average: z.number(),
+  min: z.number(),
+  max: z.number(),
+  counted: z.number().int(),
+});
+export const SummarySchema = z
+  .object({
+    total: z.number().int().meta({ description: 'Every matching record.' }),
+    truncated: z.boolean().meta({
+      description: 'More records matched than one summary reads.',
+    }),
+    groupBy: z.string().optional(),
+    period: z.enum(summaryPeriods).optional(),
+    groups: z.array(
+      z.object({
+        key: z.string().nullable().meta({
+          description:
+            'The value, an id named in names, or the period ("2026-09", "2026-Q3", a week by its Monday); null for records without one.',
+        }),
+        count: z.number().int(),
+        measures: z.array(MeasureValue),
+      }),
+    ),
+    overall: z.array(MeasureValue),
+    names: z.record(z.string(), z.string()),
+  })
+  .meta({ ref: 'CrmSummary' });

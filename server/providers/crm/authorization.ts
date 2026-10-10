@@ -43,6 +43,13 @@ import {
 } from './resources.js';
 import type { PermissionGrant } from '@nocobase/authorization/core';
 
+export interface ActorOrigin {
+  kind: 'plan';
+  planId: string;
+  agentId: string | null;
+  agentName: string | null;
+  runId: string | null;
+}
 export interface Actor {
   id: string;
   scope: AuthorizationContext;
@@ -59,6 +66,11 @@ export interface Actor {
   // organised by the AI from pasted text and checked by this user (the
   // capture review): the history records it as such.
   via?: 'assistant' | 'capture';
+  // For a change an agent proposed in a plan and this user confirmed: the
+  // plan, and the agent and run that proposed it, which the history keeps
+  // beside the change (guideline 3.2: every agent's work traces to a
+  // person's authorization).
+  origin?: ActorOrigin;
   // Starts no AI run (an approval's review, a deal's follow-up after a
   // decision): the demo dataset, which would otherwise run the model for
   // each record it builds.

@@ -96,6 +96,19 @@ import {
 } from '../../server/providers/crm/index.js';
 import { crmRoutes } from '../../server/routes/crm.js';
 import {
+  agentsToken,
+  type CallerIdentity,
+} from '@nocobase/app-plugin-agents/server/tokens';
+import {
+  CrmPlans,
+  crmPlansToken,
+  type PlanOutcome,
+} from '../../server/providers/crm/plans/engine.js';
+import {
+  crmActionGate,
+  heldActions,
+} from '../../server/providers/crm-agents/gate.js';
+import {
   findApiDocumentSchemaProblems,
   findUndeclaredApiRoutes,
   generateApiDocument,
@@ -189,6 +202,8 @@ let service: CrmService;
 const passwordResets: string[] = [];
 let folder: string;
 let router: Hono;
+let plans: CrmPlans;
+const planOutcomes: PlanOutcome[] = [];
 // The Mail plugin as the mail timeline sees it: each user's connected
 // mailboxes and the messages they hold, set by a test.
 type FakeMessage = {
@@ -340,7 +355,37 @@ beforeAll(async () => {
   const required = (): MiddlewareHandler => async (c, next) => {
     const id = c.req.header('x-test-user');
     if (!id) return c.json({ code: 'unauthorized' }, 401);
-    c.set('auth', { user: { id } });
+    // An agent's run acting for the user, configured with the actions the
+    // header lists (as the Agents plugin's run credential carries it).
+    const runActions = c.req.header('x-test-run-actions');
+    c.set(
+      'auth',
+      runActions === undefined
+        ? { user: { id } }
+        : {
+            user: { id },
+            credential: {
+              type: 'run',
+              data: {
+                run: {
+                  run: {
+                    id: 'run-1',
+                    actorUserId: id,
+                    subjectKind: 'conversation',
+                    subjectId: 'conversation-1',
+                    threadScope: 'main',
+                    parentRunId: null,
+                  },
+                },
+                agent: {
+                  id: 'agent-1',
+                  name: 'Noco',
+                  actions: runActions.split(',').filter(Boolean),
+                },
+              },
+            },
+          },
+    );
     await next();
   };
   container.instance(authenticationToken, { required } as unknown as ReturnType<
@@ -348,6 +393,25 @@ beforeAll(async () => {
   >);
   container.instance(authorizationToken, authorization);
   container.instance(crmToken, service);
+  // The Agents plugin as the CRM's routes use it: the gate, and where a
+  // run's plan goes back to.
+  const gate = crmActionGate(service);
+  container.instance(agentsToken, {
+    gate: { allowed: (identity: CallerIdentity) => gate.allowed(identity) },
+    tx: { read: () => null },
+    conversations: {
+      homeOf: () => Promise.resolve({ id: 'conversation-1' }),
+    },
+  } as unknown as ReturnType<typeof container.resolve<typeof agentsToken>>);
+  plans = new CrmPlans(service, {
+    leads: () => undefined,
+    opportunities: () => undefined,
+  });
+  plans.onDecided = (outcome) => {
+    planOutcomes.push(outcome);
+    return Promise.resolve();
+  };
+  container.instance(crmPlansToken, plans);
   timeline = new MailTimeline(service, fakeMail);
   container.instance(mailTimelineToken, timeline);
   // What the demo import needs from the users plugin: an account with a role.
@@ -9518,5 +9582,238 @@ describe('unwritten web findings', () => {
     expect((await unwrittenFindings(service, lead, 'carry-3')).items).toEqual(
       [],
     );
+  });
+});
+
+// Migration step 2: the CRM's actions on the Agents plugin, a run's requests
+// bounded by them, and the plans a run proposes instead of writing.
+describe('agents and plans', () => {
+  const asRun = (
+    path: string,
+    actions: string[],
+    method = 'GET',
+    body?: unknown,
+  ): Promise<Response> =>
+    router.request(path, {
+      method,
+      headers: {
+        'x-test-user': 'rep',
+        'x-test-run-actions': actions.join(','),
+        'Content-Type': 'application/json',
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+
+  it('gives a person their own actions and a run only its agent’s within them', async () => {
+    const rep = await heldActions(service, 'rep');
+    expect(rep.has('crm.leads/view')).toBe(true);
+    expect(rep.has('crm.leads/create')).toBe(true);
+    expect(rep.has('crm.plans/create')).toBe(true);
+    expect(rep.has('crm.comments/create')).toBe(true);
+    expect(rep.has('crm.sales/approve')).toBe(false);
+    expect(
+      (await heldActions(service, 'manager')).has('crm.sales/approve'),
+    ).toBe(true);
+    expect((await heldActions(service, 'outsider')).has('crm.leads/view')).toBe(
+      false,
+    );
+    const gate = crmActionGate(service);
+    const run = (actions: string[], userId = 'rep') =>
+      gate.allowed({
+        kind: 'run',
+        userId,
+        displayName: 'Noco',
+        agent: { actions } as never,
+      });
+    expect([...(await run(['crm.leads/view', 'crm.sales/approve']))]).toEqual([
+      'crm.leads/view',
+    ]);
+    // Never deletion, even when the agent was configured with it.
+    expect((await run(['crm.leads/delete'], 'admin')).size).toBe(0);
+  });
+
+  it('lets a run read what its agent holds and turns every write into a plan', async () => {
+    expect((await asRun('/leads', ['crm.leads/view'])).status).toBe(200);
+    const refused = await asRun('/leads', []);
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toMatchObject({
+      error: { reason: 'ACTION_NOT_ALLOWED' },
+    });
+    const before = (await service.list(actor('rep'), 'leads', { q: undefined }))
+      .total;
+    const write = await asRun(
+      '/leads',
+      ['crm.leads/view', 'crm.leads/create'],
+      'POST',
+      { name: 'Written by a run', source: 'website' },
+    );
+    expect(write.status).toBe(400);
+    expect(await write.json()).toMatchObject({
+      error: {
+        reason: 'PLAN_REQUIRED',
+        metadata: { reason: 'alwaysConfirm' },
+      },
+    });
+    expect((await service.list(actor('rep'), 'leads', {})).total).toBe(before);
+  });
+
+  it('rehearses a plan, keeps it for the person and carries it out as them', async () => {
+    const refused = await asRun('/plans', ['crm.plans/create'], 'POST', {
+      title: 'A lead without a name',
+      steps: [{ op: 'record.create', params: { entity: 'leads', values: {} } }],
+    });
+    expect(refused.status).toBe(400);
+    expect(await refused.json()).toMatchObject({
+      error: {
+        reason: 'PLAN_STEP_REFUSED',
+        fieldViolations: [{ field: 'steps.1' }],
+        metadata: { detail: 'required: name' },
+      },
+    });
+
+    const proposed = await asRun('/plans', ['crm.plans/create'], 'POST', {
+      title: 'Add Planned Works and its buyer',
+      summary: 'Met at the fair.',
+      steps: [
+        {
+          op: 'record.create',
+          ref: 'company',
+          params: {
+            entity: 'companies',
+            values: { name: 'Planned Works', source: 'exhibition' },
+          },
+        },
+        {
+          op: 'record.create',
+          params: {
+            entity: 'contacts',
+            values: { name: 'Pat Planner', companyId: '$company' },
+          },
+        },
+      ],
+    });
+    expect(proposed.status).toBe(201);
+    const plan = (await proposed.json()).data as PlanOutcome['plan'];
+    expect(plan).toMatchObject({
+      status: 'pending',
+      agentName: 'Noco',
+      runId: 'run-1',
+      conversationId: 'conversation-1',
+      proposerUserId: 'rep',
+    });
+    expect(plan.steps.map((step) => step.check?.name)).toEqual([
+      'Planned Works',
+      'Pat Planner',
+    ]);
+    // Rehearsed and rolled back: nothing exists yet.
+    expect(
+      (
+        await service.list(actor('rep'), 'companies', {
+          search: 'Planned Works',
+        })
+      ).total,
+    ).toBe(0);
+    // Only the person it was proposed to sees it, and a run never decides.
+    expect((await request(`/plans/${plan.id}`, 'other')).status).toBe(404);
+    expect(
+      (
+        await asRun(`/plans/${plan.id}/execute`, ['crm.plans/create'], 'POST', {
+          revision: plan.revision,
+        })
+      ).status,
+    ).toBe(403);
+
+    const executed = await request(`/plans/${plan.id}/execute`, 'rep', 'POST', {
+      revision: plan.revision,
+    });
+    expect(executed.status).toBe(200);
+    expect((await executed.json()).data.status).toBe('executed');
+    const [company] = (
+      await service.list(actor('rep'), 'companies', { search: 'Planned Works' })
+    ).data;
+    const [contact] = (
+      await service.list(actor('rep'), 'contacts', { search: 'Pat Planner' })
+    ).data;
+    expect(contact.companyId).toBe(company.id);
+    // The history says the change came from the agent's plan.
+    const created = await database
+      .query()
+      .selectFrom('crmHistory')
+      .select(['origin', 'source'])
+      .where('recordId', '=', company.id)
+      .executeTakeFirst();
+    expect(created?.source).toBe('assistant');
+    expect(JSON.parse(toText(created?.origin))).toMatchObject({
+      kind: 'plan',
+      planId: plan.id,
+      agentName: 'Noco',
+      runId: 'run-1',
+    });
+    expect(planOutcomes.at(-1)).toMatchObject({
+      decision: 'executed',
+      plan: { id: plan.id },
+    });
+    // Decided once.
+    const again = await request(`/plans/${plan.id}/execute`, 'rep', 'POST', {
+      revision: plan.revision,
+    });
+    expect(again.status).toBe(400);
+    expect(await again.json()).toMatchObject({
+      error: { reason: 'PLAN_DECIDED' },
+    });
+  });
+
+  it('leaves a plan stale when its record changed since, and voids one on request', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Stale target',
+      source: 'website',
+    });
+    const propose = async () =>
+      (
+        await (
+          await asRun('/plans', ['crm.plans/create'], 'POST', {
+            title: 'Rename the lead',
+            steps: [
+              {
+                op: 'record.update',
+                params: {
+                  entity: 'leads',
+                  id: lead.id,
+                  values: { name: 'Renamed by plan' },
+                },
+              },
+            ],
+          })
+        ).json()
+      ).data as PlanOutcome['plan'];
+    const plan = await propose();
+    expect(plan.steps[0].check?.changes).toEqual([
+      { field: 'name', from: 'Stale target', to: 'Renamed by plan' },
+    ]);
+    await new Promise((done) => setTimeout(done, 5));
+    await service.save(actor('rep'), 'leads', { company: 'Changed' }, lead.id);
+    const stale = await (
+      await request(`/plans/${plan.id}/execute`, 'rep', 'POST', {
+        revision: plan.revision,
+      })
+    ).json();
+    expect(stale.data).toMatchObject({
+      status: 'stale',
+      failure: { position: 1, code: 'stale' },
+    });
+    expect((await service.get(actor('rep'), 'leads', lead.id)).name).toBe(
+      'Stale target',
+    );
+
+    const second = await propose();
+    const voided = await (
+      await request(`/plans/${second.id}/void`, 'rep', 'POST', {
+        revision: second.revision,
+      })
+    ).json();
+    expect(voided.data.status).toBe('voided');
+    expect(planOutcomes.at(-1)).toMatchObject({ decision: 'voided' });
+    const listed = await (await request('/plans?status=voided', 'rep')).json();
+    expect(listed.data.map((p: { id: string }) => p.id)).toContain(second.id);
   });
 });
