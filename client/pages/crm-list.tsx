@@ -1642,12 +1642,15 @@ function BoardColumn({
   return (
     // The columns share the board's width, so a wide screen shows the board
     // whole with roomier cards; each keeps at least its former width (the
-    // board scrolls sideways when they do not fit) and at most 24rem.
+    // board scrolls sideways when they do not fit) and at most 24rem. A
+    // column has no border of its own, only its tint; the dashed line shows
+    // only while a card is held over it, the border kept transparent
+    // otherwise so the column does not shift when it appears.
     <section
       className={`flex max-w-sm min-w-72 flex-1 basis-0 flex-col rounded-xl border p-3 transition-colors ${toText(
         over
           ? 'border-dashed border-primary bg-primary/5'
-          : 'border-border bg-muted/40',
+          : 'border-transparent bg-muted/40',
       )}`}
       // A non-droppable column (converted, reached only through the
       // conversion flow) never calls preventDefault, so the cursor says no
