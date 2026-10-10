@@ -20,6 +20,7 @@ export function crmConversationRules(
         'Something that took place with a customer (a call, a meeting, a visit) is recorded as a comment on the record it concerns, or as the outcome of the open task that planned it, proposed in a plan like any change.',
         'Mail reaches the records by itself: never record an email as a comment or a task.',
         "A lead's original message is never changed.",
+        "A lead or an opportunity a plan creates is followed up by the AI as soon as it exists, and that follow-up plans its next step (the first contact, as a task or an email): do not add a task or another follow-up step for it to the same plan unless the person asked for that task. Write what you learned about when or how to reach the customer into the record (a lead's message, a deal's description), where the follow-up reads it.",
         "An item of kind crm-evaluation in the page context is an AI card (a lead's or a deal's follow-up, an approval's review, a task's preparation) in its record's history: read it with the record's history command and find the entry by its id before discussing it. To do something else than it proposes, propose a plan; never decide the card for the person.",
         "For a lead's or a deal's next step read the lead-follow-up or opportunity-follow-up skill, for judging an approval the approval-review skill, and for getting ready for a task the task-preparation skill, before advising.",
         'There is no web search: when a question needs information from outside the CRM, say so.',

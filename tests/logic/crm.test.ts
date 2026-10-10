@@ -9013,6 +9013,74 @@ describe('agents and plans', () => {
     const listed = await (await request('/plans?status=voided', 'rep')).json();
     expect(listed.data.map((p: { id: string }) => p.id)).toContain(second.id);
   });
+
+  it('lets the person change a waiting step on the card, rehearsing the plan again', async () => {
+    const plan = (
+      await (
+        await asRun('/plans', ['crm.plans/create'], 'POST', {
+          title: 'Register the lead',
+          steps: [
+            {
+              op: 'record.create',
+              params: {
+                entity: 'leads',
+                values: { name: 'Placeholder name', source: 'exhibition' },
+              },
+            },
+          ],
+        })
+      ).json()
+    ).data as PlanOutcome['plan'];
+    const revise = (revision: number, values: Record<string, unknown>) =>
+      request(`/plans/${plan.id}/steps/1`, 'rep', 'PATCH', {
+        revision,
+        values,
+      });
+    // A value the step would be refused for leaves the plan as it was.
+    const refused = await revise(plan.revision, { name: '' });
+    expect(refused.status).toBe(400);
+    expect((await refused.json()).error).toMatchObject({
+      reason: 'PLAN_STEP_REFUSED',
+      metadata: { field: 'steps.1' },
+    });
+    const changed = (
+      await (await revise(plan.revision, { name: 'Qzxrevised' })).json()
+    ).data as PlanOutcome['plan'];
+    expect(changed.revision).toBe(plan.revision + 1);
+    expect(changed.steps[0].params.values).toMatchObject({
+      name: 'Qzxrevised',
+      source: 'exhibition',
+    });
+    expect(changed.steps[0].check?.changes).toContainEqual({
+      field: 'name',
+      from: null,
+      to: 'Qzxrevised',
+    });
+    // The card still showing the plan before cannot change or carry it out.
+    expect((await revise(plan.revision, { name: 'Stale' })).status).toBe(409);
+    // Nor can the agent's run: the person changes their plan.
+    expect(
+      (
+        await asRun(
+          `/plans/${plan.id}/steps/1`,
+          ['crm.plans/create'],
+          'PATCH',
+          { revision: changed.revision, values: { name: 'By the agent' } },
+        )
+      ).status,
+    ).toBe(403);
+    const done = await (
+      await request(`/plans/${plan.id}/execute`, 'rep', 'POST', {
+        revision: changed.revision,
+      })
+    ).json();
+    expect(done.data.status).toBe('executed');
+    // What the plan created carries the value as changed.
+    const created = await service.list(actor('rep'), 'leads', {
+      search: 'Qzxrevised',
+    });
+    expect(created.data.map((lead) => lead.name)).toEqual(['Qzxrevised']);
+  });
 });
 
 describe('task preparation', () => {

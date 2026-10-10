@@ -358,7 +358,7 @@ describe("The inbox's plans", () => {
   it('says a plan picked by its address is gone rather than showing another', async () => {
     state.plans = [plan()];
     renderAt('/inbox?view=todo&kind=crm-plans&plan=gone');
-    expect(await screen.findByText('这份计划已不存在。')).toBeTruthy();
+    expect(await screen.findByText('这些建议的改动已不存在。')).toBeTruthy();
     expect(
       screen.queryByRole('region', { name: '新增展会线索周晓' }),
     ).toBeNull();

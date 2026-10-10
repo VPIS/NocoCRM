@@ -151,8 +151,8 @@ describe('a plan card', () => {
       screen.getByRole('checkbox', { name: '保留第 2 步' }),
     );
     const button = screen.getByRole('button', { name: '执行 1 项改动' });
-    // Outlined: the view it sits in has a primary of its own.
-    expect(button.className).toContain('border-border');
+    // In the AI's colour, as the assistant's confirmation cards were.
+    expect(button.className).toContain('bg-ai');
     await userEvent.click(button);
     await waitFor(() =>
       expect(state.api).toHaveBeenCalledWith('plans/p1/execute', 'POST', {
@@ -175,9 +175,11 @@ describe('a plan card', () => {
     );
     renderWith(<PlanCard plan={plan()} />);
     await userEvent.click(screen.getByRole('button', { name: '拒绝' }));
-    expect(await screen.findByText('这份计划已不存在。')).toBeTruthy();
+    expect(await screen.findByText('这些建议的改动已不存在。')).toBeTruthy();
     expect(screen.queryByRole('button', { name: '拒绝' })).toBeNull();
-    expect(document.activeElement?.textContent).toBe('这份计划已不存在。');
+    expect(document.activeElement?.textContent).toBe(
+      '这些建议的改动已不存在。',
+    );
   });
 
   it('shows a plan being carried out without its buttons', () => {
@@ -197,7 +199,7 @@ describe('a plan card', () => {
     renderWith(
       <PlanCard plan={plan({ status: 'stale', failure: { position: 1 } })} />,
     );
-    expect(screen.getByText(/第 1 步的记录在计划提出后被改动过/u)).toBeTruthy();
+    expect(screen.getByText(/涉及的记录在提出建议后被改动过/u)).toBeTruthy();
   });
 });
 

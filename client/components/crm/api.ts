@@ -51,6 +51,8 @@ export interface Metadata {
   // Whether the CRM's AI employee is switched on (its Enabled switch on the
   // AI Employee plugin's settings page): every assistant entry follows it.
   assistant: boolean;
+  // The agent the background work runs on, left out of the chat's agents.
+  backgroundAgent?: string | null;
   // Which of the agents' triggers are on (server/providers/crm/agents.ts).
   agents?: Record<
     string,

@@ -64,7 +64,10 @@ export async function provisionModelServices(
           ? DASHSCOPE_CHINA
           : null;
     try {
-      await agents.online.services.create({
+      // Created under its key, which the plugin makes its name from and
+      // agents name it by, then given the title config.yml writes it under
+      // (OpenAI rather than openai); the name never changes with the title.
+      const created = await agents.online.services.create({
         title: name,
         provider: provider as never,
         baseUrl,
@@ -74,6 +77,10 @@ export async function provisionModelServices(
           label: model.label,
         })),
       });
+      if (service.title && service.title !== created.title)
+        await agents.online.services.update(created.name, {
+          title: service.title,
+        });
     } catch (error) {
       app.container
         .resolve(loggingToken)

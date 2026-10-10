@@ -129,5 +129,30 @@ export function usePlanDecision(plan: PlanView) {
     },
     [api, client, plan.id, plan.revision, plan.title, text, toaster],
   );
-  return { decide, busy, error, gone };
+  // A value of a waiting step changed on the card: the plan as revised
+  // (rehearsed again, its revision moved on) replaces it in every list at
+  // once; a refusal is thrown for the field's editor to show.
+  const revise = useCallback(
+    async (position: number, values: Record<string, unknown>) => {
+      const { data } = await api<{ data: PlanView }>(
+        `plans/${encodeURIComponent(plan.id)}/steps/${String(position)}`,
+        'PATCH',
+        { revision: plan.revision, values },
+      );
+      client.setQueriesData<PlanView[]>(
+        {
+          queryKey: ['crm'],
+          predicate: (query) =>
+            String(query.queryKey.at(-1)).startsWith('plans?'),
+        },
+        (current) =>
+          Array.isArray(current)
+            ? current.map((item) => (item.id === data.id ? data : item))
+            : current,
+      );
+      return data;
+    },
+    [api, client, plan.id, plan.revision],
+  );
+  return { decide, revise, busy, error, gone };
 }

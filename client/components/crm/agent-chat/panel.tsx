@@ -1,6 +1,12 @@
 import { Button } from '#components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '#components/ui/dialog';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '#components/ui/dropdown-menu';
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -10,12 +16,13 @@ import {
   CHAT_PANEL_ATTRIBUTE,
   ChatProvider,
   useAgentText,
-  useChatAgents,
   useChatPanel,
+  useConversation,
+  useConversationActions,
   useConversationList,
 } from '@nocobase/app-plugin-agents/client/chat';
 import type { ConversationDetail } from '@nocobase/app-plugin-agents/shared/conversations';
-import { Expand, History, Plus, X } from 'lucide-react';
+import { Archive, Ellipsis, Expand, History, Plus, X } from 'lucide-react';
 import {
   lazy,
   Suspense,
@@ -31,7 +38,7 @@ import {
   useRecordDrawerHosted,
   useRecordDrawerState,
 } from '../record-drawer.js';
-import { useAgentReadiness } from './ask.js';
+import { useAgentReadiness, useCrmChatAgents } from './ask.js';
 import { Conversation } from './conversation.js';
 import { ConversationList } from './conversation-list.js';
 
@@ -124,7 +131,7 @@ function PanelBody({ modal = false }: { modal?: boolean }): ReactElement {
   const { text } = useCrmText();
   const agentText = useAgentText();
   const panel = useChatPanel();
-  const agents = useChatAgents();
+  const agents = useCrmChatAgents();
   const readiness = useAgentReadiness();
   const list = useConversationList({});
   // The page's drawer when it draws one, else the panel's own (one
@@ -159,6 +166,15 @@ function PanelBody({ modal = false }: { modal?: boolean }): ReactElement {
   const agent = readiness.agent;
   const name = agent ? agentText.name(agent) : text('agentPanel.title');
   const role = agent ? agentText.description(agent) : null;
+  // A conversation under way is named in the panel's header, its title over
+  // the agent and what it does, with its actions behind the "…" menu; the
+  // conversation draws no header of its own here (`inPanel`).
+  const open = useConversation(
+    panel.view === 'history' ? null : conversationId,
+  ).data;
+  const actions = useConversationActions();
+  const title = open ? open.title || name : name;
+  const subtitle = open ? [name, role].filter(Boolean).join(' · ') : role;
   const iconButton = (
     label: string,
     icon: ReactElement,
@@ -208,6 +224,7 @@ function PanelBody({ modal = false }: { modal?: boolean }): ReactElement {
           onArchived={() => panel.selectConversation(null)}
           onRestored={() => undefined}
           onBack={() => panel.setView('history')}
+          inPanel
         />
       )}
     </div>
@@ -223,19 +240,52 @@ function PanelBody({ modal = false }: { modal?: boolean }): ReactElement {
           () => panel.setView(history ? 'chat' : 'history'),
           history,
         )}
-        <AgentAvatar name={name} size='sm' className='ml-1 shrink-0' />
+        <AgentAvatar
+          name={name}
+          size='sm'
+          className='ml-1 shrink-0 rounded-full'
+        />
         <div className='mx-1.5 min-w-0 flex-1'>
           {modal ? (
             <DialogTitle className='truncate text-sm font-medium'>
-              {name}
+              {title}
             </DialogTitle>
           ) : (
-            <p className='truncate text-sm font-medium'>{name}</p>
+            <p className='truncate text-sm font-medium'>{title}</p>
           )}
-          {role ? (
-            <p className='truncate text-xs text-muted-foreground'>{role}</p>
+          {subtitle ? (
+            <p className='truncate text-xs text-muted-foreground'>{subtitle}</p>
           ) : null}
         </div>
+        {open && !open.archivedAt ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant='ghost'
+                  size='icon-sm'
+                  aria-label={toText(text('agentChat.actions'))}
+                />
+              }
+            >
+              <Ellipsis />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <DropdownMenuItem
+                disabled={actions.archive.isPending}
+                onClick={() =>
+                  actions.archive.mutate(
+                    { id: open.id, archived: true },
+                    { onSuccess: () => panel.selectConversation(null) },
+                  )
+                }
+              >
+                <Archive />
+                {text('agentChat.archive')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
         {iconButton(toText(text('agentPanel.newConversation')), <Plus />, () =>
           panel.selectConversation(null),
         )}

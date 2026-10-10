@@ -9,17 +9,17 @@ import {
 import { Skeleton } from '#components/ui/skeleton';
 import { Spinner } from '#components/ui/spinner';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '#components/ui/tooltip';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '#components/ui/dropdown-menu';
 import { useTranslation } from '@nocobase/i18n/client';
 import {
   AgentAvatar,
   liveStepsView,
   newConversationAgent,
   noticeText,
-  stepLineText,
   timelineOrder,
   useAgentText,
   useConversation,
@@ -35,7 +35,15 @@ import type {
   ConversationDetail,
   ConversationMessage,
 } from '@nocobase/app-plugin-agents/shared/conversations';
-import { Archive, ArchiveRestore, ArrowDown, Info } from 'lucide-react';
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowDown,
+  Check,
+  Copy,
+  Ellipsis,
+  Info,
+} from 'lucide-react';
 import {
   useEffect,
   useLayoutEffect,
@@ -45,14 +53,22 @@ import {
   type ReactNode,
 } from 'react';
 import { Link } from 'react-router';
-import { errorCode, toText, useCrmText } from '../api.js';
+import {
+  errorCode,
+  localDate,
+  toText,
+  useCrmText,
+  useMetadata,
+} from '../api.js';
 import { AutoLoadMore } from '../auto-load.js';
 import { ErrorNotice } from '../common.js';
 import { Markdown } from '../markdown.js';
 import { PlanCard } from '../plan-card.js';
 import { usePlans } from '../plans.js';
-import { CRM_SOURCE, useAgentModels } from './ask.js';
+import { CRM_SOURCE, modelKey, useAgentModels } from './ask.js';
 import { Composer } from './composer.js';
+import { StartingPoint } from './starting-point.js';
+import { stepWords } from './step-text.js';
 
 // One conversation with an agent, or a new one (`conversationId` null): its
 // messages, the notices of what happened meanwhile, the plans the agent
@@ -68,6 +84,7 @@ export function Conversation({
   onArchived,
   onRestored,
   onBack,
+  inPanel = false,
 }: {
   conversationId: string | null;
   agents: readonly ChatAgent[];
@@ -77,6 +94,10 @@ export function Conversation({
   // Back to the conversations from one that is gone: in the panel its own
   // list; left out, the full page's.
   onBack?: () => void;
+  // In the assistant's panel, whose own header names the conversation and
+  // holds its actions: no header of its own for one under way, nor for a
+  // new one when there is only the one agent to talk to.
+  inPanel?: boolean;
 }): ReactElement {
   const { text } = useCrmText();
   const { t: agentsT } = useTranslation(AGENTS_NS);
@@ -192,6 +213,9 @@ export function Conversation({
   const name = shownAgent
     ? (agentText.name(shownAgent) ?? text('agentChat.agent'))
     : text('agentChat.agent');
+  // What the agent does, under the title, as its own list describes it.
+  const listed = agents.find((item) => item.id === shownAgent?.id);
+  const description = listed ? agentText.description(listed) : null;
   const availability: ChatAvailability | null =
     conversation?.availability ??
     (agent && !agent.fallbackAgentId ? agent.availability : null);
@@ -210,7 +234,6 @@ export function Conversation({
       node: (
         <MessageRow
           message={message}
-          agentName={name}
           notice={(item) =>
             noticeText(
               agentsT,
@@ -271,31 +294,41 @@ export function Conversation({
       aria-label={conversation?.title ?? text('agentChat.new')}
       className='flex min-h-0 flex-1 flex-col'
     >
-      {/* Who answers, and what can be done with the conversation. */}
-      <div className='flex min-h-11 items-center gap-2 border-b border-border/60 pb-2'>
-        {conversationId ? (
-          loading ? (
-            <Skeleton className='h-6 w-40' />
-          ) : (
-            <>
-              <AgentAvatar name={name} size='sm' />
-              <span className='min-w-0 truncate text-sm font-medium'>
-                {conversation?.title || name}
-              </span>
-              {conversation?.title ? (
-                <span className='hidden truncate text-xs text-muted-foreground sm:inline'>
-                  {name}
-                </span>
-              ) : null}
-              {!archived ? (
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <Button
-                        variant='ghost'
-                        size='icon-sm'
-                        className='ml-auto'
-                        aria-label={text('agentChat.archive')}
+      {/* Who answers and what the conversation is: its avatar, its title
+          over the agent's name and description, and its actions behind the
+          "…" menu. */}
+      {inPanel && (conversationId || agents.length <= 1) ? null : (
+        <div className='flex min-h-14 items-center gap-3 border-b border-border/60 pb-3'>
+          {conversationId ? (
+            loading ? (
+              <Skeleton className='h-9 w-64' />
+            ) : (
+              <>
+                <AgentAvatar name={name} className='shrink-0 rounded-full' />
+                <div className='grid min-w-0 flex-1'>
+                  <span className='truncate text-base font-semibold'>
+                    {conversation?.title || name}
+                  </span>
+                  <span className='truncate text-xs text-muted-foreground'>
+                    {[name, description].filter(Boolean).join(' · ')}
+                  </span>
+                </div>
+                {!archived ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          variant='ghost'
+                          size='icon-sm'
+                          className='shrink-0'
+                          aria-label={text('agentChat.actions')}
+                        />
+                      }
+                    >
+                      <Ellipsis />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align='end'>
+                      <DropdownMenuItem
                         disabled={actions.archive.isPending}
                         onClick={() =>
                           actions.archive.mutate(
@@ -303,24 +336,24 @@ export function Conversation({
                             { onSuccess: onArchived },
                           )
                         }
-                      />
-                    }
-                  >
-                    <Archive />
-                  </TooltipTrigger>
-                  <TooltipContent>{text('agentChat.archive')}</TooltipContent>
-                </Tooltip>
-              ) : null}
-            </>
-          )
-        ) : (
-          <AgentPicker
-            agents={agents}
-            value={agent?.id ?? null}
-            onChange={setPicked}
-          />
-        )}
-      </div>
+                      >
+                        <Archive />
+                        {text('agentChat.archive')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
+              </>
+            )
+          ) : (
+            <AgentPicker
+              agents={agents}
+              value={agent?.id ?? null}
+              onChange={setPicked}
+            />
+          )}
+        </div>
+      )}
 
       <div className='relative min-h-0 flex-1'>
         <div
@@ -331,7 +364,12 @@ export function Conversation({
               box.scrollHeight - box.scrollTop - box.clientHeight < 48,
             );
           }}
-          className='h-full overflow-y-auto py-4 scroll-quiet'
+          // Positioned, so what is placed absolutely inside it (a message's
+          // screen-reader label) scrolls with it rather than hanging below
+          // it and scrolling the whole page.
+          // Up and down only: a fraction of a pixel of rounding in the
+          // content must not bring a sideways scrollbar under the pointer.
+          className='relative h-full overflow-x-hidden overflow-y-auto py-4 scroll-quiet'
         >
           {loading || (conversationId && !messages.loaded) ? (
             <div className='flex flex-col gap-4' role='status'>
@@ -346,6 +384,14 @@ export function Conversation({
                 hasMore={messages.hasMore}
                 loading={messages.loadingOlder}
                 onLoad={messages.loadOlder}
+              />
+              {/* What it started from, atop the thread once its first
+                  message is read. */}
+              <StartingPoint
+                context={
+                  messages.items.find((message) => message.seq === 1)
+                    ?.workContext
+                }
               />
               {messages.error ? (
                 <div className='flex flex-col items-start gap-2'>
@@ -382,7 +428,7 @@ export function Conversation({
       </div>
 
       {archived && conversationId ? (
-        <div className='flex flex-wrap items-center gap-3 border-t border-border/60 pt-3 pb-4'>
+        <div className='flex flex-wrap items-center gap-3 pt-3 pb-4'>
           <Info className='size-4 text-muted-foreground' aria-hidden />
           <span className='text-sm text-muted-foreground'>
             {text('agentChat.archivedNote')}
@@ -407,8 +453,33 @@ export function Conversation({
         <Composer
           disabled={loading || (!conversationId && !agent)}
           reason={offline}
+          // A new conversation picks the model it starts on; one under way
+          // may switch, from its next reply, among its agent's models.
           {...(conversationId
-            ? {}
+            ? conversation && (conversation.models?.length ?? 0) > 1
+              ? {
+                  models: conversation.models,
+                  model:
+                    conversation.models.find(
+                      (item) =>
+                        conversation.model &&
+                        modelKey(item) === modelKey(conversation.model),
+                    ) ?? conversation.models[0],
+                  onModel: (key: string) => {
+                    const picked = conversation.models.find(
+                      (item) => modelKey(item) === key,
+                    );
+                    if (picked)
+                      actions.chooseModel.mutate({
+                        id: conversationId,
+                        model: {
+                          modelService: picked.modelService,
+                          model: picked.model,
+                        },
+                      });
+                  },
+                }
+              : {}
             : {
                 models: models.models,
                 model: models.model,
@@ -442,7 +513,11 @@ function AgentPicker({
   if (agents.length === 1 && current)
     return (
       <span className='flex items-center gap-2 text-sm font-medium'>
-        <AgentAvatar name={nameOf(current)} size='sm' />
+        <AgentAvatar
+          name={nameOf(current)}
+          size='sm'
+          className='rounded-full'
+        />
         {nameOf(current)}
       </span>
     );
@@ -482,15 +557,15 @@ function AgentPicker({
 
 function MessageRow({
   message,
-  agentName,
   notice,
 }: {
   message: ConversationMessage;
-  agentName: string;
   notice: (message: ConversationMessage) => string;
 }): ReactElement | null {
   if (message.role === 'user')
-    return <UserBubble content={message.content.content} />;
+    return (
+      <UserBubble content={message.content.content} at={message.createdAt} />
+    );
   if (message.role === 'system')
     return (
       <p className='flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground'>
@@ -500,30 +575,90 @@ function MessageRow({
     );
   if (!message.content.content.trim()) return null;
   return (
-    <div className='flex max-w-[85%] gap-2'>
-      <AgentAvatar name={agentName} size='sm' className='mt-0.5 shrink-0' />
-      <div className='min-w-0 text-sm'>
-        <Markdown>{message.content.content}</Markdown>
+    <AgentReply content={message.content.content} at={message.createdAt} />
+  );
+}
+
+// An agent's reply: the text across the conversation's width, with no
+// bubble or avatar, its headings and lists given room to read; the
+// person's own messages are the bubbles, on the right.
+function AgentReply({
+  content,
+  at,
+}: {
+  content: string;
+  at: string;
+}): ReactElement {
+  return (
+    <div className='group/message grid min-w-0 gap-0.5'>
+      <div className='min-w-0 text-sm leading-6 [&_li]:my-1 [&_ol]:my-2 [&_p]:my-2 [&_ul]:my-2'>
+        <Markdown>{content}</Markdown>
       </div>
+      <SentAt at={at} content={content} />
     </div>
+  );
+}
+
+// Under a message while it is hovered (or a control in it focused): when
+// it was sent, in the CRM's own date format, and a button copying its text,
+// which says so a moment once it has.
+function SentAt({
+  at,
+  content,
+}: {
+  at: string;
+  content: string;
+}): ReactElement {
+  const { text, language } = useCrmText();
+  const { data: meta } = useMetadata();
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 1500);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+  const label = toText(text(copied ? 'agentChat.copied' : 'agentChat.copy'));
+  return (
+    <span className='flex items-center gap-1 text-xs text-muted-foreground opacity-0 transition-opacity group-focus-within/message:opacity-100 group-hover/message:opacity-100'>
+      <time dateTime={at} className='tabular-nums'>
+        {localDate(at, language, meta?.settings.timeZone ?? 'Asia/Shanghai')}
+      </time>
+      <Button
+        variant='ghost'
+        size='icon-xs'
+        aria-label={label}
+        title={label}
+        onClick={() =>
+          void navigator.clipboard
+            ?.writeText(content)
+            .then(() => setCopied(true))
+            .catch(() => undefined)
+        }
+      >
+        {copied ? <Check /> : <Copy />}
+      </Button>
+    </span>
   );
 }
 
 function UserBubble({
   content,
+  at,
   footer,
 }: {
   content: string;
+  // When it was sent; a message still being sent has none yet.
+  at?: string;
   footer?: ReactNode;
 }): ReactElement {
   const { text } = useCrmText();
   return (
-    <div className='ml-auto flex max-w-[85%] flex-col items-end gap-1'>
+    <div className='group/message ml-auto flex max-w-[85%] flex-col items-end gap-1'>
       <span className='sr-only'>{text('agentChat.you')}</span>
       <div className='rounded-xl bg-muted px-3 py-2 text-sm break-words whitespace-pre-wrap'>
         {content}
       </div>
-      {footer}
+      {footer ?? (at ? <SentAt at={at} content={content} /> : null)}
     </div>
   );
 }
@@ -537,19 +672,25 @@ function LiveLine({
   agentName: string;
 }): ReactElement {
   const { text } = useCrmText();
-  const { t: agentsT } = useTranslation(AGENTS_NS);
   const events = useLiveRunEvents(runId);
   const view = liveStepsView(events);
+  // In the person's words (step-text.ts), never the command line.
+  const words = stepWords(view.line);
+  const step = toText(
+    text(`agentChat.step.${words.key}`, {
+      ...words.values,
+      ...(words.values?.object
+        ? { object: toText(text(`entity.${words.values.object}`)) }
+        : {}),
+    }),
+  );
   return (
     <p
       role='status'
       className='flex items-center gap-2 text-sm text-muted-foreground'
     >
       <Spinner />
-      {text('agentChat.working', {
-        agent: agentName,
-        step: stepLineText(agentsT, view.line),
-      })}
+      {text('agentChat.working', { agent: agentName, step })}
     </p>
   );
 }

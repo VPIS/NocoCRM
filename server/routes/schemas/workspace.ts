@@ -107,6 +107,10 @@ export const Workspace = z
       description: "Whether the CRM's AI employee is switched on.",
     }),
     agents: AgentSwitchesSchema,
+    backgroundAgent: z.string().nullable().meta({
+      description:
+        "The id of the agent the CRM's background work runs on, which the chat leaves out of its agents; null before it exists.",
+    }),
   })
   .meta({ ref: 'CrmWorkspace' });
 

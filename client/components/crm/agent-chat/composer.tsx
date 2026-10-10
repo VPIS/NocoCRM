@@ -1,4 +1,3 @@
-import { Button } from '#components/ui/button';
 import {
   Select,
   SelectContent,
@@ -6,7 +5,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '#components/ui/select';
-import { Textarea } from '#components/ui/textarea';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupTextarea,
+} from '#components/ui/input-group';
 import {
   Tooltip,
   TooltipContent,
@@ -32,6 +36,7 @@ import {
 } from 'react';
 import { useIsMobile } from '../../../hooks/use-mobile.js';
 import { toText, useCrmText } from '../api.js';
+import { useCurrentRecord } from '../current-record.js';
 import { contextOf, modelKey, useAskFiles, type AskFile } from './ask.js';
 
 // The draft last put in a composer, so a composer mounted later (another
@@ -62,13 +67,22 @@ export function Composer({
 }: {
   disabled: boolean;
   reason: string | null;
-  // A new conversation's choice of model; none for one under way.
+  // The model it answers with: a new conversation's choice, or the one a
+  // conversation under way switches to from its next reply.
   models?: readonly ChatModelChoice[];
   model?: ChatModelChoice;
   onModel?: (key: string) => void;
   onSend: (message: ComposerSend) => void;
 }): ReactElement {
   const { text } = useCrmText();
+  // Worded as the dock's box (assistant-dock.tsx): about the record whose
+  // page is open, when there is one.
+  const record = useCurrentRecord();
+  const placeholder = toText(
+    record
+      ? text(`dock.placeholderFor.${record.entity}`)
+      : text('dock.placeholder'),
+  );
   const panel = useChatPanel();
   // A phone's keyboard would cover the conversation as soon as it opened.
   const isMobile = useIsMobile();
@@ -142,7 +156,7 @@ export function Composer({
   const attachLabel = toText(text('dock.attach'));
   return (
     <div
-      className='flex flex-col gap-1.5 border-t border-border/60 pt-3 pb-4'
+      className='flex flex-col gap-1.5 pt-3 pb-4'
       onDragOver={(event) => {
         if (!blocked && event.dataTransfer.types.includes('Files'))
           event.preventDefault();
@@ -159,44 +173,50 @@ export function Composer({
           {reason}
         </p>
       ) : null}
-      {pinned.length || files.files.length ? (
-        <ul className='flex flex-wrap gap-1.5'>
-          {pinned.map(({ key, item }) => (
-            <li
-              key={key}
-              className='inline-flex max-w-full items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs'
-            >
-              <span className='truncate' title={item.label}>
-                {item.label}
-              </span>
-              <button
-                type='button'
-                className='rounded-sm text-muted-foreground hover:text-foreground'
-                aria-label={toText(
-                  text('agentPanel.removePin', { label: item.label }),
-                )}
-                onClick={() =>
-                  setRemoved((current) => ({
-                    ...current,
-                    keys: new Set([...current.keys, key]),
-                  }))
-                }
-              >
-                <X className='size-3' />
-              </button>
-            </li>
-          ))}
-          {files.files.map((file) => (
-            <FileChip
-              key={file.uid}
-              file={file}
-              onRemove={() => files.remove(file.uid)}
-            />
-          ))}
-        </ul>
-      ) : null}
-      <div className='flex items-end gap-2'>
-        <Textarea
+      {/* Built as the overview's ask box (assistant-ask-composer.tsx), in
+          a plain border rather than its AI colours, the send button alone in
+          the AI's colour as there: what is attached, the question, then
+          along its foot the paperclip, the model and the send button. */}
+      <InputGroup className='rounded-xl bg-card shadow-[0_6px_22px_-12px_rgb(0_0_0/0.18)] has-disabled:bg-card has-disabled:opacity-100 has-[[data-slot=input-group-control]:focus-visible]:border-ring/50 has-[[data-slot=input-group-control]:focus-visible]:ring-2 has-[[data-slot=input-group-control]:focus-visible]:ring-ring/10 dark:bg-card dark:has-disabled:bg-card'>
+        {pinned.length || files.files.length ? (
+          <InputGroupAddon align='block-start' className='px-4 pt-3'>
+            <ul className='flex flex-wrap gap-1.5'>
+              {pinned.map(({ key, item }) => (
+                <li
+                  key={key}
+                  className='inline-flex max-w-full items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs'
+                >
+                  <span className='truncate' title={item.label}>
+                    {item.label}
+                  </span>
+                  <button
+                    type='button'
+                    className='rounded-sm text-muted-foreground hover:text-foreground'
+                    aria-label={toText(
+                      text('agentPanel.removePin', { label: item.label }),
+                    )}
+                    onClick={() =>
+                      setRemoved((current) => ({
+                        ...current,
+                        keys: new Set([...current.keys, key]),
+                      }))
+                    }
+                  >
+                    <X className='size-3' />
+                  </button>
+                </li>
+              ))}
+              {files.files.map((file) => (
+                <FileChip
+                  key={file.uid}
+                  file={file}
+                  onRemove={() => files.remove(file.uid)}
+                />
+              ))}
+            </ul>
+          </InputGroupAddon>
+        ) : null}
+        <InputGroupTextarea
           ref={inputRef}
           autoFocus={!isMobile}
           value={value}
@@ -211,69 +231,77 @@ export function Composer({
             event.preventDefault();
             files.upload(pasted);
           }}
-          placeholder={toText(text('agentPanel.placeholder'))}
-          aria-label={toText(text('agentPanel.placeholder'))}
+          placeholder={placeholder}
+          aria-label={placeholder}
           rows={1}
-          className='max-h-48 min-h-9 resize-none'
+          // One line high until more is written, then growing with the
+          // text, as the overview's box does.
+          className='max-h-48 min-h-0 px-4 pt-3 pb-1 text-sm'
         />
-        <Button
-          size='icon'
-          aria-label={text('agentChat.send')}
-          disabled={!canSend}
-          onClick={submit}
+        <InputGroupAddon
+          align='block-end'
+          className='justify-between gap-2 px-3 pb-2.5'
         >
-          <ArrowUp />
-        </Button>
-      </div>
-      <div className='flex min-w-0 items-center gap-1.5'>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant='ghost'
-                size='icon-sm'
-                aria-label={attachLabel}
+          <div className='flex min-w-0 items-center gap-1.5'>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <InputGroupButton
+                    size='icon-sm'
+                    className='rounded-full'
+                    aria-label={attachLabel}
+                    disabled={blocked}
+                    onClick={() => fileRef.current?.click()}
+                  />
+                }
+              >
+                <Paperclip />
+              </TooltipTrigger>
+              <TooltipContent>{text('agentPanel.attachHint')}</TooltipContent>
+            </Tooltip>
+            {model && models.length > 1 && onModel ? (
+              <Select
+                value={modelKey(model)}
                 disabled={blocked}
-                onClick={() => fileRef.current?.click()}
-              />
-            }
+                onValueChange={(next) => {
+                  if (typeof next === 'string') onModel(next);
+                }}
+              >
+                <SelectTrigger
+                  size='sm'
+                  aria-label={toText(text('agentPanel.model'))}
+                  title={model.modelLabel}
+                  className='max-w-48 min-w-0 rounded-full border-0 bg-muted/60 shadow-none'
+                >
+                  <SelectValue>
+                    <span className='truncate'>{model.modelLabel}</span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className='w-auto max-w-[min(var(--container-sm),var(--available-width))] min-w-(--anchor-width) [&_[data-slot=select-item]>:first-child]:whitespace-normal'>
+                  {models.map((item) => (
+                    <SelectItem key={modelKey(item)} value={modelKey(item)}>
+                      {item.modelLabel}
+                      <span className='text-muted-foreground'>
+                        {' '}
+                        · {item.serviceTitle}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
+          </div>
+          <InputGroupButton
+            size='icon-sm'
+            aria-label={text('agentChat.send')}
+            disabled={!canSend}
+            className='rounded-full bg-ai text-ai-foreground hover:bg-ai/90 hover:text-ai-foreground disabled:bg-muted disabled:text-muted-foreground'
+            onClick={submit}
           >
-            <Paperclip />
-          </TooltipTrigger>
-          <TooltipContent>{text('agentPanel.attachHint')}</TooltipContent>
-        </Tooltip>
-        {model && models.length > 1 && onModel ? (
-          <Select
-            value={modelKey(model)}
-            disabled={blocked}
-            onValueChange={(next) => {
-              if (typeof next === 'string') onModel(next);
-            }}
-          >
-            <SelectTrigger
-              size='sm'
-              aria-label={toText(text('agentPanel.model'))}
-              title={model.modelLabel}
-              className='max-w-48 min-w-0 rounded-full border-0 bg-muted/60 shadow-none'
-            >
-              <SelectValue>
-                <span className='truncate'>{model.modelLabel}</span>
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent className='w-auto max-w-[min(var(--container-sm),var(--available-width))] min-w-(--anchor-width) [&_[data-slot=select-item]>:first-child]:whitespace-normal'>
-              {models.map((item) => (
-                <SelectItem key={modelKey(item)} value={modelKey(item)}>
-                  {item.modelLabel}
-                  <span className='text-muted-foreground'>
-                    {' '}
-                    · {item.serviceTitle}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : null}
-      </div>
+            <ArrowUp />
+          </InputGroupButton>
+        </InputGroupAddon>
+      </InputGroup>
       <input
         ref={fileRef}
         type='file'

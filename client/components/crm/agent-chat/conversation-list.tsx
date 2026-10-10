@@ -1,10 +1,12 @@
 import { Button } from '#components/ui/button';
 import { Skeleton } from '#components/ui/skeleton';
 import {
+  AgentAvatar,
   useAgentText,
   type ConversationListPages,
 } from '@nocobase/app-plugin-agents/client/chat';
-import type { UseInfiniteQueryResult } from '@tanstack/react-query';
+import { useQuery, type UseInfiniteQueryResult } from '@tanstack/react-query';
+import type { ConversationMessage } from '@nocobase/app-plugin-agents/shared/conversations';
 import {
   useEffect,
   useState,
@@ -13,13 +15,16 @@ import {
   type Ref,
 } from 'react';
 import { NavLink } from 'react-router';
-import { relativeTime, useCrmText } from '../api.js';
+import { relativeTime, toText, useCrmApi, useCrmText } from '../api.js';
+import { markdownLine } from '../line-breaks.js';
 import { AutoLoadMore } from '../auto-load.js';
 import { ErrorNotice } from '../common.js';
 
 // The reader's conversations with the agents, last message first: the side
 // list of the page (frontend standard §3.5), each row its conversation's
-// address, the open one marked. Archived ones are a list of their own.
+// address, the open one marked. Archived ones are a list of their own. A row
+// is the agent's avatar beside the title and the time, the newest message
+// under them; the open one on the card's white, the others lit on hover.
 export function ConversationList({
   ref,
   query,
@@ -64,7 +69,7 @@ export function ConversationList({
       ref={ref}
       tabIndex={-1}
       aria-label={text(archived ? 'agentChat.archivedList' : 'agentChat.list')}
-      className='flex min-h-0 flex-col outline-none'
+      className='flex min-h-0 flex-1 flex-col outline-none'
     >
       <div className='min-h-0 flex-1 overflow-y-auto scroll-quiet'>
         {query.isLoading ? (
@@ -92,49 +97,63 @@ export function ConversationList({
             </p>
           </div>
         ) : (
-          <ul className='flex flex-col gap-0.5'>
+          <ul className='flex flex-col gap-0.5 p-2'>
             {items.map((conversation) => {
               const title = conversation.title || text('agentChat.untitled');
               const unread = !conversation.read;
+              const current = conversation.id === openId;
+              const agent =
+                agentText.name(conversation.agent) ?? text('agentChat.agent');
               return (
                 <li key={conversation.id}>
                   <RowTarget
                     to={`/crm/agent-chat/${encodeURIComponent(conversation.id)}${suffix}`}
                     onOpen={onOpen ? () => onOpen(conversation.id) : undefined}
-                    current={conversation.id === openId}
-                    className={`relative flex w-full flex-col gap-0.5 rounded-lg border px-3 py-2 text-left transition-[background-color,border-color] ${
-                      conversation.id === openId
-                        ? 'border-border bg-card shadow-xs'
-                        : 'border-transparent hover:bg-accent/60'
+                    current={current}
+                    className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left transition-colors ${
+                      current ? 'bg-card shadow-xs' : 'hover:bg-accent/60'
                     }`}
                   >
-                    <span className='flex items-center gap-2'>
-                      <span
-                        className={`min-w-0 flex-1 truncate text-sm ${unread ? 'font-semibold' : ''}`}
-                        title={title}
-                      >
-                        {title}
-                      </span>
-                      {unread ? (
-                        <span className='size-2 shrink-0 rounded-full bg-primary'>
-                          <span className='sr-only'>
-                            {text('agentChat.unread')}
-                          </span>
+                    <AgentAvatar
+                      name={agent}
+                      className='shrink-0 rounded-full'
+                    />
+                    <span className='grid min-w-0 flex-1 gap-0.5'>
+                      <span className='flex min-w-0 items-baseline gap-2'>
+                        <span
+                          className={`min-w-0 flex-1 truncate text-sm ${unread ? 'font-semibold' : 'font-medium'}`}
+                          title={title}
+                        >
+                          {title}
                         </span>
-                      ) : null}
-                    </span>
-                    <span className='flex items-center gap-2 text-xs text-muted-foreground'>
-                      <span className='min-w-0 flex-1 truncate'>
-                        {agentText.name(conversation.agent) ??
-                          text('agentChat.agent')}
+                        <span className='shrink-0 text-xs text-muted-foreground tabular-nums'>
+                          {relativeTime(
+                            conversation.lastMessageAt,
+                            language,
+                            now,
+                            text('justNow'),
+                          )}
+                        </span>
                       </span>
-                      <span className='shrink-0'>
-                        {relativeTime(
-                          conversation.lastMessageAt,
-                          language,
-                          now,
-                          text('justNow'),
-                        )}
+                      <span className='flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground'>
+                        {unread ? (
+                          <span className='size-1.5 shrink-0 rounded-full bg-primary'>
+                            <span className='sr-only'>
+                              {text('agentChat.unread')}
+                            </span>
+                          </span>
+                        ) : null}
+                        <span className='min-w-0 truncate'>
+                          <LastMessage
+                            id={conversation.id}
+                            // Read again when a message arrives, when a run
+                            // starts or ends (a reply streamed into its
+                            // message keeps the message's time), and when the
+                            // conversation changes.
+                            at={`${conversation.lastMessageAt}|${conversation.updatedAt}|${conversation.run?.id ?? ''}`}
+                            agent={agent}
+                          />
+                        </span>
                       </span>
                     </span>
                   </RowTarget>
@@ -150,7 +169,9 @@ export function ConversationList({
         />
       </div>
       {onArchived ? (
-        <div className='border-t border-border/60 pt-2'>{toggle}</div>
+        <div className='shrink-0 border-t border-border/60 px-3 py-2'>
+          {toggle}
+        </div>
       ) : null}
     </nav>
   );
@@ -187,5 +208,46 @@ function RowTarget({
     >
       {children}
     </NavLink>
+  );
+}
+
+// The newest message of a conversation, as one plain line under its title,
+// led by who wrote it ("You:", or the agent's name); `at` is what it is read
+// again on: the plugin's list carries no preview, so each row reads its
+// conversation's last message, read again when the conversation moves on.
+function LastMessage({
+  id,
+  at,
+  agent,
+}: {
+  id: string;
+  at: string;
+  agent: string;
+}): ReactElement | null {
+  const api = useCrmApi();
+  const { data } = useQuery({
+    queryKey: ['crm', 'agent-chat', 'last-message', id, at],
+    queryFn: async () =>
+      (
+        await api<{ data: readonly ConversationMessage[] }>(
+          `agents/conversations/${encodeURIComponent(id)}/messages?pageSize=1`,
+        )
+      ).data.at(-1) ?? null,
+    staleTime: Infinity,
+  });
+  const { text } = useCrmText();
+  const line =
+    data && data.role !== 'system' ? markdownLine(data.content.content) : '';
+  if (!line) return null;
+  // The person's own last message is said to be theirs.
+  return (
+    <>
+      {toText(
+        data?.role === 'user'
+          ? text('agentChat.lastYours')
+          : text('agentChat.lastFrom', { name: agent }),
+      )}
+      {line}
+    </>
   );
 }

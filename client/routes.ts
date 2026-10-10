@@ -20,6 +20,7 @@ import {
   Inbox,
   ListChecks,
   Mail,
+  MessagesSquare,
   Radar,
   ScanSearch,
   ShieldCheck,
@@ -120,25 +121,50 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
   // agent (pages/crm-agents.tsx, which reads the agent from the path). The
   // four share the page grant crm-agents, an exception to "the page id is
   // the route name": they are one feature, granted together.
+  // Conversations leads them: the person's own talks with the CRM's agent,
+  // the assistant panel's full-page view, in place of the list the sidebar
+  // once kept under the menu. The open conversation, or "new", is the
+  // child's segment; the page draws it, as a record page draws its tab
+  // (pages/crm-record-tab.tsx renders nothing).
   {
     name: 'crm-agent-group',
     navigation: { title: 'crm.navigation.agents' },
     children: [
-      ['leads', ScanSearch],
-      ['opportunities', TrendingUp],
-      ['approvals', ShieldCheck],
-      ['tasks', ClipboardList],
-    ].map(([agent, icon]) => ({
-      name: `crm-agents-${String(agent)}`,
-      path: `/crm/agents/${String(agent)}`,
-      auth: 'required' as const,
-      authz: page('crm-agents'),
-      navigation: {
-        title: `crm.agents.${String(agent)}.title`,
-        icon: icon as typeof Radar,
+      {
+        name: 'crm-agent-chat',
+        path: '/crm/agent-chat',
+        auth: 'required',
+        authz: page('crm-agent-chat'),
+        navigation: {
+          title: 'crm.navigation.conversations',
+          icon: MessagesSquare,
+        },
+        componentLoader: () => import('./pages/crm-agent-chat/index.js'),
+        children: [
+          {
+            name: 'crm-agent-chat-conversation',
+            path: ':conversationId',
+            componentLoader: () => import('./pages/crm-record-tab.js'),
+          },
+        ],
       },
-      componentLoader: () => import('./pages/crm-agents.js'),
-    })),
+      ...[
+        ['leads', ScanSearch],
+        ['opportunities', TrendingUp],
+        ['approvals', ShieldCheck],
+        ['tasks', ClipboardList],
+      ].map(([agent, icon]) => ({
+        name: `crm-agents-${String(agent)}`,
+        path: `/crm/agents/${String(agent)}`,
+        auth: 'required' as const,
+        authz: page('crm-agents'),
+        navigation: {
+          title: `crm.agents.${String(agent)}.title`,
+          icon: icon as typeof Radar,
+        },
+        componentLoader: () => import('./pages/crm-agents.js'),
+      })),
+    ],
   },
   // The records: leads and deals, then the companies and their people.
   {
@@ -187,25 +213,6 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         auth: 'required',
         authz: page('mail.workspace'),
         componentLoader: () => import('./pages/crm-mail/accounts.js'),
-      },
-    ],
-  },
-  // The conversations with the CRM's agent: the assistant panel's full-page
-  // view, out of the menu, opened from the panel and the plans' cards. The
-  // open conversation, or "new", is the child's segment; the page draws it,
-  // as a record page draws its tab (pages/crm-record-tab.tsx renders
-  // nothing).
-  {
-    name: 'crm-agent-chat',
-    path: '/crm/agent-chat',
-    auth: 'required',
-    authz: page('crm-agent-chat'),
-    componentLoader: () => import('./pages/crm-agent-chat/index.js'),
-    children: [
-      {
-        name: 'crm-agent-chat-conversation',
-        path: ':conversationId',
-        componentLoader: () => import('./pages/crm-record-tab.js'),
       },
     ],
   },

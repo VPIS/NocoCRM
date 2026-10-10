@@ -25,6 +25,8 @@ import {
   PlanParams,
   PlanSchema,
   PlansQuery,
+  RevisePlanStepInput,
+  RevisePlanStepParams,
   VoidPlanInput,
 } from './schemas/plans.js';
 
@@ -182,6 +184,38 @@ export function registerPlanRoutes(
           c.req.valid('json'),
         ),
       }),
+  );
+
+  // The person changes a waiting step's values on the card; no run token.
+  router.patch(
+    '/plans/:planId/steps/:position',
+    describeRoute({
+      tags,
+      summary: 'Change a step of a plan',
+      operationId: 'revisePlanStep',
+      description:
+        'Lays the values over those of a waiting step that creates or updates a record, rehearses the whole plan again and moves its revision on; a value the step would be refused for is refused now (`PLAN_STEP_REFUSED`, the step in `metadata.field`).',
+      responses: {
+        '200': dataResponse(PlanSchema, 'The plan as revised.'),
+        ...apiErrorResponses,
+        '400': decided,
+        '404': notFound,
+        '409': apiErrorResponse(409, 'The plan changed (`CONFLICT`).'),
+      },
+    }),
+    apiValidator('param', RevisePlanStepParams),
+    apiValidator('json', RevisePlanStepInput),
+    async (c) => {
+      const { planId, position } = c.req.valid('param');
+      const { revision, values } = c.req.valid('json');
+      return c.json({
+        data: await plans().revise(c.get('actor'), planId, {
+          revision,
+          position,
+          values,
+        }),
+      });
+    },
   );
 
   router.post(

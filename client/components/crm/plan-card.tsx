@@ -23,6 +23,7 @@ import {
   type Field,
 } from './api.js';
 import { ErrorNotice, RecordLink, Value } from './common.js';
+import { InlineField } from './inline.js';
 import { Markdown } from './markdown.js';
 import { usePlanDecision, usePlans, type PlanView } from './plans.js';
 
@@ -49,18 +50,14 @@ const TONES: Record<
 export function PlanCard({
   plan,
   origin = true,
-  primary = false,
 }: {
   plan: PlanView;
   // Whether to link the conversation it came from (not inside it).
   origin?: boolean;
-  // Whether "Carry out" is the view's one primary button (the inbox's
-  // detail); elsewhere the view has its own, and it is outlined.
-  primary?: boolean;
 }): ReactElement {
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
-  const { decide, busy, error, gone } = usePlanDecision(plan);
+  const { decide, revise, busy, error, gone } = usePlanDecision(plan);
   // The conversation it came from opens in the assistant panel.
   const chat = useChatPanel();
   const [skipped, setSkipped] = useState<Set<number>>(() => new Set());
@@ -99,9 +96,17 @@ export function PlanCard({
     Math.ceil((Date.parse(plan.expiresAt) - now) / 3_600_000),
   );
   return (
+    // Drawn as the assistant's confirmation cards were: tinted in the AI's
+    // colour while it waits on a decision (in the plain border), neutral once decided; each step
+    // a card of its own with its fields in a label column, and the decision
+    // under them, the AI's colour on the button that carries it out.
     <section
       aria-label={plan.title}
-      className='rounded-lg border border-border/60 bg-card p-4 shadow-xs'
+      className={`rounded-lg border p-4 ${
+        waiting
+          ? 'border-border/60 bg-ai/5'
+          : 'border-border/60 bg-card shadow-xs'
+      }`}
     >
       <div className='flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground'>
         <ClipboardList className='size-3.5' aria-hidden />
@@ -136,11 +141,20 @@ export function PlanCard({
           {plan.summary}
         </Markdown>
       ) : null}
-      <ol className='mt-3 flex flex-col gap-3'>
+      <ol className='mt-3 flex flex-col gap-2'>
         {plan.steps.map((step) => (
           <PlanStep
             key={step.id}
             step={step}
+            // A waiting plan's values are the person's to change before
+            // deciding, as the confirmation cards' were.
+            onRevise={
+              waiting && !busy
+                ? async (values) => {
+                    await revise(step.position, values);
+                  }
+                : undefined
+            }
             selectable={waiting && plan.steps.length > 1}
             kept={!skipped.has(step.position)}
             onKept={(on) =>
@@ -160,28 +174,30 @@ export function PlanCard({
         </div>
       ) : null}
       {waiting ? (
-        <div className='mt-4 flex flex-wrap items-center gap-2'>
-          <Button
-            size='sm'
-            variant={primary ? 'default' : 'outline'}
-            disabled={Boolean(busy) || kept === 0}
-            onClick={() => run('execute')}
-          >
-            {busy === 'execute' ? <Spinner /> : null}
-            {text('plans.execute', { count: kept })}
-          </Button>
-          <Button
-            size='sm'
-            variant='ghost'
-            disabled={Boolean(busy)}
-            onClick={() => run('void')}
-          >
-            {busy === 'void' ? <Spinner /> : null}
-            {text('plans.void')}
-          </Button>
-          <span className='ml-auto text-xs text-muted-foreground'>
+        <div className='mt-3 flex flex-wrap items-center justify-between gap-3'>
+          <span className='text-xs text-muted-foreground'>
             {text('plans.expiresIn', { count: hoursLeft })}
           </span>
+          <div className='flex shrink-0 gap-2'>
+            <Button
+              size='sm'
+              variant='outline'
+              disabled={Boolean(busy)}
+              onClick={() => run('void')}
+            >
+              {busy === 'void' ? <Spinner /> : null}
+              {text('plans.void')}
+            </Button>
+            <Button
+              size='sm'
+              className='bg-ai text-ai-foreground hover:bg-ai/90'
+              disabled={Boolean(busy) || kept === 0}
+              onClick={() => run('execute')}
+            >
+              {busy === 'execute' ? <Spinner /> : null}
+              {text('plans.execute', { count: kept })}
+            </Button>
+          </div>
         </div>
       ) : plan.status === 'executing' && !gone ? (
         <p className='mt-3 flex items-center gap-2 text-sm text-muted-foreground'>
@@ -247,11 +263,14 @@ function PlanStep({
   selectable,
   kept,
   onKept,
+  onRevise,
 }: {
   step: Step;
   selectable: boolean;
   kept: boolean;
   onKept: (kept: boolean) => void;
+  // Changes the values the step writes; absent once the plan is decided.
+  onRevise?: (values: Record<string, unknown>) => Promise<void>;
 }): ReactElement {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
@@ -264,10 +283,16 @@ function PlanStep({
   const what = text(`plans.op.${step.op}`, {
     entity: text(`entity.${entity}`),
   });
-  const label = `${toText(step.position)}. ${what}`;
   const removed = step.status === 'removed' || (selectable && !kept);
+  // The values a step that creates or updates a record writes may be changed.
+  const editable =
+    !removed && (step.op === 'record.create' || step.op === 'record.update');
   return (
-    <li className={`flex gap-2 ${removed ? 'opacity-55' : ''}`}>
+    <li
+      className={`flex gap-2.5 rounded-md border border-border/60 bg-card p-3 ${removed ? 'opacity-55' : ''}`}
+    >
+      {/* A box to leave the step out where there is a choice; nothing,
+          not even its number, where there is none. */}
       {selectable ? (
         <Checkbox
           className='mt-0.5'
@@ -275,15 +300,13 @@ function PlanStep({
           onCheckedChange={(on) => onKept(on === true)}
           aria-label={text('plans.keepStep', { step: step.position })}
         />
-      ) : (
-        <span className='w-4 shrink-0 text-xs text-muted-foreground tabular-nums'>
-          {step.position}
-        </span>
-      )}
+      ) : null}
       <div className='min-w-0 flex-1'>
         <div className='flex flex-wrap items-center gap-x-1.5 text-sm'>
-          <span className={removed ? 'line-through' : ''}>
-            {selectable ? label : what}
+          <span
+            className={`text-muted-foreground ${removed ? 'line-through' : ''}`}
+          >
+            {what}
           </span>
           {check?.name ? (
             recordId ? (
@@ -297,35 +320,95 @@ function PlanStep({
           ) : null}
         </div>
         {check?.changes.length ? (
-          <ul className='mt-1 flex flex-col gap-0.5 text-sm'>
+          <dl className='mt-2 flex flex-col gap-1 text-sm'>
             {check.changes.map((change) => (
-              <li
+              <div
                 key={change.field}
-                className='flex flex-wrap items-baseline gap-x-1.5 break-words'
+                className='flex items-baseline gap-3 break-words'
               >
-                <span className='text-muted-foreground'>
+                <dt className='w-24 shrink-0 text-muted-foreground'>
                   {change.field === 'comment'
                     ? text('plans.comment')
                     : text(fieldLabelKey(entity, change.field), {
                         defaultValue: change.field,
                       })}
-                </span>
-                <ChangeValue
-                  field={
-                    fields.find((f) => f.key === change.field) ?? {
-                      key: change.field,
-                      type: 'text',
-                    }
-                  }
-                  from={change.from}
-                  to={change.to}
-                />
-              </li>
+                </dt>
+                <dd className='min-w-0 flex-1'>
+                  <StepValue
+                    entity={entity}
+                    field={fields.find((f) => f.key === change.field)}
+                    name={change.field}
+                    from={change.from}
+                    to={change.to}
+                    onRevise={editable ? onRevise : undefined}
+                  />
+                </dd>
+              </div>
             ))}
-          </ul>
+          </dl>
         ) : null}
       </div>
     </li>
+  );
+}
+
+// A value a step writes: while the plan waits, the new value is the field
+// the record pages edit it with (a click, then saved as they save), after
+// the old one when there was one; a value naming a record an earlier step
+// creates ($1) or a field the record has not, as it reads.
+function StepValue({
+  entity,
+  field,
+  name,
+  from,
+  to,
+  onRevise,
+}: {
+  entity: Entity;
+  field: Field | undefined;
+  name: string;
+  from: unknown;
+  to: unknown;
+  onRevise?: (values: Record<string, unknown>) => Promise<void>;
+}): ReactElement {
+  const { text } = useCrmText();
+  const reference = typeof to === 'string' && to.startsWith('$');
+  if (!onRevise || !field || reference)
+    return (
+      <ChangeValue
+        field={field ?? { key: name, type: 'text' }}
+        from={from}
+        to={to}
+      />
+    );
+  const hadValue = from !== null && from !== undefined && from !== '';
+  return (
+    <span className='flex min-w-0 items-baseline gap-x-1'>
+      {hadValue ? (
+        <>
+          <span className='shrink-0 text-muted-foreground line-through'>
+            <ChangeValue field={field} from={null} to={from} />
+          </span>
+          <ArrowRight
+            className='size-3 shrink-0 self-center text-muted-foreground'
+            aria-hidden
+          />
+        </>
+      ) : null}
+      <span className='-mx-2 -my-1 min-w-0 flex-1'>
+        <InlineField
+          entity={entity}
+          record={{ id: '', [name]: to } as unknown as CrmRecord}
+          field={field}
+          label={toText(
+            text(fieldLabelKey(entity, name), { defaultValue: name }),
+          )}
+          editable
+          plain
+          onSave={async (value) => onRevise({ [name]: value })}
+        />
+      </span>
+    </span>
   );
 }
 

@@ -52,7 +52,7 @@ export function PlanList({
               onClick={() => onSelect(plan.id)}
               className={`relative flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-[background-color,border-color] ${
                 selected
-                  ? 'border-border bg-card shadow-xs'
+                  ? 'border-transparent bg-card shadow-xs'
                   : 'border-transparent hover:bg-accent/60'
               } ${waiting ? '' : 'opacity-55'}`}
             >
@@ -132,7 +132,7 @@ export function PlanDetail({
         {t('navigation.back')}
       </button>
       {/* Keyed: what was unticked or failed on one plan stays with it. */}
-      <PlanCard key={current.id} plan={current} primary />
+      <PlanCard key={current.id} plan={current} />
     </div>
   );
 }
