@@ -12,7 +12,7 @@ import { CRM_ASSISTANT_INSTRUCTIONS } from './preset.js';
 // The CRM's assistant, named Sales Expert, as an online agent of the Agents plugin: made
 // once from the CRM assistant preset's instructions and actions, open to
 // everyone, listing every chat model of the enabled services in their order
-// (the first its default, the rest what a conversation may pick, as the
+// (DeepSeek's first, the default, the rest what a conversation may pick, as the
 // assistant's model picker offered before), and made the
 // system default chat agent when none is set. The marker keeps its id, so an
 // agent an administrator changed, archived or deleted stays as they left it:
@@ -53,15 +53,8 @@ export async function provisionAssistant(
   } catch {
     return;
   }
-  const modelEntries = (await agents.online.services.list())
-    .filter((service) => service.enabled)
-    .flatMap((service) =>
-      service.models
-        .filter((model) => model.kind === 'chat')
-        .map((model) => ({ modelService: service.name, model: model.value })),
-    )
-    // The most an agent's list holds.
-    .slice(0, MAX_MODEL_ENTRIES);
+  // The assistant converses on DeepSeek by default.
+  const modelEntries = await chatModelEntries(agents, 'deepseek');
   const assistant = await agents.agents.create(creator.id, {
     name: ASSISTANT_NAME,
     type: 'online',
@@ -85,6 +78,35 @@ export async function provisionAssistant(
     })
     .where('id', '=', ASSISTANT_MARKER)
     .execute();
+}
+
+// Every chat model of the enabled services, in their order, as an agent's
+// model entries (the first its default): what an agent the CRM creates
+// lists. Those of the `preferred` provider's services come first, so they
+// are its default while the provider is offered.
+export async function chatModelEntries(
+  agents: Agents,
+  preferred?: string,
+): Promise<{ modelService: string; model: string }[]> {
+  const services = (await agents.online.services.list()).filter(
+    (service) => service.enabled,
+  );
+  return (
+    [
+      ...services.filter((service) => service.provider === preferred),
+      ...services.filter((service) => service.provider !== preferred),
+    ]
+      .flatMap((service) =>
+        service.models
+          .filter((model) => model.kind === 'chat')
+          .map((model) => ({
+            modelService: service.name,
+            model: model.value,
+          })),
+      )
+      // The most an agent's list holds.
+      .slice(0, MAX_MODEL_ENTRIES)
+  );
 }
 
 // The assistant was first created as Noco; renamed Sales Expert once,
