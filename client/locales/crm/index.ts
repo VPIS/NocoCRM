@@ -1517,7 +1517,7 @@ const wording = {
       home: ['Overview', '工作台'],
       record: ['Record pages', '记录详情页'],
       decisions: ['AI suggestions in the inbox', '收件箱的 AI 建议'],
-      agents: ['Agents', 'Agents'],
+      agents: ['AI team', 'AI 团队'],
       reports: ['Reports', '报表'],
       agentChat: ['AI conversations', 'AI 对话'],
     },
@@ -2109,9 +2109,8 @@ const wording = {
   navigation: {
     reports: ['Reports', '报表'],
     inbox: ['Inbox', '收件箱'],
-    agents: ['Agents', 'Agents'],
+    agents: ['AI team', 'AI 团队'],
     conversations: ['Conversations', '对话'],
-    action: ['Action', '行动'],
     records: ['Records', '记录'],
     // Where the user's connected services sit: mail now, other channels
     // (WhatsApp, LinkedIn) later.

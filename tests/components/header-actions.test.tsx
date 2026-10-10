@@ -11,8 +11,8 @@ vi.mock('../../client/layouts/components/user-menu.js', () => ({
 }));
 
 // The header carries no Settings, Inbox or assistant entry: the settings
-// pages are a section of the menu and the inbox leads its Action section
-// (client/routes.ts), and the assistant is asked from the dock at the
+// pages are a section of the menu and the inbox is the menu's, right under
+// the overview (client/routes.ts), and the assistant is asked from the dock at the
 // bottom of the page (assistant-dock.tsx).
 it('has neither a settings, an inbox nor an assistant entry', () => {
   render(

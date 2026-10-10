@@ -34,9 +34,9 @@ import {
 } from 'lucide-react';
 
 // Navigation is read from these declarations, and the sidebar follows their
-// order: the workspace first, then what to do, the records and mail. A
-// group without a path is menu-only; the sidebar renders it as a headed
-// section. Detail pages carry no navigation entry and select the
+// order: the workspace and what to do first, then the AI team, the records
+// with the reports, and mail. A group without a path is menu-only; the sidebar renders it as a
+// headed section. Detail pages carry no navigation entry and select the
 // nearest visible ancestor, which keeps an object highlighted on its records.
 //
 // Every page states its check: a page left without one is hidden from all but
@@ -71,52 +71,36 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     navigation: { title: 'navigation.home', icon: LayoutDashboard },
     path: '/',
   },
-  // How the business is going: the analyses taken out of the overview, which
-  // keeps today's work.
+  // What to do, right under the overview: the AI's suggestions waiting on
+  // the reader, the tasks and the approvals. Application change: the
+  // template reaches the inbox from a header button and declares it without
+  // navigation; here it leads the menu instead, with the AI's suggestions in
+  // its To do view (client/components/crm/inbox-decisions.tsx). The plugin's
+  // API answers each person's own messages only, and the suggestions are
+  // gated by the crm-decisions page grant, so the page needs no check of its
+  // own.
   {
+    authz: 'skip',
     auth: 'required',
-    authz: page('crm-reports'),
-    componentLoader: () => import('./pages/crm-reports.js'),
-    name: 'crm-reports',
-    navigation: { title: 'crm.navigation.reports', icon: ChartLine },
-    path: '/crm/reports',
+    componentLoader: () => import('./pages/inbox.js'),
+    name: 'inbox',
+    path: '/inbox',
+    navigation: { title: 'crm.navigation.inbox', icon: Inbox },
   },
-  // What to do: the AI's suggestions waiting on the reader, the tasks and
-  // the approvals.
-  {
-    name: 'crm-action',
-    navigation: { title: 'crm.navigation.action' },
-    children: [
-      // Application change: the template reaches the inbox from a header
-      // button and declares it without navigation; here it leads the Action
-      // section instead, with the AI's suggestions in its To do view
-      // (client/components/crm/inbox-decisions.tsx). The plugin's API answers
-      // each person's own messages only, and the suggestions are gated by
-      // the crm-decisions page grant, so the page needs no check of its own.
-      {
-        authz: 'skip',
-        auth: 'required',
-        componentLoader: () => import('./pages/inbox.js'),
-        name: 'inbox',
-        path: '/inbox',
-        navigation: { title: 'crm.navigation.inbox', icon: Inbox },
-      },
-      ...[
-        ['tasks', SquareCheckBig],
-        ['approvals', ListChecks],
-      ].map(([entity, icon]) => ({
-        name: `crm-${String(entity)}`,
-        path: `/crm/${String(entity)}`,
-        auth: 'required' as const,
-        authz: page(`crm-${String(entity)}`),
-        navigation: {
-          title: `crm.entities.${String(entity)}`,
-          icon: icon as typeof Radar,
-        },
-        componentLoader: () => import('./pages/crm-list.js'),
-      })),
-    ],
-  },
+  ...[
+    ['tasks', SquareCheckBig],
+    ['approvals', ListChecks],
+  ].map(([entity, icon]) => ({
+    name: `crm-${String(entity)}`,
+    path: `/crm/${String(entity)}`,
+    auth: 'required' as const,
+    authz: page(`crm-${String(entity)}`),
+    navigation: {
+      title: `crm.entities.${String(entity)}`,
+      icon: icon as typeof Radar,
+    },
+    componentLoader: () => import('./pages/crm-list.js'),
+  })),
   // The agents: the AI's work the system starts on its own, one page per
   // agent (pages/crm-agents.tsx, which reads the agent from the path). The
   // four share the page grant crm-agents, an exception to "the page id is
@@ -171,21 +155,33 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     name: 'crm-records',
     navigation: { title: 'crm.navigation.records' },
     children: [
-      ['leads', Radar],
-      ['opportunities', Handshake],
-      ['companies', Building2],
-      ['contacts', UserRound],
-    ].map(([entity, icon]) => ({
-      name: `crm-${String(entity)}`,
-      path: `/crm/${String(entity)}`,
-      auth: 'required' as const,
-      authz: page(`crm-${String(entity)}`),
-      navigation: {
-        title: `crm.entities.${String(entity)}`,
-        icon: icon as typeof Radar,
+      ...[
+        ['leads', Radar],
+        ['opportunities', Handshake],
+        ['companies', Building2],
+        ['contacts', UserRound],
+      ].map(([entity, icon]) => ({
+        name: `crm-${String(entity)}`,
+        path: `/crm/${String(entity)}`,
+        auth: 'required' as const,
+        authz: page(`crm-${String(entity)}`),
+        navigation: {
+          title: `crm.entities.${String(entity)}`,
+          icon: icon as typeof Radar,
+        },
+        componentLoader: () => import('./pages/crm-list.js'),
+      })),
+      // How the business is going, read from the records above: the
+      // analyses taken out of the overview, which keeps today's work.
+      {
+        auth: 'required',
+        authz: page('crm-reports'),
+        componentLoader: () => import('./pages/crm-reports.js'),
+        name: 'crm-reports',
+        navigation: { title: 'crm.navigation.reports', icon: ChartLine },
+        path: '/crm/reports',
       },
-      componentLoader: () => import('./pages/crm-list.js'),
-    })),
+    ],
   },
   // Integrations: the services the user connects, the mailbox now (other
   // channels later). The Mail plugin's workspace, and the page that connects
