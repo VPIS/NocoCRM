@@ -270,12 +270,8 @@ describe("The inbox's AI suggestions", () => {
     renderAt('/inbox?view=todo');
     expect(await screen.findByText(/Nothing here/u)).toBeTruthy();
     expect(screen.queryByRole('tab')).toBeNull();
-    // Only whether there are plans is asked, never the suggestions.
-    expect(
-      state.api.mock.calls.filter(
-        ([path]) => !String(path).startsWith('plans'),
-      ),
-    ).toEqual([]);
+    // The suggestions are never asked for.
+    expect(state.api.mock.calls).toEqual([]);
   });
 
   it("opens Waiting on me's old address in the inbox", async () => {
@@ -326,52 +322,17 @@ const plan = (status = 'pending') => ({
   ],
 });
 
-describe("The inbox's plans", () => {
-  it('lists a waiting plan under To do and decides it in the detail pane', async () => {
-    state.plans = [plan()];
+// The changes agents suggest in conversations are decided in their
+// conversation and on the records they change, never in the inbox.
+describe('The inbox and the changes suggested in conversations', () => {
+  it('lists none of them, waiting or not', async () => {
+    state.plans = [plan(), { ...plan('executed'), id: 'p2' }];
     renderAt('/inbox?view=todo');
-    // Listed with the suggestions.
     expect(await screen.findByText('panel e1')).toBeTruthy();
-    await userEvent.click(
-      (await screen.findByText('新增展会线索周晓')).closest('button')!,
-    );
-    expect(screen.getByTestId('where').textContent).toContain('plan=p1');
-    const card = await screen.findByRole('region', {
-      name: '新增展会线索周晓',
-    });
-    // The old value is shown beside the new one, not only on hover.
-    expect(within(card).getByText('周小')).toBeTruthy();
-    expect(within(card).getAllByText('周晓')).toHaveLength(2);
-    state.api.mockImplementation(async (path: string, method?: string) => {
-      if (method === 'POST') return { data: plan('executed') };
-      return path.startsWith('plans')
-        ? { data: state.plans, meta: { total: state.plans.length } }
-        : state.decisions;
-    });
-    // The test's text looks keys up without plurals: the button reads its
-    // key here ("Carry out 1 change" in the application).
-    await userEvent.click(
-      within(card).getByRole('button', { name: 'plans.execute' }),
-    );
-    await waitFor(() =>
-      expect(state.api).toHaveBeenCalledWith('plans/p1/execute', 'POST', {
-        revision: 1,
-      }),
-    );
-  });
-
-  it('says a plan picked by its address is gone rather than showing another', async () => {
-    state.plans = [plan()];
-    renderAt('/inbox?view=todo&kind=crm-plans&plan=gone');
-    expect(await screen.findByText('这些建议的改动已不存在。')).toBeTruthy();
+    expect(screen.queryByText('新增展会线索周晓')).toBeNull();
+    // Nor are they asked for.
     expect(
-      screen.queryByRole('region', { name: '新增展会线索周晓' }),
-    ).toBeNull();
-  });
-
-  it('is absent for a reader without plans', async () => {
-    renderAt('/inbox?view=todo');
-    expect(await screen.findByText('panel e1')).toBeTruthy();
-    expect(screen.queryByText('计划')).toBeNull();
+      state.api.mock.calls.filter(([path]) => String(path).startsWith('plans')),
+    ).toEqual([]);
   });
 });

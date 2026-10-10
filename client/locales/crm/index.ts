@@ -2022,16 +2022,13 @@ const wording = {
   },
   // The plans an agent proposes, decided by the person they were proposed to.
   plans: {
-    category: ['Suggested in conversations', '对话建议的改动'],
     agent: ['Agent', 'Agent'],
     meta: [
       'Changes suggested by {{agent}} · {{time}}',
       '{{agent}} 建议的改动 · {{time}}',
     ],
     fromConversation: ['from a conversation', '来自对话'],
-    none: ['No suggested changes', '没有建议的改动'],
     waitingOnYou: ['Waiting on you', '等你决定'],
-    viewInInbox: ['View in inbox', '在收件箱查看'],
     status: {
       pending: ['Waiting', '待决定'],
       executing: ['Carrying out', '执行中'],

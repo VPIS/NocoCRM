@@ -36,24 +36,9 @@ export function useInboxCount(): number {
   );
   useInboxRefresh();
   const unread = useInboxUnreadCount().data ?? 0;
-  const plans = useWaitingPlans();
-  const count = (shown ? (data?.count ?? 0) : 0) + plans + unread;
+  const count = (shown ? (data?.count ?? 0) : 0) + unread;
   useDocumentTitleBadge(inboxBadgeText(count));
   return count;
-}
-
-// How many plans agents proposed wait on the reader's decision, which the
-// inbox lists under Plans (inbox-plans.tsx).
-function useWaitingPlans(): number {
-  const api = useCrmApi();
-  const scopeKey = useCrmScopeKey();
-  const path = 'plans?status=pending&pageSize=1';
-  const { data } = useQuery({
-    queryKey: [...scopeKey, path],
-    queryFn: () => api<{ meta: { total: number } }>(path),
-    refetchInterval: 30000,
-  });
-  return data?.meta.total ?? 0;
 }
 
 // How many approvals wait on the reader's decision, for the count beside

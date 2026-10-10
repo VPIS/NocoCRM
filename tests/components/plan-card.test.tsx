@@ -204,16 +204,15 @@ describe('a plan card', () => {
 });
 
 describe("a record's waiting plans", () => {
-  it('lead the particulars with their count and the way to the inbox', async () => {
+  it('lead the particulars with their count, with no way to the inbox', async () => {
     state.plans = [plan()];
     renderWith(<WaitingPlans entity='leads' recordId='lead-1' />);
     const block = await screen.findByRole('region', { name: '等你决定' });
     expect(within(block).getByRole('heading', { level: 2 }).textContent).toBe(
       '等你决定: 1',
     );
-    expect(
-      within(block).getByRole('link', { name: '在收件箱查看' }),
-    ).toHaveAttribute('href', '/inbox?plan=p1');
+    // Decided here or in their conversation, never in the inbox.
+    expect(within(block).queryByRole('link', { name: /收件箱/u })).toBeNull();
     expect(state.api).toHaveBeenCalledWith(
       'plans?pageSize=100&target=leads%3Alead-1',
     );

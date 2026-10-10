@@ -17,7 +17,6 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react';
-import { Link } from 'react-router';
 import {
   fieldLabelKey,
   relativeTime,
@@ -497,12 +496,6 @@ export function WaitingPlans({
             </>
           ) : null}
         </h2>
-        <Link
-          to={`/inbox?plan=${encodeURIComponent((waiting[0] ?? shown[0]).id)}`}
-          className='ml-auto text-xs text-muted-foreground hover:text-primary hover:underline'
-        >
-          {text('plans.viewInInbox')}
-        </Link>
       </div>
       {shown.map((plan) => (
         <PlanCard key={plan.id} plan={plan} />

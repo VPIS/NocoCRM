@@ -48,21 +48,6 @@ export function usePlans(
   });
 }
 
-// The plans the inbox lists: every one waiting or being carried out, and
-// those decided in the last week.
-const RECENT_MS = 7 * 24 * 3_600_000;
-export function useInboxPlans() {
-  const query = usePlans({});
-  const [since] = useState(() => Date.now() - RECENT_MS);
-  const plans = (query.data ?? []).filter(
-    (plan) =>
-      plan.status === 'pending' ||
-      plan.status === 'executing' ||
-      Date.parse(plan.decidedAt ?? plan.createdAt) >= since,
-  );
-  return { query, plans };
-}
-
 // Carrying a plan out or voiding it, as the person it was proposed to: the
 // card shows what came of it, and every CRM query is refreshed, since the
 // steps may have changed any record and the inbox's count.
