@@ -1,5 +1,6 @@
 import { useState, type ReactElement } from 'react';
-import { useLocation } from 'react-router';
+import { useCan } from '@nocobase/app-plugin-authorization/client';
+import { Link, useLocation } from 'react-router';
 import {
   Ban,
   CircleCheck,
@@ -46,6 +47,13 @@ import {
 // the menu's Agents section.
 
 type AgentName = 'leads' | 'opportunities' | 'approvals' | 'tasks';
+// The method skill each agent works by (ai/skills).
+const SKILLS: Record<AgentName, string> = {
+  leads: 'lead-follow-up',
+  opportunities: 'opportunity-follow-up',
+  approvals: 'approval-review',
+  tasks: 'task-preparation',
+};
 const AGENTS: readonly AgentName[] = [
   'leads',
   'opportunities',
@@ -88,6 +96,13 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
   const query = useCrmQuery<Overview>(path);
   const data = query.data;
   const admin = meta?.settingsAccess === true;
+  // The skill it works by, opened on the Agents plugin's Skills page, for
+  // whoever may open that page.
+  const skillId = meta?.methodSkills?.[SKILLS[agent]];
+  const { can: canSkills } = useCan({
+    resource: { type: 'page', id: 'skills' },
+    action: 'access',
+  });
   const zone = meta?.settings.timeZone ?? 'Asia/Shanghai';
   const save = async (input: Data): Promise<void> => {
     setSaving(true);
@@ -142,7 +157,16 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
               {text(agent === 'tasks' ? 'agents.byAiTasks' : 'agents.byAi')}
             </p>
             <p className='text-xs text-muted-foreground'>
-              {text(`agents.${agent}.skill`)}
+              {skillId && canSkills ? (
+                <Link
+                  to={`/skills/${encodeURIComponent(skillId)}`}
+                  className='underline-offset-4 hover:text-foreground hover:underline'
+                >
+                  {text(`agents.${agent}.skill`)}
+                </Link>
+              ) : (
+                text(`agents.${agent}.skill`)
+              )}
             </p>
           </CardContent>
         </Card>

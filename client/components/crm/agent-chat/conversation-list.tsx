@@ -135,15 +135,13 @@ export function ConversationList({
                           )}
                         </span>
                       </span>
-                      <span className='flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground'>
-                        {unread ? (
-                          <span className='size-1.5 shrink-0 rounded-full bg-primary'>
-                            <span className='sr-only'>
-                              {text('agentChat.unread')}
-                            </span>
-                          </span>
-                        ) : null}
-                        <span className='min-w-0 truncate'>
+                      {/* A reply not yet read: the preview in the body's
+                          colour and a dot in the AI's at the row's end, under
+                          the time. */}
+                      <span
+                        className={`flex min-w-0 items-center gap-1.5 text-xs ${unread ? 'text-foreground' : 'text-muted-foreground'}`}
+                      >
+                        <span className='min-w-0 flex-1 truncate'>
                           <LastMessage
                             id={conversation.id}
                             // Read again when a message arrives, when a run
@@ -154,6 +152,13 @@ export function ConversationList({
                             agent={agent}
                           />
                         </span>
+                        {unread ? (
+                          <span className='size-2 shrink-0 rounded-full bg-ai'>
+                            <span className='sr-only'>
+                              {text('agentChat.unread')}
+                            </span>
+                          </span>
+                        ) : null}
                       </span>
                     </span>
                   </RowTarget>

@@ -179,7 +179,12 @@ export function AskComposer({
           }}
         />
         {expanded ? null : (
-          <InputGroupAddon align='inline-end' className='pr-1.5'>
+          // Clear of the round end, rather than following its curve (the
+          // primitive pulls a button outward, `has-[>button]:mr-*`).
+          <InputGroupAddon
+            align='inline-end'
+            className='pr-2.5 has-[>button]:mr-0'
+          >
             {sendButton}
           </InputGroupAddon>
         )}

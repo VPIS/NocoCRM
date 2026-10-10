@@ -111,6 +111,10 @@ export const Workspace = z
       description:
         "The id of the agent the CRM's background work runs on, which the chat leaves out of its agents; null before it exists.",
     }),
+    methodSkills: z.record(z.string(), z.string()).meta({
+      description:
+        "The Agents plugin's library ids of the CRM's method skills, by skill name (lead-follow-up, opportunity-follow-up, approval-review, task-preparation).",
+    }),
   })
   .meta({ ref: 'CrmWorkspace' });
 

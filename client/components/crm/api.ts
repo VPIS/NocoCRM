@@ -53,6 +53,9 @@ export interface Metadata {
   assistant: boolean;
   // The agent the background work runs on, left out of the chat's agents.
   backgroundAgent?: string | null;
+  // The library ids of the CRM's method skills, by name, which the agents'
+  // pages link to.
+  methodSkills?: Record<string, string>;
   // Which of the agents' triggers are on (server/providers/crm/agents.ts).
   agents?: Record<
     string,

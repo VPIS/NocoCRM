@@ -38,6 +38,7 @@ import { searchPlaces, subdivisions } from '../providers/crm/geography.js';
 import { crmToken } from '../providers/crm/index.js';
 import { jsonValue } from '../providers/crm/values.js';
 import { BACKGROUND_MARKER } from '../providers/crm-agents/background.js';
+import { SKILLS_MARKER } from '../providers/crm-agents/library.js';
 import { pendingDecisions } from '../providers/crm/lead-evaluation.js';
 import { mailTimelineToken } from '../providers/crm/mail-timeline.js';
 import { noticesOf } from '../providers/crm/notices.js';
@@ -230,6 +231,27 @@ export function registerWorkspaceRoutes(
                 ) as { agentId?: unknown } | null
               )?.agentId ?? '',
             ) || null,
+          // The library ids of the CRM's method skills, by name (library.ts),
+          // so the agents' pages link to each on the Skills page.
+          methodSkills: Object.fromEntries(
+            Object.entries(
+              (
+                jsonValue(
+                  (
+                    await service.database
+                      .query()
+                      .selectFrom('crmSettings')
+                      .select('value')
+                      .where('id', '=', SKILLS_MARKER)
+                      .executeTakeFirst()
+                  )?.value,
+                ) as { skillIds?: Record<string, unknown> } | null
+              )?.skillIds ?? {},
+            ).filter(
+              (entry): entry is [string, string] =>
+                typeof entry[1] === 'string' && entry[1] !== '',
+            ),
+          ),
         },
       });
     },
