@@ -2096,6 +2096,8 @@ const wording = {
     // (WhatsApp, LinkedIn) later.
     integrations: ['Integrations', '集成'],
     mailbox: ['Mailbox', '邮箱'],
+    // The menu's Settings section (client/routes.ts).
+    settings: ['Settings', '设置'],
     // The Agents plugin's pages, in Settings (migration step 2).
     agentsGroup: ['Agent team', 'Agent 团队'],
     agentList: ['Agents', 'Agent'],

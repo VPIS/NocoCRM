@@ -9,37 +9,18 @@ vi.mock('../../client/theme/index.js', () => ({
 vi.mock('../../client/layouts/components/user-menu.js', () => ({
   UserMenu: () => null,
 }));
-it('hides Settings when navigation has no accessible pages', () => {
-  render(
-    <MemoryRouter>
-      <HeaderActions showSettings={false} />
-    </MemoryRouter>,
-  );
-  expect(
-    screen.queryByRole('link', { name: 'Settings' }),
-  ).not.toBeInTheDocument();
-});
 
-it('keeps Settings visible and current on an accessible settings page', () => {
+// The header carries no Settings, Inbox or assistant entry: the settings
+// pages are a section of the menu and the inbox leads its Action section
+// (client/routes.ts), and the assistant is asked from the dock at the
+// bottom of the page (assistant-dock.tsx).
+it('has neither a settings, an inbox nor an assistant entry', () => {
   render(
-    <MemoryRouter initialEntries={['/settings/users']}>
-      <HeaderActions showSettings />
+    <MemoryRouter initialEntries={['/settings/crm']}>
+      <HeaderActions />
     </MemoryRouter>,
   );
-  expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute(
-    'aria-current',
-    'page',
-  );
-});
-
-// The inbox leads the menu (client/routes.ts) and the assistant is asked
-// from the dock at the bottom of the page (assistant-dock.tsx).
-it('has neither an inbox nor an assistant button', () => {
-  render(
-    <MemoryRouter initialEntries={['/leads']}>
-      <HeaderActions showSettings />
-    </MemoryRouter>,
-  );
+  expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull();
   expect(screen.queryByRole('link', { name: /Inbox/u })).toBeNull();
   expect(screen.queryAllByRole('button')).toHaveLength(0);
 });

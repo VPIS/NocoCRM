@@ -202,7 +202,7 @@ export default function AgentChatPage(): ReactElement {
                   action={
                     <Button
                       variant='outline'
-                      render={<Link to='/settings/agents' />}
+                      render={<Link to='/agents' />}
                       nativeButton={false}
                     >
                       {text('agentChat.manageAgents')}

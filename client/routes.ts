@@ -1,6 +1,5 @@
 import {
   defineAppRoutes,
-  defineSettingsRoutes,
   type AppClientRouteContribution,
 } from '@nocobase/app-client/plugins';
 import {
@@ -271,42 +270,50 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     name: 'device',
     path: '/device',
   },
-]);
-
-const settingsRoutes: AppClientRouteContribution = defineSettingsRoutes([
+  // Settings: what configures the CRM, its AI and its people, as ordinary
+  // pages in a section of the menu. Template 1.0.0-beta.60 has no settings
+  // area of its own (no /settings layout or header entry), and plugins
+  // contribute no settings pages: each entry carries its own grant, so the
+  // section shows only what the reader may open. The CRM's own pages keep
+  // their /settings/... addresses; the Agents plugin's pages keep the paths
+  // it navigates to.
   {
-    name: 'crm-settings',
-    path: '/crm',
-    navigation: { title: 'crm.settings', icon: Settings2 },
-    authz: {
-      resource: { type: 'settings', id: 'crm' },
-      action: 'manage',
-    },
-    componentLoader: () => import('./pages/crm-settings.js'),
-  },
-  // The Agents plugin's pages, which it leaves to the application to route
-  // (migration step 2): the agents, their model services, the skill
-  // library and what runs used. Each keeps the page grant or settings item
-  // its definition declares; the coding-tool runtimes page is left out, the
-  // CRM's agents being online ones.
-  {
-    name: 'agents-settings',
-    navigation: { title: 'crm.navigation.agentsGroup', icon: Bot },
+    name: 'crm-settings-group',
+    navigation: { title: 'crm.navigation.settings' },
     children: [
       {
-        ...agentsRoute,
-        navigation: { title: 'crm.navigation.agentList' },
+        name: 'crm-settings',
+        path: '/settings/crm',
+        auth: 'required',
+        navigation: { title: 'crm.settings', icon: Settings2 },
+        authz: {
+          resource: { type: 'settings', id: 'crm' },
+          action: 'manage',
+        },
+        componentLoader: () => import('./pages/crm-settings.js'),
       },
-      { ...modelsRoute, navigation: { title: 'crm.navigation.models' } },
-      { ...skillsRoute, navigation: { title: 'crm.navigation.skills' } },
-      { ...usageRoute, navigation: { title: 'crm.navigation.usage' } },
+      // The Agents plugin's pages, which it leaves to the application to route
+      // (migration step 2): the agents, their model services, the skill
+      // library and what runs used. Each keeps the page grant or settings item
+      // its definition declares; the coding-tool runtimes page is left out, the
+      // CRM's agents being online ones.
+      {
+        name: 'agents-settings',
+        navigation: { title: 'crm.navigation.agentsGroup', icon: Bot },
+        children: [
+          {
+            ...agentsRoute,
+            navigation: { title: 'crm.navigation.agentList' },
+          },
+          { ...modelsRoute, navigation: { title: 'crm.navigation.models' } },
+          { ...skillsRoute, navigation: { title: 'crm.navigation.skills' } },
+          { ...usageRoute, navigation: { title: 'crm.navigation.usage' } },
+        ],
+      },
     ],
   },
 ]);
 
-const routes: readonly AppClientRouteContribution[] = [
-  appRoutes,
-  settingsRoutes,
-];
+const routes: readonly AppClientRouteContribution[] = [appRoutes];
 
 export default routes;

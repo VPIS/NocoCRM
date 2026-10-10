@@ -443,7 +443,7 @@ describe('the agent conversations', () => {
     expect(screen.getByText('还没有 Agent')).toBeTruthy();
     expect(screen.getByRole('button', { name: '管理 Agent' })).toHaveAttribute(
       'href',
-      '/settings/agents',
+      '/agents',
     );
   });
 
