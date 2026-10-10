@@ -12,6 +12,7 @@ import { RecordMultiPicker, RecordPicker } from './record-picker.js';
 import { CountryChoice, SubdivisionChoice } from './geography.js';
 import { Value } from './common.js';
 import { DateTimeInput } from './datetime-input.js';
+import { LongTextField } from './long-text-field.js';
 import {
   arrayValues,
   errorCode,
@@ -60,6 +61,7 @@ export function InlineField({
   onClose,
   placeholder,
   hint = false,
+  longText = 'inline',
 }: {
   entity: Entity;
   record: CrmRecord;
@@ -90,6 +92,10 @@ export function InlineField({
   // switched to: the website's pencil), and reports when editing ends.
   startOpen?: boolean;
   onClose?: () => void;
+  // A long text in a narrow column (a record's particulars) previews three
+  // lines and opens into a pop-up to read and edit (LongTextField), rather
+  // than unfolding and editing in place.
+  longText?: 'inline' | 'popover';
 }): ReactElement {
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
@@ -135,7 +141,8 @@ export function InlineField({
     return parsed.toISOString().slice(0, 10);
   };
 
-  const save = async (raw: unknown): Promise<void> => {
+  // Whether the value now stands as given (saved, or unchanged).
+  const save = async (raw: unknown): Promise<boolean> => {
     const next =
       field.type === 'boolean'
         ? raw === 'true'
@@ -152,11 +159,11 @@ export function InlineField({
         : toText(next) === toText(record[field.key]);
     if (same) {
       setEditing(false);
-      return;
+      return true;
     }
     if (field.required && (next === null || next === undefined)) {
       setError(text('requiredField'));
-      return;
+      return false;
     }
     setSaving(true);
     try {
@@ -169,8 +176,10 @@ export function InlineField({
       }
       setError('');
       setEditing(false);
+      return true;
     } catch (cause) {
       setError(text(`errors.${errorCode(cause).code}`, { defaultValue: '' }));
+      return false;
     } finally {
       setSaving(false);
     }
@@ -182,6 +191,17 @@ export function InlineField({
       ? 'font-heading text-xl font-semibold tracking-tight md:text-xl'
       : 'font-heading text-3xl font-semibold tracking-tight md:text-3xl';
   const readText = titled ? titleType : 'text-sm';
+  if (longText === 'popover' && field.type === 'textarea' && !titled)
+    return (
+      <LongTextField
+        value={toText(record[field.key])}
+        label={label}
+        editable={editable}
+        placeholder={placeholder ?? toText(text('emptyFill', { field: label }))}
+        error={error}
+        onSave={save}
+      />
+    );
   // A title's parts (a lead's name and company, a company and its deal)
   // flow as text, one run of words wrapping wherever the line is full, so
   // a title breaks inside a name rather than only between its parts. Its
@@ -303,7 +323,10 @@ export function InlineField({
       ref={boxRef}
       // A title's editor is as wide as its text, like the title it replaces,
       // and wraps only once it reaches the edge of the heading.
-      className={`rounded-md ring-2 ring-ring/40 ${titled ? 'min-w-0 max-w-full' : ''}`}
+      // No ring of its own: the control inside shows the focus, as lightly
+      // as the note box does (the primitives' focus ring is meant for a
+      // form, and doubled with a ring here it outweighed the value).
+      className={`rounded-md [&_:focus-visible]:border-ring/50! [&_:focus-visible]:ring-2! [&_:focus-visible]:ring-ring/10! ${titled ? 'min-w-0 max-w-full' : ''}`}
       // Saving on blur is the whole point, but focus moving between the parts of
       // one control (a select and its popup) must not count as leaving.
       onBlur={(event) => {

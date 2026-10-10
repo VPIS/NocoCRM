@@ -71,6 +71,15 @@ export function isSubdivision(country: string, code: string): boolean {
   return Boolean(entry && Object.hasOwn(entry.sub, code));
 }
 
+// A place's name as people shorten it: "浙江" for 浙江省, "Zhejiang" for
+// "Zhejiang Sheng".
+const strip = (name: string): string =>
+  name
+    .toLowerCase()
+    .replace(/(省|市|自治区|特别行政区|壮族|回族|维吾尔)/g, '')
+    .replace(/\s+(province|municipality|sheng|shi)$/u, '')
+    .trim();
+
 // A subdivision given by name rather than code — "江西省", "江西", "Jiangxi" —
 // resolved to its ISO code, or undefined when nothing matches. Model output
 // and imports name places the way people do, not by code.
@@ -80,12 +89,6 @@ export function subdivisionCode(
 ): string | undefined {
   const wanted = value.trim().toLowerCase();
   if (!wanted) return undefined;
-  const strip = (name: string): string =>
-    name
-      .toLowerCase()
-      .replace(/(省|市|自治区|特别行政区|壮族|回族|维吾尔)/g, '')
-      .replace(/\s+(province|municipality|sheng|shi)$/u, '')
-      .trim();
   for (const item of subdivisions(country)) {
     const names = [item.code, item.name, item.chineseName ?? ''];
     if (names.some((n) => n.toLowerCase() === wanted)) return item.code;
@@ -152,4 +155,72 @@ export function streetAddress(
   )
     parts.pop();
   return parts.join(', ').replace(separators, '');
+}
+
+// The provinces and countries whose name, in English or Chinese, contains
+// what was typed, for a record's region: a province with its country, a
+// country alone; those whose name starts with it first, at most `limit`.
+export interface PlaceMatch {
+  country: string;
+  state: string | null;
+  label: string;
+}
+export function searchPlaces(
+  query: string,
+  chinese: boolean,
+  limit = 10,
+): PlaceMatch[] {
+  const wanted = strip(query);
+  if (!wanted) return [];
+  const displays = {
+    en: new Intl.DisplayNames(['en'], { type: 'region' }),
+    'zh-CN': new Intl.DisplayNames(['zh-CN'], { type: 'region' }),
+  };
+  const names = (code: string, language: 'en' | 'zh-CN'): string => {
+    try {
+      return displays[language].of(code) ?? code;
+    } catch {
+      return code;
+    }
+  };
+  const ranked: { rank: number; match: PlaceMatch }[] = [];
+  const rank = (candidates: string[]): number => {
+    const bare = candidates.filter(Boolean).map(strip);
+    if (bare.some((n) => n.startsWith(wanted))) return 0;
+    if (bare.some((n) => n.includes(wanted))) return 1;
+    return -1;
+  };
+  for (const country of countryCodes) {
+    const countryName = names(country, chinese ? 'zh-CN' : 'en');
+    const countryRank = rank([
+      names(country, 'en'),
+      names(country, 'zh-CN'),
+      country,
+    ]);
+    if (countryRank >= 0)
+      ranked.push({
+        rank: countryRank,
+        match: { country, state: null, label: countryName },
+      });
+    for (const item of subdivisions(country)) {
+      const itemRank = rank([item.name, item.chineseName ?? '']);
+      if (itemRank < 0) continue;
+      const itemName = chinese ? (item.chineseName ?? item.name) : item.name;
+      ranked.push({
+        // A province ranks after a country of the same standing.
+        rank: itemRank + 0.5,
+        match: {
+          country,
+          state: item.code,
+          label: chinese
+            ? `${countryName} ${itemName}`
+            : `${itemName}, ${countryName}`,
+        },
+      });
+    }
+  }
+  return ranked
+    .sort((left, right) => left.rank - right.rank)
+    .slice(0, limit)
+    .map((entry) => entry.match);
 }

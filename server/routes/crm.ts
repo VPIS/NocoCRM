@@ -1,6 +1,6 @@
 import { statistics } from '../providers/crm/statistics.js';
 import { toText } from '../providers/crm/schema.js';
-import { subdivisions } from '../providers/crm/geography.js';
+import { searchPlaces, subdivisions } from '../providers/crm/geography.js';
 import { Readable } from 'node:stream';
 import { authenticationToken } from '@nocobase/app-plugin-authentication';
 import {
@@ -236,6 +236,15 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           c.get('actor'),
           c.req.param('agent'),
           object(await c.req.json()) as never,
+        ),
+      }),
+    );
+    // A record's region, searched by a province's or a country's name.
+    routes.get('/geography/search', (c) =>
+      c.json({
+        data: searchPlaces(
+          toText(c.req.query('q')),
+          c.get('actor').locale.startsWith('zh'),
         ),
       }),
     );

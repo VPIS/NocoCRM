@@ -221,7 +221,9 @@ describe('the company page', () => {
     expect(screen.queryByText(/ID: rec-1/)).toBeNull();
     for (const group of ['概况', '公司'])
       expect(screen.getByRole('heading', { name: group })).toBeTruthy();
-    expect(screen.getByText('地区')).toBeTruthy();
+    // The region and the street address are one row, the location.
+    expect(screen.getByText('地址')).toBeTruthy();
+    expect(screen.queryByText('地区')).toBeNull();
   });
 
   it('lists the leads it came from', () => {

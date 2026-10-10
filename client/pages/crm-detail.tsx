@@ -62,6 +62,7 @@ import {
 import { Button, buttonVariants } from '../components/ui/button.js';
 import { useFollowUpRequest } from '../components/crm/follow-up-request.js';
 import { FieldIcon } from '../components/crm/field-icons.js';
+import { LocationField } from '../components/crm/location-field.js';
 import { Spinner } from '../components/ui/spinner.js';
 import { LONG_TEXT_LIMIT } from '../../server/providers/crm/limits.js';
 import { Badge } from '../components/ui/badge.js';
@@ -252,17 +253,17 @@ const leadGroups = [
       'website',
       'industry',
       'employees',
-      'region',
-      'address',
+      'location',
       'companyDescription',
     ],
   ],
 ] as const;
 type LeadField = (typeof leadGroups)[number][1][number];
 // Under the Company heading its fields drop the word: "Name", not "Company
-// name". The region's three parts share one row.
+// name". The region's three parts and the street address share one row,
+// the location.
 const groupLabels: Partial<Record<LeadField, string>> = {
-  region: 'region',
+  location: 'location',
   company: 'fields.companyName',
   companyDescription: 'fields.companyIntro',
 };
@@ -384,8 +385,12 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       field={field(key)}
       editable={editable}
       lookup={names}
-      label={text(fieldLabelKey('leads', key))}
+      // As its row names it (the introduction under the Company heading),
+      // which the pop-up a long text opens into is titled with too.
+      label={text(groupLabels[key as LeadField] ?? fieldLabelKey('leads', key))}
       hint
+      // A long text previews here and opens beside the column.
+      longText='popover'
     />
   );
   const fieldRow = (key: LeadField): ReactElement => (
@@ -394,19 +399,14 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       field={key}
       label={text(groupLabels[key] ?? fieldLabelKey('leads', key))}
     >
-      {key === 'region' ? (
-        <div className='flex flex-wrap items-center'>
-          {['country', 'state', 'city'].map((part, index) => (
-            <div className='flex min-w-0 items-center' key={part}>
-              {index > 0 && (
-                <span aria-hidden className='text-muted-foreground/60'>
-                  /
-                </span>
-              )}
-              {inline(part)}
-            </div>
-          ))}
-        </div>
+      {key === 'location' ? (
+        <LocationField
+          entity='leads'
+          record={record}
+          editable={editable}
+          label={text('location')}
+          countries={field('country').options ?? []}
+        />
       ) : key === 'website' ? (
         <WebsiteField
           record={record}
@@ -896,7 +896,7 @@ export function DetailColumns({
             {/* In a drawer the frame's own padding already sets it off from
                 the drawer's bar, so the header adds none above. */}
             <header
-              className={`@3xl:pr-2 @3xl:pb-3 @3xl:pl-8 md:@3xl:pr-3 md:@3xl:pl-12 ${
+              className={`@3xl:pr-2 @3xl:pb-3 @3xl:pl-10 md:@3xl:pr-3 md:@3xl:pl-16 ${
                 inDrawer ? 'pt-0' : 'pt-5 @3xl:pt-4'
               }`}
             >
@@ -939,23 +939,28 @@ export function DetailColumns({
               {/* Side by side the column scrolls as one: the intro goes up
                   and away, and the tabs stop under the header and stay, the
                   content passing beneath them. Stacked, the page scrolls and
-                  the tabs stick to its top just the same. */}
+                  the tabs stick to its top just the same. Its scrollbar's room
+                  is kept whether or not a tab scrolls, so switching tabs never
+                  narrows the column and re-wraps the intro. */}
               <section
-                className='flex min-w-0 flex-col @3xl:min-h-0 @3xl:overflow-y-auto @3xl:pb-24 scroll-quiet'
+                className='flex min-w-0 flex-col @3xl:min-h-0 @3xl:overflow-y-auto @3xl:pb-24 @3xl:[scrollbar-gutter:stable] scroll-quiet'
                 onScroll={revealScrollbar}
               >
                 {intro ? (
-                  <div className='pb-7 @3xl:pr-10 @3xl:pl-8 md:@3xl:pr-12 md:@3xl:pl-12'>
+                  <div className='pb-7 @3xl:pr-12 @3xl:pl-10 md:@3xl:pr-16 md:@3xl:pl-16'>
                     {intro}
                   </div>
                 ) : null}
                 {/* The gap under the tabs is the bar's own, on the page's
                     background, so content scrolling up passes under it
                     rather than meeting the tabs' edge. */}
-                <div className='sticky top-0 z-10 flex flex-wrap items-center bg-background pt-1 pb-4 @3xl:pt-0 @3xl:pr-10 @3xl:pl-8 md:@3xl:pr-12 md:@3xl:pl-12'>
+                <div className='sticky top-0 z-10 flex flex-wrap items-center bg-background pt-1 pb-4 @3xl:pt-0 @3xl:pr-12 @3xl:pl-10 md:@3xl:pr-16 md:@3xl:pl-16'>
                   {tabBar}
                 </div>
-                <div className='min-w-0 @3xl:pr-10 @3xl:pl-8 md:@3xl:pr-12 md:@3xl:pl-12'>
+                {/* At least the column's height, so a short tab leaves the
+                    column where it was scrolled to rather than snapping the
+                    intro back into view. */}
+                <div className='min-w-0 @3xl:min-h-full @3xl:pr-12 @3xl:pl-10 md:@3xl:pr-16 md:@3xl:pl-16'>
                   {right}
                 </div>
               </section>

@@ -676,6 +676,14 @@ const wording = {
     company: ['Company', '公司'],
   },
   region: ['Region', '地区'],
+  // The region and the street address in one row.
+  location: ['Location', '地址'],
+  // The region's editor: a province or a country found by its name.
+  regionSearch: ['Search a province or country…', '搜索省份或国家…'],
+  regionNoMatch: [
+    'No province or country by that name',
+    '没有找到这个省份或国家',
+  ],
   loadMore: ['Load more', '加载更多'],
   justNow: ['just now', '刚刚'],
   // The line heading a record's tab, as the Mail tab's does: what the tab

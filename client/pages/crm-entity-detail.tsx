@@ -92,6 +92,7 @@ import {
   EvaluationStatus,
 } from '../components/crm/lead-evaluation.js';
 import { useFollowUpRequest } from '../components/crm/follow-up-request.js';
+import { LocationField } from '../components/crm/location-field.js';
 import { ReviewStatus } from '../components/crm/approval-review.js';
 import { Choice, RecordForm } from '../components/crm/form.js';
 import { StageField } from '../components/crm/reasons.js';
@@ -299,6 +300,8 @@ export default function EntityDetail({
       }
       label={text(fieldLabelKey(entity, key))}
       hint
+      // A long text previews here and opens beside the column.
+      longText='popover'
       onSave={
         entity === 'opportunities' && key === 'companyId'
           ? changeCompany
@@ -854,21 +857,16 @@ export default function EntityDetail({
       {inline(key)}
     </InfoRow>
   );
-  // Country / state / city on one row, each edited by itself.
-  const regionRow = (
-    <InfoRow key='region' field='region' label={text('region')}>
-      <div className='flex flex-wrap items-center'>
-        {['country', 'state', 'city'].map((part, index) => (
-          <div className='flex min-w-0 items-center' key={part}>
-            {index > 0 && (
-              <span aria-hidden className='text-muted-foreground/60'>
-                /
-              </span>
-            )}
-            {inline(part)}
-          </div>
-        ))}
-      </div>
+  // Country, state, city and street address on one row, the location.
+  const locationRow = (
+    <InfoRow key='location' field='location' label={text('location')}>
+      <LocationField
+        entity={entity}
+        record={record}
+        editable={editable}
+        label={text('location')}
+        countries={field('country').options ?? []}
+      />
     </InfoRow>
   );
   // The leads the record came from, each opening in the drawer: the one
@@ -1168,8 +1166,8 @@ export default function EntityDetail({
             />
           </InfoRow>
           {['industry', 'employees'].map(row)}
-          {regionRow}
-          {['address', 'description'].map(row)}
+          {locationRow}
+          {row('description')}
           {convertedRow}
         </InfoGroup>
       </>,

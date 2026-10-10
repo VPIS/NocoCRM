@@ -49,6 +49,7 @@ const FIELD_ICONS: Record<string, LucideIcon> = {
   industry: Factory,
   employees: UsersRound,
   region: MapPin,
+  location: MapPin,
   address: MapPinned,
   companyDescription: AlignLeft,
   description: AlignLeft,
