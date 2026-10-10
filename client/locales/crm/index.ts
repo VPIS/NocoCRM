@@ -90,7 +90,10 @@ const wording = {
         'Ask anything about this opportunity…',
         '关于此商机，问任何问题…',
       ],
-      companies: ['Ask anything about this company…', '关于此公司，问任何问题…'],
+      companies: [
+        'Ask anything about this company…',
+        '关于此公司，问任何问题…',
+      ],
       contacts: [
         'Ask anything about this contact…',
         '关于此联系人，问任何问题…',
@@ -741,6 +744,10 @@ const wording = {
       noSubject: ['(No subject)', '（无主题）'],
       count: ['{{count}} messages', '{{count}} 封'],
       countOne: ['1 message', '1 封'],
+      // Mail from before the record existed, as one entry.
+      before: ['Mail from before this record', '记录创建前的往来邮件'],
+      conversations: ['{{count}} conversations', '{{count}} 个会话'],
+      conversationsOne: ['1 conversation', '1 个会话'],
       lastFrom: ['last from {{name}}', '最后由 {{name}} 回复'],
     },
     // One of a deal's approvals, read after the person's name.

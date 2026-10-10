@@ -2239,6 +2239,80 @@ describe('CRM API security and domain rules', () => {
       (await service.historyOf(actor('rep'), 'leads', id)).data,
     ).toHaveLength(data.length);
   });
+  it('folds the mail from before a record existed into one entry at the end of its timeline', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Mail history lead',
+    });
+    const id = toText(lead.id);
+    const born = Date.parse(toText(lead.createdAt));
+    const mail = (key: string, offsetMs: number): Record<string, unknown> => {
+      const at = new Date(born + offsetMs).toISOString();
+      return {
+        id: `mail-${key}`,
+        entity: 'leads',
+        recordId: id,
+        actorId: 'rep',
+        action: 'mail',
+        source: 'mail',
+        changes: JSON.stringify({ subject: key, count: 1 }),
+        sourceKey: `box:${key}`,
+        occurredAt: at,
+        createdAt: at,
+      };
+    };
+    await database
+      .query()
+      .insertInto('crmHistory')
+      .values([
+        mail('older', -7 * 86_400_000),
+        mail('old', -3_600_000),
+        mail('after', 60_000),
+      ])
+      .execute();
+    const { data, total } = await service.historyOf(actor('rep'), 'leads', id);
+    // The mail after the record reads as its own entry; the two before it
+    // are one entry, last, newest first inside.
+    expect(data.map((entry) => entry.action)).toEqual([
+      'mail',
+      'created',
+      'mailBefore',
+    ]);
+    expect(total).toBe(3);
+    const before = data[2].changes as {
+      count: number;
+      conversations: { id: string; sourceKey: string }[];
+    };
+    expect(before.count).toBe(2);
+    expect(before.conversations.map((c) => c.id)).toEqual([
+      'mail-old',
+      'mail-older',
+    ]);
+    expect(before.conversations[0].sourceKey).toBe('box:old');
+    // Paged, it comes on the page where the list ends, and only there.
+    const first = await service.historyOf(actor('rep'), 'leads', id, {
+      pageSize: 2,
+    });
+    expect(first.data.map((entry) => entry.action)).toEqual([
+      'mail',
+      'created',
+    ]);
+    const second = await service.historyOf(actor('rep'), 'leads', id, {
+      page: 2,
+      pageSize: 2,
+    });
+    expect(second.data.map((entry) => entry.action)).toEqual(['mailBefore']);
+    // The notes alone carry none of it.
+    expect(
+      (await service.historyOf(actor('rep'), 'leads', id, { action: 'note' }))
+        .data,
+    ).toEqual([]);
+    // Its mail goes, so the mail timeline's tests read only their own.
+    await database
+      .query()
+      .deleteFrom('crmHistory')
+      .where('id', 'in', ['mail-older', 'mail-old', 'mail-after'])
+      .execute();
+  });
   it("summarizes records by field and period within the reader's scope, per currency", async () => {
     const company = await service.save(actor('rep'), 'companies', {
       name: 'Summary company',
@@ -4602,10 +4676,8 @@ describe('CRM opportunity follow-up', () => {
       // The skill, the deal, its people and what came of its tasks.
       // The company's particulars are empty: it is looked up
       // first, then the follow-up reads that research.
-      expect(prompts[0]).toContain(
-        "First look up this opportunity's company",
-      );
-      expect(prompts.at(-1)).toContain("Web research on the company");
+      expect(prompts[0]).toContain("First look up this opportunity's company");
+      expect(prompts.at(-1)).toContain('Web research on the company');
       expect(prompts.at(-1)).toContain('技能正文');
       expect(prompts.at(-1)).toContain('跟进报工系统');
       expect(prompts.at(-1)).toContain('决策');
@@ -8418,6 +8490,16 @@ describe('opportunity signals', () => {
 });
 
 describe('mail in the timeline', () => {
+  // A record's mail entries, those from before it existed included, which
+  // its timeline holds inside one earlier-mail entry (`mailBefore`).
+  const mailIn = (entries: readonly Row[]): Row[] =>
+    entries.flatMap((entry) =>
+      entry.action === 'mailBefore'
+        ? (entry.changes as { conversations: Row[] }).conversations
+        : entry.action === 'mail'
+          ? [entry]
+          : [],
+    );
   it("reads back a mailbox's history once its first synchronization completes, after a pass that saw none of it", async () => {
     const now = new Date();
     const lead = await service.save(actor('rep'), 'leads', {
@@ -8447,10 +8529,9 @@ describe('mail in the timeline', () => {
       const later = new Date(now.getTime() + 60_000);
       expect(await timeline.syncUser('other', later)).toBe(1);
       expect(
-        (await service.historyOf(actor('other'), 'leads', lead.id)).data.some(
-          (entry) => entry.action === 'mail',
-        ),
-      ).toBe(true);
+        mailIn((await service.historyOf(actor('other'), 'leads', lead.id)).data)
+          .length,
+      ).toBeGreaterThan(0);
       // And only once: the next pass reads from where this one stopped.
       expect(
         await timeline.syncUser('other', new Date(later.getTime() + 60_000)),
@@ -8580,7 +8661,7 @@ describe('mail in the timeline', () => {
       // A colleague who may read the lead sees the conversation on its
       // timeline, as a summary.
       const feed = await service.historyOf(actor('manager'), 'leads', lead.id);
-      expect(feed.data.find((e) => e.action === 'mail')).toMatchObject({
+      expect(mailIn(feed.data)[0]).toMatchObject({
         sourceKey: 'mailbox-rep:lead-thread',
         changes: { subject: '询价', count: 1 },
       });

@@ -1995,6 +1995,107 @@ function MailEvent({
   );
 }
 
+// The mail from before the record existed (historyOf's `mailBefore`): one
+// entry at the end of the timeline, closed, saying how many conversations
+// it holds; opened, each conversation on a line of its own as a mail entry
+// reads, under whose mailbox it is.
+function EarlierMail({
+  event,
+  last,
+  open,
+  onToggle,
+  onOpenMail,
+  now,
+  timeZone,
+}: {
+  event: Data;
+  last: boolean;
+  open: boolean;
+  onToggle: () => void;
+  onOpenMail?: (sourceKey: string) => void;
+  now: number;
+  timeZone: string;
+}): ReactElement {
+  const { text, language } = useCrmText();
+  const { data: meta } = useMetadata();
+  const changes = (event.changes ?? {}) as Data;
+  const count = Number(changes.count) || 0;
+  const conversations = (
+    Array.isArray(changes.conversations) ? changes.conversations : []
+  ) as Data[];
+  const ago = (at: unknown): ReactElement => (
+    <time
+      dateTime={toText(at)}
+      title={localDate(at, language, timeZone)}
+      className='shrink-0 self-start text-xs leading-[26px] text-muted-foreground/80 tabular-nums'
+    >
+      {relativeTime(at, language, now, text('justNow'))}
+    </time>
+  );
+  return (
+    <li
+      id={`feed-${toText(event.id)}`}
+      className='group/entry relative flex scroll-mt-24 gap-3'
+    >
+      <div className='flex w-5 shrink-0 flex-col items-center'>
+        <span className='flex h-[26px] items-center justify-center'>
+          <Mail className='size-3.5 text-muted-foreground' />
+        </span>
+        {!last && <span className='min-h-3 w-px flex-1 bg-border/50' />}
+      </div>
+      <div className='min-w-0 flex-1 pb-3'>
+        <div className='flex min-h-[26px] items-center gap-3 text-sm'>
+          <span className='flex min-w-0 flex-1 items-center gap-x-1.5 overflow-hidden whitespace-nowrap'>
+            <span className='min-w-0 truncate text-muted-foreground'>
+              {text('feed.mail.before')}
+            </span>
+            <span className='shrink-0'>
+              {count === 1
+                ? text('feed.mail.conversationsOne')
+                : text('feed.mail.conversations', { count })}
+            </span>
+            {/* The same round toggle an AI entry opens with. */}
+            <Button
+              size='icon-xs'
+              variant='outline'
+              className='rounded-full'
+              aria-expanded={open}
+              aria-label={text(open ? 'collapse' : 'expand')}
+              onClick={onToggle}
+            >
+              <ChevronDown
+                className={`transition-transform ${open ? 'rotate-180' : ''}`}
+              />
+            </Button>
+          </span>
+          {ago(event.createdAt)}
+        </div>
+        {open ? (
+          <ul className='mt-1 grid gap-0.5'>
+            {conversations.map((conversation) => (
+              <li
+                key={toText(conversation.id)}
+                className='flex min-h-[26px] items-center gap-3 text-sm'
+              >
+                <span className='flex min-w-0 flex-1 items-center gap-x-1.5 overflow-hidden whitespace-nowrap'>
+                  <span className='shrink-0 font-semibold text-foreground'>
+                    {
+                      meta?.users.find((u) => u.id === conversation.actorId)
+                        ?.name
+                    }
+                  </span>
+                  <MailEvent event={conversation} onOpen={onOpenMail} />
+                </span>
+                {ago(conversation.createdAt)}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
 function TaskEvent({
   event,
   open,
@@ -2425,6 +2526,19 @@ export function HistoryFeed({
                         : filesOnly(event)
                           ? Paperclip
                           : (eventIcons[toText(event.action)] ?? PencilLine);
+                  if (event.action === 'mailBefore')
+                    return (
+                      <EarlierMail
+                        key={key}
+                        event={event}
+                        last={index === events.length - 1}
+                        open={isOpen(key)}
+                        onToggle={() => toggle(key)}
+                        onOpenMail={onOpenMail}
+                        now={now}
+                        timeZone={timeZone}
+                      />
+                    );
                   return (
                     <li
                       id={`feed-${key}`}

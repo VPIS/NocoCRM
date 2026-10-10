@@ -113,6 +113,8 @@ export function searchWords(text: string): string[] {
 
 // A detail page's related lists and history come this many at a time.
 export const RELATED_PAGE = 20;
+// The conversations an entry of mail from before a record existed lists.
+const MAIL_BEFORE_SHOWN = 200;
 export interface ListResult {
   data: CrmRecord[];
   total: number;
@@ -775,6 +777,15 @@ export class CrmService {
     } = {},
   ): Promise<{ data: Row[]; total: number; page: number; pageSize: number }> {
     const subject = await this.get(actor, entity, id);
+    // Mail from before the record existed (mail-timeline.ts reaches 180
+    // days back) is one entry at the end of its story, `mailBefore`, its
+    // conversations inside, rather than one entry per conversation, under
+    // which a customer's long correspondence would bury the record's own.
+    const born = Date.parse(toText(subject.createdAt ?? ''));
+    const createdAt = Number.isNaN(born)
+      ? undefined
+      : new Date(born).toISOString();
+    const foldsMail = Boolean(createdAt) && options.action !== 'note';
     // An approval's AI review is its approver's working draft: it reads
     // with the approver's access (precedents on companies the applicant may
     // not see) and leans on a decision not yet made, so no one else reads it.
@@ -832,7 +843,18 @@ export class CrmService {
       );
     // The record's own entries, and those of its tasks that tell.
     const ofRecord = (eb: ExpressionBuilder): Expression<SqlBool> => {
-      const own = eb.and([eb('entity', '=', entity), eb('recordId', '=', id)]);
+      const own = eb.and([
+        eb('entity', '=', entity),
+        eb('recordId', '=', id),
+        ...(foldsMail
+          ? [
+              eb.or([
+                eb('action', '!=', 'mail'),
+                eb('createdAt', '>=', createdAt),
+              ]),
+            ]
+          : []),
+      ]);
       const linked = [
         ...(taskIds.length
           ? [
@@ -915,7 +937,25 @@ export class CrmService {
         .offset((page - 1) * pageSize)
         .execute();
     }
-    const data = rows.map((event) =>
+    // The earlier mail, newest first, unless the reader filtered to the
+    // AI's or people's entries, which leave mail out anyway.
+    const earlier =
+      foldsMail && !options.source
+        ? await query
+            .selectFrom('crmHistory')
+            .selectAll()
+            .where('entity', '=', entity)
+            .where('recordId', '=', id)
+            .where('action', '=', 'mail')
+            .where('createdAt', '<', createdAt!)
+            .orderBy('createdAt', 'desc')
+            .orderBy('id', 'asc')
+            .execute()
+        : [];
+    // It comes after every other entry: on the page where the list ends.
+    const position = total;
+    if (earlier.length) total += 1;
+    const data: Row[] = rows.map((event) =>
       // One of the deal's approvals changing status: the approval as it now
       // reads, and its decision comment once decided.
       event.entity === 'approvals' && entity !== 'approvals'
@@ -1030,6 +1070,33 @@ export class CrmService {
                   : { ai: null }),
               },
     );
+    if (
+      earlier.length &&
+      position >= (page - 1) * pageSize &&
+      position < page * pageSize
+    )
+      data.push({
+        id: `mailBefore:${id}`,
+        entity,
+        recordId: id,
+        actorId: null,
+        action: 'mailBefore',
+        source: 'mail',
+        // When the latest of them took place.
+        createdAt: earlier[0].createdAt,
+        changes: {
+          count: earlier.length,
+          conversations: earlier.slice(0, MAIL_BEFORE_SHOWN).map((row) => ({
+            id: row.id,
+            actorId: row.actorId,
+            sourceKey: row.sourceKey ?? null,
+            createdAt: row.createdAt,
+            changes: object(jsonValue(row.changes) ?? {}),
+          })),
+        },
+        previous: null,
+        ai: null,
+      });
     return { data, total, page, pageSize };
   }
   // The record with the first page of its history and of each related list;
