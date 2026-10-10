@@ -1544,8 +1544,6 @@ const wording = {
   },
   decisions: {
     empty: ['Nothing is waiting on you.', '没有等你处理的事。'],
-    openKind: ['Open {{kind}}', '打开{{kind}}'],
-    evaluatedAt: ['Suggested', '建议时间'],
     handled: ['Handled', '已处理'],
   },
   settings: ['System settings', '系统设置'],

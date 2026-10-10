@@ -59,6 +59,11 @@ vi.mock('../../client/components/crm/lead-evaluation.js', () => ({
     <p>panel {entry.id}</p>
   ),
 }));
+// The detail pane is the record's left column opened at the AI's card; here
+// it names the card it was opened at.
+vi.mock('../../client/pages/crm-detail.js', () => ({
+  RecordPane: ({ focus }: { focus: string }) => <p>panel {focus}</p>,
+}));
 vi.mock('../../client/components/crm/approval-review.js', () => ({
   ReviewPanel: ({ entry }: { entry: { id: string } }) => (
     <p>review {entry.id}</p>

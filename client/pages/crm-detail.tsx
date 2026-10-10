@@ -203,6 +203,41 @@ export default function CrmDetailPage(): ReactElement {
   );
 }
 
+// A record's left column alone (its heading, actions and tabs, without the
+// particulars), drawn as the drawer draws a record and opened on its
+// timeline at `focus`: the inbox's AI suggestions pane, where the AI card
+// is handled in its record's story. Links in it open the drawer of the page
+// around it.
+export function RecordPane({
+  entity,
+  id,
+  focus,
+}: {
+  entity: Entity;
+  id: string;
+  focus: string;
+}): ReactElement {
+  const page = useRecordDrawer();
+  const noop = (): void => undefined;
+  return (
+    <RecordDrawerContext.Provider
+      value={{
+        open: page?.open ?? noop,
+        close: page?.close ?? noop,
+        inDrawer: true,
+        bare: true,
+        focus,
+      }}
+    >
+      {entity === 'leads' ? (
+        <LeadDetail id={id} />
+      ) : (
+        <EntityDetail entity={entity} id={id} />
+      )}
+    </RecordDrawerContext.Provider>
+  );
+}
+
 // The drawer a detail page or the workspace opens records in: the same
 // detail component as the full page, over the page the reader came from.
 // Links inside it replace what it shows (the back button steps back through
@@ -916,7 +951,10 @@ export function DetailColumns({
 }): ReactElement {
   // In the drawer the page is already on the popover's white, with its own
   // padding: nothing to reach past.
-  const inDrawer = useRecordDrawer()?.inDrawer ?? false;
+  const drawer = useRecordDrawer();
+  const inDrawer = drawer?.inDrawer ?? false;
+  // The inbox's pane draws the left column alone.
+  const bare = drawer?.bare ?? false;
   // The left column's sides: the page's room, and a drawer's narrower
   // room, whose own padding already sets it off.
   const sidePad = inDrawer
@@ -988,7 +1026,13 @@ export function DetailColumns({
             }`}
             onScroll={revealScrollbar}
           >
-            <div className='grid gap-6 @3xl:min-h-0 @3xl:flex-1 @3xl:grid-cols-[minmax(0,1fr)_22rem] @3xl:grid-rows-[auto_minmax(0,1fr)] @3xl:gap-0 md:@3xl:grid-cols-[minmax(0,1fr)_23rem]'>
+            <div
+              className={`grid gap-6 @3xl:min-h-0 @3xl:flex-1 @3xl:grid-rows-[auto_minmax(0,1fr)] @3xl:gap-0 ${
+                bare
+                  ? '@3xl:grid-cols-[minmax(0,1fr)]'
+                  : '@3xl:grid-cols-[minmax(0,1fr)_22rem] md:@3xl:grid-cols-[minmax(0,1fr)_23rem]'
+              }`}
+            >
               {/* The record's header over the left column, the particulars
                     beside it reaching to the top: the heading, and under it,
                     from the left, the AI's latest suggestion and the actions,
@@ -1033,17 +1077,19 @@ export function DetailColumns({
                   6rem of room so its last row scrolls above the assistant's
                   dock. The rows keep 8px of their own on each side for an
                   inline editor's hover fill. */}
-              <section
-                className={`flex min-w-0 flex-col gap-3 @3xl:col-start-2 @3xl:row-span-2 @3xl:row-start-1 @3xl:overflow-y-auto @3xl:pb-24 scroll-quiet ${
-                  inDrawer ? '@3xl:mr-4' : '@3xl:mr-2 @3xl:pt-4 md:@3xl:mr-3'
-                }`}
-                onScroll={revealScrollbar}
-              >
-                {recordId ? (
-                  <WaitingPlans entity={entity} recordId={recordId} />
-                ) : null}
-                {left}
-              </section>
+              {bare ? null : (
+                <section
+                  className={`flex min-w-0 flex-col gap-3 @3xl:col-start-2 @3xl:row-span-2 @3xl:row-start-1 @3xl:overflow-y-auto @3xl:pb-24 scroll-quiet ${
+                    inDrawer ? '@3xl:mr-4' : '@3xl:mr-2 @3xl:pt-4 md:@3xl:mr-3'
+                  }`}
+                  onScroll={revealScrollbar}
+                >
+                  {recordId ? (
+                    <WaitingPlans entity={entity} recordId={recordId} />
+                  ) : null}
+                  {left}
+                </section>
+              )}
               {/* The tabs head the left column: stacked, they stay in view as
                   the page scrolls; side by side, their content scrolls below
                   them. */}
@@ -2834,7 +2880,8 @@ export function HistoryFeed({
   const { text, language } = useCrmText();
   const refresh = useRefresh();
   const [searchParams] = useSearchParams();
-  const focus = focusId ?? searchParams.get('focus') ?? undefined;
+  const paneFocus = useRecordDrawer()?.focus;
+  const focus = focusId ?? paneFocus ?? searchParams.get('focus') ?? undefined;
   const { data: meta } = useMetadata();
   // The evaluations opened into their records.
   const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set());

@@ -26,6 +26,13 @@ export interface RecordDrawerApi {
   // True for the content rendered inside the drawer, which after deleting
   // its record closes instead of leaving the page.
   inDrawer: boolean;
+  // The record's left column alone, without its particulars: the inbox's
+  // AI suggestions pane (RecordPane in pages/crm-detail.tsx), which is drawn
+  // as the drawer is otherwise.
+  bare?: boolean;
+  // The timeline entry to bring into view and open, where no address names
+  // one (the pane's AI card).
+  focus?: string;
 }
 
 export const RecordDrawerContext = createContext<RecordDrawerApi | undefined>(

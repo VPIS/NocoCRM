@@ -1,34 +1,27 @@
 import { useTranslation } from '@nocobase/i18n/client';
-import { ArrowLeft, ArrowUpRight, Sparkles } from 'lucide-react';
-import { useState, type ReactElement } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { ArrowLeft, Maximize2, Sparkles } from 'lucide-react';
+import { lazy, Suspense, useState, type ReactElement } from 'react';
+import { Link } from 'react-router';
 import { Badge } from '../ui/badge.js';
 import { Button } from '../ui/button.js';
 import { ErrorNotice, Loading } from './common.js';
+import { VerdictBadge } from './lead-evaluation.js';
+import { relativeTime, toText, useCrmText, type Entity } from './api.js';
 import {
-  VerdictBadge,
-  VerdictPanel,
-  type EvaluationEntry,
-} from './lead-evaluation.js';
-import { ReviewPanel, type ReviewEntry } from './approval-review.js';
-import { PrepPanel, type PrepEntry } from './task-preparation.js';
-import { isEndOfDay } from '../../../server/providers/crm/zone-time.js';
-import {
-  relativeTime,
-  toText,
-  useCrmText,
-  useMetadata,
-  useRefresh,
-  type CrmRecord,
-} from './api.js';
-import {
-  DECISION_PARAM,
   isDecided,
   recordOf,
   useDecisions,
   useWording,
   type DecisionItem,
 } from './inbox-decisions-data.js';
+
+// The record's pane, from the detail pages, loaded with the first
+// suggestion shown so the inbox's own code stays small.
+const RecordPane = lazy(() =>
+  import('../../pages/crm-detail.js').then((module) => ({
+    default: module.RecordPane,
+  })),
+);
 
 // The inbox's AI suggestions as they are drawn: the list in its left column
 // and the chosen one in its detail pane (inbox-decisions.tsx registers them).
@@ -198,7 +191,9 @@ export function DecisionList({
 }
 
 // The chosen suggestion in the inbox's detail pane, or the first while none
-// is chosen.
+// is chosen: its record's left column (heading, actions and tabs, without
+// the particulars), opened on the timeline at the AI's card, which is
+// handled there as on the record's page. Its code loads with the pane.
 export function DecisionDetail({
   id,
   onBack,
@@ -208,9 +203,7 @@ export function DecisionDetail({
 }): ReactElement {
   const { text } = useCrmText();
   const { t } = useTranslation();
-  const [params, setParams] = useSearchParams();
   const query = useDecisions();
-  const wording = useWording();
   const items = query.data?.data ?? [];
   const current =
     items.find((entry) => entry.id === id) ??
@@ -225,218 +218,45 @@ export function DecisionDetail({
         {text('decisions.empty')}
       </p>
     );
+  const record = recordOf(current);
+  const entity = current.entity as Entity;
   return (
-    // Container query: the inbox's list and the AI panel narrow this pane.
-    <div className='@container p-4 md:p-6'>
-      {/* Narrow, the way back to the list, as the inbox's own items have. */}
-      <button
-        type='button'
-        onClick={onBack}
-        className='mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground lg:hidden'
-      >
-        <ArrowLeft className='size-4' />
-        {t('navigation.back')}
-      </button>
-      <DecisionEntry
-        entry={current}
-        onRevised={(next) => {
-          // The card redone in place: its successor is the one shown.
-          const updated = new URLSearchParams(params);
-          updated.set(DECISION_PARAM, next.id);
-          setParams(updated, { replace: true });
-        }}
-        name={wording.nameOf(current)}
-        owner={wording.ownerOf(current)}
-        when={wording.when}
-      />
-    </div>
-  );
-}
-
-// The heading of the detail: the name, then a line of labelled facts, each
-// set apart from the one before by a rule.
-function DetailHeading({
-  name,
-  facts,
-  action,
-}: {
-  name: string;
-  facts: [label: string, value: string][];
-  action: ReactElement;
-}): ReactElement {
-  const { text, language } = useCrmText();
-  const colon = language.startsWith('zh') ? '：' : ':';
-  return (
-    <div className='mb-4 flex items-start justify-between gap-4'>
-      {/* Takes the width the action leaves, so the facts wrap only when
-          that is full, not at the name's width. */}
-      <div className='grid min-w-0 flex-1 gap-1'>
-        <h2 className='font-heading text-xl leading-tight font-semibold break-words @3xl:truncate'>
-          {name}
-        </h2>
-        {/* Wide, one line of facts; narrow, a row each, labels and values
-            in two columns. */}
-        <dl className='mt-1 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm @3xl:flex @3xl:flex-wrap @3xl:items-center'>
-          {facts
-            .filter(([, value]) => value)
-            .map(([label, value], index) => (
-              <div
-                key={label}
-                className='contents @3xl:flex @3xl:min-w-0 @3xl:items-center @3xl:gap-3'
-              >
-                {/* Narrow, the facts wrap and a rule would start a line;
-                    their labels set them apart. */}
-                {index ? (
-                  <span
-                    aria-hidden
-                    className='hidden h-3 w-px bg-border @3xl:block'
-                  />
-                ) : null}
-                <div className='contents @3xl:flex @3xl:min-w-0 @3xl:gap-1'>
-                  <dt className='shrink-0 text-muted-foreground'>
-                    {text(label)}
-                    {colon}
-                  </dt>
-                  <dd className='min-w-0 truncate tabular-nums @3xl:max-w-72'>
-                    {value}
-                  </dd>
-                </div>
-              </div>
-            ))}
-        </dl>
+    <div className='flex min-h-full flex-col'>
+      {/* The way back to the list, narrow, as the inbox's own items have,
+          and the record's full page, with its particulars. */}
+      <div className='flex items-center gap-2 px-4 pt-3'>
+        <button
+          type='button'
+          onClick={onBack}
+          className='inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground lg:hidden'
+        >
+          <ArrowLeft className='size-4' />
+          {t('navigation.back')}
+        </button>
+        <Button
+          className='ml-auto'
+          variant='ghost'
+          size='sm'
+          nativeButton={false}
+          render={
+            <Link
+              to={`/crm/${entity}/${record.id}/history?focus=${current.id}`}
+            />
+          }
+        >
+          <Maximize2 />
+          {text('openFullPage')}
+        </Button>
       </div>
-      {action}
+      <Suspense fallback={<Loading />}>
+        {/* A new pane for each suggestion: its timeline, scrolled to it. */}
+        <RecordPane
+          key={current.id}
+          entity={entity}
+          id={record.id}
+          focus={current.id}
+        />
+      </Suspense>
     </div>
-  );
-}
-
-// A lead's or a deal's follow-up, an approval's review or a task's
-// preparation, decided here as on
-// its record's page, or opened in its timeline, where it is brought into view
-// and marked.
-function DecisionEntry({
-  entry,
-  name,
-  owner,
-  when,
-  onRevised,
-}: {
-  entry: DecisionItem;
-  onRevised: (entry: EvaluationEntry) => void;
-  name: string;
-  owner: string;
-  when: (at: string) => string;
-}): ReactElement {
-  const { text } = useCrmText();
-  const { data: meta } = useMetadata();
-  const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
-  const refresh = useRefresh();
-  const open = (path: string) => (
-    <Button
-      size='sm'
-      variant='outline'
-      nativeButton={false}
-      render={<Link to={path} />}
-    >
-      <ArrowUpRight />
-      {/* What it opens, by name: 打开任务, Open lead. */}
-      {text('decisions.openKind', { kind: text(`entity.${entry.entity}`) })}
-    </Button>
-  );
-  // A task's preparation: written into the task here by its owner.
-  if (entry.entity === 'tasks' && entry.task)
-    return (
-      <>
-        <DetailHeading
-          name={name}
-          facts={[
-            [
-              'fields.dueAt',
-              // A date alone reads as the date, not its day's last minute.
-              entry.task.dueAt
-                ? isEndOfDay(new Date(entry.task.dueAt), timeZone)
-                  ? when(entry.task.dueAt).slice(0, 10)
-                  : when(entry.task.dueAt)
-                : '',
-            ],
-            ['decisions.evaluatedAt', when(entry.createdAt)],
-          ]}
-          action={open(`/crm/tasks/${entry.task.id}/history?focus=${entry.id}`)}
-        />
-        <PrepPanel
-          key={entry.id}
-          entry={entry as unknown as PrepEntry}
-          task={entry.task as unknown as CrmRecord}
-          onChanged={async () => {
-            await refresh();
-          }}
-        />
-      </>
-    );
-  // An approval's review: decided here by its approver.
-  if (entry.entity === 'approvals' && entry.approval)
-    return (
-      <>
-        <DetailHeading
-          name={name}
-          facts={[
-            ['fields.opportunityId', toText(entry.approval.opportunity)],
-            ['fields.topic', toText(text(`options.${entry.approval.topic}`))],
-            ['approvalReview.applicant', owner],
-            ['decisions.evaluatedAt', when(entry.createdAt)],
-          ]}
-          action={open(
-            `/crm/approvals/${entry.approval.id}/history?focus=${entry.id}`,
-          )}
-        />
-        <ReviewPanel
-          key={entry.id}
-          entry={entry as unknown as ReviewEntry}
-          approvalId={entry.approval.id}
-          approvalName={name}
-          onRevised={(next) => onRevised(next as unknown as EvaluationEntry)}
-          onChanged={async () => {
-            await refresh();
-          }}
-        />
-      </>
-    );
-  return (
-    <>
-      <DetailHeading
-        name={name}
-        facts={[
-          ...(entry.opportunity
-            ? ([
-                ['fields.companyId', toText(entry.opportunity.company)],
-                [
-                  'fields.stage',
-                  toText(text(`options.${entry.opportunity.stage}`)),
-                ],
-              ] as [string, string][])
-            : []),
-          ['fields.ownerId', owner],
-          ['decisions.evaluatedAt', when(entry.createdAt)],
-        ]}
-        action={open(
-          `/crm/${entry.entity}/${recordOf(entry).id}/history?focus=${entry.id}`,
-        )}
-      />
-      <VerdictPanel
-        key={entry.id}
-        // Past the approvals' branch above: a lead's or a deal's.
-        entity={entry.entity as 'leads' | 'opportunities'}
-        entry={entry}
-        recordId={recordOf(entry).id}
-        recordName={name}
-        editable
-        // Whole, waiting or decided, as the record's timeline shows it.
-        full
-        onRevised={onRevised}
-        onChanged={async () => {
-          await refresh();
-        }}
-      />
-    </>
   );
 }

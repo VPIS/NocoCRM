@@ -369,7 +369,9 @@ export function Conversation({
           // it and scrolling the whole page.
           // Up and down only: a fraction of a pixel of rounding in the
           // content must not bring a sideways scrollbar under the pointer.
-          className='relative h-full overflow-x-hidden overflow-y-auto py-4 scroll-quiet'
+          // It reaches into the side padding of the panel and the page around
+          // it, so its scrollbar stands clear of the messages.
+          className='relative -mr-3 h-full overflow-x-hidden overflow-y-auto py-4 pr-3 scroll-quiet'
         >
           {loading || (conversationId && !messages.loaded) ? (
             <div className='flex flex-col gap-4' role='status'>

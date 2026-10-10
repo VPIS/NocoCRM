@@ -451,7 +451,7 @@ function InboxPageContent({
       <div className='flex min-h-0 flex-1'>
         <div
           className={cn(
-            'flex min-h-0 w-full flex-col border-r bg-sidebar/60 lg:w-[26rem] lg:shrink-0',
+            'flex min-h-0 w-full flex-col border-r bg-sidebar/60 lg:w-96 lg:shrink-0',
             showsDetail ? 'max-lg:hidden' : undefined,
           )}
         >
