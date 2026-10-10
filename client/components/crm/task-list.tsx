@@ -193,20 +193,44 @@ export function TaskCards({
   // The record whose tab this is.
   recordId?: string;
 }): ReactElement {
+  const { text } = useCrmText();
+  // The open ones first, as they came (soonest first); then, under their
+  // heading, the completed and cancelled ones, the latest closed first.
+  const open = rows.filter((task) => toText(task.status) === 'open');
+  const closed = rows
+    .filter((task) => toText(task.status) !== 'open')
+    .sort(
+      (a, b) =>
+        new Date(toText(b.updatedAt ?? b.dueAt ?? '')).getTime() -
+        new Date(toText(a.updatedAt ?? a.dueAt ?? '')).getTime(),
+    );
+  const card = (list: CrmRecord[]): ReactElement => (
+    <div className='divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60 bg-card shadow-xs'>
+      {list.map((task) => (
+        <TaskRow
+          key={task.id}
+          task={task}
+          titles={titles}
+          recordId={recordId}
+        />
+      ))}
+    </div>
+  );
   return rows.length ? (
     // Rows lay their particulars beside the title once the card is wide
     // enough, whatever the page beside it takes.
-    <div className='@container'>
-      <div className='divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60 bg-card shadow-xs'>
-        {rows.map((task) => (
-          <TaskRow
-            key={task.id}
-            task={task}
-            titles={titles}
-            recordId={recordId}
-          />
-        ))}
-      </div>
+    <div className='@container grid gap-3'>
+      {open.length ? card(open) : null}
+      {closed.length ? (
+        <>
+          {open.length ? (
+            <p className='pt-1 text-xs font-medium text-muted-foreground'>
+              {text('taskList.done')}
+            </p>
+          ) : null}
+          {card(closed)}
+        </>
+      ) : null}
       <AutoLoadMore hasMore={hasMore} loading={loading} onLoad={onLoad} />
     </div>
   ) : (

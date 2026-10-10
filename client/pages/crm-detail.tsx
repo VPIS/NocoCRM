@@ -881,6 +881,11 @@ export function DetailColumns({
   // In the drawer the page is already on the popover's white, with its own
   // padding: nothing to reach past.
   const inDrawer = useRecordDrawer()?.inDrawer ?? false;
+  // The left column's sides: the page's room, and a drawer's narrower
+  // room, whose own padding already sets it off.
+  const sidePad = inDrawer
+    ? '@3xl:pr-5 @3xl:pl-4'
+    : '@3xl:pr-12 @3xl:pl-10 md:@3xl:pr-16 md:@3xl:pl-16';
   // Side by side, the intro folds away once the tab's content is scrolled
   // down and comes back at its top, as if it had scrolled away with it.
   // Apart, so the content's own height change cannot undo it: it folds past
@@ -915,8 +920,8 @@ export function DetailColumns({
             own background: the block reaches past the frame's padding and
             the parts inside give it back. */}
         <div
-          className={`flex h-full flex-col @3xl:-mx-4 md:@3xl:-mx-8 ${
-            inDrawer ? '' : '-mx-4 md:-mx-8'
+          className={`flex h-full flex-col @3xl:-mx-4 ${
+            inDrawer ? '' : 'md:@3xl:-mx-8 -mx-4 md:-mx-8'
           }`}
         >
           {/* Stacked, the header, the particulars and the tabs scroll as one;
@@ -935,7 +940,7 @@ export function DetailColumns({
               {/* In a drawer the frame's own padding already sets it off from
                   the drawer's bar, so the header adds none above. */}
               <header
-                className={`@3xl:col-start-1 @3xl:row-start-1 @3xl:pr-12 @3xl:pb-3 @3xl:pl-10 md:@3xl:pr-16 md:@3xl:pl-16 ${
+                className={`@3xl:col-start-1 @3xl:row-start-1 @3xl:pb-3 ${sidePad} ${
                   inDrawer ? 'pt-0' : 'pt-5 @3xl:pt-4'
                 }`}
               >
@@ -952,6 +957,11 @@ export function DetailColumns({
                   ) : null}
                 </div>
               </header>
+              {/* Stacked, what the record says of itself comes under its
+                  header, before the particulars. */}
+              {intro ? (
+                <div className='min-w-0 @3xl:hidden'>{intro}</div>
+              ) : null}
 
               {/* The timeline and the other tabs on the left, taking the
                   room, the particulars in a narrow column on the right.
@@ -965,8 +975,8 @@ export function DetailColumns({
                   dock. The rows keep 8px of their own on each side for an
                   inline editor's hover fill. */}
               <section
-                className={`flex min-w-0 flex-col gap-3 @3xl:col-start-2 @3xl:row-span-2 @3xl:row-start-1 @3xl:mr-2 @3xl:overflow-y-auto @3xl:pb-24 md:@3xl:mr-3 scroll-quiet ${
-                  inDrawer ? '' : '@3xl:pt-4'
+                className={`flex min-w-0 flex-col gap-3 @3xl:col-start-2 @3xl:row-span-2 @3xl:row-start-1 @3xl:overflow-y-auto @3xl:pb-24 scroll-quiet ${
+                  inDrawer ? '@3xl:mr-4' : '@3xl:mr-2 @3xl:pt-4 md:@3xl:mr-3'
                 }`}
                 onScroll={revealScrollbar}
               >
@@ -983,7 +993,9 @@ export function DetailColumns({
               <section className='flex min-w-0 flex-col @3xl:col-start-1 @3xl:row-start-2 @3xl:min-h-0 @3xl:overflow-hidden'>
                 {intro ? (
                   <div
-                    className={`grid shrink-0 transition-[grid-template-rows,opacity] duration-200 ease-out ${
+                    // Side by side only; stacked it is drawn under the
+                    // header instead, above the particulars.
+                    className={`hidden shrink-0 transition-[grid-template-rows,opacity] duration-200 ease-out @3xl:grid ${
                       introAway
                         ? '@3xl:grid-rows-[0fr] @3xl:opacity-0'
                         : 'grid-rows-[1fr]'
@@ -992,7 +1004,7 @@ export function DetailColumns({
                     <div className='min-h-0 overflow-hidden'>
                       <div
                         ref={introRef}
-                        className='pb-7 @3xl:max-h-[40vh] @3xl:overflow-y-auto @3xl:[scrollbar-gutter:stable] @3xl:pr-12 @3xl:pl-10 md:@3xl:pr-16 md:@3xl:pl-16 scroll-quiet'
+                        className={`pb-7 @3xl:max-h-[40vh] @3xl:overflow-y-auto @3xl:[scrollbar-gutter:stable] ${sidePad} scroll-quiet`}
                         onScroll={revealScrollbar}
                       >
                         {intro}
@@ -1006,7 +1018,9 @@ export function DetailColumns({
                 {/* Side by side it keeps the room of the content's scrollbar
                     too (none where scrollbars lie over the page), so the
                     tabs' rule ends where the content does. */}
-                <div className='sticky top-0 z-10 flex shrink-0 flex-wrap items-center bg-background pt-1 pb-4 @3xl:overflow-hidden @3xl:[scrollbar-gutter:stable] @3xl:pt-0 @3xl:pr-12 @3xl:pl-10 md:@3xl:pr-16 md:@3xl:pl-16 scroll-quiet'>
+                <div
+                  className={`sticky top-0 z-10 flex shrink-0 flex-wrap items-center bg-background pt-1 pb-4 @3xl:overflow-hidden @3xl:[scrollbar-gutter:stable] @3xl:pt-0 ${sidePad} scroll-quiet`}
+                >
                   {tabBar}
                 </div>
                 {/* The tab's content, which alone scrolls side by side; its
@@ -1015,7 +1029,7 @@ export function DetailColumns({
                     it, and its scrollbar's room is kept whether or not a tab
                     scrolls, so switching tabs never re-wraps it. */}
                 <div
-                  className='min-w-0 @3xl:min-h-0 @3xl:flex-1 @3xl:overflow-y-auto @3xl:[scrollbar-gutter:stable] @3xl:pr-12 @3xl:pl-10 @3xl:pb-36 md:@3xl:pr-16 md:@3xl:pl-16 scroll-quiet'
+                  className={`min-w-0 @3xl:min-h-0 @3xl:flex-1 @3xl:overflow-y-auto @3xl:[scrollbar-gutter:stable] @3xl:pb-36 ${sidePad} scroll-quiet`}
                   onScroll={scrollTab}
                 >
                   {right}

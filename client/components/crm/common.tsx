@@ -69,7 +69,7 @@ export function CrmFrame({
     <Frame
       className={
         inDrawer
-          ? 'space-y-6 p-4 md:p-6'
+          ? 'space-y-6 p-4'
           : // A record's page sits tighter at the top than a list's, so its
             // particulars and timeline start higher; one without a header
             // starts at the top, where its own columns begin.
