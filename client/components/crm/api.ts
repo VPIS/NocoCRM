@@ -99,7 +99,7 @@ export function useCrmApi() {
       api.request<T>({
         path: `crm/${toText(path)}`,
         method,
-        headers: { 'X-CRM-Request': '1', 'Accept-Language': i18n.language },
+        headers: { 'Accept-Language': i18n.language },
         ...(input instanceof FormData
           ? { body: input }
           : input !== undefined
@@ -279,6 +279,34 @@ export function useCrmText() {
     t(`crm.${toText(key)}`, { ns: 'crm', ...options });
   return { text, language: i18n.language };
 }
+// The standard error body (references/http-api.md): the CRM's reasons are
+// its camelCase codes in UPPER_SNAKE_CASE (server/routes/errors.ts), turned
+// back so `errors.<code>` names their text; the framework's and other
+// plugins' are worded by what they mean.
+interface StandardError {
+  status?: string;
+  reason?: string;
+  domain?: string;
+  fieldViolations?: { field?: string }[];
+  metadata?: { field?: unknown; detail?: unknown };
+}
+const FOREIGN_REASONS: Record<string, string> = {
+  UNAUTHENTICATED: 'unauthorized',
+  ROUTE_NOT_FOUND: 'notFound',
+  INTERNAL_ERROR: 'serverError',
+  BODY_TOO_LARGE: 'fileTooLarge',
+  INVALID_INPUT: 'invalidInput',
+};
+const STATUS_CODES: Record<string, string> = {
+  UNAUTHENTICATED: 'unauthorized',
+  PERMISSION_DENIED: 'forbidden',
+  NOT_FOUND: 'notFound',
+  INVALID_ARGUMENT: 'invalidInput',
+};
+const camelCode = (reason: string): string =>
+  reason
+    .toLowerCase()
+    .replace(/_([a-z0-9])/gu, (_, letter: string) => letter.toUpperCase());
 export function errorCode(error: unknown): {
   code: string;
   field?: string;
@@ -286,7 +314,34 @@ export function errorCode(error: unknown): {
 } {
   if (error instanceof ApiClientError) {
     const body = error.payload as
-      { code?: string; field?: string; detail?: string } | undefined;
+      | {
+          error?: StandardError;
+          code?: string;
+          field?: string;
+          detail?: string;
+        }
+      | undefined;
+    const standard = body?.error;
+    if (standard?.reason) {
+      const field =
+        standard.fieldViolations?.[0]?.field ??
+        (typeof standard.metadata?.field === 'string'
+          ? standard.metadata.field
+          : undefined);
+      return {
+        code:
+          standard.domain === 'crm'
+            ? camelCode(standard.reason)
+            : (FOREIGN_REASONS[standard.reason] ??
+              STATUS_CODES[standard.status ?? ''] ??
+              camelCode(standard.reason)),
+        field,
+        detail:
+          typeof standard.metadata?.detail === 'string'
+            ? standard.metadata.detail
+            : undefined,
+      };
+    }
     return {
       code: body?.code ?? 'serverError',
       field: body?.field,

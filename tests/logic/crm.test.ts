@@ -456,7 +456,6 @@ const request = (
     method,
     headers: {
       ...(user ? { 'x-test-user': user } : {}),
-      'x-crm-request': '1',
       'Content-Type': 'application/json',
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -491,15 +490,22 @@ describe('CRM API security and domain rules', () => {
         action: 'manage',
       }),
     ).toBe(false);
-    expect(
-      (
-        await router.request('/crm/leads', {
-          method: 'POST',
-          headers: { 'x-test-user': 'rep' },
-          body: '{}',
-        })
-      ).status,
-    ).toBe(403);
+    // A write needs no header of the CRM's own (the session cookie is
+    // SameSite=Lax): a lead without a name is refused for the name, in the
+    // standard error body.
+    const unnamed = await router.request('/crm/leads', {
+      method: 'POST',
+      headers: { 'x-test-user': 'rep' },
+      body: '{}',
+    });
+    expect(unnamed.status).toBe(400);
+    expect(await unnamed.json()).toMatchObject({
+      error: {
+        status: 'INVALID_ARGUMENT',
+        domain: 'crm',
+        fieldViolations: [{ field: 'name' }],
+      },
+    });
     expect((await router.request('/unrelated')).status).toBe(404);
   });
   it('offers the assistant only as the enabled AI employee and drops the retired AI switch', async () => {
@@ -1103,9 +1109,10 @@ describe('CRM API security and domain rules', () => {
       approverId: 'manager',
     });
     await service.approvalAction(actor('rep'), pending.id, 'submit');
+    // A state the request may not change: 400 FAILED_PRECONDITION.
     expect(
       (await request('/approvals/' + pending.id, 'rep', 'DELETE')).status,
-    ).toBe(409);
+    ).toBe(400);
     await service.approvalAction(actor('rep'), pending.id, 'withdraw');
     expect(
       (await request('/approvals/' + pending.id, 'rep', 'DELETE')).status,
@@ -1134,7 +1141,7 @@ describe('CRM API security and domain rules', () => {
     ).toBe(false);
     expect(
       (await request('/approvals/' + rejected.id, 'rep', 'DELETE')).status,
-    ).toBe(409);
+    ).toBe(400);
     // A manager deletes only what they created, so the record is not theirs.
     expect(
       (await request('/approvals/' + rejected.id, 'manager', 'DELETE')).status,
@@ -3246,10 +3253,10 @@ describe('CRM lead capture', () => {
       (await request('/leads/capture', 'outsider', 'POST', { text: pasted }))
         .status,
     ).toBe(403);
-    // The routes' container has no AI employee plugin.
+    // The routes' container has no AI employee plugin: unavailable.
     expect(
       (await request('/leads/capture', 'rep', 'POST', { text: pasted })).status,
-    ).toBe(409);
+    ).toBe(503);
   });
 });
 
@@ -4282,10 +4289,10 @@ describe('CRM lead evaluation', () => {
     expect(
       await (await request(`/leads/${lead.id}/evaluation`, 'rep')).json(),
     ).toEqual({ data: null });
-    // The routes' container has no AI employee plugin.
+    // The routes' container has no AI employee plugin: unavailable.
     expect(
       (await request(`/leads/${lead.id}/evaluation`, 'rep', 'POST', {})).status,
-    ).toBe(409);
+    ).toBe(503);
     expect((await request('/decisions')).status).toBe(401);
     expect((await request('/decisions', 'rep')).status).toBe(200);
     // A lead created from the AI's organising is recorded as such, and
@@ -6380,8 +6387,11 @@ describe('demo dataset', () => {
       expect([entity, owned.total > 0]).toEqual([entity, true]);
     }
     const again = await request('/demo/populate', 'admin', 'POST', {});
-    expect(again.status).toBe(409);
-    expect((await again.json()).code).toBe('demoExists');
+    expect(again.status).toBe(400);
+    expect((await again.json()).error).toMatchObject({
+      status: 'FAILED_PRECONDITION',
+      reason: 'DEMO_EXISTS',
+    });
     // A demo mailbox for each demo account and the importer, connected as
     // each with the provider's secret, holding the import's conversations.
     expect(demoMail.connected).toHaveLength(5);
@@ -6524,8 +6534,12 @@ describe('demo dataset', () => {
     });
     expect(refused.status).toBe(400);
     expect(await refused.json()).toMatchObject({
-      code: 'invalidInput',
-      field: 'language',
+      error: {
+        status: 'INVALID_ARGUMENT',
+        reason: 'INVALID_INPUT',
+        domain: 'crm',
+        fieldViolations: [{ field: 'language' }],
+      },
     });
     const populated = await request('/demo/populate', 'admin', 'POST', {
       language: 'en-US',
