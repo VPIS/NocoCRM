@@ -575,8 +575,10 @@ export function LongText({ value }: { value: string }): ReactElement {
     };
   }, [value]);
   const toggle = overflows || open;
+  // A little more room between lines than a one-line value has, so a
+  // paragraph reads easily; the fold and its toggle go by the line height.
   return (
-    <div className='flex'>
+    <div className='flex leading-relaxed'>
       <div
         ref={ref}
         className={`min-w-0 flex-1 break-words ${open ? 'block' : 'line-clamp-4'} ${

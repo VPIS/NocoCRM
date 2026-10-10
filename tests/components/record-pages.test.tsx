@@ -23,6 +23,8 @@ const state = vi.hoisted(() => ({
   canApprove: true,
   userId: 'rep',
   history: [] as Record<string, unknown>[],
+  // The approval's latest AI review, when it has one.
+  review: null as Record<string, unknown> | null,
 }));
 
 // No mail in these pages: the Mail plugin needs the application root, which
@@ -113,9 +115,11 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
               },
             },
           }
-        : path === 'metadata'
-          ? { isLoading: false, data: metadata }
-          : { isLoading: false, data: undefined },
+        : path === 'approvals/rec-1/review'
+          ? { isLoading: false, data: state.review }
+          : path === 'metadata'
+            ? { isLoading: false, data: metadata }
+            : { isLoading: false, data: undefined },
     useCrmText: () => ({
       text: (key: string, values?: Record<string, unknown>): string => {
         const value = key
@@ -186,6 +190,7 @@ beforeEach(() => {
   state.canApprove = true;
   state.related = {};
   state.history = [];
+  state.review = null;
 });
 
 describe('the company page', () => {
@@ -345,6 +350,26 @@ describe('the approval page', () => {
   it('offers the AI review to the approver while it waits', () => {
     renderPage();
     expect(screen.getAllByRole('button', { name: /辅助审批/ })).toHaveLength(1);
+  });
+
+  // Once reviewed, one chip as a lead's suggestion reads: the
+  // recommendation, where it stands, then asking again, the approver's.
+  it('reads the latest review on one chip that ends in asking again', () => {
+    state.review = {
+      id: 'review-1',
+      status: 'pending',
+      createdAt: '2026-10-01T04:00:00.000Z',
+      ai: { result: { recommendation: 'conditional' } },
+    };
+    renderPage();
+    expect(screen.getByText('建议有条件批准')).toBeTruthy();
+    expect(screen.getByText('待处理')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: '重新分析' })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /辅助审批/ })).toBeNull();
+    cleanup();
+    state.userId = 'someone';
+    renderPage();
+    expect(screen.queryByRole('button', { name: '重新分析' })).toBeNull();
   });
 
   // The review is the approver's alone: the applicant, like anyone else,

@@ -76,6 +76,31 @@ describe('MentionTextarea', () => {
     expect(names).toEqual(['Li Ming']);
   });
 
+  // Chinese text runs on without a space before the @, at the end or in the
+  // middle of what is written; an email address is no mention.
+  it('lists them after Chinese text and in the middle, not inside an email address', async () => {
+    render(<Box />);
+    const box = screen.getByRole('textbox', { name: 'Note' });
+    await userEvent.type(box, '请@L');
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'Li Ming',
+    ]);
+    await userEvent.keyboard('{Escape}');
+    await userEvent.clear(box);
+    await userEvent.type(box, '跟进后告诉我');
+    // Back into the middle of the text, after 跟进.
+    (box as HTMLTextAreaElement).setSelectionRange(2, 2);
+    await userEvent.type(box, '@L', {
+      initialSelectionStart: 2,
+      initialSelectionEnd: 2,
+    });
+    expect(screen.getAllByRole('option')).toHaveLength(1);
+    await userEvent.keyboard('{Escape}');
+    await userEvent.clear(box);
+    await userEvent.type(box, 'mail li@L');
+    expect(screen.queryAllByRole('option')).toHaveLength(0);
+  });
+
   it('writes the picked name and sends whom the text still names', async () => {
     render(<Box />);
     const box = screen.getByRole('textbox', { name: 'Note' });

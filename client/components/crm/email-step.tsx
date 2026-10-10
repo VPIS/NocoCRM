@@ -27,8 +27,9 @@ import { ErrorNotice } from './common.js';
 // An AI follow-up whose next step is an email (lead-evaluation.tsx): the
 // draft laid out to be read and changed on the card, with whom it goes to
 // and whom it copies, and sent from there through the Mail plugin as the
-// person, from their own mailbox. Sending is what accepts the card
-// (`onSent`). Nothing is sent but by the person pressing Send; without a
+// person, from their own mailbox. The fields ticked on the card are
+// written first (`beforeSend`), so a send the provider refuses loses none
+// of them; sending is what accepts the card (`onSent`). Nothing is sent but by the person pressing Send; without a
 // mailbox to send from, the draft is copied instead.
 //
 // Who it goes to: a lead's own address; on a deal, its primary contact (else
@@ -109,6 +110,7 @@ export function EmailStep({
   recordId,
   draft,
   editable,
+  beforeSend,
   onSent,
 }: {
   entity: 'leads' | 'opportunities';
@@ -117,6 +119,9 @@ export function EmailStep({
   // A waiting card the reader may decide: changed and sent here. Otherwise
   // the draft as it was, to read.
   editable: boolean;
+  // Before the message goes, here or from the composer: what else the
+  // card writes.
+  beforeSend?: () => Promise<void>;
   // Once the provider took it: the card is accepted.
   onSent: () => Promise<void>;
 }): ReactElement {
@@ -172,11 +177,38 @@ export function EmailStep({
     [...toList, ...ccList].every((p) => valid(p.address)) &&
     subject.trim() !== '' &&
     body.trim() !== '';
+  // The whole composer, the card's fields written first; sending there
+  // accepts the card too.
+  const openComposer = async (): Promise<void> => {
+    setError(undefined);
+    try {
+      await beforeSend?.();
+    } catch (e) {
+      setError(e);
+      return;
+    }
+    composer.compose(
+      {
+        // The composer takes bare addresses; a name with one
+        // would be sent as part of the address, which the
+        // provider refuses.
+        to: toList.map((p) => p.address).join(', '),
+        cc: ccList.map((p) => p.address).join(', '),
+        subject,
+        text: body,
+        html: plainTextToMailHtml(body),
+      },
+      async (sent) => {
+        if (sent) await onSent();
+      },
+    );
+  };
   const send = async (): Promise<void> => {
     if (!sender || !ready) return;
     setBusy(true);
     setError(undefined);
     try {
+      await beforeSend?.();
       const identities = await mail.listIdentities(sender.id);
       const identity =
         identities.find((i) => i.isPrimary && i.canSend) ??
@@ -308,23 +340,7 @@ export function EmailStep({
               size='sm'
               variant='ghost'
               disabled={busy}
-              onClick={() =>
-                composer.compose(
-                  {
-                    // The composer takes bare addresses; a name with one
-                    // would be sent as part of the address, which the
-                    // provider refuses.
-                    to: toList.map((p) => p.address).join(', '),
-                    cc: ccList.map((p) => p.address).join(', '),
-                    subject,
-                    text: body,
-                    html: plainTextToMailHtml(body),
-                  },
-                  async (sent) => {
-                    if (sent) await onSent();
-                  },
-                )
-              }
+              onClick={() => void openComposer()}
             >
               <SquarePen />
               {text('emailStep.openComposer')}

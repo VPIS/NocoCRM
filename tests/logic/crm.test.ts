@@ -5135,6 +5135,71 @@ describe('CRM opportunity follow-up', () => {
     }
   });
 
+  // An email card writes what it ticked before its message goes, so a
+  // refused send keeps it; the accept after the send leaves it be.
+  it("writes a deal's ticked updates ahead of the accept, which then leaves them be", async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const { opportunity } = await deal('先写字段');
+      const run = following({
+        ...advance,
+        stage: null,
+        recommendation: 'continue',
+        approvals: [],
+        updates: [
+          { field: 'businessType', value: 'renewal', reason: '续约（活动）' },
+          { field: 'source', value: 'exhibition', reason: '展会（线索）' },
+        ],
+      });
+      await run.evaluator.request(actor('rep'), opportunity.id);
+      await run.evaluator.idle();
+      const card = await latestOpportunityEvaluation(
+        service,
+        actor('rep'),
+        opportunity.id,
+      );
+      const written = await run.evaluator.enrich(
+        actor('rep'),
+        opportunity.id,
+        card!.id,
+        ['businessType'],
+      );
+      expect(written.status).toBe('pending');
+      expect(written.ai.updatedFields).toEqual(['businessType']);
+      expect(
+        await service.get(actor('rep'), 'opportunities', opportunity.id),
+      ).toMatchObject({ businessType: 'renewal' });
+      // Changed by a person meanwhile, it is not put back by the accept.
+      await service.save(
+        actor('rep'),
+        'opportunities',
+        { businessType: 'expansion' },
+        opportunity.id,
+      );
+      const accepted = await run.evaluator.decide(
+        actor('rep'),
+        opportunity.id,
+        card!.id,
+        'accept',
+        ['businessType', 'source'],
+      );
+      expect(accepted.ai.updatedFields).toEqual(['businessType', 'source']);
+      expect(
+        await service.get(actor('rep'), 'opportunities', opportunity.id),
+      ).toMatchObject({ businessType: 'expansion', source: 'exhibition' });
+      // Nothing ticked that is left to write is refused.
+      await expect(
+        run.evaluator.enrich(actor('rep'), opportunity.id, card!.id, [
+          'businessType',
+        ]),
+      ).rejects.toMatchObject({ code: 'invalidInput' });
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
   // The customer's people with a part in the deal: a role changed, a
   // contact of the company added, a person created; written as ticked.
   it("proposes the customer's people and their parts, and sets the ones kept", async () => {

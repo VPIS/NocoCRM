@@ -1,0 +1,78 @@
+import {
+  AlignLeft,
+  ArrowRightLeft,
+  BriefcaseBusiness,
+  Building2,
+  CalendarClock,
+  CalendarDays,
+  CircleDollarSign,
+  CircleDot,
+  CircleSlash,
+  Clock,
+  Factory,
+  Flag,
+  Globe,
+  Handshake,
+  IdCard,
+  Mail,
+  MapPin,
+  MapPinned,
+  Pause,
+  Phone,
+  Radar,
+  Signpost,
+  Tag,
+  UserRound,
+  UserRoundCheck,
+  UsersRound,
+  type LucideIcon,
+} from 'lucide-react';
+import { createElement, type ReactElement } from 'react';
+
+// Each particular's icon before its label on a record page, by the field it
+// shows (the menu's icons for a linked lead, deal and company), so a long
+// column of rows is read at a glance; the groups' headings carry none.
+const FIELD_ICONS: Record<string, LucideIcon> = {
+  ownerId: UserRound,
+  approverId: UserRoundCheck,
+  internalParticipants: UsersRound,
+  status: CircleDot,
+  stage: Flag,
+  source: Signpost,
+  name: IdCard,
+  jobTitle: BriefcaseBusiness,
+  phone: Phone,
+  email: Mail,
+  company: Building2,
+  companyId: Building2,
+  website: Globe,
+  industry: Factory,
+  employees: UsersRound,
+  region: MapPin,
+  address: MapPinned,
+  companyDescription: AlignLeft,
+  description: AlignLeft,
+  message: AlignLeft,
+  amount: CircleDollarSign,
+  expectedCloseAt: CalendarDays,
+  resumeAt: CalendarClock,
+  dueAt: Clock,
+  businessType: Tag,
+  topic: Tag,
+  type: Tag,
+  pauseReason: Pause,
+  lostReason: CircleSlash,
+  invalidReason: CircleSlash,
+  churnReason: CircleSlash,
+  leadId: Radar,
+  opportunityId: Handshake,
+  convertedFrom: ArrowRightLeft,
+};
+
+// A field without one of its own reads under a plain tag.
+export function FieldIcon({ field }: { field: string }): ReactElement {
+  return createElement(FIELD_ICONS[field] ?? Tag, {
+    'aria-hidden': true,
+    className: 'size-3.5 shrink-0',
+  });
+}

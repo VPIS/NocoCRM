@@ -91,6 +91,7 @@ import {
   EvaluateButton,
   EvaluationStatus,
 } from '../components/crm/lead-evaluation.js';
+import { useFollowUpRequest } from '../components/crm/follow-up-request.js';
 import { ReviewStatus } from '../components/crm/approval-review.js';
 import { Choice, RecordForm } from '../components/crm/form.js';
 import { StageField } from '../components/crm/reasons.js';
@@ -109,7 +110,6 @@ import {
   WebsiteField,
 } from './crm-detail.js';
 import { UploadZone } from '../components/crm/attachments.js';
-import { GROUP_ICONS } from '../components/crm/group-icons.js';
 import { RecordOutcomeDialog } from '../components/crm/outcome.js';
 import { RecordMailPanel } from '../components/crm/record-mail.js';
 import { emailsOf, useMailSetup } from '../components/crm/mail.js';
@@ -149,7 +149,9 @@ export default function EntityDetail({
   const { data: meta } = useMetadata();
   const mailSetup = useMailSetup();
   // The objects whose people mail is exchanged with.
-  const mailEntity = ['companies', 'contacts', 'opportunities'].includes(entity);
+  const mailEntity = ['companies', 'contacts', 'opportunities'].includes(
+    entity,
+  );
   const api = useCrmApi();
   const refresh = useRefresh();
   const navigate = useNavigate();
@@ -222,6 +224,16 @@ export default function EntityDetail({
       : undefined,
   );
   useRecordBreadcrumb(entity, !drawer?.inDrawer);
+  // Asking the AI to follow an open deal up, for whoever may edit it: a
+  // button before the first suggestion, then in "More".
+  const followUp = useFollowUpRequest(
+    'opportunities',
+    id,
+    setError,
+    entity === 'opportunities' &&
+      Boolean(detail?.permissions.edit) &&
+      !['won', 'lost'].includes(toText(detail?.record.stage)),
+  );
   if (isLoading || !meta) return <Loading />;
   if (!detail)
     return (
@@ -442,6 +454,7 @@ export default function EntityDetail({
       <EvaluationStatus
         entity='opportunities'
         recordId={id}
+        request={followUp}
         onOpen={(entryId) => {
           setFocus({ id: entryId, at: Date.now() });
           setTab('historyTab');
@@ -837,13 +850,13 @@ export default function EntityDetail({
   // record's heading across the page with its actions at the right, its
   // particulars in groups on the left, the tabs atop the right column.
   const row = (key: string): ReactElement => (
-    <InfoRow key={key} label={text(fieldLabelKey(entity, key))}>
+    <InfoRow key={key} field={key} label={text(fieldLabelKey(entity, key))}>
       {inline(key)}
     </InfoRow>
   );
   // Country / state / city on one row, each edited by itself.
   const regionRow = (
-    <InfoRow key='region' label={text('region')}>
+    <InfoRow key='region' field='region' label={text('region')}>
       <div className='flex flex-wrap items-center'>
         {['country', 'state', 'city'].map((part, index) => (
           <div className='flex min-w-0 items-center' key={part}>
@@ -862,7 +875,11 @@ export default function EntityDetail({
   // place they show on a company, whose deletion they block.
   const convertedRow =
     convertedFrom.length > 0 ? (
-      <InfoRow key='convertedFrom' label={text('convertedFrom')}>
+      <InfoRow
+        key='convertedFrom'
+        field='convertedFrom'
+        label={text('convertedFrom')}
+      >
         <div className='flex min-w-0 flex-col gap-1 px-2 py-1.5'>
           {convertedFrom.map((lead) => (
             <RecordLink
@@ -929,7 +946,9 @@ export default function EntityDetail({
           onClick={() => setConfirmDelete(true)}
         >
           <Trash2 />
-          {text('deleteRecord', { entity: text(`entity.${toText(entity)}`) })}
+          {text('deleteRecord', {
+            entity: text(`entity.${toText(entity)}`),
+          })}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -1015,11 +1034,11 @@ export default function EntityDetail({
           <div className='min-w-0 py-0.5 text-sm'>{inline('description')}</div>
         </InfoGroup>
         {/* Who has it and who takes part, where it stands, and when. */}
-        <InfoGroup title={text('detailsGroup')} icon={GROUP_ICONS.general}>
+        <InfoGroup title={text('detailsGroup')}>
           {row('ownerId')}
           {row('internalParticipants')}
           {statusKey && (
-            <InfoRow label={text(`fields.${statusKey}`)}>
+            <InfoRow field={statusKey} label={text(`fields.${statusKey}`)}>
               <StageField
                 entity={entity}
                 record={record}
@@ -1051,13 +1070,7 @@ export default function EntityDetail({
       headingOf(companyCrumb),
       actionsOf(
         <>
-          {editable && !closedDeal && (
-            <EvaluateButton
-              entity='opportunities'
-              recordId={id}
-              onError={setError}
-            />
-          )}
+          <EvaluateButton request={followUp} />
           {moreMenu}
         </>,
       ),
@@ -1069,9 +1082,9 @@ export default function EntityDetail({
         </InfoGroup>
         {/* One list: who has it and where it stands, what it is worth
             and when it should close, then the company and how it came. */}
-        <InfoGroup title={text('detailsGroup')} icon={GROUP_ICONS.general}>
+        <InfoGroup title={text('detailsGroup')}>
           {row('ownerId')}
-          <InfoRow label={text('fields.stage')}>
+          <InfoRow field='stage' label={text('fields.stage')}>
             <StageField
               entity={entity}
               record={record}
@@ -1096,7 +1109,7 @@ export default function EntityDetail({
             and how it came. */}
           {/* Currency, then the bare number: both edit in place, and the
               sign is not repeated. */}
-          <InfoRow label={text('fields.amount')}>
+          <InfoRow field='amount' label={text('fields.amount')}>
             <div className='flex items-center'>
               <div className='shrink-0'>{inline('currency')}</div>
               <div className='min-w-0 flex-1'>
@@ -1127,13 +1140,10 @@ export default function EntityDetail({
       <>
         {/* Who has it and where it stands (a churned company's reason
             beside its status). */}
-        <InfoGroup
-          title={text('companyGroups.general')}
-          icon={GROUP_ICONS.general}
-        >
+        <InfoGroup title={text('companyGroups.general')}>
           {row('ownerId')}
           {statusKey && (
-            <InfoRow label={text(`fields.${statusKey}`)}>
+            <InfoRow field={statusKey} label={text(`fields.${statusKey}`)}>
               <StageField
                 entity={entity}
                 record={record}
@@ -1148,11 +1158,8 @@ export default function EntityDetail({
           {currentStatus === 'churned' && row('churnReason')}
           {['type', 'source'].map(row)}
         </InfoGroup>
-        <InfoGroup
-          title={text('companyGroups.company')}
-          icon={GROUP_ICONS.company}
-        >
-          <InfoRow label={text('fields.website')}>
+        <InfoGroup title={text('companyGroups.company')}>
+          <InfoRow field='website' label={text('fields.website')}>
             <WebsiteField
               entity={entity}
               record={record}
@@ -1173,7 +1180,7 @@ export default function EntityDetail({
       headingOf(undefined, companyCrumb),
       actionsOf(<>{moreMenu}</>),
       <>
-        <InfoGroup title={text('detailsGroup')} icon={GROUP_ICONS.general}>
+        <InfoGroup title={text('detailsGroup')}>
           {[
             'ownerId',
             'companyId',
@@ -1205,10 +1212,10 @@ export default function EntityDetail({
       <InfoGroup>
         <div className='min-w-0 py-0.5 text-sm'>{inline('description')}</div>
       </InfoGroup>
-      <InfoGroup title={text('detailsGroup')} icon={GROUP_ICONS.general}>
+      <InfoGroup title={text('detailsGroup')}>
         {row('ownerId')}
         {statusKey && (
-          <InfoRow label={text(`fields.${statusKey}`)}>
+          <InfoRow field={statusKey} label={text(`fields.${statusKey}`)}>
             {/* The marker says which side of it the approver is on. */}
             <span className='flex flex-wrap items-center gap-2 px-2 py-1.5'>
               <Status value={currentStatus} />

@@ -50,7 +50,7 @@ import {
   Paperclip,
   MessageCircle,
   PencilLine,
-  StickyNote,
+  MessageSquareText,
   Maximize2,
   X,
   Plus,
@@ -60,7 +60,8 @@ import {
   SquareCheckBig,
 } from 'lucide-react';
 import { Button, buttonVariants } from '../components/ui/button.js';
-import { GROUP_ICONS } from '../components/crm/group-icons.js';
+import { useFollowUpRequest } from '../components/crm/follow-up-request.js';
+import { FieldIcon } from '../components/crm/field-icons.js';
 import { Spinner } from '../components/ui/spinner.js';
 import { LONG_TEXT_LIMIT } from '../../server/providers/crm/limits.js';
 import { Badge } from '../components/ui/badge.js';
@@ -327,6 +328,14 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       : undefined,
   );
   useRecordBreadcrumb('leads', !drawer?.inDrawer);
+  // Asking the AI to follow the lead up, while it is open and the reader
+  // may edit it: a button before the first suggestion, then in "More".
+  const followUp = useFollowUpRequest(
+    'leads',
+    id,
+    setError,
+    Boolean(detail?.permissions.edit && detail.record.status !== 'converted'),
+  );
   if (isLoading || !meta) return <Loading />;
   if (!detail)
     return (
@@ -382,6 +391,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   const fieldRow = (key: LeadField): ReactElement => (
     <InfoRow
       key={key}
+      field={key}
       label={text(groupLabels[key] ?? fieldLabelKey('leads', key))}
     >
       {key === 'region' ? (
@@ -475,9 +485,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   // edge's left).
   const leadActions = (
     <>
-      {meta.assistant && !converted && editable && (
-        <EvaluateButton recordId={id} onError={setError} />
-      )}
+      <EvaluateButton request={followUp} />
       {editable && (
         <Button size='sm' onClick={() => setConvert(true)}>
           <ArrowRightLeft />
@@ -514,6 +522,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   const leadStatus = (
     <EvaluationStatus
       recordId={id}
+      request={followUp}
       onOpen={(entryId) => {
         setFocus({ id: entryId, at: Date.now() });
         setTab('historyTab');
@@ -566,14 +575,11 @@ function LeadDetail({ id }: { id: string }): ReactElement {
           />
           <div>
             {/* Who has the lead and where it stands head the next group. */}
-            <InfoGroup
-              title={text('leadGroups.general')}
-              icon={GROUP_ICONS.general}
-            >
-              <InfoRow label={text('fields.ownerId')}>
+            <InfoGroup title={text('leadGroups.general')}>
+              <InfoRow field='ownerId' label={text('fields.ownerId')}>
                 {inline('ownerId')}
               </InfoRow>
-              <InfoRow label={text('fields.status')}>
+              <InfoRow field='status' label={text('fields.status')}>
                 <LeadStatusField
                   record={record}
                   editable={editable}
@@ -612,7 +618,11 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                       ['opportunities', 'convertedOpportunityId'],
                     ] as const
                   ).map(([e, key]) => (
-                    <InfoRow key={key} label={text(`fields.${key}`)}>
+                    <InfoRow
+                      key={key}
+                      field={key}
+                      label={text(`fields.${key}`)}
+                    >
                       {/* An empty one is shown rather than dropped: "no
                               opportunity" is itself worth seeing. */}
                       <div className='px-2 py-1.5'>
@@ -638,11 +648,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
               {leadGroups[0][1].map(fieldRow)}
             </InfoGroup>
             {leadGroups.slice(1).map(([group, keys]) => (
-              <InfoGroup
-                key={group}
-                title={text(`leadGroups.${group}`)}
-                icon={GROUP_ICONS[group]}
-              >
+              <InfoGroup key={group} title={text(`leadGroups.${group}`)}>
                 {keys.map(fieldRow)}
               </InfoGroup>
             ))}
@@ -890,7 +896,7 @@ export function DetailColumns({
             {/* In a drawer the frame's own padding already sets it off from
                 the drawer's bar, so the header adds none above. */}
             <header
-              className={`@3xl:pr-4 @3xl:pb-3 @3xl:pl-4 md:@3xl:pr-8 md:@3xl:pl-6 ${
+              className={`@3xl:pr-2 @3xl:pb-3 @3xl:pl-8 md:@3xl:pr-3 md:@3xl:pl-12 ${
                 inDrawer ? 'pt-0' : 'pt-5 @3xl:pt-4'
               }`}
             >
@@ -922,7 +928,7 @@ export function DetailColumns({
                   dock. The rows keep 8px of their own on each side for an
                   inline editor's hover fill. */}
               <section
-                className='flex min-w-0 flex-col gap-3 @3xl:order-2 @3xl:mr-4 @3xl:overflow-y-auto @3xl:pb-24 md:@3xl:mr-8 scroll-quiet'
+                className='flex min-w-0 flex-col gap-3 @3xl:order-2 @3xl:mr-2 @3xl:overflow-y-auto @3xl:pb-24 md:@3xl:mr-3 scroll-quiet'
                 onScroll={revealScrollbar}
               >
                 {left}
@@ -939,17 +945,17 @@ export function DetailColumns({
                 onScroll={revealScrollbar}
               >
                 {intro ? (
-                  <div className='pb-7 @3xl:pr-6 @3xl:pl-4 md:@3xl:pl-6'>
+                  <div className='pb-7 @3xl:pr-10 @3xl:pl-8 md:@3xl:pr-12 md:@3xl:pl-12'>
                     {intro}
                   </div>
                 ) : null}
                 {/* The gap under the tabs is the bar's own, on the page's
                     background, so content scrolling up passes under it
                     rather than meeting the tabs' edge. */}
-                <div className='sticky top-0 z-10 flex flex-wrap items-center bg-background pt-1 pb-4 @3xl:pt-0 @3xl:pr-6 @3xl:pl-4 md:@3xl:pl-6'>
+                <div className='sticky top-0 z-10 flex flex-wrap items-center bg-background pt-1 pb-4 @3xl:pt-0 @3xl:pr-10 @3xl:pl-8 md:@3xl:pr-12 md:@3xl:pl-12'>
                   {tabBar}
                 </div>
-                <div className='min-w-0 @3xl:pr-6 @3xl:pl-4 md:@3xl:pl-6'>
+                <div className='min-w-0 @3xl:pr-10 @3xl:pl-8 md:@3xl:pr-12 md:@3xl:pl-12'>
                   {right}
                 </div>
               </section>
@@ -1560,8 +1566,6 @@ export function HistoryChanges({
   part = 'line',
   open = false,
   onToggle,
-  long = false,
-  onLong,
 }: {
   entity?: Entity;
   record: CrmRecord;
@@ -1576,14 +1580,9 @@ export function HistoryChanges({
   // its count and the toggle (`line`), and, unfolded, its fields in a box
   // under the whole entry, the time's column included (`rows`). The
   // timeline keeps which entries are open, as it does for the AI's.
-  // A lone field's value too long for the line reads whole below the
-  // entry's line (`below`), as a long note does: the timeline keeps which
-  // ones are (`long`), as this line reports it (`onLong`).
-  part?: 'line' | 'rows' | 'below';
+  part?: 'line' | 'rows';
   open?: boolean;
   onToggle?: () => void;
-  long?: boolean;
-  onLong?: (long: boolean) => void;
 }): ReactElement | null {
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
@@ -1664,20 +1663,6 @@ export function HistoryChanges({
         );
       })()
     );
-  // The whole value over as many lines as it takes: a long text as the
-  // record shows it (Markdown, folded after four lines).
-  const full = (key: string): ReactNode =>
-    key === 'attachments' ||
-    fields.find((f) => f.key === key)?.type === 'contacts' ? (
-      show(changed, key)
-    ) : (
-      <Value
-        record={{ ...record, ...changed }}
-        field={fields.find((f) => f.key === key) ?? { key, type: 'text' }}
-        lookup={names}
-        wrap
-      />
-    );
   // Read like a status move on the timeline: each field's name (muted, as
   // the verb before it), then → new in the line's own type. Several
   // fields in one save follow one another on the line.
@@ -1696,10 +1681,10 @@ export function HistoryChanges({
     before && key in before && toText(before[key] ?? '').trim()
       ? `${toText(before[key])} → ${toText(changed[key] ?? '')}`
       : toText(changed[key]);
-  // An arrow to the new value only; the old value stays on hover
-  // (titleOf). On the line a value is cut where the line ends, and one
-  // that does not fit (or runs over several lines) reads whole below the
-  // line instead; in the rows of a save of several fields it wraps.
+  // An arrow to the new value only, clamped so one long value cannot turn
+  // an entry into a paragraph; the old value and the full text stay on
+  // hover (titleOf). The descendant rule beats the value renderer's own
+  // pre-wrap.
   const valuesOf = (key: string): ReactNode =>
     // Emptied, it says so rather than pointing at a dash.
     isBlankValue(changed[key]) ? (
@@ -1710,21 +1695,11 @@ export function HistoryChanges({
       <>
         <ArrowRight
           aria-hidden
-          className={`size-3 shrink-0 self-center text-muted-foreground ${
-            part === 'line' && long ? 'invisible' : ''
-          }`}
+          className='size-3 shrink-0 self-center text-muted-foreground'
         />
-        {part === 'rows' ? (
-          <span className='min-w-0 flex-1 break-words'>{full(key)}</span>
-        ) : (
-          <LineValue
-            long={long}
-            onLong={onLong}
-            lines={toText(changed[key]).trim().includes('\n')}
-          >
-            {show(changed, key)}
-          </LineValue>
-        )}
+        <span className='min-w-0 shrink truncate [&_*]:whitespace-nowrap'>
+          {show(changed, key)}
+        </span>
       </>
     );
   const rows = shown.map((key, index) => {
@@ -1794,10 +1769,6 @@ export function HistoryChanges({
       </span>
     );
   });
-  if (part === 'below')
-    return !folds && long && !isBlankValue(changed[shown[0]]) ? (
-      <div className='mt-0.5 min-w-0 text-sm break-words'>{full(shown[0])}</div>
-    ) : null;
   if (part === 'rows')
     return folds && open ? (
       <div className='mt-1 grid gap-1 rounded-lg border bg-muted/40 px-3 py-2 text-sm'>
@@ -1824,51 +1795,6 @@ export function HistoryChanges({
         />
       </Button>
     </>
-  );
-}
-
-// A lone field's new value on its entry's line, cut where the line ends
-// (the descendant rule beats the value renderer's own pre-wrap). It reports
-// whether the value does not fit, or runs over several lines, and then
-// stays in place unseen, keeping the line's measure, while the whole value
-// reads below the line, as a long note does (NoteExcerpt).
-function LineValue({
-  children,
-  lines,
-  long,
-  onLong,
-}: {
-  children: ReactNode;
-  lines: boolean;
-  long: boolean;
-  onLong?: (long: boolean) => void;
-}): ReactElement {
-  const ref = useRef<HTMLSpanElement>(null);
-  const reportRef = useRef(onLong);
-  useEffect(() => {
-    reportRef.current = onLong;
-  });
-  useLayoutEffect(() => {
-    const node = ref.current;
-    if (!node || !reportRef.current) return;
-    const measure = (): void =>
-      reportRef.current?.(lines || node.scrollWidth > node.clientWidth + 1);
-    measure();
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [lines, children]);
-  return (
-    <span
-      ref={ref}
-      aria-hidden={long || undefined}
-      className={`min-w-0 shrink truncate [&_*]:whitespace-nowrap ${
-        long ? 'invisible' : ''
-      }`}
-    >
-      {children}
-    </span>
   );
 }
 
@@ -2203,7 +2129,6 @@ function TaskEvent({
             value={toText(task.result)}
             long={resultLong}
             onLong={(long) => onResultLong?.(long)}
-            tight={false}
           />
         </>
       ) : null}
@@ -2246,9 +2171,9 @@ const eventIcons: Record<string, LucideIcon> = {
   ai: Sparkles,
   // A note's entries by what they concern, as files' are: added, edited or
   // removed, all under the note.
-  note: StickyNote,
-  noteEdited: StickyNote,
-  noteDeleted: StickyNote,
+  note: MessageSquareText,
+  noteEdited: MessageSquareText,
+  noteDeleted: MessageSquareText,
   // A person asking the AI to redo its card, in their words.
   aiRevise: MessageCircle,
   merged: Merge,
@@ -2452,13 +2377,9 @@ export function HistoryFeed({
               key='timeline'
               className='grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4'
             >
+              {/* The icons on no rail of their own, joined by a hairline
+                  from one entry to the next. */}
               <ol className='relative'>
-                {/* The rail behind the icons: a slim one in the menu's
-                    colour, a shade deeper than the page's tint, borderless. */}
-                <span
-                  aria-hidden
-                  className='absolute inset-y-0 left-0 w-5 rounded-full bg-sidebar'
-                />
                 {events.map((event, index) => {
                   const key = toText(event.id);
                   const ai = event.action === 'ai';
@@ -2619,7 +2540,9 @@ export function HistoryFeed({
                                             ? 'feed.reviewed'
                                             : 'feed.evaluated',
                                     )
-                                  : filesOnly(event)
+                                  : // A note is its text, right after who
+                                    // wrote it, with no word before it.
+                                    filesOnly(event) || note
                                     ? ''
                                     : // A status or stage move reads as any
                                       // other field's update.
@@ -2689,8 +2612,6 @@ export function HistoryFeed({
                                   fileNames={fileNames}
                                   open={open}
                                   onToggle={() => toggle(key)}
-                                  long={longNotes.has(key)}
-                                  onLong={(long) => markLong(key, long)}
                                 />
                               )}
                             {/* What the person asked the AI to change, in
@@ -2698,10 +2619,10 @@ export function HistoryFeed({
                             {event.action === 'merged' ? (
                               <MergedLead changes={event.changes} />
                             ) : null}
-                            {/* A note that fits reads on its line after
-                                "Note:"; one of several lines, or longer
-                                than the line, reads whole below it, as
-                                Clarify shows a comment. */}
+                            {/* A note that fits reads on its line right
+                                after who wrote it; one of several lines, or
+                                longer than the line, reads whole below it,
+                                as Clarify shows a comment. */}
                             {note ? (
                               <NoteExcerpt
                                 value={noteText(event)}
@@ -2710,7 +2631,6 @@ export function HistoryFeed({
                                 }
                                 long={longNotes.has(key)}
                                 onLong={(long) => markLong(key, long)}
-                                tight={language.startsWith('zh')}
                               />
                             ) : null}
                             {event.action === 'aiRevise' ? (
@@ -2789,32 +2709,6 @@ export function HistoryFeed({
                             )}
                           </time>
                         </div>
-                        {/* A field's value too long for the line, whole
-                            below it as a long note's text is. */}
-                        {longNotes.has(key) &&
-                          !ai &&
-                          !note &&
-                          event.action !== 'created' &&
-                          !toText(event.action).startsWith('note') &&
-                          event.action !== 'aiRevise' &&
-                          event.action !== 'merged' &&
-                          event.action !== 'mail' &&
-                          !taskEvent &&
-                          !approvalEvent && (
-                            <HistoryChanges
-                              part='below'
-                              long
-                              entity={entity}
-                              record={record}
-                              changes={shownChanges}
-                              previous={event.previous}
-                              movedField={
-                                event.fromValue ? statusKey : undefined
-                              }
-                              names={allNames}
-                              fileNames={fileNames}
-                            />
-                          )}
                         {comment ? (
                           <div className='mt-0.5 text-sm'>
                             <LongText value={comment} />
@@ -3071,7 +2965,6 @@ function NoteExcerpt({
   value,
   long,
   onLong,
-  tight,
   mentions,
 }: {
   value: string;
@@ -3079,9 +2972,6 @@ function NoteExcerpt({
   mentions?: unknown;
   long: boolean;
   onLong: (long: boolean) => void;
-  // Right after a Chinese full-width colon, which carries its own space;
-  // the line's gap stays after an English one.
-  tight: boolean;
 }): ReactElement {
   const { data: meta } = useMetadata();
   const ref = useRef<HTMLSpanElement>(null);
@@ -3105,9 +2995,7 @@ function NoteExcerpt({
     <span
       ref={ref}
       aria-hidden={long || undefined}
-      className={`min-w-0 flex-1 truncate ${tight ? '-ml-1.5' : ''} ${
-        long ? 'invisible' : ''
-      }`}
+      className={`min-w-0 flex-1 truncate ${long ? 'invisible' : ''}`}
     >
       {withMentions(markdownLine(value), mentions, meta?.users ?? [])}
     </span>
@@ -3236,49 +3124,84 @@ function NoteEditor({
   );
 }
 
-// A group of a record's particulars (the lead's, the task's): a heading,
-// then its rows, set off from the group before by space alone.
+// A group of a record's particulars (the lead's, the task's): a heading
+// that folds the group away and opens it again, as Clarify's do (each
+// group's fold remembered in the browser, by its heading), then its rows.
 export function InfoGroup({
   title,
-  icon: Icon,
   children,
 }: {
-  // None for what leads the page by itself (a task's description).
+  // None for what leads the page by itself (a task's description), which
+  // does not fold.
   title?: string;
-  // Before the title: what the group is about (GROUP_ICONS in
-  // components/crm/group-icons.ts).
-  icon?: LucideIcon;
   children: ReactNode;
 }): ReactElement {
+  const storageKey = title ? `nococrm:info-group:${title}` : '';
+  const [folded, setFolded] = useState(() => {
+    if (!storageKey) return false;
+    try {
+      return localStorage.getItem(storageKey) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const toggle = (): void => {
+    const next = !folded;
+    setFolded(next);
+    try {
+      if (next) localStorage.setItem(storageKey, '1');
+      else localStorage.removeItem(storageKey);
+    } catch {
+      // A browser that keeps nothing folds for this visit only.
+    }
+  };
   // A card of its own, white on the page's tint with a faint border and
   // the lightest shadow, set 0.75rem from the group above it.
   return (
-    <section className='mt-3 rounded-xl border border-border/60 bg-card px-2 py-3 shadow-xs first:mt-0'>
+    <section
+      className={`mt-3 rounded-xl border border-border/60 bg-card px-2 shadow-xs first:mt-0 ${
+        folded ? 'py-1.5' : 'py-3'
+      }`}
+    >
       {title && (
-        <h3 className='flex items-center gap-1.5 px-2 pb-1.5 text-sm font-medium'>
-          {Icon && (
-            <Icon className='size-4 text-muted-foreground' aria-hidden />
-          )}
-          {title}
+        <h3 className={folded ? '' : 'pb-1.5'}>
+          <button
+            type='button'
+            aria-expanded={!folded}
+            onClick={toggle}
+            className='group/fold flex w-full items-center gap-1.5 rounded-md px-2 py-0.5 text-left text-sm font-medium hover:bg-muted/60'
+          >
+            <span className='min-w-0 flex-1 truncate'>{title}</span>
+            <ChevronDown
+              aria-hidden
+              className={`size-4 shrink-0 text-muted-foreground transition-transform ${
+                folded ? '-rotate-90' : ''
+              }`}
+            />
+          </button>
         </h3>
       )}
-      <dl>{children}</dl>
+      {folded ? null : <dl>{children}</dl>}
     </section>
   );
 }
 
-// A row of a record's particulars: the label, then the value (an
-// inline editor, a status, a time).
+// A row of a record's particulars: the field's icon and label, then the
+// value (an inline editor, a status, a time).
 export function InfoRow({
   label,
+  field,
   children,
 }: {
   label: string;
+  // The field it shows, for its icon (components/crm/field-icons.tsx).
+  field: string;
   children: ReactNode;
 }): ReactElement {
   return (
-    <div className='grid grid-cols-[6.5rem_minmax(0,1fr)] items-start gap-2'>
+    <div className='grid grid-cols-[7.5rem_minmax(0,1fr)] items-start gap-2'>
       <dt className='flex items-center gap-1.5 px-2 py-1.5 text-sm text-muted-foreground'>
+        <FieldIcon field={field} />
         <span className='min-w-0 leading-snug'>{label}</span>
       </dt>
       <dd className='min-w-0 text-sm'>{children}</dd>

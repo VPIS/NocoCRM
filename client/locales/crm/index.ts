@@ -764,7 +764,6 @@ const wording = {
       updated: ['updated', '更新'],
       deleted: ['deleted the record', '删除了记录'],
       converted: ['converted the lead', '转化了线索'],
-      note: ['note:', '备注：'],
       noteEdited: ['edited a note', '编辑了备注'],
       noteDeleted: ['removed a note', '删除了一条备注'],
       aiRevise: ['asked the AI to revise the suggestion', '让 AI 修改建议'],
@@ -779,14 +778,14 @@ const wording = {
   },
   evaluation: {
     title: ['AI follow-up', 'AI 跟进建议'],
-    // The lead timeline's status chip, short beside the verdict.
-    chip: ['AI suggestion', 'AI 建议'],
     waiting: ['AI follow-up waiting for you', 'AI 跟进建议待处理'],
     onCard: {
       running: ['AI working', 'AI 跟进中'],
       pending: ['AI suggestion', 'AI 建议待处理'],
     },
     again: ['Follow up', '跟进'],
+    // At the end of the AI's latest suggestion's chip.
+    askAgain: ['Rerun', '重新跟进'],
     running: [
       'The AI is reviewing it and preparing a suggestion…',
       'AI 正在查看、准备跟进建议…',
@@ -800,7 +799,7 @@ const wording = {
       'The follow-up did not finish. Follow up again to retry.',
       '这次跟进没有完成，可以重新跟进。',
     ],
-    follow: ['Keep following up', '继续跟进'],
+    follow: ['Follow up', '继续跟进'],
     nurture: ['Nurture', '放入培育'],
     convert: ['Convert', '转化'],
     invalid: ['Invalid', '无效'],
@@ -1017,7 +1016,7 @@ const wording = {
     statuses: {
       superseded: ['Replaced', '已被新建议替代'],
       running: ['Working', '跟进中'],
-      pending: ['Waiting for you', '待处理'],
+      pending: ['Pending', '待处理'],
       accepted: ['Accepted', '已采纳'],
       dismissed: ['Dismissed', '已忽略'],
       failed: ['Not finished', '未完成'],
@@ -1207,6 +1206,9 @@ const wording = {
     running: ['The AI is reviewing the request…', 'AI 正在分析这个申请…'],
     failed: ['The AI could not review it', '没能给出审批建议'],
     superseded: ['decided on the approval itself', '已在审批上直接处理'],
+    // Where the latest review stands, and asking for another, on its chip.
+    working: ['Reviewing', '分析中'],
+    again: ['Rerun', '重新分析'],
     // Voided because the approval left the queue without the card.
     retired: {
       withdrawn: [

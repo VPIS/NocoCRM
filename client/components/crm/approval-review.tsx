@@ -399,8 +399,8 @@ export function ReviewFeedEntry({
   );
 }
 
-// Where the latest review of an approval stands, beside the way to ask for
-// another (the approver's or the applicant's, while it waits), for the
+// Where the latest review of an approval stands, ending in the way to ask
+// for another (the approver's, while the approval waits), for the
 // approval's page.
 export function ReviewStatus({
   approvalId,
@@ -439,58 +439,97 @@ export function ReviewStatus({
   const mayAsk =
     record?.status === 'pending' && record.approverId === meta.userId;
   const review = entry?.ai.result;
+  const ask = (): void => {
+    setBusy(true);
+    setError(undefined);
+    api(`approvals/${approvalId}/review`, 'POST', {})
+      .then(() => refresh())
+      .catch(setError)
+      .finally(() => setBusy(false));
+  };
+  const pending = entry?.status === 'pending';
+  const again = mayAsk && entry?.status !== 'running';
+  // Where it stands, in the timeline's words.
+  const standing =
+    entry?.status === 'running'
+      ? text('approvalReview.working')
+      : entry?.status === 'superseded'
+        ? text('approvalReview.superseded')
+        : text(`evaluation.statuses.${toText(entry?.status)}`);
   return (
     <div className='flex flex-wrap items-center gap-1'>
-      {entry && (
-        <button
-          type='button'
-          onClick={() => onOpen(entry.id)}
-          className={`${wide ? 'flex min-w-0 flex-1' : 'inline-flex max-w-full'} items-center gap-1.5 rounded-lg border px-2 py-1 text-xs transition-colors ${
+      {/* As a lead's and a deal's suggestion read (EvaluationStatus): the
+          AI's mark, the recommendation and where it stands on one line,
+          then asking again; before the first review, a button asks. */}
+      {entry ? (
+        <div
+          className={`${wide ? 'flex min-w-0 flex-1' : 'inline-flex max-w-full'} h-7 items-center rounded-lg border text-xs ${
             entry.status === 'running'
               ? 'crm-ai-working'
-              : entry.status === 'pending'
-                ? 'border-ai/30 bg-ai/5 hover:bg-ai/10'
-                : 'hover:bg-muted'
+              : pending
+                ? 'border-ai/30 bg-ai/5'
+                : 'bg-card'
           }`}
         >
-          {entry.status === 'running' ? (
-            <Spinner className='size-3.5 text-ai' />
-          ) : (
-            <Sparkles className='size-3.5 text-ai' />
-          )}
-          <span className='font-medium'>{text('approvalReview.title')}</span>
-          <span className='truncate text-muted-foreground'>
-            {entry.status === 'running'
-              ? text('approvalReview.running')
-              : entry.status === 'failed'
-                ? text('approvalReview.failed')
-                : review
-                  ? text(
-                      `approvalReview.recommendations.${review.recommendation}`,
-                    )
-                  : ''}
-          </span>
-        </button>
-      )}
-      {mayAsk && (
+          <button
+            type='button'
+            onClick={() => onOpen(entry.id)}
+            className={`flex min-w-0 items-center h-full gap-1.5 rounded-l-lg px-2 transition-colors ${
+              again ? '' : 'rounded-r-lg'
+            } ${pending ? 'hover:bg-ai/10' : 'hover:bg-muted'} ${wide ? 'flex-1' : ''}`}
+          >
+            {entry.status === 'running' ? (
+              <Spinner className='size-3.5 text-ai' />
+            ) : (
+              <Sparkles className='size-3.5 text-ai' />
+            )}
+            {review && (
+              <>
+                <span className='min-w-0 truncate font-medium'>
+                  {text(
+                    `approvalReview.recommendations.${review.recommendation}`,
+                  )}
+                </span>
+                <span aria-hidden className='shrink-0 text-muted-foreground/60'>
+                  ·
+                </span>
+              </>
+            )}
+            <span
+              className={`shrink-0 whitespace-nowrap ${
+                pending ? 'font-medium text-ai' : 'text-muted-foreground'
+              }`}
+            >
+              {standing}
+            </span>
+          </button>
+          {again ? (
+            <>
+              <span aria-hidden className='h-3.5 w-px shrink-0 bg-border' />
+              <button
+                type='button'
+                disabled={busy}
+                onClick={ask}
+                className='flex shrink-0 items-center gap-1 h-full rounded-r-lg px-2 font-medium whitespace-nowrap text-ai transition-colors hover:bg-ai/10 disabled:opacity-50'
+              >
+                {busy ? <Spinner className='size-3' /> : null}
+                {text('approvalReview.again')}
+              </button>
+            </>
+          ) : null}
+        </div>
+      ) : mayAsk ? (
         <Button
           size='sm'
           variant='ghost'
           className='text-ai hover:text-ai'
-          disabled={busy || entry?.status === 'running'}
-          onClick={() => {
-            setBusy(true);
-            setError(undefined);
-            api(`approvals/${approvalId}/review`, 'POST', {})
-              .then(() => refresh())
-              .catch(setError)
-              .finally(() => setBusy(false));
-          }}
+          disabled={busy}
+          onClick={ask}
         >
           {busy ? <Spinner /> : <Sparkles />}
           {text('approvalReview.ask')}
         </Button>
-      )}
+      ) : null}
       <ErrorNotice error={error} />
     </div>
   );

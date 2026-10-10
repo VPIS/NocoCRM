@@ -857,6 +857,15 @@ async function previousOf(
   return null;
 }
 
+// The deal's fields the updates set, an amount as a number.
+const updateInput = (updates: readonly OpportunityUpdate[]): Row => {
+  const input: Row = {};
+  for (const update of updates)
+    input[update.field] =
+      update.field === 'amount' ? Number(update.value) : update.value;
+  return input;
+};
+
 // The deal's fields whose value a person accepted from an earlier card and
 // that nothing has borne on since: the value still the one accepted, and no
 // task done, no note written and, for the amount, no discount decided
@@ -1829,12 +1838,15 @@ export class OpportunityEvaluator {
           const chosen = new Set(
             Array.isArray(fields) ? fields.map(toText) : [],
           );
-          const input: Row = {};
-          for (const update of verdict.updates)
-            if (chosen.has(update.field))
-              input[update.field] =
-                update.field === 'amount' ? Number(update.value) : update.value;
-          updatedFields = Object.keys(input);
+          // The updates picked and not already written (`enrich`).
+          const before = entry.ai.updatedFields ?? [];
+          const input: Row = updateInput(
+            verdict.updates.filter(
+              (update) =>
+                chosen.has(update.field) && !before.includes(update.field),
+            ),
+          );
+          updatedFields = [...before, ...Object.keys(input)];
           if (verdict.recommendation === 'advance' && verdict.stage)
             input.stage = verdict.stage;
           else if (verdict.recommendation === 'pause') {
@@ -1999,16 +2011,47 @@ export class OpportunityEvaluator {
           .executeTakeFirst();
         if (!row) throw new CrmError('notFound', 404);
         const entry = readEntry<OpportunityVerdict>(row);
-        if (entry.ai.enrichedAt) throw new CrmError('evaluationDecided', 409);
-        const written = await this.writeFindings(
-          prepared,
-          query,
-          opportunity,
-          entry,
-          chosen,
+        // The company's findings, once per card.
+        const findings = (entry.ai.result?.enrich ?? []).some((f) =>
+          chosen.has(f.field),
         );
-        if (!written) throw new CrmError('invalidInput', 400, 'fields');
-        const ai = { ...entry.ai, ...written };
+        if (findings && entry.ai.enrichedAt)
+          throw new CrmError('evaluationDecided', 409);
+        const written = findings
+          ? await this.writeFindings(
+              prepared,
+              query,
+              opportunity,
+              entry,
+              chosen,
+            )
+          : null;
+        // The deal's own fields, written ahead of the accept when an
+        // email card writes what it ticked before sending, so a refused
+        // send loses none of it; the accept then leaves them be.
+        const updatedFields = entry.ai.result
+          ? await this.writeUpdates(
+              prepared,
+              query,
+              opportunityId,
+              entry,
+              chosen,
+            )
+          : [];
+        if (!written && !updatedFields.length)
+          throw new CrmError('invalidInput', 400, 'fields');
+        const ai = {
+          ...entry.ai,
+          ...(written ?? {}),
+          ...(updatedFields.length
+            ? {
+                updatedFields: [
+                  ...(entry.ai.updatedFields ?? []),
+                  ...updatedFields,
+                ],
+              }
+            : {}),
+        };
         await query
           .updateTable('crmHistory')
           .set({ ai: JSON.stringify(ai) })
@@ -2017,6 +2060,32 @@ export class OpportunityEvaluator {
         return { ...entry, ai };
       },
     );
+  }
+
+  // Writes the deal's updates picked and not yet written, as the AI's
+  // proposal the person confirmed; returns the fields it wrote.
+  private async writeUpdates(
+    prepared: Actor,
+    query: QueryAdapter,
+    opportunityId: string,
+    entry: EvaluationEntry<OpportunityVerdict>,
+    chosen: ReadonlySet<string>,
+  ): Promise<string[]> {
+    const before = entry.ai.updatedFields ?? [];
+    const input = updateInput(
+      (entry.ai.result?.updates ?? []).filter(
+        (update) => chosen.has(update.field) && !before.includes(update.field),
+      ),
+    );
+    if (!Object.keys(input).length) return [];
+    await this.service.save(
+      prepared,
+      'opportunities',
+      input,
+      opportunityId,
+      query,
+    );
+    return Object.keys(input);
   }
 
   // Sets the people the person kept on the deal in their role: a contact of

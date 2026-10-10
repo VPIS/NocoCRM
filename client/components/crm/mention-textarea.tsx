@@ -28,13 +28,16 @@ function useColleagues(): { id: string; name: string }[] {
 }
 
 // The "@" and what follows it right before the caret, while it is still
-// being typed: after the start or a space, up to twenty characters with no
-// space.
+// being typed: anywhere but right after a character an email address is
+// made of ("name@company.com" is not a mention), so after Chinese text, a
+// space or the start alike; up to twenty characters with no space.
 function typing(
   text: string,
   caret: number,
 ): { at: number; query: string } | undefined {
-  const match = /(^|\s)@([^\s@]{0,20})$/.exec(text.slice(0, caret));
+  const match = /(^|[^A-Za-z0-9._%+-])@([^\s@]{0,20})$/.exec(
+    text.slice(0, caret),
+  );
   return match
     ? { at: caret - match[2].length - 1, query: match[2] }
     : undefined;

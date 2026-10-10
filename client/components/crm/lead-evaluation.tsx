@@ -37,6 +37,7 @@ import {
 import { OutcomeBox } from './outcome.js';
 import { useMailSetup } from './mail.js';
 import { EmailStep } from './email-step.js';
+import type { FollowUpRequest } from './follow-up-request.js';
 import { Choice } from './form.js';
 import { Input } from '../ui/input.js';
 import { DateTimeInput } from './datetime-input.js';
@@ -249,11 +250,14 @@ export function EvaluationStatus({
   entity = 'leads',
   recordId,
   onOpen,
+  request,
   wide = false,
 }: {
   entity?: FollowedEntity;
   recordId: string;
   onOpen: (entryId: string) => void;
+  // Asking the AI to follow the record up again, at the chip's end.
+  request?: FollowUpRequest;
   // Across its row, as atop a record's particulars.
   wide?: boolean;
 }): ReactElement | null {
@@ -275,8 +279,8 @@ export function EvaluationStatus({
       void refresh();
     lastStatusRef.current = entry?.status;
   }, [entry?.status, refresh]);
-  // Evaluating (again) is EvaluateButton atop the timeline; this only
-  // reports the latest evaluation, and nothing before the first.
+  // Before the first evaluation it shows nothing (EvaluateButton asks
+  // for one); after, it reports the latest and asks for another.
   if (!meta?.assistant || !entry) return null;
   const verdict = entry.ai.result;
   const pending = entry.status === 'pending';
@@ -284,110 +288,111 @@ export function EvaluationStatus({
   // One chip, not a row of its own: what the AI concluded and where that
   // stands. It opens the evaluation in the timeline, where it is handled;
   // the details say more on hover.
+  const again = request?.available && entry.status !== 'running';
+  // As tall as the small buttons beside it (h-7), the main action's.
   return (
-    <button
-      type='button'
-      onClick={() => onOpen(entry.id)}
-      title={
-        decided
-          ? text('evaluation.decidedBy', {
-              status: text(`evaluation.statuses.${entry.status}`),
-              name:
-                meta.users.find((u) => u.id === entry.ai.decidedById)?.name ??
-                '',
-              time: localDate(
-                entry.ai.decidedAt,
-                language,
-                meta.settings.timeZone,
-              ),
-            })
-          : entry.status === 'failed'
-            ? text('evaluation.failed')
-            : undefined
-      }
-      // Small, as the filter beside it; the button asking for a follow-up
-      // keeps the text's size.
-      className={`${wide ? 'flex w-full' : 'inline-flex max-w-full'} items-center gap-1.5 rounded-lg border px-2 py-1 font-sans text-xs font-normal tracking-normal transition-colors ${
+    <div
+      className={`${wide ? 'flex w-full' : 'inline-flex max-w-full'} h-7 items-center rounded-lg border font-sans text-xs font-normal tracking-normal ${
         entry.status === 'running'
           ? 'crm-ai-working'
           : pending
-            ? 'border-ai/30 bg-ai/5 hover:bg-ai/10'
-            : 'bg-card hover:bg-muted'
+            ? 'border-ai/30 bg-ai/5'
+            : 'bg-card'
       }`}
     >
-      {entry.status === 'running' ? (
-        <Spinner className='size-3.5 text-ai' />
-      ) : (
-        <Sparkles className='size-3.5 text-ai' />
-      )}
-      {/* In a narrow column the labels keep to one line and the verdict,
-          the one part that can run long, is cut with an ellipsis (shown
-          whole on hover, the chip's title aside). */}
-      <span className='shrink-0 font-medium whitespace-nowrap'>
-        {text('evaluation.chip')}
-      </span>
-      {verdict && (
-        <Badge
-          variant={pending ? 'ai' : 'muted'}
-          className='min-w-0 shrink'
-          title={label(verdict)}
-        >
-          <span className='truncate'>{label(verdict)}</span>
-        </Badge>
-      )}
-      {/* Its status in the timeline's words, waiting in the AI's colour. */}
-      <span
-        className={`shrink-0 whitespace-nowrap ${
-          pending ? 'font-medium text-ai' : 'text-muted-foreground'
-        }`}
+      <button
+        type='button'
+        onClick={() => onOpen(entry.id)}
+        title={
+          decided
+            ? text('evaluation.decidedBy', {
+                status: text(`evaluation.statuses.${entry.status}`),
+                name:
+                  meta.users.find((u) => u.id === entry.ai.decidedById)?.name ??
+                  '',
+                time: localDate(
+                  entry.ai.decidedAt,
+                  language,
+                  meta.settings.timeZone,
+                ),
+              })
+            : entry.status === 'failed'
+              ? text('evaluation.failed')
+              : undefined
+        }
+        // Small, as the filter beside it.
+        className={`flex min-w-0 items-center h-full gap-1.5 rounded-l-lg px-2 transition-colors ${
+          again ? '' : 'rounded-r-lg'
+        } ${pending ? 'hover:bg-ai/10' : 'hover:bg-muted'} ${wide ? 'flex-1' : ''}`}
       >
-        {text(`evaluation.statuses.${entry.status}`)}
-      </span>
-    </button>
+        {entry.status === 'running' ? (
+          <Spinner className='size-3.5 text-ai' />
+        ) : (
+          <Sparkles className='size-3.5 text-ai' />
+        )}
+        {/* The AI's mark says whose it is: the verdict, then its status,
+          one line, no box within the box. In a narrow column the verdict,
+          the one part that can run long, is cut with an ellipsis (shown
+          whole on hover). */}
+        {verdict && (
+          <span className='min-w-0 truncate font-medium' title={label(verdict)}>
+            {label(verdict)}
+          </span>
+        )}
+        {verdict && (
+          <span aria-hidden className='shrink-0 text-muted-foreground/60'>
+            ·
+          </span>
+        )}
+        {/* Its status in the timeline's words, waiting in the AI's colour. */}
+        <span
+          className={`shrink-0 whitespace-nowrap ${
+            pending ? 'font-medium text-ai' : 'text-muted-foreground'
+          }`}
+        >
+          {text(`evaluation.statuses.${entry.status}`)}
+        </span>
+      </button>
+      {/* Following it up again, after where it stands. */}
+      {again ? (
+        <>
+          <span aria-hidden className='h-3.5 w-px shrink-0 bg-border' />
+          <button
+            type='button'
+            disabled={request.busy}
+            onClick={request.ask}
+            className='flex shrink-0 items-center gap-1 h-full rounded-r-lg px-2 font-medium whitespace-nowrap text-ai transition-colors hover:bg-ai/10 disabled:opacity-50'
+          >
+            {request.busy ? <Spinner className='size-3' /> : null}
+            {text('evaluation.askAgain')}
+          </button>
+        </>
+      ) : null}
+    </div>
   );
 }
 
-// Asks the AI to evaluate the lead, or to evaluate it again: a button atop
-// the lead's timeline, the one place to ask for it (the cards do not offer
-// it), while EvaluationStatus reports what came of it. Evaluating again
-// while a verdict waits sets that verdict aside.
+// Asks the AI to follow the record up before it ever has: a button beside
+// the record's heading. After, the latest suggestion's chip stands there
+// and asks again at its end (EvaluationStatus); evaluating again while a
+// verdict waits sets that verdict aside. No card offers it.
 export function EvaluateButton({
-  entity = 'leads',
-  recordId,
-  onError,
+  request,
 }: {
-  entity?: FollowedEntity;
-  recordId: string;
-  onError: (error: unknown) => void;
+  request: FollowUpRequest;
 }): ReactElement | null {
-  const { data: meta } = useMetadata();
   const { text } = useCrmText();
-  const api = useCrmApi();
-  const refresh = useRefresh();
-  const [busy, setBusy] = useState(false);
-  const { data: entry } = useCrmQuery<EvaluationEntry | null>(
-    `${entity}/${recordId}/evaluation`,
-    Boolean(meta?.assistant),
-  );
-  if (!meta?.assistant) return null;
+  if (!request.available || request.asked) return null;
   return (
     <Button
       size='sm'
       variant='ghost'
       className='text-ai hover:text-ai'
-      disabled={busy || entry?.status === 'running'}
-      onClick={() => {
-        setBusy(true);
-        onError(undefined);
-        api(`${entity}/${recordId}/evaluation`, 'POST', {})
-          .then(() => refresh())
-          .catch(onError)
-          .finally(() => setBusy(false));
-      }}
+      disabled={request.busy}
+      onClick={request.ask}
     >
       {/* The AI's mark, as on every AI entry point. */}
-      {busy ? <Spinner /> : <Sparkles />}
-      {/* "Follow up", the first time as every time after. */}
+      {request.busy ? <Spinner /> : <Sparkles />}
       {text('evaluation.again')}
     </Button>
   );
@@ -539,6 +544,14 @@ export function VerdictPanel({
           : {}),
       }),
     );
+  // An email card writes them before its message goes, so a send the
+  // provider refuses keeps them; the accept that follows the send leaves
+  // them be. The card then shows them written.
+  const writeTicked = async (): Promise<void> => {
+    if (!unwritten.length) return;
+    await api(`${base}/${entry.id}/enrich`, 'POST', { fields: unwritten });
+    await onChanged();
+  };
   // A conversion writes them first: the lead is read-only once converted,
   // and the company it becomes takes the corrected particulars.
   const convert = (): Promise<void> =>
@@ -800,6 +813,7 @@ export function VerdictPanel({
                 recordId={recordId}
                 draft={verdict.email}
                 editable={entry.status === 'pending' && editable}
+                beforeSend={writeTicked}
                 onSent={() => decide('accept')}
               />
             ) : undefined

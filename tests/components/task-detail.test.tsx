@@ -275,9 +275,10 @@ describe('the task page', () => {
       note,
     ];
     renderPage();
-    // "Note:" on the entry's line; a note of several lines reads whole
-    // below it, as Clarify shows a comment, and its edits are not entries.
-    expect(screen.getByText('备注：')).toBeTruthy();
+    // No word before a note on its line; a note of several lines reads
+    // whole below it, as Clarify shows a comment, and its edits are not
+    // entries.
+    expect(screen.queryByText('备注：')).toBeNull();
     // (The line keeps its one-line text unseen, to measure.)
     expect(
       screen
