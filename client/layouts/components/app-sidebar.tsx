@@ -85,10 +85,14 @@ function useSuppressSidebarShortcut(): void {
  * an untranslated title.
  */
 export function AppSidebar({
+  action,
   children,
   footer,
   label,
 }: {
+  // Application change: a control beside the brand (the CRM's search),
+  // shown while the sidebar is expanded and in the phone's sheet.
+  readonly action?: ReactNode;
   readonly children: ReactNode;
   readonly footer?: ReactNode;
   /** The accessible name of the sidebar, and the title of the phone's sheet. */
@@ -104,6 +108,9 @@ export function AppSidebar({
   const header = (
     <SidebarHeader className='h-16 shrink-0 flex-row items-center justify-between border-b border-sidebar-border/70 px-5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0'>
       <AppBrand compact={state === 'collapsed' && !isMobile} />
+      {action && (isMobile || state === 'expanded') ? (
+        <div className='ml-auto flex items-center'>{action}</div>
+      ) : null}
       {isMobile ? (
         <Button
           aria-label={t('navigation.close', {

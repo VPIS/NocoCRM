@@ -35,6 +35,7 @@ import { DemoBanner } from '../components/crm/demo-banner.js';
 import { AssistantDock } from '../components/crm/assistant-dock.js';
 import {
   GlobalSearchDialog,
+  SearchHeaderButton,
   SearchNavButton,
 } from '../components/crm/search-dialog.js';
 import { SidebarChats } from './components/sidebar-chats.js';
@@ -105,7 +106,14 @@ export function AppLayout({
     <RouteTreeProvider routes={routeTree}>
       <PageBreadcrumbProvider>
         <AppSidebarProvider>
-          <AppSidebar label={navigationLabel} footer={<AppSidebarFooter />}>
+          <AppSidebar
+            // Application change: the search beside the brand
+            // (search-dialog.tsx); in the collapsed sidebar, under the
+            // overview.
+            action={<SearchHeaderButton />}
+            label={navigationLabel}
+            footer={<AppSidebarFooter />}
+          >
             {/* Application change: the CRM's menu-only groups are headed sections (navigation-menu.tsx). */}
             <NavigationBadgesContext
               value={{
@@ -120,8 +128,9 @@ export function AppLayout({
                 label={navigationLabel}
                 selectedKey={selectedKey}
                 sections
-                // Application change: Search under the overview, which opens
-                // the global search's dialog (search-dialog.tsx).
+                // Application change: in the collapsed sidebar, Search under
+                // the overview, which opens the global search's dialog
+                // (search-dialog.tsx); expanded, it sits beside the brand.
                 after={{ home: <SearchNavButton /> }}
               />
             </NavigationBadgesContext>

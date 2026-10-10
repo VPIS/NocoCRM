@@ -22,7 +22,6 @@ import {
   CommandList,
 } from '../ui/command.js';
 import { Dialog, DialogContent, DialogTitle } from '../ui/dialog.js';
-import { Kbd } from '../ui/kbd.js';
 import {
   SidebarMenuButton,
   SidebarMenuItem,
@@ -400,22 +399,52 @@ function ModeSwitch({
   );
 }
 
-// The menu's Search, right under the overview (NavigationMenu's `after`):
-// a button that opens the dialog, with its shortcut; in the phone's sheet it
-// closes the sheet first.
+// The search's button at the right of the sidebar's brand (AppSidebar's
+// `action`), with its shortcut on hover; in the phone's sheet it closes the
+// sheet first.
+export function SearchHeaderButton(): ReactElement | null {
+  const search = useGlobalSearch();
+  const { text } = useCrmText();
+  const { isMobile, setOpenMobile } = useSidebar();
+  if (!search) return null;
+  const label = toText(text('globalSearch.label'));
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            aria-label={label}
+            className='text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+            onClick={() => {
+              if (isMobile) setOpenMobile(false);
+              search.setOpen(true);
+            }}
+            size='icon-sm'
+            variant='ghost'
+          />
+        }
+      >
+        <Search />
+      </TooltipTrigger>
+      <TooltipContent side='bottom'>
+        {isMobile ? label : `${label} · ${SEARCH_SHORTCUT}`}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+// The collapsed sidebar has no room beside its mark, so there the search is
+// the menu's item under the overview (NavigationMenu's `after`).
 export function SearchNavButton(): ReactElement | null {
   const search = useGlobalSearch();
   const { text } = useCrmText();
-  const { isMobile, setOpenMobile, state } = useSidebar();
-  if (!search) return null;
+  const { isMobile, state } = useSidebar();
+  if (!search || isMobile || state !== 'collapsed') return null;
   const label = toText(text('globalSearch.label'));
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
-        onClick={() => {
-          if (isMobile) setOpenMobile(false);
-          search.setOpen(true);
-        }}
+        onClick={() => search.setOpen(true)}
         tooltip={{
           children: `${label} · ${SEARCH_SHORTCUT}`,
           role: 'tooltip',
@@ -424,9 +453,6 @@ export function SearchNavButton(): ReactElement | null {
       >
         <Search />
         <span>{label}</span>
-        {!isMobile && state === 'expanded' && (
-          <Kbd className='ml-auto'>{SEARCH_SHORTCUT}</Kbd>
-        )}
       </SidebarMenuButton>
     </SidebarMenuItem>
   );

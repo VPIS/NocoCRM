@@ -118,7 +118,7 @@ vi.mock(
 
 const { GlobalSearchProvider } =
   await import('../../client/components/crm/global-search.js');
-const { GlobalSearchDialog, SearchNavButton } =
+const { GlobalSearchDialog, SearchHeaderButton, SearchNavButton } =
   await import('../../client/components/crm/search-dialog.js');
 const { searchChat } =
   await import('../../client/components/crm/search-chat.js');
@@ -130,15 +130,16 @@ function Where() {
   );
 }
 
-function renderSearch(extra?: ReactNode) {
+function renderSearch(extra?: ReactNode, open = true) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/crm/tasks']}>
-        <SidebarProvider>
+        <SidebarProvider defaultOpen={open}>
           <GlobalSearchProvider>
+            <SearchHeaderButton />
             <SearchNavButton />
             <GlobalSearchDialog />
             {extra}
@@ -210,6 +211,18 @@ describe('the global search', () => {
     await user.keyboard('{Enter}');
     expect(screen.getByTestId('where').textContent).toBe('/crm/leads/l1');
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('sits beside the brand, and in the collapsed sidebar under the overview', () => {
+    const label = new RegExp(english('globalSearch.label'));
+    const { unmount } = renderSearch();
+    // Expanded: the icon button alone.
+    expect(screen.getAllByRole('button', { name: label })).toHaveLength(1);
+    expect(screen.queryByText(english('globalSearch.label'))).toBeNull();
+    unmount();
+    // Collapsed: the menu's item, which shows its label.
+    renderSearch(undefined, false);
+    expect(screen.getByText(english('globalSearch.label'))).toBeTruthy();
   });
 
   it("opens a kind's whole list with the search, and asks the AI from the last row", async () => {

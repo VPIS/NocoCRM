@@ -24,17 +24,17 @@ export function AppBrand(inputProps: AppBrandProps): ReactElement {
       <img
         alt=''
         aria-hidden='true'
-        className='h-7 w-auto shrink-0 object-contain dark:hidden'
+        className='h-6 w-auto shrink-0 object-contain dark:hidden'
         src={resolveAssetUrl('/assets/logo-mark.png')}
       />
       <img
         alt=''
         aria-hidden='true'
-        className='hidden h-7 w-auto shrink-0 object-contain dark:block'
+        className='hidden h-6 w-auto shrink-0 object-contain dark:block'
         src={resolveAssetUrl('/assets/logo-mark-dark.png')}
       />
       {!compact && (
-        <span className='truncate font-heading text-lg tracking-wide'>
+        <span className='truncate font-heading text-base tracking-wide'>
           {/* The template's wordmark weighting: "Noco" heavy, the product
               name light. */}
           <span className='font-black'>Noco</span>
