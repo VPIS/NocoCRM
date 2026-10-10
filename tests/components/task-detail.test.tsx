@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
@@ -183,18 +183,17 @@ beforeEach(() => {
 });
 
 describe('the task page', () => {
-  it('heads the page with the name, the particulars in one card', () => {
+  it('heads the page with the name, its lead in a card of its own', () => {
     renderPage();
     expect(screen.getByRole('heading', { level: 1 }).textContent).toContain(
       '新域零售 培训计划沟通',
     );
     // No generic header line with the record's id.
     expect(screen.queryByText(/ID: act-1/)).toBeNull();
-    // One list headed Details; the links among its rows.
-    expect(screen.getByRole('heading', { name: '详情' })).toBeTruthy();
-    for (const group of ['概况', '关联'])
-      expect(screen.queryByRole('heading', { name: group })).toBeNull();
-    expect(screen.getByText('关联线索')).toBeTruthy();
+    // The task's card, then the card of the lead it concerns, picked there.
+    for (const group of ['概况', '关联线索'])
+      expect(screen.getByRole('heading', { name: group })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: '详情' })).toBeNull();
     expect(
       screen.getByRole('link', { name: '罗雨萱 / 新域零售' }),
     ).toBeTruthy();
@@ -205,6 +204,23 @@ describe('the task page', () => {
   it('offers completing it only while the task is open', () => {
     renderPage();
     expect(screen.getByRole('button', { name: '完成' })).toBeTruthy();
+  });
+
+  it('cancels an open task once that is confirmed', async () => {
+    renderPage();
+    await userEvent.click(screen.getByRole('button', { name: '取消任务' }));
+    expect(state.api).not.toHaveBeenCalledWith(
+      'tasks/act-1',
+      'PATCH',
+      expect.anything(),
+    );
+    const dialog = screen.getByRole('dialog');
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: '取消任务' }),
+    );
+    expect(state.api).toHaveBeenCalledWith('tasks/act-1', 'PATCH', {
+      status: 'cancelled',
+    });
   });
 
   // The outcome of a planned task goes through "Record outcome", which

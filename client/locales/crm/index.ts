@@ -12,6 +12,7 @@ const wording = {
   // An opportunity's empty description, under its heading.
   dealDescriptionPlaceholder: ['Add a description...', '填写商机描述...'],
   companyDescriptionPlaceholder: ['Add an introduction...', '填写公司介绍...'],
+  taskDescriptionPlaceholder: ['Add a description...', '填写任务描述...'],
   approvalDescriptionPlaceholder: [
     'Describe what is asked...',
     '填写审批内容...',
@@ -707,6 +708,13 @@ const wording = {
   },
   // A contact's page: who the person is and how to reach them, beside its
   // General card.
+  // A task's page: the record it concerns, a card of its own.
+  taskGroups: {
+    lead: ['Lead', '关联线索'],
+    company: ['Company', '关联公司'],
+    deal: ['Opportunity', '关联商机'],
+    linked: ['Linked record', '关联记录'],
+  },
   // An approval's page: the deal it is asked about, beside its Details.
   approvalGroups: {
     deal: ['Opportunity', '所属商机'],
@@ -1695,6 +1703,12 @@ const wording = {
   owner: ['Owner', '负责人'],
   newTask: ['New task', '新建任务'],
   completeTask: ['Complete', '完成'],
+  cancelTask: ['Cancel task', '取消任务'],
+  cancelTaskTitle: ['Cancel this task?', '取消此任务？'],
+  cancelTaskDescription: [
+    'It is marked cancelled, and the colleagues taking part are told. It can be opened again later.',
+    '任务将标记为已取消，参与的同事会收到通知。之后仍可重新打开。',
+  ],
   completeTaskOf: ['Complete: {{name}}', '完成：{{name}}'],
   newApproval: ['Request approval', '申请审批'],
   linkExisting: ['Link existing', '关联已有'],

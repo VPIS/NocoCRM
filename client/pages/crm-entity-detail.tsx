@@ -197,6 +197,9 @@ export default function EntityDetail({
   const [confirmDelete, setConfirmDelete] = useState(false);
   // A planned task's outcome being recorded.
   const [recording, setRecording] = useState(false);
+  // Cancelling an open task, once confirmed.
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelBusy, setCancelBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   // A deal's company change waiting for the user to confirm it takes the
   // deal's contacts off (see changeCompany below).
@@ -712,6 +715,22 @@ export default function EntityDetail({
           onClose={() => setRecording(false)}
         />
       )}
+      {cancelling && (
+        <ConfirmDialog
+          title={text('cancelTaskTitle')}
+          description={text('cancelTaskDescription')}
+          confirmLabel={toText(text('cancelTask'))}
+          busy={cancelBusy}
+          onCancel={() => setCancelling(false)}
+          onConfirm={() => {
+            setCancelBusy(true);
+            patch({ status: 'cancelled' })
+              .then(() => setCancelling(false))
+              .catch(setError)
+              .finally(() => setCancelBusy(false));
+          }}
+        />
+      )}
       {confirmDelete && (
         <ConfirmDialog
           title={text('deleteRecordTitle', {
@@ -852,6 +871,13 @@ export default function EntityDetail({
   // particulars in groups on the left, the tabs atop the right column.
   const row = (key: string): ReactElement => (
     <InfoRow key={key} field={key} label={text(fieldLabelKey(entity, key))}>
+      {inline(key)}
+    </InfoRow>
+  );
+  // A linked record's own field atop its card, under the card's heading:
+  // its name.
+  const linkRow = (key: string): ReactElement => (
+    <InfoRow field={key} label={text('fields.name')}>
       {inline(key)}
     </InfoRow>
   );
@@ -1041,22 +1067,28 @@ export default function EntityDetail({
           {/* An open task: done, with what came of it if anything (and
               its record followed up anew), in one step. */}
           {currentStatus === 'open' && editable && (
-            <Button size='sm' onClick={() => setRecording(true)}>
-              <Check />
-              {text('completeTask')}
-            </Button>
+            <>
+              <Button size='sm' onClick={() => setRecording(true)}>
+                <Check />
+                {text('completeTask')}
+              </Button>
+              {/* Not to be done after all: cancelled, after a word on
+                  who hears of it. */}
+              <Button
+                size='sm'
+                variant='outline'
+                onClick={() => setCancelling(true)}
+              >
+                <X />
+                {text('cancelTask')}
+              </Button>
+            </>
           )}
         </>,
       ),
       <>
-        {/* What it is first, across the column with neither heading nor
-            label. What came of it is told in the timeline, under the entry
-            that completed it. */}
-        <InfoGroup>
-          <div className='min-w-0 py-0.5 text-sm'>{inline('description')}</div>
-        </InfoGroup>
         {/* Who has it and who takes part, where it stands, and when. */}
-        <InfoGroup title={text('detailsGroup')}>
+        <InfoGroup title={text('companyGroups.general')}>
           {row('ownerId')}
           {row('internalParticipants')}
           {statusKey && (
@@ -1081,10 +1113,34 @@ export default function EntityDetail({
           )}
           {/* When it is, if it is. */}
           {row('dueAt')}
-          {['leadId', 'companyId', 'opportunityId'].map(row)}
           <RecordTimes record={record} />
         </InfoGroup>
+        {/* The record it concerns, a card of its own as an approval's
+            deal is, picked there: a deal (with its company's card), a
+            company or a lead; none yet, the three to pick from. */}
+        {record.opportunityId ? (
+          <DealCard
+            id={toText(record.opportunityId)}
+            picker={linkRow('opportunityId')}
+            title={toText(text('taskGroups.deal'))}
+          />
+        ) : record.companyId ? (
+          <CompanyCard
+            id={toText(record.companyId)}
+            picker={linkRow('companyId')}
+            title={toText(text('taskGroups.company'))}
+          />
+        ) : record.leadId ? (
+          <LeadCard id={toText(record.leadId)} picker={linkRow('leadId')} />
+        ) : (
+          <InfoGroup title={text('taskGroups.linked')}>
+            {['leadId', 'companyId', 'opportunityId'].map(row)}
+          </InfoGroup>
+        )}
       </>,
+      // What it is, under its heading; what came of it is told in the
+      // timeline, under the entry that completed it.
+      descriptionIntro('taskDescriptionPlaceholder'),
     );
 
   if (entity === 'opportunities') {
@@ -1503,8 +1559,12 @@ function CompanyCard({
   id,
   picker,
   standing = [],
+  title,
 }: {
   id?: string;
+  // Its heading where "Company" is not what the record calls it (a task's
+  // linked company).
+  title?: string;
   // The record's own company field, which picks or changes it; without
   // one (an approval's, whose company is its deal's), the company's name
   // opening it.
@@ -1524,7 +1584,7 @@ function CompanyCard({
   const company = id ? data?.[0] : undefined;
   if (!company || !meta)
     return picker ? (
-      <InfoGroup title={text('contactGroups.company')}>
+      <InfoGroup title={title ?? text('contactGroups.company')}>
         {picker}
         {id ? standing : null}
       </InfoGroup>
@@ -1554,7 +1614,7 @@ function CompanyCard({
     </InfoRow>
   );
   return (
-    <InfoGroup title={text('contactGroups.company')}>
+    <InfoGroup title={title ?? text('contactGroups.company')}>
       {picker ?? (
         <InfoRow field='companyId' label={text('fields.companyName')}>
           <div className='px-2 py-1.5 text-sm'>
@@ -1591,14 +1651,65 @@ function CompanyCard({
   );
 }
 
+// A task's lead, a card of its own under the task's: the task's lead
+// field, then where the lead stands and how to reach its person, read only,
+// when the reader may read it.
+function LeadCard({
+  id,
+  picker,
+}: {
+  id: string;
+  // The task's own lead field, which picks or changes it.
+  picker: ReactElement;
+}): ReactElement {
+  const { text } = useCrmText();
+  const { data: meta } = useMetadata();
+  const { data } = useCrmQuery<CrmRecord[]>(
+    `leads?ids=${encodeURIComponent(id)}`,
+  );
+  const lead = data?.[0];
+  return (
+    <InfoGroup title={text('taskGroups.lead')}>
+      {picker}
+      {lead && meta
+        ? ['status', 'company', 'phone', 'email', 'ownerId'].map((key) => (
+            <InfoRow
+              key={key}
+              field={key}
+              label={text(fieldLabelKey('leads', key))}
+            >
+              <div className='px-2 py-1.5 text-sm'>
+                <Value
+                  record={lead}
+                  field={
+                    meta.definitions.leads.fields.find(
+                      (f) => f.key === key,
+                    ) ?? {
+                      key,
+                      type: 'text',
+                    }
+                  }
+                />
+              </div>
+            </InfoRow>
+          ))
+        : null}
+    </InfoGroup>
+  );
+}
+
 // An approval's deal, a card of its own under the approval's: the
 // approval's deal field, then where the deal stands, read only, when the
 // reader may read it; then the deal's company, in a card of its own.
 function DealCard({
   id,
   picker,
+  title,
 }: {
   id?: string;
+  // Its heading where "Opportunity" is not what the record calls it (a
+  // task's linked deal).
+  title?: string;
   // The approval's own deal field, which picks or changes it.
   picker: ReactElement;
 }): ReactElement {
@@ -1611,7 +1722,7 @@ function DealCard({
   const deal = id ? data?.[0] : undefined;
   return (
     <>
-      <InfoGroup title={text('approvalGroups.deal')}>
+      <InfoGroup title={title ?? text('approvalGroups.deal')}>
         {picker}
         {deal && meta
           ? ['stage', 'amount', 'expectedCloseAt', 'ownerId'].map((key) => (
