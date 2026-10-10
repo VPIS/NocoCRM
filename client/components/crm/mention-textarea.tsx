@@ -84,8 +84,9 @@ export function MentionTextarea({
   const caretRef = useRef<number | undefined>(undefined);
   // The layer under the box that marks each mentioned "@Name": it copies
   // the box's box model and type, so its text, transparent, lies exactly
-  // under the box's own, and only the marks show through the box, whose
-  // own fill it takes over.
+  // under the box's own, and only the marks show through the box. It
+  // carries the fill, the card's white: the box is transparent, so its
+  // own fill cannot be read from it.
   const backRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const box = ref.current;
@@ -99,7 +100,6 @@ export function MentionTextarea({
         borderStyle: 'solid',
         borderColor: 'transparent',
         borderRadius: style.borderRadius,
-        backgroundColor: style.backgroundColor,
         font: style.font,
         lineHeight: style.lineHeight,
         letterSpacing: style.letterSpacing,
@@ -175,7 +175,7 @@ export function MentionTextarea({
       <div
         ref={backRef}
         aria-hidden
-        className='pointer-events-none absolute inset-0 overflow-hidden break-words whitespace-pre-wrap text-transparent'
+        className='pointer-events-none absolute inset-0 overflow-hidden bg-card break-words whitespace-pre-wrap text-transparent'
       >
         {marked(value, names)}
         {/* A last line break still takes a line, as in the box. */}

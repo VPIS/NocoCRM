@@ -102,29 +102,29 @@ export function LeadDuplicates({
   const [merging, setMerging] = useState<Duplicate>();
   if (!open || !data?.length) return null;
   return (
-    // Inset as the particulars' rows are, so its edges line up with their
-    // text.
-    // Small type, as a notice beside the particulars rather than one of
-    // them.
-    <div className='mx-2 mb-4 space-y-1.5 rounded-lg border border-warning/40 bg-warning/10 px-2 py-2 text-xs'>
-      <div className='flex items-center gap-1.5 font-medium'>
-        <TriangleAlert className='size-3.5 text-warning' />
+    // A card as the particulars' groups below it are (InfoGroup): the same
+    // padding, a title with its icon, rows set in as theirs; in the warning
+    // colour. Each duplicate reads on two lines, its name, then why it
+    // matched, whose it is and when it came, ending in the way to merge it.
+    <div className='rounded-xl border border-warning/40 bg-warning/10 px-2 py-3'>
+      <h3 className='flex items-center gap-1.5 px-2 pb-1.5 text-sm font-medium'>
+        <TriangleAlert className='size-4 text-warning' aria-hidden />
         {text('merge.notice')}
-      </div>
-      <ul className='space-y-1.5'>
+      </h3>
+      <ul>
         {data.map((duplicate) => (
-          <li key={duplicate.id} className='flex items-center gap-2'>
-            <div className='min-w-0 flex-1 font-medium'>
-              <RecordLink
-                entity='leads'
-                record={{
-                  id: duplicate.id,
-                  name: [duplicate.name, duplicate.company]
-                    .filter(Boolean)
-                    .join(' / '),
-                }}
-              />
-              <div className='truncate font-normal text-muted-foreground'>
+          <li key={duplicate.id} className='min-w-0 px-2 py-1.5 text-sm'>
+            <RecordLink
+              entity='leads'
+              record={{
+                id: duplicate.id,
+                name: [duplicate.name, duplicate.company]
+                  .filter(Boolean)
+                  .join(' / '),
+              }}
+            />
+            <div className='flex min-w-0 items-baseline gap-1.5 text-xs text-muted-foreground'>
+              <span className='min-w-0 truncate'>
                 {[
                   duplicate.matched
                     .map((m) => text(`merge.matched.${m}`))
@@ -139,17 +139,20 @@ export function LeadDuplicates({
                 ]
                   .filter(Boolean)
                   .join(' · ')}
-              </div>
+              </span>
+              {duplicate.mergeable && (
+                <>
+                  <span aria-hidden>·</span>
+                  <button
+                    type='button'
+                    className='shrink-0 font-medium text-foreground hover:underline'
+                    onClick={() => setMerging(duplicate)}
+                  >
+                    {text('merge.action')}
+                  </button>
+                </>
+              )}
             </div>
-            {duplicate.mergeable && (
-              <Button
-                size='xs'
-                variant='outline'
-                onClick={() => setMerging(duplicate)}
-              >
-                {text('merge.action')}
-              </Button>
-            )}
           </li>
         ))}
       </ul>

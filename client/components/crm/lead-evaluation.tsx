@@ -335,15 +335,14 @@ export function EvaluationStatus({
           <span className='truncate'>{label(verdict)}</span>
         </Badge>
       )}
-      {pending ? (
-        <span className='shrink-0 font-medium whitespace-nowrap text-ai'>
-          {text('evaluation.handle')}
-        </span>
-      ) : (
-        <span className='shrink-0 whitespace-nowrap text-muted-foreground'>
-          {text(`evaluation.statuses.${entry.status}`)}
-        </span>
-      )}
+      {/* Its status in the timeline's words, waiting in the AI's colour. */}
+      <span
+        className={`shrink-0 whitespace-nowrap ${
+          pending ? 'font-medium text-ai' : 'text-muted-foreground'
+        }`}
+      >
+        {text(`evaluation.statuses.${entry.status}`)}
+      </span>
     </button>
   );
 }

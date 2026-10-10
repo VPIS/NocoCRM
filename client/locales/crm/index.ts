@@ -2,6 +2,11 @@ const wording = {
   conversionRate: ['Conversion rate', '转化率'],
   uncontacted: ['Leads awaiting first contact', '待首次跟进线索'],
   uncontactedCard: ['New leads', '新线索'],
+  // An empty field the reader may fill, by its label.
+  emptyFill: ['Add {{field}}', '填写{{field}}'],
+  emptyChoose: ['Choose {{field}}', '选择{{field}}'],
+  // A lead's empty original message, under its heading.
+  messagePlaceholder: ['Add the original message...', '填写原始信息...'],
   stale: ['Stalled', '停滞'],
   convertedThisMonth: ['Converted this month', '本月转化'],
   converted: ['Converted leads', '已转化线索'],
@@ -359,11 +364,10 @@ const wording = {
   },
   notes: {
     label: ['Note', '备注'],
-    placeholder: [
-      'Write a note, type @ to mention a colleague…',
-      '写备注，输入 @ 提到同事…',
-    ],
+    placeholder: ['Leave a note, @ a colleague...', '留言，可 @ 同事...'],
     add: ['Add note', '添加备注'],
+    // The note box's button.
+    post: ['Post', '发布'],
     shortcut: ['⌘/Ctrl + Enter to add', '⌘/Ctrl + Enter 添加'],
     edited: ['Edited', '已编辑'],
     confirmDelete: ['Delete it?', '确认删除'],
@@ -702,6 +706,8 @@ const wording = {
   dealFollowUpNow: ['AI follows up the opportunity at once', 'AI 立刻跟进商机'],
   historyTab: ['Timeline', '动态'],
   feed: {
+    // A field an update emptied, after its name.
+    cleared: ['cleared', '已清空'],
     // Who did an AI entry on the timeline.
     ai: ['AI', 'AI'],
     aiProposed: ['AI proposed', 'AI 提议'],
@@ -734,6 +740,7 @@ const wording = {
       exchanged: ['exchanged mail', '往来邮件'],
       noSubject: ['(No subject)', '（无主题）'],
       count: ['{{count}} messages', '{{count}} 封'],
+      countOne: ['1 message', '1 封'],
       lastFrom: ['last from {{name}}', '最后由 {{name}} 回复'],
     },
     // One of a deal's approvals, read after the person's name.
@@ -768,7 +775,6 @@ const wording = {
     // The lead timeline's status chip, short beside the verdict.
     chip: ['AI suggestion', 'AI 建议'],
     waiting: ['AI follow-up waiting for you', 'AI 跟进建议待处理'],
-    handle: ['Handle it', '去处理'],
     onCard: {
       running: ['AI working', 'AI 跟进中'],
       pending: ['AI suggestion', 'AI 建议待处理'],
@@ -1004,7 +1010,7 @@ const wording = {
     statuses: {
       superseded: ['Replaced', '已被新建议替代'],
       running: ['Working', '跟进中'],
-      pending: ['Waiting for you', '待决定'],
+      pending: ['Waiting for you', '待处理'],
       accepted: ['Accepted', '已采纳'],
       dismissed: ['Dismissed', '已忽略'],
       failed: ['Not finished', '未完成'],
@@ -1138,6 +1144,8 @@ const wording = {
     '记录将被删除。存在关联记录时，请先解除关联或删除相关记录。',
   ],
   convert: ['Convert lead', '转化线索'],
+  // The lead page's button, beside the heading that names the lead.
+  convertShort: ['Convert', '转化'],
   convertedHint: [
     'This lead has been converted and is read-only. Continue from the records it was converted into.',
     '此线索已转化，为只读状态，请在转化的记录中继续跟进。',
@@ -1155,7 +1163,7 @@ const wording = {
       phone: ['same phone', '电话相同'],
       person: ['same person and company', '同一公司同一人'],
     },
-    action: ['Merge…', '合并…'],
+    action: ['Merge', '合并'],
     title: ['Merge duplicate leads', '合并重复线索'],
     hint: [
       'Keep one lead and pick the value to keep for each field. The other lead’s tasks, notes and attachments move to the lead kept, and the other lead is deleted; what it held is recorded on the kept lead’s timeline.',

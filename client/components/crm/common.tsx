@@ -603,7 +603,7 @@ export function LongText({ value }: { value: string }): ReactElement {
               event.stopPropagation();
             }}
           >
-            <span className='font-medium text-ai group-hover/toggle:underline'>
+            <span className='font-medium text-muted-foreground group-hover/toggle:text-foreground group-hover/toggle:underline'>
               {text(open ? 'showLess' : 'showMore')}
             </span>
           </button>

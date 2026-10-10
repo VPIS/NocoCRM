@@ -58,6 +58,8 @@ export function InlineField({
   relationFilter,
   startOpen = false,
   onClose,
+  placeholder,
+  hint = false,
 }: {
   entity: Entity;
   record: CrmRecord;
@@ -78,6 +80,12 @@ export function InlineField({
   bare?: boolean;
   // Passed to Value: a status or stage as text rather than a badge.
   plain?: boolean;
+  // Shown greyed in place of an empty value the reader may fill (a lead's
+  // original message: "Edit the original message…").
+  placeholder?: string;
+  // An empty value the reader may fill prompts for it by its label, as
+  // "Add Website" or, for one picked, "Choose Industry".
+  hint?: boolean;
   // Opens straight into its editor (a text-like field another control
   // switched to: the website's pencil), and reports when editing ends.
   startOpen?: boolean;
@@ -238,14 +246,25 @@ export function InlineField({
           }
         }}
       >
-        <Value
-          record={record}
-          field={field}
-          lookup={lookup}
-          bare={bare}
-          plain={plain}
-          wrap={!titled}
-        />
+        {(placeholder ?? hint) && editable && isBlank(record[field.key]) ? (
+          <span className='text-muted-foreground'>
+            {placeholder ??
+              toText(
+                text(PICKED.has(field.type) ? 'emptyChoose' : 'emptyFill', {
+                  field: label,
+                }),
+              )}
+          </span>
+        ) : (
+          <Value
+            record={record}
+            field={field}
+            lookup={lookup}
+            bare={bare}
+            plain={plain}
+            wrap={!titled}
+          />
+        )}
         {error ? (
           <span className='mt-1 block text-xs text-destructive'>{error}</span>
         ) : null}
@@ -492,3 +511,28 @@ export function InlineField({
     </div>
   );
 }
+
+// Nothing to show: no value, an empty text or an empty list.
+function isBlank(value: unknown): boolean {
+  return (
+    value === null ||
+    value === undefined ||
+    (typeof value === 'string' && value.trim() === '') ||
+    (Array.isArray(value) && value.length === 0)
+  );
+}
+
+// Fields whose value is picked rather than typed: their empty prompt says
+// choose, the others add.
+const PICKED = new Set<Field['type']>([
+  'date',
+  'datetime',
+  'select',
+  'boolean',
+  'relation',
+  'multi',
+  'country',
+  'subdivision',
+  'contacts',
+  'files',
+]);

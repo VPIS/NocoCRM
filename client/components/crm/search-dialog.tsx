@@ -2,7 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Command as CommandPrimitive } from 'cmdk';
 import {
   Building2,
-  ContactRound,
+  UserRound,
   Handshake,
   ListChecks,
   Radar,
@@ -61,7 +61,7 @@ const KIND_ICONS: Record<Entity, LucideIcon> = {
   leads: Radar,
   opportunities: Handshake,
   accounts: Building2,
-  contacts: ContactRound,
+  contacts: UserRound,
   tasks: SquareCheckBig,
   approvals: ListChecks,
 };

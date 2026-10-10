@@ -37,11 +37,12 @@ import {
 } from '../components/crm/record-drawer.js';
 import {
   ArrowLeft,
+  ArrowRight,
   ArrowRightLeft,
   Mail,
   Merge,
   ListChecks,
-  ContactRound,
+  UserRound,
   CirclePlus,
   ChevronDown,
   Ellipsis,
@@ -59,6 +60,7 @@ import {
   SquareCheckBig,
 } from 'lucide-react';
 import { Button, buttonVariants } from '../components/ui/button.js';
+import { GROUP_ICONS } from '../components/crm/group-icons.js';
 import { Spinner } from '../components/ui/spinner.js';
 import { LONG_TEXT_LIMIT } from '../../server/providers/crm/limits.js';
 import { Badge } from '../components/ui/badge.js';
@@ -233,8 +235,8 @@ export function RecordDrawer({
   );
 }
 
-// The lead's particulars in groups, each under its heading, below its
-// original message: how the lead stands (after owner and status), the
+// The lead's particulars in groups, each under its heading (its original
+// message heads the tab column instead): how the lead stands (after owner and status), the
 // person, their company. Name and
 // company head the page as well and lead their groups here too, so the
 // column reads whole on its own. When it came and last changed close the
@@ -374,6 +376,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       editable={editable}
       lookup={names}
       label={text(fieldLabelKey('leads', key))}
+      hint
     />
   );
   const fieldRow = (key: LeadField): ReactElement => (
@@ -467,18 +470,19 @@ function LeadDetail({ id }: { id: string }): ReactElement {
     </div>
   );
   // Everything the reader can do with the lead, right of its heading:
-  // converting it, the assistant, asking the AI to follow it up, and the
-  // rarer deleting in "More" (opening to the right edge's left).
+  // asking the AI to follow it up, converting it (the main action, last
+  // before "More"), and the rarer deleting in "More" (opening to the right
+  // edge's left).
   const leadActions = (
     <>
+      {meta.assistant && !converted && editable && (
+        <EvaluateButton recordId={id} onError={setError} />
+      )}
       {editable && (
         <Button size='sm' onClick={() => setConvert(true)}>
           <ArrowRightLeft />
-          {text('convert')}
+          {text('convertShort')}
         </Button>
-      )}
-      {meta.assistant && !converted && editable && (
-        <EvaluateButton recordId={id} onError={setError} />
       )}
       {detail.permissions.delete && (
         <DropdownMenu>
@@ -510,7 +514,6 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   const leadStatus = (
     <EvaluationStatus
       recordId={id}
-      wide
       onOpen={(entryId) => {
         setFocus({ id: entryId, at: Date.now() });
         setTab('historyTab');
@@ -525,6 +528,27 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       status={leadStatus}
       tabBar={tabBar}
       notice={<ErrorNotice error={error ?? loadError} />}
+      // What the lead wrote first, under the heading with neither heading
+      // nor label of its own, as a task's description leads its page.
+      // Its inline editor keeps 8px of its own on each side for the hover
+      // fill; pulled out by them, the text lines up with the heading.
+      // Empty, it offers itself to whoever may write it, and is left out
+      // for anyone else.
+      intro={
+        editable || toText(record.message).trim() ? (
+          <div className='-mx-2 min-w-0 text-sm'>
+            <InlineField
+              entity='leads'
+              record={record}
+              field={field('message')}
+              editable={editable}
+              lookup={names}
+              label={text(fieldLabelKey('leads', 'message'))}
+              placeholder={toText(text('messagePlaceholder'))}
+            />
+          </div>
+        ) : undefined
+      }
       left={
         <>
           {/* Open leads that repeat this one, each to merge. */}
@@ -541,13 +565,11 @@ function LeadDetail({ id }: { id: string }): ReactElement {
             }}
           />
           <div>
-            {/* What the lead wrote first, across the column with neither
-                heading nor label, as a task's description leads its page. */}
-            <InfoGroup>
-              <div className='min-w-0 py-0.5 text-sm'>{inline('message')}</div>
-            </InfoGroup>
             {/* Who has the lead and where it stands head the next group. */}
-            <InfoGroup title={text('leadGroups.general')}>
+            <InfoGroup
+              title={text('leadGroups.general')}
+              icon={GROUP_ICONS.general}
+            >
               <InfoRow label={text('fields.ownerId')}>
                 {inline('ownerId')}
               </InfoRow>
@@ -616,7 +638,11 @@ function LeadDetail({ id }: { id: string }): ReactElement {
               {leadGroups[0][1].map(fieldRow)}
             </InfoGroup>
             {leadGroups.slice(1).map(([group, keys]) => (
-              <InfoGroup key={group} title={text(`leadGroups.${group}`)}>
+              <InfoGroup
+                key={group}
+                title={text(`leadGroups.${group}`)}
+                icon={GROUP_ICONS[group]}
+              >
                 {keys.map(fieldRow)}
               </InfoGroup>
             ))}
@@ -803,6 +829,7 @@ export function DetailColumns({
   status,
   tabBar,
   notice,
+  intro,
   left,
   right,
   children,
@@ -812,10 +839,14 @@ export function DetailColumns({
   heading: ReactNode;
   // Everything the reader can do with the record, right of the heading.
   actions: ReactNode;
-  // Where the AI's latest work on the record stands, atop the particulars.
+  // Where the AI's latest work on the record stands, at the head of the
+  // actions at the top right.
   status?: ReactNode;
   tabBar: ReactNode;
   notice: ReactNode;
+  // What the record says of itself, under the heading atop the tab column
+  // (a lead's original message).
+  intro?: ReactNode;
   left: ReactNode;
   right: ReactNode;
   // The page's dialogs.
@@ -868,48 +899,57 @@ export function DetailColumns({
                 <div className='min-w-0 flex-1 basis-60 @3xl:basis-80'>
                   {heading}
                 </div>
-                {actions ? (
+                {/* The AI's latest suggestion leads the actions, as what
+                    to do next; it draws nothing before the first. */}
+                {actions || status ? (
                   <div className='ml-auto flex flex-wrap items-center justify-end gap-2 empty:hidden @3xl:pt-1'>
+                    {status}
                     {actions}
                   </div>
                 ) : null}
               </div>
             </header>
-            <div className='grid gap-6 pt-5 @3xl:min-h-0 @3xl:flex-1 @3xl:grid-cols-[22rem_minmax(0,1fr)] @3xl:grid-rows-[minmax(0,1fr)] @3xl:gap-0 @3xl:pt-0 md:@3xl:grid-cols-[23rem_minmax(0,1fr)]'>
-              {/* The particulars in a narrow column on the left, the timeline
-                  and the other tabs taking the rest, the way record pages
-                  commonly lay them out. Stacked, the particulars come first
-                  (a phone number before the history). */}
-              {/* A long white card on the page's tint, with the open tab's
-                  faint border and shadow, set apart by itself rather than by
-                  a rule; side by side it runs the height of
-                  the page and scrolls inside, ending in 6rem of room so its
-                  last row scrolls above the assistant's dock. Its rows keep
-                  8px of their own on each side for an inline editor's hover
-                  fill. */}
+            <div className='grid gap-6 pt-5 @3xl:min-h-0 @3xl:flex-1 @3xl:grid-cols-[minmax(0,1fr)_22rem] @3xl:grid-rows-[minmax(0,1fr)] @3xl:gap-0 @3xl:pt-0 md:@3xl:grid-cols-[minmax(0,1fr)_23rem]'>
+              {/* The timeline and the other tabs on the left, taking the
+                  room, the particulars in a narrow column on the right.
+                  Stacked, the particulars come first (a phone number before
+                  the history): the source order, which side by side the
+                  column's order-2 turns round. */}
+              {/* The particulars as a stack of cards, one per group
+                  (InfoGroup), with whatever leads them (a lead's duplicates)
+                  above; side by side the stack scrolls on its own, ending in
+                  6rem of room so its last row scrolls above the assistant's
+                  dock. The rows keep 8px of their own on each side for an
+                  inline editor's hover fill. */}
               <section
-                className='min-w-0 rounded-xl border border-border/60 bg-card px-2 py-3 shadow-xs @3xl:mb-4 @3xl:ml-4 @3xl:overflow-y-auto @3xl:pb-24 md:@3xl:ml-6 scroll-quiet'
+                className='flex min-w-0 flex-col gap-3 @3xl:order-2 @3xl:mr-4 @3xl:overflow-y-auto @3xl:pb-24 md:@3xl:mr-8 scroll-quiet'
                 onScroll={revealScrollbar}
               >
-                {/* Empty when the status draws nothing (no AI work yet). */}
-                {status ? (
-                  <div className='mb-3 px-2 empty:hidden'>{status}</div>
-                ) : null}
                 {left}
               </section>
-              {/* The tabs head the right column: stacked, they stay in view as
+              {/* The tabs head the left column: stacked, they stay in view as
                   the page scrolls; side by side, their content scrolls below
                   them. */}
-              <section className='flex min-w-0 flex-col @3xl:min-h-0'>
-                {/* The gap under the pills is the bar's own, so content scrolling
-                    up stops short of them rather than meeting their edge. */}
-                <div className='sticky top-0 z-10 flex flex-wrap items-center bg-background pt-1 pb-4 @3xl:static @3xl:pt-0 @3xl:pr-4 @3xl:pl-6 md:@3xl:pr-8'>
+              {/* Side by side the column scrolls as one: the intro goes up
+                  and away, and the tabs stop under the header and stay, the
+                  content passing beneath them. Stacked, the page scrolls and
+                  the tabs stick to its top just the same. */}
+              <section
+                className='flex min-w-0 flex-col @3xl:min-h-0 @3xl:overflow-y-auto @3xl:pb-24 scroll-quiet'
+                onScroll={revealScrollbar}
+              >
+                {intro ? (
+                  <div className='pb-7 @3xl:pr-6 @3xl:pl-4 md:@3xl:pl-6'>
+                    {intro}
+                  </div>
+                ) : null}
+                {/* The gap under the tabs is the bar's own, on the page's
+                    background, so content scrolling up passes under it
+                    rather than meeting the tabs' edge. */}
+                <div className='sticky top-0 z-10 flex flex-wrap items-center bg-background pt-1 pb-4 @3xl:pt-0 @3xl:pr-6 @3xl:pl-4 md:@3xl:pl-6'>
                   {tabBar}
                 </div>
-                <div
-                  className='min-w-0 @3xl:min-h-0 @3xl:flex-1 @3xl:overflow-y-auto @3xl:pr-4 @3xl:pb-24 @3xl:pl-6 md:@3xl:pr-8 scroll-quiet'
-                  onScroll={revealScrollbar}
-                >
+                <div className='min-w-0 @3xl:pr-6 @3xl:pl-4 md:@3xl:pl-6'>
                   {right}
                 </div>
               </section>
@@ -1012,13 +1052,14 @@ export function DetailTabBar({
 }): ReactElement {
   const { text } = useCrmText();
   return (
-    // Pills on the page's tint: the open tab a white one, as the
-    // particulars' card is, the others plain until hovered; a count in
-    // muted figures where a tab has one. No rule under them.
-    // Side by side, pulled left by a pill's padding, so the first tab's
-    // icon and label, not its fill, line up with the content under the tabs;
-    // stacked (a drawer, a phone), the fill lines up with the card above.
-    <div role='tablist' className='flex flex-wrap gap-1 @3xl:-ml-3'>
+    // Underlined tabs on a thin rule that sets them off from the content
+    // below: the open tab in the foreground over a 2px line of it, the
+    // others muted until hovered; a count in muted figures where a tab has
+    // one. The first tab's text lines up with the heading and the content.
+    <div
+      role='tablist'
+      className='flex w-full flex-wrap gap-x-5 border-b border-border/60'
+    >
       {tabs.map(({ name, label, icon: Icon, count }) => {
         const selected = name === active;
         return (
@@ -1028,10 +1069,10 @@ export function DetailTabBar({
             role='tab'
             aria-selected={selected}
             onClick={() => onSelect(name)}
-            className={`flex h-8 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
+            className={`-mb-px flex h-10 items-center gap-1.5 border-b-2 text-sm font-medium transition-colors outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring/50 ${
               selected
-                ? 'border-border/60 bg-card text-foreground shadow-xs'
-                : 'border-transparent text-muted-foreground hover:bg-card/70 hover:text-foreground'
+                ? 'border-foreground text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             <Icon className='size-4' />
@@ -1179,6 +1220,7 @@ export function WebsiteField({
         field={{ key: 'website', type: 'url' }}
         editable={editable}
         label={label}
+        hint
         startOpen={editing}
         onClose={() => setEditing(false)}
       />
@@ -1518,6 +1560,8 @@ export function HistoryChanges({
   part = 'line',
   open = false,
   onToggle,
+  long = false,
+  onLong,
 }: {
   entity?: Entity;
   record: CrmRecord;
@@ -1532,9 +1576,14 @@ export function HistoryChanges({
   // its count and the toggle (`line`), and, unfolded, its fields in a box
   // under the whole entry, the time's column included (`rows`). The
   // timeline keeps which entries are open, as it does for the AI's.
-  part?: 'line' | 'rows';
+  // A lone field's value too long for the line reads whole below the
+  // entry's line (`below`), as a long note does: the timeline keeps which
+  // ones are (`long`), as this line reports it (`onLong`).
+  part?: 'line' | 'rows' | 'below';
   open?: boolean;
   onToggle?: () => void;
+  long?: boolean;
+  onLong?: (long: boolean) => void;
 }): ReactElement | null {
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
@@ -1615,8 +1664,22 @@ export function HistoryChanges({
         );
       })()
     );
+  // The whole value over as many lines as it takes: a long text as the
+  // record shows it (Markdown, folded after four lines).
+  const full = (key: string): ReactNode =>
+    key === 'attachments' ||
+    fields.find((f) => f.key === key)?.type === 'contacts' ? (
+      show(changed, key)
+    ) : (
+      <Value
+        record={{ ...record, ...changed }}
+        field={fields.find((f) => f.key === key) ?? { key, type: 'text' }}
+        lookup={names}
+        wrap
+      />
+    );
   // Read like a status move on the timeline: each field's name (muted, as
-  // the verb before it), then old → new in the line's own type. Several
+  // the verb before it), then → new in the line's own type. Several
   // fields in one save follow one another on the line.
   const separator = (index: number): ReactNode =>
     !folds && index < shown.length - 1 ? (
@@ -1628,31 +1691,42 @@ export function HistoryChanges({
   // list before and after.
   const fileList = (ids: string[]): string =>
     ids.map((id) => fileNames[id] ?? id.slice(0, 8)).join('、');
+  // On hover: what it was, when it held anything, and what it became.
   const titleOf = (key: string): string =>
-    before && key in before
-      ? `${toText(before[key] ?? '')} → ${toText(changed[key] ?? '')}`
+    before && key in before && toText(before[key] ?? '').trim()
+      ? `${toText(before[key])} → ${toText(changed[key] ?? '')}`
       : toText(changed[key]);
-  // Old → new, clamped so one long value cannot turn an entry into a
-  // paragraph; the full text stays available on hover. The old value has
-  // up to 45% of the line, the new one the rest. The descendant rule beats
-  // the value renderer's own pre-wrap.
-  const valuesOf = (key: string): ReactNode => (
-    <>
-      {before && key in before && (
-        <>
-          <span className='max-w-[45%] min-w-0 shrink-0 truncate [&_*]:whitespace-nowrap'>
-            {show(before, key)}
-          </span>
-          <span aria-hidden className='shrink-0'>
-            →
-          </span>
-        </>
-      )}
-      <span className='min-w-0 shrink truncate [&_*]:whitespace-nowrap'>
-        {show(changed, key)}
+  // An arrow to the new value only; the old value stays on hover
+  // (titleOf). On the line a value is cut where the line ends, and one
+  // that does not fit (or runs over several lines) reads whole below the
+  // line instead; in the rows of a save of several fields it wraps.
+  const valuesOf = (key: string): ReactNode =>
+    // Emptied, it says so rather than pointing at a dash.
+    isBlankValue(changed[key]) ? (
+      <span className='shrink-0 text-muted-foreground'>
+        {text('feed.cleared')}
       </span>
-    </>
-  );
+    ) : (
+      <>
+        <ArrowRight
+          aria-hidden
+          className={`size-3 shrink-0 self-center text-muted-foreground ${
+            part === 'line' && long ? 'invisible' : ''
+          }`}
+        />
+        {part === 'rows' ? (
+          <span className='min-w-0 flex-1 break-words'>{full(key)}</span>
+        ) : (
+          <LineValue
+            long={long}
+            onLong={onLong}
+            lines={toText(changed[key]).trim().includes('\n')}
+          >
+            {show(changed, key)}
+          </LineValue>
+        )}
+      </>
+    );
   const rows = shown.map((key, index) => {
     if (key === 'attachments' && before && key in before) {
       const was = arrayValues(before.attachments).map(toText);
@@ -1720,6 +1794,10 @@ export function HistoryChanges({
       </span>
     );
   });
+  if (part === 'below')
+    return !folds && long && !isBlankValue(changed[shown[0]]) ? (
+      <div className='mt-0.5 min-w-0 text-sm break-words'>{full(shown[0])}</div>
+    ) : null;
   if (part === 'rows')
     return folds && open ? (
       <div className='mt-1 grid gap-1 rounded-lg border bg-muted/40 px-3 py-2 text-sm'>
@@ -1746,6 +1824,51 @@ export function HistoryChanges({
         />
       </Button>
     </>
+  );
+}
+
+// A lone field's new value on its entry's line, cut where the line ends
+// (the descendant rule beats the value renderer's own pre-wrap). It reports
+// whether the value does not fit, or runs over several lines, and then
+// stays in place unseen, keeping the line's measure, while the whole value
+// reads below the line, as a long note does (NoteExcerpt).
+function LineValue({
+  children,
+  lines,
+  long,
+  onLong,
+}: {
+  children: ReactNode;
+  lines: boolean;
+  long: boolean;
+  onLong?: (long: boolean) => void;
+}): ReactElement {
+  const ref = useRef<HTMLSpanElement>(null);
+  const reportRef = useRef(onLong);
+  useEffect(() => {
+    reportRef.current = onLong;
+  });
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node || !reportRef.current) return;
+    const measure = (): void =>
+      reportRef.current?.(lines || node.scrollWidth > node.clientWidth + 1);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [lines, children]);
+  return (
+    <span
+      ref={ref}
+      aria-hidden={long || undefined}
+      className={`min-w-0 shrink truncate [&_*]:whitespace-nowrap ${
+        long ? 'invisible' : ''
+      }`}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -1826,8 +1949,12 @@ function MailEvent({
   const subject = toText(mail.subject) || toText(text('feed.mail.noSubject'));
   const own = onOpen && meta?.userId === toText(mail.ownerId);
   const writer = toText(mail.lastFromName) || toText(mail.lastFrom);
+  // "1 message", not "1 messages".
+  const messages = Number(mail.count) || 1;
   const count = toText(
-    text('feed.mail.count', { count: Number(mail.count) || 1 }),
+    messages === 1
+      ? text('feed.mail.countOne')
+      : text('feed.mail.count', { count: messages }),
   );
   const last =
     mail.fromCustomer && writer
@@ -2270,11 +2397,12 @@ export function HistoryFeed({
                   const pending =
                     ai && followed && event.aiStatus === 'pending';
                   // An approval's AI review for its approver
-                  // (approval-review.tsx): open while it waits, as a
-                  // follow-up card is.
+                  // (approval-review.tsx).
                   const review = ai && entity === 'approvals';
-                  const reviewWaiting = review && event.aiStatus === 'pending';
-                  const open = pending || reviewWaiting || isOpen(key);
+                  // Every AI card starts closed, a waiting one too, its
+                  // line saying it waits; the entry the page was sent to
+                  // opens on arrival.
+                  const open = isOpen(key);
                   // Files added or removed show the attachments' clip.
                   // An entry of one of the record's tasks: planned,
                   // done or called off, or moved.
@@ -2293,7 +2421,7 @@ export function HistoryFeed({
                     : approvalEvent
                       ? ListChecks
                       : contactsOnly(event)
-                        ? ContactRound
+                        ? UserRound
                         : filesOnly(event)
                           ? Paperclip
                           : (eventIcons[toText(event.action)] ?? PencilLine);
@@ -2420,9 +2548,7 @@ export function HistoryFeed({
                               <Spinner className='size-3.5 shrink-0 text-ai' />
                             ) : review && event.aiStatus !== 'failed' ? (
                               <ReviewFeedEntry entry={event} />
-                            ) : ai &&
-                              !pending &&
-                              event.aiStatus !== 'failed' ? (
+                            ) : ai && event.aiStatus !== 'failed' ? (
                               <EvaluationFeedEntry entry={event} />
                             ) : null}
                             {/* A creation says only that it happened: the
@@ -2449,6 +2575,8 @@ export function HistoryFeed({
                                   fileNames={fileNames}
                                   open={open}
                                   onToggle={() => toggle(key)}
+                                  long={longNotes.has(key)}
+                                  onLong={(long) => markLong(key, long)}
                                 />
                               )}
                             {/* What the person asked the AI to change, in
@@ -2490,27 +2618,22 @@ export function HistoryFeed({
                                 {text('feed.aiCaptured')}
                               </Badge>
                             )}
-                            {/* An evaluation opens into its record (not
-                                while it runs: there is nothing to open). */}
-                            {ai &&
-                              !pending &&
-                              !reviewWaiting &&
-                              event.aiStatus !== 'running' && (
-                                <Button
-                                  size='icon-xs'
-                                  variant='outline'
-                                  className='rounded-full'
-                                  aria-expanded={open}
-                                  aria-label={text(
-                                    open ? 'collapse' : 'expand',
-                                  )}
-                                  onClick={() => toggle(key)}
-                                >
-                                  <ChevronDown
-                                    className={`transition-transform ${open ? 'rotate-180' : ''}`}
-                                  />
-                                </Button>
-                              )}
+                            {/* An AI card opens from its line (not while
+                                it runs: there is nothing to open). */}
+                            {ai && event.aiStatus !== 'running' && (
+                              <Button
+                                size='icon-xs'
+                                variant='outline'
+                                className='rounded-full'
+                                aria-expanded={open}
+                                aria-label={text(open ? 'collapse' : 'expand')}
+                                onClick={() => toggle(key)}
+                              >
+                                <ChevronDown
+                                  className={`transition-transform ${open ? 'rotate-180' : ''}`}
+                                />
+                              </Button>
+                            )}
                           </span>
                           {/* Its author's edit and delete, on hover. */}
                           {note && event.actorId === meta?.userId ? (
@@ -2552,6 +2675,32 @@ export function HistoryFeed({
                             )}
                           </time>
                         </div>
+                        {/* A field's value too long for the line, whole
+                            below it as a long note's text is. */}
+                        {longNotes.has(key) &&
+                          !ai &&
+                          !note &&
+                          event.action !== 'created' &&
+                          !toText(event.action).startsWith('note') &&
+                          event.action !== 'aiRevise' &&
+                          event.action !== 'merged' &&
+                          event.action !== 'mail' &&
+                          !taskEvent &&
+                          !approvalEvent && (
+                            <HistoryChanges
+                              part='below'
+                              long
+                              entity={entity}
+                              record={record}
+                              changes={shownChanges}
+                              previous={event.previous}
+                              movedField={
+                                event.fromValue ? statusKey : undefined
+                              }
+                              names={allNames}
+                              fileNames={fileNames}
+                            />
+                          )}
                         {comment ? (
                           <div className='mt-0.5 text-sm'>
                             <LongText value={comment} />
@@ -2584,8 +2733,8 @@ export function HistoryFeed({
                             />
                           </div>
                         ) : null}
-                        {/* A waiting verdict is handled here, open; any other
-                            evaluation is its record, when opened. */}
+                        {/* A waiting verdict is handled here once opened; any
+                            other evaluation is its record. */}
                         {review && open && event.aiStatus !== 'running' ? (
                           <div className='mt-1'>
                             <ReviewPanel
@@ -2603,7 +2752,7 @@ export function HistoryFeed({
                               onChanged={refresh}
                             />
                           </div>
-                        ) : pending ? (
+                        ) : pending && open ? (
                           <div className='mt-1'>
                             <VerdictPanel
                               entry={
@@ -2748,7 +2897,10 @@ function NoteComposer({
   };
   const me = meta?.users.find((user) => user.id === meta.userId)?.name ?? '';
   return (
-    <div className='mb-5 grid gap-2'>
+    // Stays under the tabs as the timeline scrolls (the tab bar is 3.5rem
+    // side by side, 3.75rem stacked), on the page's background, its gap
+    // below its own so entries pass under it.
+    <div className='sticky top-[3.75rem] z-[9] grid gap-2 bg-background pb-5 @3xl:top-14'>
       {/* The writer's avatar before the box, drawn as the account menu's:
           the first letter of each of the name's first two words. */}
       <div className='flex items-start gap-3'>
@@ -2788,7 +2940,7 @@ function NoteComposer({
             {text('notes.shortcut')}
           </span>
           <Button size='sm' disabled={busy} onClick={() => void add()}>
-            {text('notes.add')}
+            {text('notes.post')}
           </Button>
         </div>
       ) : null}
@@ -2974,15 +3126,28 @@ function NoteEditor({
 // then its rows, set off from the group before by space alone.
 export function InfoGroup({
   title,
+  icon: Icon,
   children,
 }: {
   // None for what leads the page by itself (a task's description).
   title?: string;
+  // Before the title: what the group is about (GROUP_ICONS in
+  // components/crm/group-icons.ts).
+  icon?: LucideIcon;
   children: ReactNode;
 }): ReactElement {
+  // A card of its own, white on the page's tint with a faint border and
+  // the lightest shadow, set 0.75rem from the group above it.
   return (
-    <section className='py-3 first:pt-0 last:pb-0'>
-      {title && <h3 className='px-2 pb-1.5 text-sm font-medium'>{title}</h3>}
+    <section className='mt-3 rounded-xl border border-border/60 bg-card px-2 py-3 shadow-xs first:mt-0'>
+      {title && (
+        <h3 className='flex items-center gap-1.5 px-2 pb-1.5 text-sm font-medium'>
+          {Icon && (
+            <Icon className='size-4 text-muted-foreground' aria-hidden />
+          )}
+          {title}
+        </h3>
+      )}
       <dl>{children}</dl>
     </section>
   );
@@ -3004,5 +3169,15 @@ export function InfoRow({
       </dt>
       <dd className='min-w-0 text-sm'>{children}</dd>
     </div>
+  );
+}
+
+// No value left: nothing, an empty text or an empty list.
+function isBlankValue(value: unknown): boolean {
+  return (
+    value === null ||
+    value === undefined ||
+    (typeof value === 'string' && value.trim() === '') ||
+    (Array.isArray(value) && value.length === 0)
   );
 }

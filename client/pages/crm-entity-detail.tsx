@@ -18,7 +18,7 @@ import {
 import {
   ArrowUpRight,
   Clock,
-  ContactRound,
+  UserRound,
   History,
   Mail,
   Paperclip,
@@ -109,6 +109,7 @@ import {
   WebsiteField,
 } from './crm-detail.js';
 import { UploadZone } from '../components/crm/attachments.js';
+import { GROUP_ICONS } from '../components/crm/group-icons.js';
 import { RecordOutcomeDialog } from '../components/crm/outcome.js';
 import { RecordMailPanel } from '../components/crm/record-mail.js';
 import { emailsOf, useMailSetup } from '../components/crm/mail.js';
@@ -285,6 +286,7 @@ export default function EntityDetail({
         record.accountId ? { accountId: toText(record.accountId) } : undefined
       }
       label={text(fieldLabelKey(entity, key))}
+      hint
       onSave={
         entity === 'opportunities' && key === 'accountId'
           ? changeAccount
@@ -440,7 +442,6 @@ export default function EntityDetail({
       <EvaluationStatus
         entity='opportunities'
         recordId={id}
-        wide
         onOpen={(entryId) => {
           setFocus({ id: entryId, at: Date.now() });
           setTab('historyTab');
@@ -449,7 +450,6 @@ export default function EntityDetail({
     ) : entity === 'approvals' ? (
       <ReviewStatus
         approvalId={id}
-        wide
         onOpen={(entryId) => {
           setFocus({ id: entryId, at: Date.now() });
           setTab('historyTab');
@@ -945,8 +945,8 @@ export default function EntityDetail({
   const tabIcons: Record<string, LucideIcon> = {
     historyTab: History,
     tasks: SquareCheckBig,
-    opportunityContacts: ContactRound,
-    contacts: ContactRound,
+    opportunityContacts: UserRound,
+    contacts: UserRound,
     leads: Radar,
     opportunities: Handshake,
     approvals: ListChecks,
@@ -1015,7 +1015,7 @@ export default function EntityDetail({
           <div className='min-w-0 py-0.5 text-sm'>{inline('description')}</div>
         </InfoGroup>
         {/* Who has it and who takes part, where it stands, and when. */}
-        <InfoGroup title={text('detailsGroup')}>
+        <InfoGroup title={text('detailsGroup')} icon={GROUP_ICONS.general}>
           {row('ownerId')}
           {row('internalParticipants')}
           {statusKey && (
@@ -1069,7 +1069,7 @@ export default function EntityDetail({
         </InfoGroup>
         {/* One list: who has it and where it stands, what it is worth
             and when it should close, then the account and how it came. */}
-        <InfoGroup title={text('detailsGroup')}>
+        <InfoGroup title={text('detailsGroup')} icon={GROUP_ICONS.general}>
           {row('ownerId')}
           <InfoRow label={text('fields.stage')}>
             <StageField
@@ -1127,7 +1127,10 @@ export default function EntityDetail({
       <>
         {/* Who has it and where it stands (a churned account's reason
             beside its status). */}
-        <InfoGroup title={text('accountGroups.general')}>
+        <InfoGroup
+          title={text('accountGroups.general')}
+          icon={GROUP_ICONS.general}
+        >
           {row('ownerId')}
           {statusKey && (
             <InfoRow label={text(`fields.${statusKey}`)}>
@@ -1145,7 +1148,10 @@ export default function EntityDetail({
           {currentStatus === 'churned' && row('churnReason')}
           {['type', 'source'].map(row)}
         </InfoGroup>
-        <InfoGroup title={text('accountGroups.company')}>
+        <InfoGroup
+          title={text('accountGroups.company')}
+          icon={GROUP_ICONS.company}
+        >
           <InfoRow label={text('fields.website')}>
             <WebsiteField
               entity={entity}
@@ -1167,7 +1173,7 @@ export default function EntityDetail({
       headingOf(undefined, accountCrumb),
       actionsOf(<>{moreMenu}</>),
       <>
-        <InfoGroup title={text('detailsGroup')}>
+        <InfoGroup title={text('detailsGroup')} icon={GROUP_ICONS.general}>
           {[
             'ownerId',
             'accountId',
@@ -1199,7 +1205,7 @@ export default function EntityDetail({
       <InfoGroup>
         <div className='min-w-0 py-0.5 text-sm'>{inline('description')}</div>
       </InfoGroup>
-      <InfoGroup title={text('detailsGroup')}>
+      <InfoGroup title={text('detailsGroup')} icon={GROUP_ICONS.general}>
         {row('ownerId')}
         {statusKey && (
           <InfoRow label={text(`fields.${statusKey}`)}>

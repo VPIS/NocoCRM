@@ -6,7 +6,7 @@ import {
 import {
   Building2,
   ChartLine,
-  ContactRound,
+  UserRound,
   Handshake,
   LayoutDashboard,
   Inbox,
@@ -122,7 +122,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       ['leads', Radar],
       ['opportunities', Handshake],
       ['accounts', Building2],
-      ['contacts', ContactRound],
+      ['contacts', UserRound],
     ].map(([entity, icon]) => ({
       name: `crm-${String(entity)}`,
       path: `/crm/${String(entity)}`,
