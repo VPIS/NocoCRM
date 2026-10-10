@@ -106,7 +106,9 @@ export function AppSidebar({
   }, [isMobile, openMobile, setOpenMobile]);
 
   const header = (
-    <SidebarHeader className='h-16 shrink-0 flex-row items-center justify-between border-b border-sidebar-border/70 px-5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0'>
+    // Application change: the right padding is the menu's actions' inset
+    // (SidebarGroupAction's right-3), so the brand's action lines up with them.
+    <SidebarHeader className='h-16 shrink-0 flex-row items-center justify-between gap-2 border-b border-sidebar-border/70 pr-3 pl-5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0'>
       <AppBrand compact={state === 'collapsed' && !isMobile} />
       {action && (isMobile || state === 'expanded') ? (
         <div className='ml-auto flex items-center'>{action}</div>

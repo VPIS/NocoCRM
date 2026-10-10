@@ -414,7 +414,9 @@ export function SearchHeaderButton(): ReactElement | null {
         render={
           <Button
             aria-label={label}
-            className='text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+            // The menu's own actions' box (SidebarGroupAction), so the icon
+            // lines up with theirs.
+            className='size-5 rounded-md p-0 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
             onClick={() => {
               if (isMobile) setOpenMobile(false);
               search.setOpen(true);
