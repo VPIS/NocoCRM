@@ -84,7 +84,7 @@ export interface CommentFile {
 }
 export function useCommentFileList(entity: Entity, id: string): CommentFile[] {
   const { data } = useCrmQuery<CommentFile[]>(
-    `${toText(entity)}/${encodeURIComponent(id)}/comments/files`,
+    `${toText(entity)}/${encodeURIComponent(id)}/comments/attachments`,
     Boolean(id),
   );
   return Array.isArray(data) ? data : [];

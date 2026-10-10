@@ -195,7 +195,7 @@ describe('the task a follow-up card creates', () => {
       screen.getByRole('button', { name: '采纳并安排联系' }),
     );
     expect(state.api).toHaveBeenCalledWith(
-      'leads/lead-1/evaluation/entry-1',
+      'leads/lead-1/evaluations/entry-1/decide',
       'POST',
       { decision: 'accept', fields: [], task: { name: '发送方案资料' } },
     );
@@ -223,7 +223,7 @@ describe('the task a follow-up card creates', () => {
     );
     // Typed on the laptop's clock, sent as the instant it names.
     expect(state.api).toHaveBeenCalledWith(
-      'leads/lead-1/evaluation/entry-1',
+      'leads/lead-1/evaluations/entry-1/decide',
       'POST',
       {
         decision: 'accept',
@@ -318,7 +318,7 @@ describe('a follow-up that carries on an overdue task', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: '记录结果' }));
     expect(state.api).toHaveBeenCalledWith(
-      'leads/lead-1/evaluation/entry-1',
+      'leads/lead-1/evaluations/entry-1/decide',
       'POST',
       {
         decision: 'accept',
@@ -446,7 +446,7 @@ describe('a follow-up that carries on a planned task', () => {
     await userEvent.type(outcome, '张总说下周看演示');
     await userEvent.click(screen.getByRole('button', { name: 'AI 整理' }));
     expect(state.api).toHaveBeenCalledWith(
-      'tasks/act-2/feedback/organise',
+      'tasks/act-2/organiseFeedback',
       'POST',
       { text: '张总说下周看演示' },
     );
@@ -466,7 +466,7 @@ describe('a follow-up that carries on a planned task', () => {
     await userEvent.click(again);
     await userEvent.click(screen.getByRole('button', { name: '记录结果' }));
     expect(state.api).toHaveBeenLastCalledWith(
-      'leads/lead-1/evaluation/entry-1',
+      'leads/lead-1/evaluations/entry-1/decide',
       'POST',
       expect.objectContaining({
         decision: 'accept',
@@ -544,7 +544,7 @@ describe("a deal's follow-up card", () => {
     );
     await userEvent.click(screen.getByRole('button', { name: '采纳并推进' }));
     expect(state.api).toHaveBeenCalledWith(
-      'opportunities/opp-1/evaluation/entry-2',
+      'opportunities/opp-1/evaluations/entry-2/decide',
       'POST',
       { decision: 'accept', fields: ['expectedCloseAt'], task: {} },
     );
@@ -637,7 +637,7 @@ describe("a deal's follow-up card", () => {
     );
     await userEvent.click(screen.getByRole('button', { name: '采纳并暂停' }));
     expect(state.api).toHaveBeenCalledWith(
-      'opportunities/opp-1/evaluation/entry-2',
+      'opportunities/opp-1/evaluations/entry-2/decide',
       'POST',
       { decision: 'accept', fields: [], task: {} },
     );

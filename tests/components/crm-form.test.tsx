@@ -129,7 +129,7 @@ describe('CRM forms and file interchange', () => {
     );
     await waitFor(() =>
       expect(state.api).toHaveBeenCalledWith(
-        'leads?followUp=0',
+        'leads?followUp=false',
         'POST',
         expect.objectContaining({ name: 'Ada' }),
       ),

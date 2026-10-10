@@ -502,7 +502,9 @@ export function RecordForm({
         )
         .map((u) => ({ value: u.id, label: u.name }));
     const key =
-      field.key === 'type' && entity === 'companies' ? 'companyType' : field.key;
+      field.key === 'type' && entity === 'companies'
+        ? 'companyType'
+        : field.key;
     return (meta?.settings.options[key] ?? field.options ?? []).map((v) => ({
       value: v,
       label: text(`options.${toText(v)}`, { defaultValue: v }),
@@ -1043,7 +1045,7 @@ export function RecordForm({
             recordId
               ? `${toText(entity)}/${toText(recordId)}`
               : (entity === 'leads' || entity === 'opportunities') && !followUp
-                ? `${entity}?followUp=0`
+                ? `${entity}?followUp=false`
                 : entity,
             recordId ? 'PATCH' : 'POST',
             payload,

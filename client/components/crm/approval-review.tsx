@@ -101,7 +101,7 @@ export function ReviewPanel({
   const decide = (decision: 'approve' | 'reject' | 'dismiss'): void => {
     setBusy(decision);
     setError(undefined);
-    api(`approvals/${approvalId}/review/${entry.id}`, 'POST', {
+    api(`approvals/${approvalId}/reviews/${entry.id}/decide`, 'POST', {
       decision,
       comment,
     })
@@ -424,7 +424,7 @@ export function ReviewStatus({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   const { data: entry } = useCrmQuery<ReviewEntry | null>(
-    `approvals/${approvalId}/review`,
+    `approvals/${approvalId}/reviews/latest`,
     Boolean(meta?.assistant),
     { refetchInterval: (data) => (data?.status === 'running' ? 4000 : false) },
   );

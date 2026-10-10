@@ -232,7 +232,7 @@ export function OpportunityCaptureDialog({
           contacts: Data[];
           duplicates: CapturedDeal['duplicates'];
         };
-      }>('opportunities/capture/match', 'POST', {
+      }>('opportunities/matchCompany', 'POST', {
         companyId: company,
         people,
       })
@@ -283,7 +283,7 @@ export function OpportunityCaptureDialog({
         ).map((key) => [key, key === 'contacts' ? contacts : input[key]]),
       );
       const { data } = await api<{ data: CrmRecord }>(
-        `opportunities?via=capture${followUp ? '' : '&followUp=0'}`,
+        `opportunities?via=capture${followUp ? '' : '&followUp=false'}`,
         'POST',
         { ...payload, contacts },
       );

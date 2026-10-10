@@ -267,7 +267,7 @@ export function EvaluationStatus({
   const refresh = useRefresh();
   const label = useVerdictLabel();
   const { data: entry } = useCrmQuery<EvaluationEntry | null>(
-    `${entity}/${recordId}/evaluation`,
+    `${entity}/${recordId}/evaluations/latest`,
     Boolean(meta?.assistant),
     // While the AI works, look again every few seconds.
     { refetchInterval: (data) => (data?.status === 'running' ? 4000 : false) },
@@ -465,7 +465,7 @@ export function VerdictPanel({
   const unwritten = [...picked].filter(
     (field) => !(entry.ai.enrichedAt && found.has(field)),
   );
-  const base = `${entity}/${recordId}/evaluation`;
+  const base = `${entity}/${recordId}`;
   // An email as the next step is changed and sent on the card (EmailStep),
   // which accepts it once sent; without a mailbox to send from, the draft is
   // copied instead and the card accepted as any other.
@@ -513,7 +513,7 @@ export function VerdictPanel({
   // Accepting writes the findings still ticked with it.
   const decide = (decision: 'accept' | 'dismiss'): Promise<void> =>
     act(decision, () =>
-      api(`${base}/${entry.id}`, 'POST', {
+      api(`${base}/evaluations/${entry.id}/decide`, 'POST', {
         decision,
         ...(decision === 'accept'
           ? {
@@ -554,7 +554,9 @@ export function VerdictPanel({
   // them be. The card then shows them written.
   const writeTicked = async (): Promise<void> => {
     if (!unwritten.length) return;
-    await api(`${base}/${entry.id}/enrich`, 'POST', { fields: unwritten });
+    await api(`${base}/evaluations/${entry.id}/enrich`, 'POST', {
+      fields: unwritten,
+    });
     await onChanged();
   };
   // A conversion writes them first: the lead is read-only once converted,
@@ -562,7 +564,7 @@ export function VerdictPanel({
   const convert = (): Promise<void> =>
     act('accept', async () => {
       if (unwritten.length)
-        await api(`${base}/${entry.id}/enrich`, 'POST', {
+        await api(`${base}/evaluations/${entry.id}/enrich`, 'POST', {
           fields: unwritten,
         });
       setConverting(true);
@@ -570,10 +572,14 @@ export function VerdictPanel({
   // Redoes the card as asked: the AI writes a new one, which replaces this.
   const revise = (): Promise<void> =>
     act('revise', async () => {
-      const result = await api<{ data: EvaluationEntry }>(base, 'POST', {
-        revise: entry.id,
-        instruction: instruction.trim(),
-      });
+      const result = await api<{ data: EvaluationEntry }>(
+        `${base}/evaluate`,
+        'POST',
+        {
+          revise: entry.id,
+          instruction: instruction.trim(),
+        },
+      );
       setInstruction('');
       onRevised?.(result.data);
     });
@@ -969,7 +975,7 @@ export function VerdictPanel({
           opportunity={verdict.opportunity ?? null}
           onClose={() => setConverting(false)}
           onConverted={() =>
-            api(`${base}/${entry.id}`, 'POST', {
+            api(`${base}/evaluations/${entry.id}/decide`, 'POST', {
               decision: 'accept',
             }).then(onChanged)
           }
@@ -1717,7 +1723,7 @@ function Findings({
               setBusy(true);
               setError(undefined);
               api(
-                `${entity}/${recordId}/evaluation/${entry.id}/enrich`,
+                `${entity}/${recordId}/evaluations/${entry.id}/enrich`,
                 'POST',
                 {
                   fields: chosen,
@@ -1861,7 +1867,7 @@ function ConversionPlan({
     contacts: CrmRecord[];
     opportunities: CrmRecord[];
     titles: Record<string, string>;
-  }>(`leads/${leadId}/conversion`);
+  }>(`leads/${leadId}/previewConversion`);
   const zh = language.startsWith('zh');
   const quoted = (value: unknown): string =>
     zh ? `「${toText(value)}」` : `“${toText(value)}”`;

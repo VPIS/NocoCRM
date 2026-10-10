@@ -35,7 +35,7 @@ export function useMatches(
   const api = useCrmApi();
   const scopeKey = useCrmScopeKey();
   const params = new URLSearchParams({ pageSize: String(RESULTS) });
-  if (search) params.set('search', search);
+  if (search) params.set('q', search);
   for (const [key, value] of Object.entries(extra))
     if (value) params.set(key, value);
   const path = `${toText(entity)}?${params.toString()}`;
@@ -49,6 +49,6 @@ export function useMatches(
   return {
     rows: Array.isArray(rows) ? rows : [],
     // The names of the records they refer to (a deal's company).
-    titles: query.data?.titles ?? {},
+    titles: query.data?.meta.titles ?? {},
   };
 }

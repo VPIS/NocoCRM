@@ -308,7 +308,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   // The tasks and the history arrive one page each with the lead;
   // these grow them from the list and history endpoints.
   const moreTasks = useMore(
-    `tasks?leadId=${toText(id)}&sort=dueAt`,
+    `tasks?leadId=${toText(id)}&orderBy=dueAt`,
     detail?.related.tasks
       ? {
           data: rows(detail.related.tasks) as CrmRecord[],

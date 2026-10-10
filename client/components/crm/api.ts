@@ -64,14 +64,19 @@ export interface Titled {
   names: Record<string, string>;
   opportunities?: Record<string, { amount: number; currency: string }>;
 }
-export interface ListData extends Titled {
-  data: CrmRecord[];
+export interface ListMeta extends Titled {
   total: number;
   page: number;
   pageSize: number;
   // Leads and deals the AI is following up or has a verdict waiting on;
   // approvals whose review is being written or waits, for their approver.
   ai?: Record<string, 'running' | 'pending'>;
+}
+// A page of a list: the records, and in `meta` the paging and the names of
+// what they refer to.
+export interface ListData {
+  data: CrmRecord[];
+  meta: ListMeta;
 }
 export interface Detail extends Titled {
   record: CrmRecord;
@@ -87,6 +92,26 @@ export interface Detail extends Titled {
   unlinks?: Partial<Record<Entity, number>>;
   permissions: { edit: boolean; delete: boolean; approve: boolean };
 }
+// The routes still under /api/crm: the workspace's own (metadata,
+// settings, dashboard and the rest), until they move to the root like the
+// records did. Every other path is the application's at the root.
+const UNDER_CRM = new Set([
+  'metadata',
+  'settings',
+  'demo',
+  'geography',
+  'search',
+  'mail',
+  'dashboard',
+  'decisions',
+  'agents',
+  'ai',
+  'files',
+]);
+export function apiPath(path: string): string {
+  const first = path.split(/[/?]/u, 1)[0] ?? '';
+  return UNDER_CRM.has(first) ? `crm/${path}` : path;
+}
 export function useCrmApi() {
   const api = useService(apiClientToken);
   const { i18n } = useTranslation('crm');
@@ -97,7 +122,7 @@ export function useCrmApi() {
       input?: unknown,
     ): Promise<T> =>
       api.request<T>({
-        path: `crm/${toText(path)}`,
+        path: apiPath(toText(path)),
         method,
         headers: { 'Accept-Language': i18n.language },
         ...(input instanceof FormData
@@ -198,8 +223,8 @@ export function useRecord(entity: Entity | undefined, id: unknown) {
     staleTime: 20000,
     select: (result) => ({
       record: result.data[0],
-      titles: result.titles,
-      names: result.names,
+      titles: result.meta.titles,
+      names: result.meta.names,
     }),
   });
 }
@@ -233,16 +258,15 @@ export function useMore<T = CrmRecord>(
       const joiner = base.includes('?') ? '&' : '?';
       const next = await api<{
         data: T[];
-        page: number;
-        titles?: Record<string, string>;
+        meta: { page: number; titles?: Record<string, string> };
       }>(
         `${base}${joiner}page=${toText(current.page + 1)}&pageSize=${toText(pageSize)}`,
       );
       setState({
         base,
         more: [...current.more, ...next.data],
-        page: next.page,
-        titles: { ...current.titles, ...(next.titles ?? {}) },
+        page: next.meta.page,
+        titles: { ...current.titles, ...(next.meta.titles ?? {}) },
         loading: false,
       });
     } catch {

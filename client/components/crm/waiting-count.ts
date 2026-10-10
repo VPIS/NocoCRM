@@ -58,7 +58,7 @@ export function useApprovalsToDecide(): number {
     enabled: decides,
     refetchInterval: 30000,
   });
-  return decides ? (data?.total ?? 0) : 0;
+  return decides ? (data?.meta.total ?? 0) : 0;
 }
 
 // How many runs each agent has under way, for the Agents entries in the

@@ -338,7 +338,7 @@ function EntityList({
           pages: data.pages.map((p) => ({
             ...p,
             data: p.data.filter((r) => r.id !== record.id),
-            total: Math.max(0, p.total - 1),
+            meta: { ...p.meta, total: Math.max(0, p.meta.total - 1) },
           })),
         });
       else if (column === stage)
@@ -348,7 +348,7 @@ function EntityList({
             ...p,
             data:
               i === 0 ? [{ ...full, [statusField]: stage }, ...p.data] : p.data,
-            total: p.total + 1,
+            meta: { ...p.meta, total: p.meta.total + 1 },
           })),
         });
     }
@@ -378,7 +378,7 @@ function EntityList({
   // object's) reads as everyone's.
   const whose = scopes[entity]?.includes(scope) ? scope : 'all';
   const params = new URLSearchParams({
-    search,
+    q: search,
     status,
     ownerId: whose === 'mine' ? toText(meta?.userId) : ownerId,
     source,
@@ -397,12 +397,12 @@ function EntityList({
   const listParams = new URLSearchParams(params);
   if (sort)
     listParams.set(
-      'sort',
+      'orderBy',
       sort.direction === 'desc' ? `-${sort.key}` : sort.key,
     );
   // Tasks, unsorted by the reader, come soonest first, those with no time
   // last.
-  else if (entity === 'tasks') listParams.set('sort', 'dueAt');
+  else if (entity === 'tasks') listParams.set('orderBy', 'dueAt');
   const path = `${toText(entity)}?${listParams.toString()}`;
   const query = useQuery({
     queryKey: [...scopeKey, path],
@@ -411,7 +411,9 @@ function EntityList({
     enabled: Boolean(definition) && !(entity === 'tasks' && view === 'list'),
     // While the AI works on a row here, look again every few seconds.
     refetchInterval: (q) =>
-      Object.values(q.state.data?.ai ?? {}).includes('running') ? 5000 : false,
+      Object.values(q.state.data?.meta.ai ?? {}).includes('running')
+        ? 5000
+        : false,
   });
   // The calendar reads one month from the server, by when tasks
   // happen, with the same filters as the list. The range is widened by a
@@ -433,18 +435,20 @@ function EntityList({
   for (const key of ['page', 'pageSize']) calendarParams.delete(key);
   calendarParams.set('dueFrom', new Date(monthStart - 86400000).toISOString());
   calendarParams.set('dueTo', new Date(monthEnd + 86400000).toISOString());
-  calendarParams.set('pageSize', '500');
+  // The list's largest page; a month of more than 5,000 tasks shows its
+  // first 5,000.
+  calendarParams.set('pageSize', '100');
   const calendarPath = `${toText(entity)}?${calendarParams.toString()}`;
   const calendar = useQuery({
     queryKey: [...scopeKey, calendarPath],
     queryFn: async () => {
       const all: CrmRecord[] = [];
-      for (let page = 1; page <= 20; page++) {
+      for (let page = 1; page <= 50; page++) {
         const result = await api<ListData>(
           `${calendarPath}&page=${toText(page)}`,
         );
         all.push(...result.data);
-        if (result.page * result.pageSize >= result.total) break;
+        if (result.meta.page * result.meta.pageSize >= result.meta.total) break;
       }
       return all;
     },
@@ -553,7 +557,7 @@ function EntityList({
     </div>
   );
   const writable = Boolean(meta?.permissions[entity]?.create);
-  const lookup = query.data?.titles ?? {};
+  const lookup = query.data?.meta.titles ?? {};
   const read = meta?.permissions[entity]?.read;
   // A lead's name cell carries "name / company", so the company column would
   // repeat it.
@@ -599,7 +603,7 @@ function EntityList({
   const opportunityOf = (
     record: CrmRecord,
   ): { amount: number; currency: string } | undefined =>
-    query.data?.opportunities?.[toText(record.opportunityId ?? '')];
+    query.data?.meta.opportunities?.[toText(record.opportunityId ?? '')];
   const newButton = (
     <>
       {writable && (
@@ -795,11 +799,11 @@ function EntityList({
       // it is context, not something to act on.
       // Tasks count each tab instead.
       title={
-        entity !== 'tasks' && totals.data?.total !== undefined ? (
+        entity !== 'tasks' && totals.data?.meta.total !== undefined ? (
           <>
             {text(`entities.${toText(entity)}`)}
             <span className='ml-2 align-middle text-base font-normal text-muted-foreground tabular-nums'>
-              {toText(totals.data.total)}
+              {toText(totals.data.meta.total)}
             </span>
           </>
         ) : (
@@ -1012,7 +1016,9 @@ function EntityList({
                                   row, or its suggestion waiting, as on
                                   the board. */}
                                 <AiRowMark
-                                  state={query.data.ai?.[toText(record.id)]}
+                                  state={
+                                    query.data.meta.ai?.[toText(record.id)]
+                                  }
                                   review={entity === 'approvals'}
                                 />
                               </span>
@@ -1071,7 +1077,10 @@ function EntityList({
               <span>
                 {text('page', {
                   page,
-                  pages: Math.max(1, Math.ceil(query.data.total / PAGE_SIZE)),
+                  pages: Math.max(
+                    1,
+                    Math.ceil(query.data.meta.total / PAGE_SIZE),
+                  ),
                 })}
               </span>
               <div className='flex gap-2'>
@@ -1084,7 +1093,7 @@ function EntityList({
                 </Button>
                 <Button
                   variant='outline'
-                  disabled={page * PAGE_SIZE >= query.data.total}
+                  disabled={page * PAGE_SIZE >= query.data.meta.total}
                   onClick={() => setPage(page + 1)}
                 >
                   {text('next')}
@@ -1607,7 +1616,7 @@ function BoardColumn({
   base.set('pageSize', String(PAGE_SIZE));
   // Most recently touched first: a card dropped here was just touched, so
   // it stays at the top where it landed, and a column reads as recent work.
-  base.set('sort', '-updatedAt');
+  base.set('orderBy', '-updatedAt');
   const query = useInfiniteQuery({
     queryKey: [...scopeKey, `${toText(entity)}/board`, stage, base.toString()],
     queryFn: ({ pageParam }) => {
@@ -1617,11 +1626,13 @@ function BoardColumn({
     },
     initialPageParam: 1,
     getNextPageParam: (last) =>
-      last.page * last.pageSize < last.total ? last.page + 1 : undefined,
+      last.meta.page * last.meta.pageSize < last.meta.total
+        ? last.meta.page + 1
+        : undefined,
     // While the AI works on a card here, look again every few seconds.
     refetchInterval: (q) =>
       q.state.data?.pages.some((p) =>
-        Object.values(p.ai ?? {}).includes('running'),
+        Object.values(p.meta.ai ?? {}).includes('running'),
       )
         ? 5000
         : false,
@@ -1629,10 +1640,10 @@ function BoardColumn({
   const items = query.data?.pages.flatMap((p) => p.data) ?? [];
   const ai = (query.data?.pages ?? []).reduce<
     Record<string, 'running' | 'pending'>
-  >((all, p) => ({ ...all, ...p.ai }), {});
-  const total = query.data?.pages[0]?.total ?? 0;
+  >((all, p) => ({ ...all, ...p.meta.ai }), {});
+  const total = query.data?.pages[0]?.meta.total ?? 0;
   const titles = (query.data?.pages ?? []).reduce<Record<string, string>>(
-    (all, p) => ({ ...all, ...p.titles }),
+    (all, p) => ({ ...all, ...p.meta.titles }),
     {},
   );
   // Whether a card is held over this column: counted, because entering a

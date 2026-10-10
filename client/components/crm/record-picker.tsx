@@ -37,7 +37,7 @@ function useRecordSearch(
   const api = useCrmApi();
   const scopeKey = useCrmScopeKey();
   const params = new URLSearchParams({ pageSize: String(PAGE_SIZE) });
-  if (search) params.set('search', search);
+  if (search) params.set('q', search);
   if (excludeStatus) params.set('excludeStatus', excludeStatus);
   for (const [key, value] of Object.entries(filter))
     if (value) params.set(key, value);
@@ -48,7 +48,9 @@ function useRecordSearch(
       api<ListData>(`${toText(entity)}?${base}&page=${toText(pageParam)}`),
     initialPageParam: 1,
     getNextPageParam: (last) =>
-      last.page * last.pageSize < last.total ? last.page + 1 : undefined,
+      last.meta.page * last.meta.pageSize < last.meta.total
+        ? last.meta.page + 1
+        : undefined,
     enabled,
     staleTime: 20000,
   });
@@ -124,7 +126,7 @@ function ResultList({
                   role='option'
                   aria-selected={picked}
                   className='flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground'
-                  onClick={() => onPick(record, page.titles)}
+                  onClick={() => onPick(record, page.meta.titles)}
                 >
                   <Check
                     className={`size-4 shrink-0 ${picked ? '' : 'invisible'}`}
@@ -132,7 +134,7 @@ function ResultList({
                   <span className='min-w-0 truncate'>
                     {bare
                       ? toText(record.name)
-                      : recordTitle(entity, record, page.titles)}
+                      : recordTitle(entity, record, page.meta.titles)}
                   </span>
                 </button>
               </li>

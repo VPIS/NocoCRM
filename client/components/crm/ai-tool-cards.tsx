@@ -118,7 +118,7 @@ function useNames(
       Object.assign(
         {},
         ...(await Promise.all(
-          query.map((path) => api<ListData>(path).then((r) => r.names)),
+          query.map((path) => api<ListData>(path).then((r) => r.meta.names)),
         )),
       ) as Record<string, string>,
     enabled: query.length > 0,

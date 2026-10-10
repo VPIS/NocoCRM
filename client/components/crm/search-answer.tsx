@@ -148,7 +148,7 @@ function FoundPreview({
   });
   if (!list.data) return null;
   const rows = list.data.data;
-  const total = list.data.total;
+  const total = list.data.meta.total;
   if (!total) return null;
   const all = new URLSearchParams({ ids, found: found.title });
   return (
@@ -169,7 +169,7 @@ function FoundPreview({
               <SearchRow
                 entity={found.entity}
                 record={row}
-                titles={list.data.titles ?? {}}
+                titles={list.data.meta.titles ?? {}}
                 words={[]}
               />
             </button>

@@ -366,13 +366,16 @@ export function ConvertDialog({
     contacts: CrmRecord[];
     opportunities: CrmRecord[];
     titles: Record<string, string>;
-  }>(`leads/${toText(lead.id)}/conversion`);
-  // The list endpoint puts total beside data, not inside it, so this reads
-  // the raw response rather than going through useCrmQuery's unwrapping.
+  }>(`leads/${toText(lead.id)}/previewConversion`);
+  // The list endpoint puts the total in `meta`, beside the data, so this
+  // reads the raw response rather than going through useCrmQuery's
+  // unwrapping.
   const tasks = useQuery({
     queryKey: [...scopeKey, `tasks?leadId=${toText(lead.id)}&count`],
     queryFn: () =>
-      api<{ total: number }>(`tasks?leadId=${toText(lead.id)}&pageSize=1`),
+      api<{ meta: { total: number } }>(
+        `tasks?leadId=${toText(lead.id)}&pageSize=1`,
+      ),
   });
   const [input, setInput] = useState<Data>(() => ({
     companyName: lead.company ?? '',
@@ -483,7 +486,7 @@ export function ConvertDialog({
         (o) => !['won', 'lost'].includes(toText(o.stage)),
       )
     : [];
-  const linkedTasks = tasks.data?.total ?? 0;
+  const linkedTasks = tasks.data?.meta.total ?? 0;
 
   // Conflicts: fields where the lead and the chosen record both have a value
   // and disagree; the user opts into each overwrite.

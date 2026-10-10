@@ -95,6 +95,13 @@ import {
   crmToken,
 } from '../../server/providers/crm/index.js';
 import { crmRoutes } from '../../server/routes/crm.js';
+import { objectRoutes } from '../../server/routes/objects.js';
+import {
+  findApiDocumentSchemaProblems,
+  findUndeclaredApiRoutes,
+  generateApiDocument,
+} from '@nocobase/app-server/router';
+import { apiPath } from '../../client/components/crm/api.js';
 import { captureLeads } from '../../server/providers/crm/lead-capture.js';
 import {
   captureOpportunity,
@@ -184,6 +191,8 @@ let service: CrmService;
 const passwordResets: string[] = [];
 let folder: string;
 let router: Hono;
+// The records' routes alone, as the API document reads them.
+let objectRouter: Hono;
 // The Mail plugin as the mail timeline sees it: each user's connected
 // mailboxes and the messages they hold, set by a test.
 type FakeMessage = {
@@ -436,11 +445,17 @@ beforeAll(async () => {
   } as unknown as ReturnType<
     typeof container.resolve<typeof mailServiceToken>
   >);
-  router = await crmRoutes.createRouter({
+  // The application's routes as /api serves them: the records at the
+  // root, the workspace's still under /crm.
+  const host = {
     container,
     publicBasePath: '/test',
     paths: createAppPaths({ rootDir: folder }),
-  } as Application);
+  } as Application;
+  router = new Hono();
+  objectRouter = await objectRoutes.createRouter(host);
+  router.route('/', objectRouter);
+  router.route('/', await crmRoutes.createRouter(host));
 }, 30000);
 afterAll(async () => {
   await database?.destroy();
@@ -452,7 +467,8 @@ const request = (
   method = 'GET',
   body?: unknown,
 ): Promise<Response> =>
-  router.request(`/crm${path}`, {
+  // Paths as the client writes them, with a leading slash.
+  router.request(`/${apiPath(path.slice(1))}`, {
     method,
     headers: {
       ...(user ? { 'x-test-user': user } : {}),
@@ -469,6 +485,39 @@ async function runSalesSetsSeed(): Promise<void> {
     query: database.query(),
   } as unknown as Parameters<typeof salesSetsSeed.run>[0]);
 }
+
+describe('CRM API document', () => {
+  it('declares every record route, each with its own operation and valid schemas', async () => {
+    expect(findUndeclaredApiRoutes(objectRouter)).toEqual([]);
+    const document = await generateApiDocument(objectRouter, {
+      info: { title: 'CRM', version: 'test' },
+    });
+    expect(findApiDocumentSchemaProblems(document)).toEqual([]);
+    const operations = Object.values(document.paths ?? {}).flatMap((item) =>
+      Object.values(item ?? {}).flatMap((op) =>
+        op && typeof op === 'object' && 'operationId' in op
+          ? [String(op.operationId)]
+          : [],
+      ),
+    );
+    expect(new Set(operations).size).toBe(operations.length);
+    const leads = document.paths?.['/api/leads/{leadId}'];
+    expect(leads?.get?.operationId).toBe('getLead');
+    expect(Object.keys(leads?.delete?.responses ?? {}).sort()).toEqual([
+      '204',
+      '400',
+      '401',
+      '403',
+      '404',
+      '500',
+    ]);
+    expect(
+      document.paths?.['/api/leads/{leadId}/convert']?.post?.operationId,
+    ).toBe('convertLead');
+    // Tasks are neither exported nor imported.
+    expect(document.paths?.['/api/tasks/export']).toBeUndefined();
+  });
+});
 
 describe('CRM API security and domain rules', () => {
   it('rejects anonymous and unpermitted requests and serves permitted users', async () => {
@@ -493,7 +542,7 @@ describe('CRM API security and domain rules', () => {
     // A write needs no header of the CRM's own (the session cookie is
     // SameSite=Lax): a lead without a name is refused for the name, in the
     // standard error body.
-    const unnamed = await router.request('/crm/leads', {
+    const unnamed = await router.request('/leads', {
       method: 'POST',
       headers: { 'x-test-user': 'rep' },
       body: '{}',
@@ -584,7 +633,7 @@ describe('CRM API security and domain rules', () => {
       (await request(`/leads/${lead.id}`, 'manager', 'DELETE')).status,
     ).toBe(404);
     expect((await request(`/leads/${lead.id}`, 'admin', 'DELETE')).status).toBe(
-      200,
+      204,
     );
     await expect(
       service.save(actor('rep'), 'leads', {
@@ -1100,7 +1149,7 @@ describe('CRM API security and domain rules', () => {
     ).toBe(404);
     expect(
       (await request('/approvals/' + draft.id, 'rep', 'DELETE')).status,
-    ).toBe(200);
+    ).toBe(204);
     const pending = await service.save(actor('rep'), 'approvals', {
       name: 'Keep pending',
       opportunityId: opportunity.id,
@@ -1116,7 +1165,7 @@ describe('CRM API security and domain rules', () => {
     await service.approvalAction(actor('rep'), pending.id, 'withdraw');
     expect(
       (await request('/approvals/' + pending.id, 'rep', 'DELETE')).status,
-    ).toBe(200);
+    ).toBe(204);
   });
   it('lets only an administrator delete a decided approval', async () => {
     const opportunity = (
@@ -1155,7 +1204,7 @@ describe('CRM API security and domain rules', () => {
     expect(detail.permissions.edit).toBe(false);
     expect(
       (await request('/approvals/' + rejected.id, 'admin', 'DELETE')).status,
-    ).toBe(200);
+    ).toBe(204);
     await expect(
       service.get(actor('admin'), 'approvals', rejected.id),
     ).rejects.toMatchObject({ code: 'notFound' });
@@ -1679,7 +1728,7 @@ describe('CRM API security and domain rules', () => {
       await expect(
         service.list(actor(user), 'leads', { sort }),
       ).rejects.toMatchObject({ code: 'invalidInput' });
-    expect((await request('/leads?sort=-email', 'restricted')).status).toBe(
+    expect((await request('/leads?orderBy=-email', 'restricted')).status).toBe(
       400,
     );
   });
@@ -4133,7 +4182,7 @@ describe('CRM lead evaluation', () => {
       expect(count.data.count).toBeGreaterThan(0);
       // The list says so for the board's cards.
       const list = await (await request(`/leads?ids=${lead.id}`, 'rep')).json();
-      expect(list.ai).toEqual({ [lead.id]: 'pending' });
+      expect(list.meta.ai).toEqual({ [lead.id]: 'pending' });
       expect(running).not.toBeNull();
     } finally {
       enabled.mockRestore();
@@ -4282,16 +4331,15 @@ describe('CRM lead evaluation', () => {
       name: 'route',
       source: 'website',
     });
-    expect((await request(`/leads/${lead.id}/evaluation`)).status).toBe(401);
-    expect(
-      (await request(`/leads/${lead.id}/evaluation`, 'outsider')).status,
-    ).toBe(403);
-    expect(
-      await (await request(`/leads/${lead.id}/evaluation`, 'rep')).json(),
-    ).toEqual({ data: null });
+    const latest = `/leads/${lead.id}/evaluations/latest`;
+    expect((await request(latest)).status).toBe(401);
+    expect((await request(latest, 'outsider')).status).toBe(403);
+    expect(await (await request(latest, 'rep')).json()).toEqual({
+      data: null,
+    });
     // The routes' container has no AI employee plugin: unavailable.
     expect(
-      (await request(`/leads/${lead.id}/evaluation`, 'rep', 'POST', {})).status,
+      (await request(`/leads/${lead.id}/evaluate`, 'rep', 'POST', {})).status,
     ).toBe(503);
     expect((await request('/decisions')).status).toBe(401);
     expect((await request('/decisions', 'rep')).status).toBe(200);
@@ -6764,22 +6812,24 @@ describe('resolved titles and paged filters', () => {
     // A contact and a deal carry their company in the title; the bare name
     // stays available for lists already scoped to that company.
     const contacts = await page(`/contacts?ids=${toText(contact.id)}`);
-    expect(contacts.titles[toText(contact.id)]).toBe(
+    expect(contacts.meta.titles[toText(contact.id)]).toBe(
       'Titled person / Titled company',
     );
-    expect(contacts.names[toText(contact.id)]).toBe('Titled person');
+    expect(contacts.meta.names[toText(contact.id)]).toBe('Titled person');
     const deals = await page(`/opportunities?ids=${toText(deal.id)}`);
-    expect(deals.titles[toText(deal.id)]).toBe('Titled company / Titled deal');
-    expect(deals.titles[toText(company.id)]).toBe('Titled company');
-    expect(deals.titles[toText(contact.id)]).toBe(
+    expect(deals.meta.titles[toText(deal.id)]).toBe(
+      'Titled company / Titled deal',
+    );
+    expect(deals.meta.titles[toText(company.id)]).toBe('Titled company');
+    expect(deals.meta.titles[toText(contact.id)]).toBe(
       'Titled person / Titled company',
     );
     // The approval list names the deal and carries its size for the column.
     const approvals = await page(`/approvals?ids=${toText(approval.id)}`);
-    expect(approvals.titles[toText(deal.id)]).toBe(
+    expect(approvals.meta.titles[toText(deal.id)]).toBe(
       'Titled company / Titled deal',
     );
-    expect(approvals.opportunities[toText(deal.id)]).toEqual({
+    expect(approvals.meta.opportunities[toText(deal.id)]).toEqual({
       amount: 12345,
       currency: 'CNY',
     });
@@ -6795,7 +6845,7 @@ describe('resolved titles and paged filters', () => {
       '/tasks?dueFrom=2031-03-01T00:00:00.000Z&dueTo=2031-03-31T23:59:59.999Z',
     );
     expect(inMarch.data.map((r: { id: string }) => r.id)).toContain(task.id);
-    expect(inMarch.titles[toText(deal.id)]).toBe(
+    expect(inMarch.meta.titles[toText(deal.id)]).toBe(
       'Titled company / Titled deal',
     );
     const inApril = await page(
@@ -6805,7 +6855,7 @@ describe('resolved titles and paged filters', () => {
       task.id,
     );
     // A picker leaves out one status, and the whole-table lookup is gone.
-    const leads = await page('/leads?excludeStatus=new&pageSize=200');
+    const leads = await page('/leads?excludeStatus=new&pageSize=100');
     expect(
       leads.data.every((r: { status: string }) => r.status !== 'new'),
     ).toBe(true);
@@ -6846,20 +6896,19 @@ describe('resolved titles and paged filters', () => {
     const contacts = (await request(
       `/contacts?companyId=${toText(company.id)}&page=2&pageSize=20`,
       'rep',
-    ).then((r) => r.json())) as { data: unknown[]; total: number };
+    ).then((r) => r.json())) as { data: unknown[]; meta: { total: number } };
     expect(contacts.data).toHaveLength(3);
-    expect(contacts.total).toBe(23);
+    expect(contacts.meta.total).toBe(23);
     const history = (await request(
       `/companies/${toText(company.id)}/history?page=2&pageSize=20`,
       'rep',
     ).then((r) => r.json())) as {
       data: unknown[];
-      total: number;
-      page: number;
+      meta: { total: number; page: number };
     };
-    expect(history.page).toBe(2);
+    expect(history.meta.page).toBe(2);
     expect(history.data).toHaveLength(2);
-    expect(history.total).toBe(22);
+    expect(history.meta.total).toBe(22);
     // History is read within the reader's access, like the record.
     expect(
       (await request(`/companies/${toText(company.id)}/history`, 'outsider'))
@@ -7871,7 +7920,7 @@ describe('comments in the activity feed', () => {
           text: 'Seen',
         })
       ).status,
-    ).toBe(200);
+    ).toBe(201);
     const feed = await service.historyOf(actor('rep'), 'leads', id);
     const comments = feed.data.filter((entry) => entry.action === 'comment');
     expect(
@@ -7947,7 +7996,7 @@ describe('comments in the activity feed', () => {
     ).toBe(404);
     expect(
       (await request(`/comments/${commentId}`, 'rep', 'DELETE')).status,
-    ).toBe(200);
+    ).toBe(204);
     const after2 = (await service.historyOf(actor('rep'), 'leads', id)).data;
     expect(after2.some((entry) => entry.id === commentId)).toBe(false);
     // The feed says a comment was removed, and by whom, without its text.

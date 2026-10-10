@@ -189,7 +189,7 @@ export default function EntityDetail({
         }
       : undefined;
   const moreTasks = useMore(
-    `tasks?${linkParam}&sort=dueAt`,
+    `tasks?${linkParam}&orderBy=dueAt`,
     firstPage('tasks'),
   );
   const moreApprovals = useMore(

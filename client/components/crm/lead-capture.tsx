@@ -535,7 +535,7 @@ function CaptureReview({
       try {
         // Created as the AI's proposal the user checked (the feed marks it).
         const { data } = await api<{ data: { id: string } }>(
-          `leads?via=capture${followUp ? '' : '&followUp=0'}`,
+          `leads?via=capture${followUp ? '' : '&followUp=false'}`,
           'POST',
           Object.fromEntries(
             Object.entries(row.input).filter(

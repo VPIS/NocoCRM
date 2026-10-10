@@ -214,13 +214,13 @@ export function MergeDialog({
   const proposal = useQuery({
     queryKey: [
       ...scopeKey,
-      `leads/${leadId}/merge/proposal`,
+      `leads/${leadId}/proposeMerge`,
       otherId,
       input ? JSON.stringify(input) : '',
     ],
     queryFn: () =>
       api<{ data: Proposal }>(
-        `leads/${leadId}/merge/proposal`,
+        `leads/${leadId}/proposeMerge`,
         'POST',
         input ? { input } : { with: otherId },
       ).then((r) => r.data),

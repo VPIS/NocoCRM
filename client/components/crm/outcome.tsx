@@ -90,7 +90,7 @@ export function OutcomeBox({
               setOrganising(true);
               setError(undefined);
               api<{ data: { text: string } }>(
-                `tasks/${taskId}/feedback/organise`,
+                `tasks/${taskId}/organiseFeedback`,
                 'POST',
                 { text: value },
               )
@@ -167,7 +167,7 @@ export function RecordOutcomeDialog({
             onClick={() => {
               setBusy(true);
               setError(undefined);
-              api(`tasks/${toText(task.id)}/outcome`, 'POST', {
+              api(`tasks/${toText(task.id)}/recordOutcome`, 'POST', {
                 outcome,
                 followUp: followable && followUp,
               })

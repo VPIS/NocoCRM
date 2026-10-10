@@ -56,8 +56,17 @@ import {
   type Data,
   type CrmRecord,
   type Entity,
-  type ListData,
+  type Titled,
 } from '../components/crm/api.js';
+
+// A page of a dashboard list (`dashboard/:list`), in the shape the
+// workspace's routes still answer under /api/crm.
+type AgendaPage = Titled & {
+  data: CrmRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
 
 // The six risk cards: which list page they open, the metric key that page
 // filters by, and the icon. The number itself comes from the same rule the
@@ -173,7 +182,7 @@ export default function DashboardPage(): ReactElement {
       key={`${name}-${scope}`}
       name={name}
       scope={scope}
-      initial={data?.[name] as ListData | undefined}
+      initial={data?.[name] as AgendaPage | undefined}
       empty={empty}
       to={to}
       timeZone={timeZone}
@@ -420,7 +429,7 @@ function AgendaCard({
 }: {
   name: AgendaName;
   scope: 'mine' | 'team';
-  initial: ListData | undefined;
+  initial: AgendaPage | undefined;
   empty: string;
   to: string;
   timeZone: string;
@@ -439,7 +448,7 @@ function AgendaCard({
   const loadMore = async (): Promise<void> => {
     setLoading(true);
     try {
-      const next = await api<ListData>(
+      const next = await api<AgendaPage>(
         `dashboard/${name}?scope=${scope}&page=${toText(page + 1)}&pageSize=${toText(AGENDA_PAGE)}`,
       );
       setMore((all) => [...all, ...next.data]);

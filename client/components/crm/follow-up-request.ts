@@ -22,8 +22,10 @@ export function useFollowUpRequest(
   const refresh = useRefresh();
   const [busy, setBusy] = useState(false);
   const { data: entry } = useCrmQuery<EvaluationEntry | null>(
-    `${entity}/${recordId}/evaluation`,
-    Boolean(meta?.assistant),
+    `${entity}/${recordId}/evaluations/latest`,
+    // Only where it may be asked for: a record page of another kind passes
+    // its own id, which names no deal.
+    Boolean(meta?.assistant) && allowed,
   );
   return {
     available: Boolean(meta?.assistant) && allowed,
@@ -32,7 +34,7 @@ export function useFollowUpRequest(
     ask: () => {
       setBusy(true);
       onError(undefined);
-      api(`${entity}/${recordId}/evaluation`, 'POST', {})
+      api(`${entity}/${recordId}/evaluate`, 'POST', {})
         .then(() => refresh())
         .catch(onError)
         .finally(() => setBusy(false));

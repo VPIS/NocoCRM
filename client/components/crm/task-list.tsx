@@ -53,7 +53,7 @@ function useTaskPages(
   const api = useCrmApi();
   const scopeKey = useCrmScopeKey();
   const base = new URLSearchParams(params);
-  for (const key of ['page', 'pageSize', 'status', 'sort']) base.delete(key);
+  for (const key of ['page', 'pageSize', 'status', 'orderBy']) base.delete(key);
   for (const [key, value] of Object.entries(set)) base.set(key, value);
   base.set('pageSize', String(PAGE_SIZE));
   const query = useInfiniteQuery({
@@ -65,17 +65,19 @@ function useTaskPages(
     },
     initialPageParam: 1,
     getNextPageParam: (last) =>
-      last.page * last.pageSize < last.total ? last.page + 1 : undefined,
+      last.meta.page * last.meta.pageSize < last.meta.total
+        ? last.meta.page + 1
+        : undefined,
     enabled,
   });
   const pages = query.data?.pages ?? [];
   return {
     rows: pages.flatMap((p) => p.data),
     titles: pages.reduce<Record<string, string>>(
-      (all, p) => ({ ...all, ...p.titles }),
+      (all, p) => ({ ...all, ...p.meta.titles }),
       {},
     ),
-    total: pages[0]?.total ?? 0,
+    total: pages[0]?.meta.total ?? 0,
     loading: query.isLoading,
     more: query.hasNextPage ? () => void query.fetchNextPage() : undefined,
     fetchingMore: query.isFetchingNextPage,
@@ -90,11 +92,11 @@ function useTaskSets(
 ): { open: TaskPages; done: TaskPages } {
   const open = useTaskPages(params, {
     status: status || 'open',
-    sort: (status || 'open') === 'open' ? 'dueAt' : '-updatedAt',
+    orderBy: (status || 'open') === 'open' ? 'dueAt' : '-updatedAt',
   });
   const done = useTaskPages(
     params,
-    { excludeStatus: 'open', sort: '-updatedAt' },
+    { excludeStatus: 'open', orderBy: '-updatedAt' },
     !status,
   );
   return { open, done };

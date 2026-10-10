@@ -91,10 +91,13 @@ const task = (
 
 const page = (data: Record<string, unknown>[]) => ({
   data,
-  total: data.length,
-  page: 1,
-  pageSize: 50,
-  titles: { 'lead-1': '罗雨萱 / 新域零售' },
+  meta: {
+    total: data.length,
+    page: 1,
+    pageSize: 50,
+    titles: { 'lead-1': '罗雨萱 / 新域零售' },
+    names: {},
+  },
 });
 
 function renderList(status = ''): void {
@@ -141,12 +144,14 @@ describe('the task list', () => {
     // Open tasks soonest first; what is done latest first.
     const paths = state.api.mock.calls.map(([path]) => String(path));
     expect(
-      paths.some((p) => p.includes('status=open') && p.includes('sort=dueAt')),
+      paths.some(
+        (p) => p.includes('status=open') && p.includes('orderBy=dueAt'),
+      ),
     ).toBe(true);
     expect(
       paths.some(
         (p) =>
-          p.includes('excludeStatus=open') && p.includes('sort=-updatedAt'),
+          p.includes('excludeStatus=open') && p.includes('orderBy=-updatedAt'),
       ),
     ).toBe(true);
     await userEvent.click(screen.getByRole('tab', { name: '已结束' }));
@@ -177,7 +182,7 @@ describe('the task list', () => {
     );
     await userEvent.click(within(dialog).getByRole('button', { name: '完成' }));
     expect(state.api).toHaveBeenCalledWith(
-      'tasks/open-1/outcome',
+      'tasks/open-1/recordOutcome',
       'POST',
       expect.objectContaining({ outcome: '' }),
     );

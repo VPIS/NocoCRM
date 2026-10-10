@@ -122,7 +122,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
               },
             },
           }
-        : path === 'approvals/rec-1/review'
+        : path === 'approvals/rec-1/reviews/latest'
           ? { isLoading: false, data: state.review }
           : path === 'metadata'
             ? { isLoading: false, data: metadata }

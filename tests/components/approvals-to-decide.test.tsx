@@ -42,7 +42,10 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 
 beforeEach(() => {
   state.api.mockReset();
-  state.api.mockResolvedValue({ data: [], total: 3 });
+  state.api.mockResolvedValue({
+    data: [],
+    meta: { page: 1, pageSize: 1, total: 3, titles: {}, names: {} },
+  });
   state.canApprove = true;
 });
 
