@@ -2161,7 +2161,6 @@ function EarlierMail({
         {!last && <span className='min-h-3 w-px flex-1 bg-border/50' />}
       </div>
       <div className='min-w-0 flex-1 pb-3'>
-        {/* Grey, as the field changes and other plain activity. */}
         <div className='flex min-h-[26px] items-center gap-3 text-sm'>
           <span className='flex min-w-0 flex-1 items-center gap-x-1.5 overflow-hidden whitespace-nowrap'>
             <span className='min-w-0 truncate text-muted-foreground'>
@@ -2967,10 +2966,8 @@ export function HistoryFeed({
                   // withdrawn.
                   const approvalEvent =
                     event.entity === 'approvals' && entity !== 'approvals';
-                  // Plain activity (a field changed, a status moved, the
-                  // record created) reads in grey, its actor too, so what
-                  // people wrote stands out; comments are cards, and the AI's work,
-                  // tasks, approvals and mail sit between the two.
+                  // Comments are cards, people talking set apart from the
+                  // activity around them.
                   // A comment with replies joins its author's avatar to
                   // theirs by one line.
                   const replyIds = Array.isArray(event.replies)
@@ -2982,12 +2979,6 @@ export function HistoryFeed({
                       replyingTo === key ||
                       (replyingTo !== undefined &&
                         replyIds.includes(replyingTo)));
-                  const quiet =
-                    !comment &&
-                    !ai &&
-                    !taskEvent &&
-                    !approvalEvent &&
-                    event.action !== 'mail';
                   // Every task entry carries the Tasks tab's icon,
                   // every approval entry the Approvals tab's.
                   const Icon = taskEvent
@@ -3063,13 +3054,7 @@ export function HistoryFeed({
                             ) : null}
                             {/* Who: a person, or "AI" for its own work,
                                 in bold. */}
-                            <span
-                              className={`shrink-0 ${
-                                quiet
-                                  ? 'font-medium text-muted-foreground'
-                                  : 'font-semibold text-foreground'
-                              }`}
-                            >
+                            <span className='shrink-0 font-semibold text-foreground'>
                               {ai
                                 ? text('feed.ai')
                                 : meta?.users.find(

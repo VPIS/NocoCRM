@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
   type ReactElement,
+  type ReactNode,
 } from 'react';
 import { Button } from '../ui/button.js';
 import {
@@ -112,6 +113,8 @@ export function EmailStep({
   editable,
   beforeSend,
   onSent,
+  sendRef,
+  heading,
 }: {
   entity: 'leads' | 'opportunities';
   recordId: string;
@@ -119,11 +122,16 @@ export function EmailStep({
   // A waiting card the reader may decide: changed and sent here. Otherwise
   // the draft as it was, to read.
   editable: boolean;
-  // Before the message goes, here or from the composer: what else the
-  // card writes.
+  // Before the message goes as part of accepting the whole card: what else
+  // the card writes. Sent from the box itself, it goes alone.
   beforeSend?: () => Promise<void>;
-  // Once the provider took it: the card is accepted.
-  onSent: () => Promise<void>;
+  // Once the provider took it: the card is accepted, with the rest of what
+  // it proposes when `all`, else as the email alone.
+  onSent: (all: boolean) => Promise<void>;
+  // The card's own "accept all" sends through this, as the draft stands.
+  sendRef?: { current: ((all: boolean) => Promise<void>) | null };
+  // What the box is, atop it.
+  heading?: ReactNode;
 }): ReactElement {
   const { text } = useCrmText();
   const api = useCrmApi();
@@ -133,6 +141,8 @@ export function EmailStep({
   const composer = useMailComposer();
   const [to, setTo] = useState('');
   const [cc, setCc] = useState('');
+  // The copy line shows once it holds someone or is asked for.
+  const [ccShown, setCcShown] = useState(false);
   const [subject, setSubject] = useState(draft.subject);
   const [body, setBody] = useState(draft.body);
   const [accountId, setAccountId] = useState('');
@@ -180,15 +190,9 @@ export function EmailStep({
     subject.trim() !== '' &&
     body.trim() !== '';
   // The whole composer, the card's fields written first; sending there
-  // accepts the card too.
-  const openComposer = async (): Promise<void> => {
+  // The whole composer; sending there accepts the card as the email alone.
+  const openComposer = (): void => {
     setError(undefined);
-    try {
-      await beforeSend?.();
-    } catch (e) {
-      setError(e);
-      return;
-    }
     composer.compose(
       {
         // The composer takes bare addresses; a name with one
@@ -201,16 +205,21 @@ export function EmailStep({
         html: plainTextToMailHtml(body),
       },
       async (sent) => {
-        if (sent) await onSent();
+        if (sent) await onSent(false);
       },
     );
   };
-  const send = async (): Promise<void> => {
-    if (!sender || !ready) return;
+  // From the box, the email alone; from the card's "accept all", with what
+  // else it writes first.
+  const send = async (all = false): Promise<void> => {
+    if (!sender || !ready) {
+      if (all) setError(new Error(toText(text('emailStep.notReady'))));
+      return;
+    }
     setBusy(true);
     setError(undefined);
     try {
-      await beforeSend?.();
+      if (all) await beforeSend?.();
       const identities = await mail.listIdentities(sender.id);
       const identity =
         identities.find((i) => i.isPrimary && i.canSend) ??
@@ -231,7 +240,7 @@ export function EmailStep({
       // The mail reaches the record's timeline now rather than at the next
       // minute's pass.
       await api('mail/sync', 'POST', {}).catch(() => undefined);
-      await onSent();
+      await onSent(all);
       toaster.show({
         type: submission.status === 'unknown' ? 'warning' : 'success',
         title: toText(
@@ -246,21 +255,53 @@ export function EmailStep({
       setBusy(false);
     }
   };
+  // The card's "accept all" reaches the send as the draft now stands.
+  useEffect(() => {
+    if (!sendRef) return;
+    sendRef.current = send;
+    return () => {
+      sendRef.current = null;
+    };
+  });
   const field =
     'w-full rounded-md border bg-background px-2 py-1 text-sm outline-none focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 disabled:opacity-60';
   // Decided, or the reader may not act: the draft as written.
   if (!editable)
     return (
-      <div className='grid gap-1.5 rounded-lg border bg-background/60 p-3'>
+      <div className='grid gap-1.5 rounded-lg border border-border/60 bg-background/60 p-3'>
+        {heading}
         <p className='font-medium'>{draft.subject}</p>
         <p className='break-words whitespace-pre-wrap'>{draft.body}</p>
       </div>
     );
+  // The whole composer, for attachments, a signature or formatting;
+  // sending there accepts the card too. Then sending it as it stands.
+  const sendActions = (
+    <>
+      <Button size='xs' variant='ghost' disabled={busy} onClick={openComposer}>
+        <SquarePen />
+        {text('emailStep.openComposer')}
+      </Button>
+      {/* As the field updates' write: a plain button in the AI's colour,
+          the card's own "accept all" being the filled one. */}
+      <Button
+        size='xs'
+        variant='outline'
+        className='border-ai/40 bg-card font-medium text-ai hover:bg-ai/10 hover:text-ai'
+        disabled={busy || !ready}
+        onClick={() => void send()}
+      >
+        {busy ? <Spinner /> : <Mail />}
+        {text('emailStep.send')}
+      </Button>
+    </>
+  );
   const label = (key: string) => (
     <span className='pt-1 text-xs text-muted-foreground'>{text(key)}</span>
   );
   return (
-    <div className='grid gap-2 rounded-lg border bg-background/60 p-3'>
+    <div className='grid gap-2 rounded-lg border border-border/60 bg-background/60 p-3'>
+      {heading}
       <div className='grid grid-cols-[4.5rem_minmax(0,1fr)] items-start gap-x-2 gap-y-1.5'>
         {senders.length > 0 && (
           <>
@@ -298,22 +339,41 @@ export function EmailStep({
           </>
         )}
         {label('emailStep.to')}
-        <input
-          className={field}
-          value={to}
-          disabled={busy}
-          placeholder={loaded ? toText(text('emailStep.toPlaceholder')) : ''}
-          onChange={(e) => setTo(e.target.value)}
-          aria-label={toText(text('emailStep.to'))}
-        />
-        {label('emailStep.cc')}
-        <input
-          className={field}
-          value={cc}
-          disabled={busy}
-          onChange={(e) => setCc(e.target.value)}
-          aria-label={toText(text('emailStep.cc'))}
-        />
+        <span className='flex min-w-0 items-center gap-1'>
+          <input
+            className={field}
+            value={to}
+            disabled={busy}
+            placeholder={loaded ? toText(text('emailStep.toPlaceholder')) : ''}
+            onChange={(e) => setTo(e.target.value)}
+            aria-label={toText(text('emailStep.to'))}
+          />
+          {/* An empty copy line is asked for, not drawn. */}
+          {!cc && !ccShown ? (
+            <Button
+              size='xs'
+              variant='ghost'
+              className='shrink-0 text-muted-foreground'
+              disabled={busy}
+              onClick={() => setCcShown(true)}
+            >
+              {text('emailStep.addCc')}
+            </Button>
+          ) : null}
+        </span>
+        {cc || ccShown ? (
+          <>
+            {label('emailStep.cc')}
+            <input
+              className={field}
+              value={cc}
+              disabled={busy}
+              autoFocus={ccShown && !cc}
+              onChange={(e) => setCc(e.target.value)}
+              aria-label={toText(text('emailStep.cc'))}
+            />
+          </>
+        ) : null}
         {label('emailStep.subject')}
         <input
           className={`${field} font-medium`}
@@ -335,28 +395,7 @@ export function EmailStep({
       <ErrorNotice error={error} />
       <div className='flex flex-wrap items-center justify-end gap-2'>
         {senders.length ? (
-          <>
-            {/* The whole composer, for attachments, a signature or
-                formatting; sending there accepts the card too. */}
-            <Button
-              size='sm'
-              variant='ghost'
-              disabled={busy}
-              onClick={() => void openComposer()}
-            >
-              <SquarePen />
-              {text('emailStep.openComposer')}
-            </Button>
-            <Button
-              size='sm'
-              className='bg-ai text-ai-foreground hover:bg-ai/90'
-              disabled={busy || !ready}
-              onClick={() => void send()}
-            >
-              {busy ? <Spinner /> : <Mail />}
-              {text('emailStep.send')}
-            </Button>
-          </>
+          sendActions
         ) : (
           <>
             <span className='mr-auto text-xs text-muted-foreground'>

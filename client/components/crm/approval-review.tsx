@@ -253,7 +253,7 @@ export function ReviewPanel({
                     approver, on its own page. */}
                 <Button
                   size='sm'
-                  variant='outline'
+                  variant='ghost'
                   disabled={Boolean(busy)}
                   onClick={() => decide('dismiss')}
                 >

@@ -191,9 +191,7 @@ describe('the task a follow-up card creates', () => {
         .value,
     ).toBe('**准备要点**\n- 梳理方案\n\n**要问的问题**\n- 覆盖哪些环节？');
     await userEvent.keyboard('{Escape}');
-    await userEvent.click(
-      screen.getByRole('button', { name: '采纳并安排联系' }),
-    );
+    await userEvent.click(screen.getByRole('button', { name: '全部采纳' }));
     expect(state.api).toHaveBeenCalledWith(
       'leads/lead-1/evaluation/entry-1',
       'POST',
@@ -218,9 +216,7 @@ describe('the task a follow-up card creates', () => {
     );
     await userEvent.clear(start);
     await userEvent.type(start, '2026-10-09 15:45{Enter}');
-    await userEvent.click(
-      screen.getByRole('button', { name: '采纳并安排联系' }),
-    );
+    await userEvent.click(screen.getByRole('button', { name: '全部采纳' }));
     // Typed on the laptop's clock, sent as the instant it names.
     expect(state.api).toHaveBeenCalledWith(
       'leads/lead-1/evaluation/entry-1',
@@ -310,13 +306,13 @@ describe('a follow-up that carries on an overdue task', () => {
     expect(screen.getByText('首次电话')).toBeTruthy();
     expect(screen.queryByRole('button', { name: '名称' })).toBeNull();
     // Done is the first answer: what came of it is needed to record it.
-    const record = screen.getByRole('button', { name: '记录结果' });
+    const record = screen.getByRole('button', { name: '全部采纳' });
     expect((record as HTMLButtonElement).disabled).toBe(true);
     await userEvent.type(
       screen.getByRole('textbox', { name: '结果' }),
       '对方下周看演示',
     );
-    await userEvent.click(screen.getByRole('button', { name: '记录结果' }));
+    await userEvent.click(screen.getByRole('button', { name: '全部采纳' }));
     expect(state.api).toHaveBeenCalledWith(
       'leads/lead-1/evaluation/entry-1',
       'POST',
@@ -326,9 +322,12 @@ describe('a follow-up that carries on an overdue task', () => {
         task: { mode: 'report', outcome: '对方下周看演示' },
       },
     );
-    // Not done: moved instead.
+    // Not done: moved instead, which needs no outcome.
     await userEvent.click(screen.getByRole('radio', { name: '未完成，改期' }));
-    expect(screen.getByRole('button', { name: '采纳并改期' })).toBeTruthy();
+    expect(
+      (screen.getByRole('button', { name: '全部采纳' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
   });
 });
 
@@ -410,7 +409,7 @@ describe('a follow-up that carries on a planned task', () => {
     );
     expect(screen.getByText('跟进的任务（已安排）')).toBeTruthy();
     expect(screen.getByText('任务内容已经准备好，无需改动。')).toBeTruthy();
-    expect(screen.getByRole('button', { name: '采纳' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '全部采纳' })).toBeTruthy();
   });
 
   it('says what accepting changes on it', () => {
@@ -425,7 +424,7 @@ describe('a follow-up that carries on a planned task', () => {
     expect(
       screen.getByText('采纳后：准备要点 不变 · 邮件草稿 更新'),
     ).toBeTruthy();
-    expect(screen.getByRole('button', { name: '采纳并更新任务' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '全部采纳' })).toBeTruthy();
   });
 
   it('may be told as done though not yet due, the notes written up by the AI', async () => {
@@ -457,14 +456,14 @@ describe('a follow-up that carries on a planned task', () => {
         }) as HTMLTextAreaElement
       ).value,
     ).toBe('**对方反馈**\n- 下周看演示');
-    expect(screen.getByRole('button', { name: '记录结果' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '全部采纳' })).toBeTruthy();
     // The lead followed up anew once recorded, unless unticked.
     const again = screen.getByRole('checkbox', {
       name: '记录后让 AI 继续跟进',
     });
     expect(again).toBeChecked();
     await userEvent.click(again);
-    await userEvent.click(screen.getByRole('button', { name: '记录结果' }));
+    await userEvent.click(screen.getByRole('button', { name: '全部采纳' }));
     expect(state.api).toHaveBeenLastCalledWith(
       'leads/lead-1/evaluation/entry-1',
       'POST',
@@ -542,7 +541,7 @@ describe("a deal's follow-up card", () => {
     expect(screen.getByRole('button', { name: '名称' }).textContent).toBe(
       '技术评估会',
     );
-    await userEvent.click(screen.getByRole('button', { name: '采纳并推进' }));
+    await userEvent.click(screen.getByRole('button', { name: '全部采纳' }));
     expect(state.api).toHaveBeenCalledWith(
       'opportunities/opp-1/evaluation/entry-2',
       'POST',
@@ -635,7 +634,7 @@ describe("a deal's follow-up card", () => {
     expect(screen.getByRole('button', { name: '名称' }).textContent).toBe(
       '张伟 恢复跟进',
     );
-    await userEvent.click(screen.getByRole('button', { name: '采纳并暂停' }));
+    await userEvent.click(screen.getByRole('button', { name: '全部采纳' }));
     expect(state.api).toHaveBeenCalledWith(
       'opportunities/opp-1/evaluation/entry-2',
       'POST',
@@ -665,9 +664,7 @@ describe('a follow-up whose next step is an email', () => {
         onChanged={() => Promise.resolve()}
       />,
     );
-    expect(
-      screen.getByRole('button', { name: '采纳（自行发送邮件）' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: '全部采纳' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: '采纳并安排联系' })).toBeNull();
     expect(screen.queryByText('将创建的任务')).toBeNull();
   });
