@@ -7,7 +7,6 @@ import {
 } from '@tanstack/react-table';
 import { useState, type ReactElement, type ReactNode } from 'react';
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
-import { Button } from '../ui/button.js';
 import {
   Table,
   TableBody,
@@ -37,7 +36,9 @@ const ariaSort = (
       : 'none';
 
 // A column header that sorts its table when clicked, showing the direction
-// it sorts in; shared by the workspace's tables and the list pages.
+// it sorts in; shared by the workspace's tables and the list pages. Quiet,
+// as a header should be: small muted words, the sorted column's in the
+// foreground with its arrow, the others' arrow only under the pointer.
 export function SortableHead({
   title,
   direction,
@@ -57,13 +58,21 @@ export function SortableHead({
         : ChevronsUpDown;
   return (
     <TableHead className={className} aria-sort={ariaSort(direction)}>
-      <Button variant='ghost' size='sm' className='-ml-3 h-8' onClick={onClick}>
+      <button
+        type='button'
+        onClick={onClick}
+        className={`group/sort -ml-1 inline-flex h-5 items-center gap-1 rounded-md px-1 transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:outline-none ${
+          direction ? 'text-foreground' : ''
+        }`}
+      >
         {title}
         <Icon
-          className={direction ? undefined : 'text-muted-foreground'}
+          className={`size-3 shrink-0 ${
+            direction ? '' : 'opacity-0 group-hover/sort:opacity-60'
+          }`}
           aria-hidden
         />
-      </Button>
+      </button>
     </TableHead>
   );
 }

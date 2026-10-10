@@ -365,10 +365,10 @@ function TaskRow({
                 lead's row shows its follow-up. */}
             <AiStateTag state={aiState} work='prep' className='shrink-0' />
           </span>
-          <span className='flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground'>
+          <span className='flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground'>
             {linkedId && linkedId !== recordId && titles[linkedId] && (
               <span className='inline-flex max-w-56 min-w-0 items-center gap-1'>
-                <LinkedIcon className='size-3 shrink-0' />
+                <LinkedIcon className='size-3.5 shrink-0' />
                 <RecordLink
                   entity={linkedEntity}
                   record={{ id: linkedId, name: titles[linkedId] }}
@@ -379,13 +379,13 @@ function TaskRow({
               <span
                 className={`inline-flex items-center gap-1 tabular-nums ${overdue ? 'text-destructive' : ''}`}
               >
-                <Clock className='size-3 shrink-0' />
+                <Clock className='size-3.5 shrink-0' />
                 {dueText(task, timeZone)}
               </span>
             )}
             {owner && (
               <span className='inline-flex items-center gap-1'>
-                <User className='size-3 shrink-0' />
+                <User className='size-3.5 shrink-0' />
                 {owner}
               </span>
             )}
@@ -394,7 +394,7 @@ function TaskRow({
                 className='inline-flex items-center gap-1 tabular-nums'
                 title={toText(text('fields.internalParticipants'))}
               >
-                <Users className='size-3 shrink-0' />
+                <Users className='size-3.5 shrink-0' />
                 {participants}
               </span>
             )}

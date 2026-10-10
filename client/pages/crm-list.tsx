@@ -96,6 +96,11 @@ import {
 
 // A calendar cell lists this many before asking to show the rest.
 const CALENDAR_DAY_LIMIT = 5;
+// A list's column header: muted, on a band of its own, as tall as a row:
+// header and cells share one height (a minimum: a row with the AI's tag
+// under its name grows) and padding.
+const HEAD =
+  'h-11 px-3 py-2.5 text-sm font-medium text-muted-foreground first:pl-4 last:pr-4';
 
 // "2026-09" ± n months, staying in the yyyy-mm shape the calendar keys on.
 function shiftMonth(month: string, by: number): string {
@@ -955,20 +960,21 @@ function EntityList({
             {/* Framed as the task list's card is. */}
             <div className='overflow-hidden rounded-xl border border-border/60 bg-card shadow-xs'>
               <Table>
-                <TableHeader>
-                  <TableRow>
+                {/* A quiet header: small muted words on the menu's ground. */}
+                <TableHeader className='bg-sidebar'>
+                  <TableRow className='border-border/60 hover:bg-transparent'>
                     {columns.map((key) => {
                       const title =
                         key === 'name' && entity === 'leads'
                           ? text('leadTitle')
                           : text(fieldLabelKey(entity, toText(key)));
                       return key === 'opportunityAmount' ? (
-                        <TableHead className='px-4 py-3' key={key}>
+                        <TableHead className={HEAD} key={key}>
                           {title}
                         </TableHead>
                       ) : (
                         <SortableHead
-                          className='px-4 py-3'
+                          className={HEAD}
                           key={key}
                           title={title}
                           direction={sort?.key === key && sort.direction}
@@ -981,14 +987,15 @@ function EntityList({
                 <TableBody>
                   {query.data.data.map((record) => (
                     <Fragment key={record.id}>
-                      <TableRow>
+                      {/* Ruled as the card is framed. */}
+                      <TableRow className='border-border/60'>
                         {columns.map((key) => (
                           <TableCell
                             // Every value, the name included, is cut with an
                             // ellipsis, so a cell never runs over the next one,
                             // which on a phone put two columns' text on top of
                             // each other.
-                            className='max-w-72 truncate px-4 py-4'
+                            className='h-11 max-w-72 truncate px-3 py-2.5 first:pl-4 last:pr-4'
                             key={key}
                           >
                             {key === 'name' ? (
@@ -1386,9 +1393,11 @@ function EntityList({
           </div>
           <div className='hidden gap-px overflow-hidden rounded-xl border border-border/60 bg-border/60 shadow-xs lg:grid lg:grid-cols-7'>
             {Array.from({ length: 7 }, (_, i) => (
+              // The weekdays as a list's header reads: small muted words on
+              // the menu's ground.
               <div
                 key={i + 1}
-                className='hidden bg-card p-3 text-sm font-medium lg:block'
+                className='hidden bg-sidebar px-3 py-2 text-sm font-medium text-muted-foreground lg:block'
               >
                 {new Intl.DateTimeFormat(language, {
                   weekday: 'short',

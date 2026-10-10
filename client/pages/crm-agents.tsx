@@ -263,7 +263,6 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
               title={text('agents.acceptance')}
               icon={Percent}
               value={percent(stats.acceptance)}
-              note={text('agents.acceptanceNote')}
             />
           </div>
         </div>
