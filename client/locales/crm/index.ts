@@ -1668,7 +1668,7 @@ const wording = {
   unsetPrimaryTitle: ['Clear primary contact', '取消主要联系人'],
   setPrimaryDetail: [
     '{{name}} becomes the primary contact of this company.',
-    '{{name}} 将成为本公司的主要联系人。',
+    '{{name}} 将成为该公司的主要联系人。',
   ],
   replacePrimaryDetail: [
     '{{name}} becomes the primary contact; {{previous}} no longer is.',
@@ -1676,7 +1676,7 @@ const wording = {
   ],
   unsetPrimaryDetail: [
     '{{name}} will no longer be the primary contact; this company will have none.',
-    '{{name}} 将不再是主要联系人，本公司将没有主要联系人。',
+    '{{name}} 将不再是主要联系人，该公司将没有主要联系人。',
   ],
   moveTo: ['Move to {{stage}}', '移到「{{stage}}」'],
   moveToDetail: ['{{name}}: a reason is required.', '{{name}}：必须填写原因。'],
