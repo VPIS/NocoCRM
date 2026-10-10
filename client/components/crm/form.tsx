@@ -291,7 +291,7 @@ export function RecordForm({
     ...(entity === 'leads'
       ? { status: 'new' }
       : entity === 'companies'
-        ? { status: 'prospect' }
+        ? { status: 'prospect', currency: meta?.settings.currency ?? 'USD' }
         : entity === 'contacts'
           ? { employed: true, primary: false, gender: 'unknown' }
           : entity === 'opportunities'
@@ -865,15 +865,22 @@ export function RecordForm({
           {fields.map((field) => {
             if (tucked(field)) return null;
             // An opportunity's amount and currency are one thing: one
-            // field labelled Amount, the currency picker leading the number.
+            // field labelled Amount, the currency picker leading the
+            // number; a company's annual revenue the same.
+            const moneyKey =
+              entity === 'opportunities'
+                ? 'amount'
+                : entity === 'companies'
+                  ? 'annualRevenue'
+                  : undefined;
             const pairedCurrency =
-              entity === 'opportunities' && field.key === 'amount'
+              moneyKey && field.key === moneyKey
                 ? fields.find((f) => f.key === 'currency')
                 : undefined;
             if (
-              entity === 'opportunities' &&
+              moneyKey &&
               field.key === 'currency' &&
-              fields.some((f) => f.key === 'amount')
+              fields.some((f) => f.key === moneyKey)
             )
               return null;
             const block = (f: Field, lead?: Field): ReactElement =>

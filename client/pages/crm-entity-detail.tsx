@@ -100,6 +100,7 @@ import { ApprovalActions } from '../components/crm/approval-actions.js';
 import {
   AfterSlash,
   ConfirmDialog,
+  Copyable,
   DetailColumns,
   DetailTabBar,
   MailCount,
@@ -529,6 +530,8 @@ export default function EntityDetail({
                   setForm({
                     entity: 'approvals',
                     initial: { opportunityId: id },
+                    // The deal's own name for its chip, as a new task's.
+                    titles: { ...names, [id]: contextName ?? '' },
                   })
                 }
               >
@@ -998,6 +1001,9 @@ export default function EntityDetail({
     heading: ReactNode,
     actions: Actions,
     left: ReactNode,
+    // What the record says of itself, under its heading atop the tabs (a
+    // deal's description, as a lead's original message).
+    intro?: ReactNode,
   ): ReactElement => (
     <DetailColumns
       entity={entity}
@@ -1006,6 +1012,7 @@ export default function EntityDetail({
       status={aiStatus}
       tabBar={tabBar}
       notice={<ErrorNotice error={error ?? loadError} />}
+      intro={intro}
       left={left}
       right={tabContent}
     >
@@ -1079,11 +1086,6 @@ export default function EntityDetail({
         </>,
       ),
       <>
-        {/* What the deal is, across the column with neither heading nor
-            label, as a task's description leads its page. */}
-        <InfoGroup>
-          <div className='min-w-0 py-0.5 text-sm'>{inline('description')}</div>
-        </InfoGroup>
         {/* One list: who has it and where it stands, what it is worth
             and when it should close, then the company and how it came. */}
         <InfoGroup title={text('detailsGroup')}>
@@ -1135,6 +1137,26 @@ export default function EntityDetail({
           <RecordTimes record={record} />
         </InfoGroup>
       </>,
+      // What the deal is, under its heading as a lead's original message:
+      // with neither heading nor label, five lines unfolding on a click,
+      // the editor's own 8px pulled out so the text lines up. Empty, it
+      // offers itself to whoever may write it.
+      editable || toText(record.description).trim() ? (
+        <div className='-mx-2 min-w-0 text-sm'>
+          <Copyable>
+            <InlineField
+              entity={entity}
+              record={record}
+              field={field('description')}
+              editable={editable}
+              lookup={names}
+              label={text(fieldLabelKey(entity, 'description'))}
+              placeholder={toText(text('dealDescriptionPlaceholder'))}
+              longText='fold'
+            />
+          </Copyable>
+        </div>
+      ) : undefined,
     );
   }
 
@@ -1174,6 +1196,24 @@ export default function EntityDetail({
             />
           </InfoRow>
           {['industry', 'employees'].map(row)}
+          {/* Its annual revenue as an opportunity's amount: the currency,
+              then the bare number, both edited in place. */}
+          <InfoRow field='annualRevenue' label={text('fields.annualRevenue')}>
+            <div className='flex items-center'>
+              <div className='shrink-0'>{inline('currency')}</div>
+              <div className='min-w-0 flex-1'>
+                <InlineField
+                  entity={entity}
+                  record={record}
+                  field={field('annualRevenue')}
+                  editable={editable}
+                  lookup={names}
+                  label={text('fields.annualRevenue')}
+                  bare
+                />
+              </div>
+            </div>
+          </InfoRow>
           {locationRow}
           {row('description')}
           {convertedRow}

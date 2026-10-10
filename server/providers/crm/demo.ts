@@ -32,6 +32,28 @@ import {
 // in server/ai/employees/crm-guidance.ts. Imported and removed from the settings
 // page by an administrator; a manifest row in crm_settings records exactly
 // which rows the import created, so removal touches nothing else.
+
+// Each demo lead's gender, by place (the content files' leads, in both
+// languages, are the same people in the same order).
+const LEAD_GENDERS = [
+  'female',
+  'male',
+  'female',
+  'male',
+  'female',
+  'male',
+  'female',
+  'male',
+  'female',
+  'male',
+  'female',
+  'male',
+  'male',
+  'male',
+  'female',
+  'male',
+] as const;
+
 export const DEMO_MARKER = 'demo-dataset-v1';
 
 export const demoPassword = (username: string): string => `${username}123`;
@@ -403,17 +425,18 @@ export async function populateDemo(
   const contacts: Row[][] = [];
   const opportunities: Row[] = [];
   const leads: Row[] = [];
-  // [industry, city, status, source, employees]; the names, domains and
-  // descriptions are the language's, and so are the contacts.
-  const companies: [string, DemoCity, string, string, string][] = [
-    ['manufacturing', 'shanghai', 'qualified', 'exhibition', '201-500'],
-    ['retail', 'hangzhou', 'qualified', 'customerReferral', '501-1000'],
-    ['healthcare', 'beijing', 'qualified', 'website', '201-500'],
-    ['technology', 'shenzhen', 'qualified', 'partner', '51-200'],
-    ['education', 'suzhou', 'prospect', 'marketing', '51-200'],
-    ['professionalServices', 'chengdu', 'qualified', 'outbound', '11-50'],
-    ['energy', 'nanjing', 'inactive', 'search', '201-500'],
-    ['foodAndBeverage', 'guangzhou', 'qualified', 'partner', '501-1000'],
+  // [industry, city, status, source, employees, annual revenue in CNY,
+  // as the deals are kept]; the names, domains and descriptions are the
+  // language's, and so are the contacts.
+  const companies: [string, DemoCity, string, string, string, number][] = [
+    ['manufacturing', 'shanghai', 'qualified', 'exhibition', '201-500', 380e6],
+    ['retail', 'hangzhou', 'qualified', 'customerReferral', '501-1000', 1.2e9],
+    ['healthcare', 'beijing', 'qualified', 'website', '201-500', 650e6],
+    ['technology', 'shenzhen', 'qualified', 'partner', '51-200', 85e6],
+    ['education', 'suzhou', 'prospect', 'marketing', '51-200', 60e6],
+    ['professionalServices', 'chengdu', 'qualified', 'outbound', '11-50', 18e6],
+    ['energy', 'nanjing', 'inactive', 'search', '201-500', 900e6],
+    ['foodAndBeverage', 'guangzhou', 'qualified', 'partner', '501-1000', 1.5e9],
   ];
   // [company, amount, stage, close day, business type, created day, last
   // change day, lost reason]; the names are the language's, by index.
@@ -500,7 +523,7 @@ export async function populateDemo(
   await service.mutate(owner, async (prepared, q) => {
     const save = saver(prepared, q);
     for (let i = 0; i < companies.length; i++) {
-      const [industry, city, status, source, employees] = companies[i];
+      const [industry, city, status, source, employees, revenue] = companies[i];
       const { name, domain, description } = text.companies[i];
       const ownerId = companyOwner(i).id;
       const company = await save(
@@ -515,6 +538,8 @@ export async function populateDemo(
           status,
           source,
           employees,
+          annualRevenue: revenue,
+          currency: 'CNY',
           type: i === 3 ? 'partner' : 'direct',
           website: `https://www.${domain}.example`,
           description,
@@ -643,6 +668,9 @@ export async function populateDemo(
             email: `${mailbox}@lead-${i + 1}.example`,
             phone: i % 4 === 0 ? null : phone(40 + i),
             jobTitle: text.leadJobTitles[i % 2],
+            // The same person in either language, by place: the names in
+            // the content files are chosen to match.
+            gender: LEAD_GENDERS[i] ?? 'unknown',
             country: 'CN',
             state: provinceOf[leadCities[i % 4]],
             city: text.cities[leadCities[i % 4]],

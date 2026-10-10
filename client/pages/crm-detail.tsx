@@ -263,7 +263,7 @@ export function RecordDrawer({
 // column as a group of their own.
 const leadGroups = [
   ['general', ['source']],
-  ['contact', ['name', 'jobTitle', 'phone', 'email']],
+  ['contact', ['name', 'gender', 'jobTitle', 'phone', 'email']],
   [
     'company',
     [
@@ -3877,7 +3877,7 @@ const ROW_ACTION =
 // A value a button on hover copies as it reads (a particular, a lead's
 // original message): not while it is empty (a placeholder or a dash,
 // marked data-placeholder) or being edited.
-function Copyable({ children }: { children: ReactNode }): ReactElement {
+export function Copyable({ children }: { children: ReactNode }): ReactElement {
   const { text } = useCrmText();
   const valueRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);

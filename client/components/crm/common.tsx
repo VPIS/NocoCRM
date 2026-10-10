@@ -430,7 +430,9 @@ export function Value({
     ) : (
       <Status value={value} />
     );
-  if (field.key === 'amount')
+  // An opportunity's amount and a company's annual revenue, in the
+  // record's currency.
+  if (field.key === 'amount' || field.key === 'annualRevenue')
     return (
       <>
         {bare

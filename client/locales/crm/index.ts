@@ -7,6 +7,8 @@ const wording = {
   emptyChoose: ['Choose {{field}}', '选择{{field}}'],
   // A lead's empty original message, under its heading.
   messagePlaceholder: ['Add the original message...', '填写原始信息...'],
+  // An opportunity's empty description, under its heading.
+  dealDescriptionPlaceholder: ['Add a description...', '填写商机描述...'],
   stale: ['Stalled', '停滞'],
   convertedThisMonth: ['Converted this month', '本月转化'],
   converted: ['Converted leads', '已转化线索'],
@@ -1902,6 +1904,8 @@ const wording = {
     stage: ['Stage', '阶段'],
     amount: ['Amount', '金额'],
     currency: ['Currency', '币种'],
+    // A company's, in its currency.
+    annualRevenue: ['Annual revenue', '年营收'],
     expectedCloseAt: ['Expected close date', '预计成交日期'],
     businessType: ['Business type', '业务类型'],
     contacts: ['Opportunity contacts', '商机联系人'],

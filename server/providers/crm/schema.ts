@@ -199,6 +199,9 @@ export const definitions: Record<Entity, EntityDefinition> = {
       field('name', 'text', true),
       field('company'),
       ...person,
+      // As a contact's, and carried to the contact a conversion creates;
+      // optional on a lead.
+      field('gender', 'select', false, ['male', 'female', 'unknown']),
       owner,
       source,
       field('status', 'select', true, [
@@ -256,6 +259,9 @@ export const definitions: Record<Entity, EntityDefinition> = {
         'other',
       ]),
       field('employees', 'select', false, employeeRanges),
+      // Its annual revenue in a currency, as an opportunity's amount.
+      field('currency', 'select', false, currencies),
+      field('annualRevenue', 'number'),
       ...geography,
       field('website', 'url'),
       field('address'),

@@ -784,6 +784,29 @@ describe('CRM API security and domain rules', () => {
     expect(kept.companyId).toBeNull();
     expect(kept.leadId).toBe(lead.id);
   });
+  it("carries a lead's gender to its contact and keeps a company's annual revenue", async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Gendered Person',
+      company: 'Revenue Works',
+      gender: 'female',
+      source: 'exhibition',
+    });
+    const converted = await convertLead(service, actor('rep'), lead.id, {});
+    const contact = await service.get(
+      actor('rep'),
+      'contacts',
+      toText(converted.convertedContactId),
+    );
+    expect(contact.gender).toBe('female');
+    const company = await service.save(
+      actor('rep'),
+      'companies',
+      { annualRevenue: 120000000, currency: 'CNY' },
+      toText(converted.convertedCompanyId),
+    );
+    expect(Number(company.annualRevenue)).toBe(120000000);
+    expect(company.currency).toBe('CNY');
+  });
   it('saves the values the person changed in the conversion dialog', async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: 'Edited Person',

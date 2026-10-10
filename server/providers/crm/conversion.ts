@@ -109,6 +109,9 @@ export async function convertLead(
     phone: lead.phone,
     email: lead.email,
     jobTitle: lead.jobTitle,
+    // The lead's gender when it has one; a new contact otherwise takes the
+    // unknown it starts with.
+    ...(lead.gender ? { gender: lead.gender } : {}),
     ownerId: lead.ownerId,
     source: lead.source,
     employed: true,

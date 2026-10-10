@@ -16,7 +16,15 @@ export const inherited = {
     'source',
     'ownerId',
   ],
-  contacts: ['name', 'phone', 'email', 'jobTitle', 'source', 'ownerId'],
+  contacts: [
+    'name',
+    'gender',
+    'phone',
+    'email',
+    'jobTitle',
+    'source',
+    'ownerId',
+  ],
 } as const;
 
 export function proposalFor(
@@ -40,6 +48,8 @@ export function proposalFor(
       }
     : {
         name: lead.name,
+        // A new contact without the lead's starts as unknown.
+        gender: lead.gender ?? 'unknown',
         phone: lead.phone,
         email: lead.email,
         jobTitle: lead.jobTitle,
