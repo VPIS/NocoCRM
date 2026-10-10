@@ -45,6 +45,8 @@ export interface DemoCompany {
   // The website's and the email addresses' domain, before .example.
   readonly domain: string;
   readonly description: string;
+  // The street address, over two lines.
+  readonly address: string;
 }
 
 export interface DemoLead {
@@ -54,6 +56,10 @@ export interface DemoLead {
   readonly company: string;
   // The lead's original message.
   readonly message: string;
+  // What research found about the lead's company, and where the lead
+  // works: the long texts of its particulars.
+  readonly companyDescription: string;
+  readonly address: string;
 }
 
 export interface DemoNamedText {
@@ -147,6 +153,9 @@ export interface DemoContent {
   readonly contactComments: readonly [string, string];
   // The comments on the company that churned.
   readonly churnComments: string;
+  // What took place with each of the eight companies, oldest first, written
+  // as comments on its timeline by its owner, some answered by a colleague.
+  readonly companyNotes: readonly (readonly DemoNote[])[];
   // The opportunities' names, by index.
   readonly deals: readonly string[];
   readonly leads: readonly DemoLead[];
@@ -199,6 +208,11 @@ export interface DemoProjectPerson extends DemoPerson {
 export interface DemoComment {
   readonly heading: string;
   readonly body: string;
+}
+
+// A comment on one of the eight companies, and a colleague's reply to it.
+export interface DemoNote extends DemoComment {
+  readonly reply?: string;
 }
 
 // The importing administrator's own projects, at real companies, so that the

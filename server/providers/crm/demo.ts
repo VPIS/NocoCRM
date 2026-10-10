@@ -593,7 +593,7 @@ async function populate(
     const save = saver(prepared, q);
     for (let i = 0; i < companies.length; i++) {
       const [industry, city, status, source, employees, revenue] = companies[i];
-      const { name, domain, description } = text.companies[i];
+      const { name, domain, description, address } = text.companies[i];
       const ownerId = companyOwner(i).id;
       const company = await save(
         'companies',
@@ -611,6 +611,7 @@ async function populate(
           currency: 'CNY',
           type: i === 3 ? 'partner' : 'direct',
           website: `https://www.${domain}.example`,
+          address,
           description,
         },
         -75 + i * 5,
@@ -724,7 +725,8 @@ async function populate(
     ];
     for (let i = 0; i < leadSpecs.length; i++) {
       const [status, source, day] = leadSpecs[i];
-      const { name, mailbox, company, message } = text.leads[i];
+      const { name, mailbox, company, message, companyDescription, address } =
+        text.leads[i];
       leads.push(
         await save(
           'leads',
@@ -754,6 +756,8 @@ async function populate(
                 }
               : {}),
             message,
+            companyDescription,
+            address,
             ...(status === 'invalid'
               ? { invalidReason: i === 12 ? 'badContact' : 'notTarget' }
               : {}),
@@ -805,7 +809,9 @@ async function populate(
           actorId: toText(authorId),
           action: 'comment',
           changes: JSON.stringify({
-            text: heading ? `**${heading}**\n\n${body}` : body,
+            // The heading as a line of its own, not bold: a comment is
+            // what a person writes, without formatting.
+            text: heading ? `${heading}\n\n${body}` : body,
           }),
           createdAt: at(day, hour + 1),
         })
@@ -833,6 +839,52 @@ async function populate(
       -20,
       9,
     );
+    // What took place with each company, written by its owner over the
+    // life of its first deal, each answered, where the content has a reply,
+    // by a colleague: the manager, or the importer on the manager's own.
+    for (const [i, notes] of text.companyNotes.entries()) {
+      const first = deals.find(([company]) => company === i);
+      if (!first) continue;
+      const [, , , , , createdDay, changedDay] = first;
+      const span = Math.max(changedDay - createdDay, notes.length + 1);
+      const author = companyOwner(i);
+      const colleague = author.id === managerActor.id ? owner : managerActor;
+      for (const [k, note] of notes.entries()) {
+        const day = Math.min(
+          createdDay + Math.round((span * (k + 1)) / (notes.length + 1)),
+          -1,
+        );
+        const id = randomUUID();
+        await q
+          .insertInto('crmHistory')
+          .values({
+            id,
+            entity: 'companies',
+            recordId: toText(companies_[i].id),
+            actorId: toText(author.id),
+            action: 'comment',
+            changes: JSON.stringify({
+              text: `${note.heading}\n\n${note.body}`,
+            }),
+            createdAt: at(day, 11),
+          })
+          .execute();
+        if (note.reply)
+          await q
+            .insertInto('crmHistory')
+            .values({
+              id: randomUUID(),
+              entity: 'companies',
+              recordId: toText(companies_[i].id),
+              actorId: toText(colleague.id),
+              action: 'comment',
+              replyToId: id,
+              changes: JSON.stringify({ text: note.reply }),
+              createdAt: at(day, 15),
+            })
+            .execute();
+      }
+    }
     const leadLinks = (i: number): Row => ({
       leadId: leads[i].id,
       ownerId: leadOwner(i).id,
@@ -1183,7 +1235,9 @@ async function populate(
           actorId: toText(authorId),
           action: 'comment',
           changes: JSON.stringify({
-            text: heading ? `**${heading}**\n\n${body}` : body,
+            // The heading as a line of its own, not bold: a comment is
+            // what a person writes, without formatting.
+            text: heading ? `${heading}\n\n${body}` : body,
           }),
           createdAt: at(day, hour),
         })
@@ -1216,6 +1270,7 @@ async function populate(
           employees: '5000+',
           type: 'direct',
           website: `https://www.${about.domain}.example`,
+          address: about.address,
           description: about.description,
         },
         day,
