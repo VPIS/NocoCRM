@@ -28,7 +28,6 @@ import legacyTimestampsMigration from '../../database/main/migrations/2026092000
 import salesSetsSeed from '../../database/main/seeds/202610040001_crm_sales_permission_sets.js';
 // @vitest-environment node
 import sqlite from '@nocobase/db-sqlite';
-import { databaseManagerToken } from '@nocobase/db';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -80,9 +79,6 @@ import {
   salesGrant,
 } from '../../server/providers/crm/resources.js';
 import { CrmService } from '../../server/providers/crm/service.js';
-import { run as notify } from '../../workflows/approval-notification/server/notify.js';
-import { run as notifyRecord } from '../../workflows/record-notification/server/notify.js';
-import { run as remind } from '../../workflows/task-reminder/server/remind.js';
 import { createCrmUserRoleScope } from '../../server/providers/crm/user-roles.js';
 import { crmRecordTools } from '../../server/ai/tools/crm-records.js';
 import { crmWriteTools } from '../../server/ai/tools/crm-writes.js';
@@ -186,66 +182,6 @@ const collectionGrant = (
 let service: CrmService;
 // Users whose password the demo import set back through the users plugin.
 const passwordResets: string[] = [];
-// A workflow service that runs each CRM workflow's run script at once, in
-// place of the plugin's runtime: the trigger is recorded, and the message
-// the workflow would queue is queued through the given service.
-function inlineWorkflows(crm: () => CrmService) {
-  const triggers: {
-    key: string;
-    input: Record<string, unknown>;
-    eventKey?: string;
-  }[] = [];
-  // The run scripts read the database from the handle CrmProvider publishes.
-  (globalThis as Record<symbol, unknown>)[Symbol.for('nococrm.database')] =
-    database;
-  const options = () =>
-    ({
-      services: {
-        has: () => true,
-        resolve: () => crm(),
-      },
-      signal: new AbortController().signal,
-      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-    }) as unknown as Parameters<typeof notify>[1];
-  const scripts: Record<
-    string,
-    (input: Record<string, unknown>) => Promise<unknown>
-  > = {
-    'approval-notification': (input) =>
-      notify({ ...input, recordId: input.approvalId }, options()),
-    'record-notification': (input) => notifyRecord(input, options()),
-    'task-reminder': (input) =>
-      remind(
-        {
-          recordId: input.taskId,
-          recipientId: input.recipientId,
-          actorId: 'system',
-          event: 'starting',
-          at: input.dueAt,
-        },
-        options(),
-      ),
-  };
-  return {
-    triggers,
-    workflows: {
-      registerInstruction: () => undefined,
-      async trigger(
-        key: string,
-        input: Record<string, unknown>,
-        opts?: { eventKey?: string },
-      ) {
-        triggers.push({ key, input, eventKey: opts?.eventKey });
-        await scripts[key](input);
-        return {
-          status: 'accepted' as const,
-          eventKey: opts?.eventKey ?? 'k',
-          runId: String(triggers.length),
-        };
-      },
-    },
-  };
-}
 let folder: string;
 let router: Hono;
 // The Mail plugin as the mail timeline sees it: each user's connected
@@ -1104,15 +1040,14 @@ describe('CRM API security and domain rules', () => {
         approverId: 'manager',
       }),
     ).rejects.toMatchObject({ code: 'selfApproval' });
-    // Messages are the approval-notification workflow's to send; this
-    // service has no workflow service, so nothing is queued directly.
+    // Each step's message was queued once it committed.
     const outbox = await database
       .query()
       .selectFrom('crmOutbox')
       .selectAll()
       .where('recordId', '=', approval.id)
       .execute();
-    expect(outbox).toHaveLength(0);
+    expect(outbox.map((row) => toText(row.event))).toContain('approved');
   });
 
   it('refuses an approval for an opportunity the applicant may not edit', async () => {
@@ -1943,14 +1878,8 @@ describe('CRM API security and domain rules', () => {
     });
     const send = vi.fn().mockResolvedValue({ notificationId: 'test-delivery' });
     const container = new ServiceContainer();
-    // The scan starts a task-reminder run per recipient; here the
-    // workflow runs inline and queues the reminder through this service.
-    const inline = inlineWorkflows(() => reminding);
-    const reminding = new CrmService(
-      database,
-      authorization,
-      () => inline.workflows,
-    );
+    // The scan queues a reminder per recipient through this service.
+    const reminding = new CrmService(database, authorization);
     container.instance(crmToken, reminding);
     container.instance(notificationServiceToken, {
       send,
@@ -2013,15 +1942,19 @@ describe('CRM API security and domain rules', () => {
     const count = send.mock.calls.length;
     await scan.call(provider);
     expect(send).toHaveBeenCalledTimes(count);
-    // Every scan asked for the same reminder by the same key; the second
-    // start is deduplicated by the runtime and would queue nothing anyway.
-    const reminderKeys = inline.triggers
-      .filter((t) => t.key === 'task-reminder')
-      .map((t) => t.eventKey);
-    expect(reminderKeys.length).toBeGreaterThanOrEqual(2);
-    expect(new Set(reminderKeys)).toEqual(
-      new Set([`task:${toText(meeting.id)}:${toText(meeting.dueAt)}:rep`]),
-    );
+    // Every scan asked for the same reminder by the same key, which was
+    // queued once.
+    expect(
+      (
+        await database
+          .query()
+          .selectFrom('crmOutbox')
+          .select('id')
+          .where('recordId', '=', meeting.id)
+          .where('event', '=', 'starting')
+          .execute()
+      ).map((row) => toText(row.id)),
+    ).toEqual([`task:${toText(meeting.id)}:${toText(meeting.dueAt)}:rep`]);
     await service.enqueue(
       database.query(),
       actor('rep'),
@@ -7421,7 +7354,7 @@ it('rewrites legacy epoch timestamps so repository reads succeed', async () => {
   }
 });
 
-describe('approval-notification workflow', () => {
+describe('approval notifications', () => {
   const approvalFor = async (crm: CrmService, name: string) => {
     const company = await crm.save(actor('rep'), 'companies', { name });
     const opportunity = await crm.save(actor('rep'), 'opportunities', {
@@ -7441,142 +7374,90 @@ describe('approval-notification workflow', () => {
       await database
         .query()
         .selectFrom('crmOutbox')
-        .select(['id', 'event', 'recipientId'])
+        .select(['id', 'event', 'recipientId', 'createdAt'])
         .where('recordId', '=', recordId)
+        .orderBy('createdAt')
         .execute()
     ).map((r) => [toText(r.event), toText(r.recipientId), toText(r.id)]);
 
-  it('starts the workflow for every approval event once it is committed', async () => {
-    const trigger = vi.fn().mockResolvedValue({
-      status: 'accepted',
-      eventKey: 'k',
-      runId: 'r',
-    });
-    const crm = new CrmService(database, authorization, () => ({
-      trigger,
-      registerInstruction: () => undefined,
-    }));
-    const approval = await approvalFor(crm, 'Workflow company');
-    const submitted = await crm.approvalAction(
+  it('queues a message for every approval event once it is committed', async () => {
+    const approval = await approvalFor(service, 'Notified company');
+    const submitted = await service.approvalAction(
       actor('rep'),
       approval.id,
       'submit',
     );
-    const withdrawn = await crm.approvalAction(
+    const withdrawn = await service.approvalAction(
       actor('rep'),
       approval.id,
       'withdraw',
     );
-    await crm.approvalAction(actor('rep'), approval.id, 'submit');
-    const decided = await crm.approvalAction(
+    await service.approvalAction(actor('rep'), approval.id, 'submit');
+    const decided = await service.approvalAction(
       actor('manager'),
       approval.id,
       'reject',
       'No',
     );
-    const calls = trigger.mock.calls.map(([key, input, options]) => ({
-      key,
-      event: input.event,
-      recipientId: input.recipientId,
-      actorId: input.actorId,
-      eventKey: options.eventKey,
-    }));
-    expect(calls.map((c) => c.key)).toEqual([
-      'approval-notification',
-      'approval-notification',
-      'approval-notification',
-      'approval-notification',
-    ]);
-    expect(calls.map((c) => [c.event, c.recipientId, c.actorId])).toEqual([
-      ['pending', 'manager', 'rep'],
-      ['withdrawn', 'manager', 'rep'],
-      ['pending', 'manager', 'rep'],
-      ['rejected', 'rep', 'manager'],
-    ]);
-    expect(calls[0].eventKey).toBe(
-      `approval-notification:${toText(approval.id)}:pending:${toText(submitted.updatedAt)}`,
-    );
-    expect(calls[1].eventKey).toBe(
-      `approval-notification:${toText(approval.id)}:withdrawn:${toText(withdrawn.updatedAt)}`,
-    );
-    expect(calls[3].eventKey).toBe(
-      `approval-notification:${toText(approval.id)}:rejected:${toText(decided.updatedAt)}`,
-    );
-    // The workflow is the only sender: the service queued nothing itself.
-    expect(await outboxEvents(approval.id)).toEqual([]);
-  });
-
-  it('sends nothing itself when the workflow is not running', async () => {
-    const crm = new CrmService(database, authorization, () => ({
-      trigger: vi
-        .fn()
-        .mockResolvedValue({ status: 'skipped', reason: 'disabled' }),
-      registerInstruction: () => undefined,
-    }));
-    const approval = await approvalFor(crm, 'Skipped company');
-    await crm.approvalAction(actor('rep'), approval.id, 'submit');
-    const decided = await crm.approvalAction(
-      actor('manager'),
-      approval.id,
-      'approve',
-    );
-    expect(decided.status).toBe('approved');
-    expect(await outboxEvents(approval.id)).toEqual([]);
-  });
-
-  it('queues each message once from the run script, however often it reruns', async () => {
-    const approval = await approvalFor(service, 'Script company');
-    const at = new Date().toISOString();
-    const args = {
-      recordId: approval.id,
-      recipientId: 'rep',
-      actorId: 'manager',
-      event: 'rejected',
-      at,
-    };
-    const options = {
-      services: {
-        has: () => true,
-        resolve: (token: unknown) =>
-          token === databaseManagerToken ? database : service,
-      },
-      signal: new AbortController().signal,
-      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-    } as unknown as Parameters<typeof notify>[1];
-    expect(await notify(args, options)).toEqual({ queued: true });
-    expect(await notify(args, options)).toEqual({ queued: false });
-    expect(
-      await notify(
-        { ...args, event: 'pending', recipientId: 'manager', actorId: 'rep' },
-        options,
-      ),
-    ).toEqual({ queued: true });
-    expect(
-      (await outboxEvents(approval.id)).map(([event, recipient]) => [
-        event,
-        recipient,
-      ]),
-    ).toEqual([
-      ['rejected', 'rep'],
+    const events = await outboxEvents(approval.id);
+    expect(events.map(([event, recipient]) => [event, recipient])).toEqual([
       ['pending', 'manager'],
+      ['withdrawn', 'manager'],
+      ['pending', 'manager'],
+      ['rejected', 'rep'],
     ]);
-    await expect(notify({ ...args, event: 'maybe' }, options)).rejects.toThrow(
-      /event/,
+    expect(events.map(([, , id]) => id)).toEqual(
+      expect.arrayContaining([
+        `approval-notification:${toText(approval.id)}:pending:${toText(submitted.updatedAt)}`,
+        `approval-notification:${toText(approval.id)}:withdrawn:${toText(withdrawn.updatedAt)}`,
+        `approval-notification:${toText(approval.id)}:rejected:${toText(decided.updatedAt)}`,
+      ]),
     );
+    // Asked again for the same event, nothing more is queued.
+    expect(await service.notifyApproval(actor('manager'), decided)).toBe(false);
+    expect(await outboxEvents(approval.id)).toHaveLength(4);
+  });
+
+  it('queues nothing while the settings switch approval messages off', async () => {
+    await service.saveSettings(actor('admin'), { notifyApprovals: false });
+    try {
+      const approval = await approvalFor(service, 'Quiet company');
+      await service.approvalAction(actor('rep'), approval.id, 'submit');
+      const decided = await service.approvalAction(
+        actor('manager'),
+        approval.id,
+        'approve',
+      );
+      expect(decided.status).toBe('approved');
+      expect(await outboxEvents(approval.id)).toEqual([]);
+      await expect(
+        service.saveSettings(actor('admin'), { notifyApprovals: 'no' }),
+      ).rejects.toMatchObject({ code: 'invalidInput' });
+    } finally {
+      await service.saveSettings(actor('admin'), { notifyApprovals: true });
+    }
   });
 });
 
-describe('record-notification workflow', () => {
+describe('record notifications', () => {
+  const queued = async (recordId: unknown) =>
+    (
+      await database
+        .query()
+        .selectFrom('crmOutbox')
+        .select(['id', 'event', 'recipientId', 'createdAt'])
+        .where('recordId', '=', recordId)
+        .orderBy('createdAt')
+        .execute()
+    ).map((r) => [toText(r.event), toText(r.recipientId), toText(r.id)]);
+
   it('tells the colleagues a note mentions, each once', async () => {
-    const inline = inlineWorkflows(() => crm);
-    const crm = new CrmService(database, authorization, () => inline.workflows);
-    const lead = await crm.save(actor('rep'), 'leads', {
+    const lead = await service.save(actor('rep'), 'leads', {
       name: 'Mentioned lead',
       ownerId: 'rep',
     });
-    inline.triggers.length = 0;
-    // The writer and an unknown company are dropped; the manager is kept.
-    const note = await crm.addNote(
+    // The writer and an unknown account are dropped; the manager is kept.
+    const note = await service.addNote(
       actor('rep'),
       'leads',
       toText(lead.id),
@@ -7587,21 +7468,17 @@ describe('record-notification workflow', () => {
       text: '@Manager please look',
       mentions: ['manager'],
     });
-    await vi.waitFor(() => expect(inline.triggers).toHaveLength(1));
-    expect(inline.triggers[0]).toMatchObject({
-      key: 'record-notification',
-      input: {
-        entity: 'leads',
-        recordId: lead.id,
-        recipientId: 'manager',
-        actorId: 'rep',
-        event: 'mentioned',
-      },
-      eventKey: `record-notification:leads:${toText(lead.id)}:mentioned:manager:${toText(note.id)}`,
-    });
+    await vi.waitFor(async () =>
+      expect(await queued(lead.id)).toEqual([
+        [
+          'mentioned',
+          'manager',
+          `record-notification:leads:${toText(lead.id)}:mentioned:manager:${toText(note.id)}`,
+        ],
+      ]),
+    );
     // An edit tells only whom it adds.
-    inline.triggers.length = 0;
-    const edited = await crm.editNote(
+    const edited = await service.editNote(
       actor('rep'),
       toText(note.id),
       '@Manager @Other please look',
@@ -7611,91 +7488,85 @@ describe('record-notification workflow', () => {
       text: '@Manager @Other please look',
       mentions: ['manager', 'other'],
     });
-    await vi.waitFor(() => expect(inline.triggers).toHaveLength(1));
-    expect(inline.triggers[0].input).toMatchObject({
-      recipientId: 'other',
-      event: 'mentioned',
-    });
+    await vi.waitFor(async () =>
+      expect(
+        (await queued(lead.id)).map(([event, recipient]) => [event, recipient]),
+      ).toEqual([
+        ['mentioned', 'manager'],
+        ['mentioned', 'other'],
+      ]),
+    );
   });
 
-  it('starts a run for a change of hands and for participant changes, once committed', async () => {
-    const inline = inlineWorkflows(() => crm);
-    const crm = new CrmService(database, authorization, () => inline.workflows);
-    const lead = await crm.save(actor('manager'), 'leads', {
+  it('queues a message for a change of hands and for participant changes, once committed', async () => {
+    const lead = await service.save(actor('manager'), 'leads', {
       name: 'Handoff lead',
       ownerId: 'rep',
     });
     // The new owner is told; the manager who did it is not.
-    expect(
-      inline.triggers.map((t) => [
-        t.key,
-        t.input.event,
-        t.input.recipientId,
-        t.input.actorId,
-      ]),
-    ).toEqual([['record-notification', 'assigned', 'rep', 'manager']]);
-    expect(inline.triggers[0].input).toMatchObject({
-      entity: 'leads',
-      recordId: lead.id,
-      at: lead.updatedAt,
-    });
-    expect(inline.triggers[0].eventKey).toBe(
-      `record-notification:leads:${toText(lead.id)}:assigned:rep:${toText(lead.updatedAt)}`,
-    );
-    inline.triggers.length = 0;
-    const meeting = await crm.save(actor('rep'), 'tasks', {
+    expect(await queued(lead.id)).toEqual([
+      [
+        'assigned',
+        'rep',
+        `record-notification:leads:${toText(lead.id)}:assigned:rep:${toText(lead.updatedAt)}`,
+      ],
+    ]);
+    const meeting = await service.save(actor('rep'), 'tasks', {
       name: 'Handoff meeting',
       leadId: lead.id,
       dueAt: '2026-10-01T02:00:00.000Z',
       internalParticipants: ['other'],
     });
-    await crm.save(
+    await service.save(
       actor('rep'),
       'tasks',
-      {
-        dueAt: '2026-10-01T04:00:00.000Z',
-      },
+      { dueAt: '2026-10-01T04:00:00.000Z' },
       meeting.id,
     );
-    await crm.save(
+    await service.save(
       actor('rep'),
       'tasks',
       { internalParticipants: [] },
       meeting.id,
     );
     expect(
-      inline.triggers.map((t) => [t.input.event, t.input.recipientId]),
+      (await queued(meeting.id)).map(([event, recipient]) => [
+        event,
+        recipient,
+      ]),
     ).toEqual([
       ['invited', 'other'],
       ['rescheduled', 'other'],
       ['removed', 'other'],
     ]);
-    // The workflow queued each message through the service by its key.
-    const queued = await database
-      .query()
-      .selectFrom('crmOutbox')
-      .select(['event', 'recipientId'])
-      .where('recordId', '=', meeting.id)
-      .execute();
-    expect(queued.map((r) => [toText(r.event), toText(r.recipientId)])).toEqual(
-      [
-        ['invited', 'other'],
-        ['rescheduled', 'other'],
-        ['removed', 'other'],
-      ],
-    );
   });
 
-  it('starts nothing when the change is rolled back', async () => {
-    const inline = inlineWorkflows(() => crm);
-    const crm = new CrmService(database, authorization, () => inline.workflows);
+  it('queues nothing when the change is rolled back, or while switched off', async () => {
+    const before = (
+      await database.query().selectFrom('crmOutbox').select('id').execute()
+    ).length;
     await expect(
-      crm.save(actor('manager'), 'leads', {
+      service.save(actor('manager'), 'leads', {
         name: 'Rolled back',
         ownerId: 'no-such-user',
       }),
     ).rejects.toBeDefined();
-    expect(inline.triggers).toEqual([]);
+    expect(
+      (await database.query().selectFrom('crmOutbox').select('id').execute())
+        .length,
+    ).toBe(before);
+    await service.saveSettings(actor('admin'), { notifyRecordChanges: false });
+    try {
+      const lead = await service.save(actor('manager'), 'leads', {
+        name: 'Quiet handoff',
+        ownerId: 'rep',
+      });
+      expect(await queued(lead.id)).toEqual([]);
+    } finally {
+      await service.saveSettings(actor('admin'), {
+        notifyRecordChanges: true,
+      });
+    }
   });
 });
 

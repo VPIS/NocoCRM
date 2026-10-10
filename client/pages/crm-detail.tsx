@@ -2860,7 +2860,7 @@ export function HistoryFeed({
   );
 }
 
-// A name's initials, as the company menu draws them: the first letter of
+// A name's initials, as the account menu draws them: the first letter of
 // each of its first two words.
 function initials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
@@ -2914,7 +2914,7 @@ function NoteComposer({
     // side by side, 3.75rem stacked), on the page's background, its gap
     // below its own so entries pass under it.
     <div className='sticky top-[3.75rem] z-[9] grid gap-2 bg-background pb-5 @3xl:top-14'>
-      {/* The writer's avatar before the box, drawn as the company menu's:
+      {/* The writer's avatar before the box, drawn as the account menu's:
           the first letter of each of the name's first two words. */}
       <div className='flex items-start gap-3'>
         <span

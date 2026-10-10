@@ -1,6 +1,5 @@
 import { normalizePhone } from './phone.js';
 import { LIST_LIMIT, LONG_TEXT_LIMIT, lengthLimit } from './limits.js';
-import type { WorkflowServiceContract } from '@nocobase/app-plugin-workflow/server';
 import { decodeRow, encodeRow, jsonValue } from './values.js';
 import {
   DATABASE_ORDERS,
@@ -51,10 +50,12 @@ import {
   definitions,
   entities,
   fieldsFor,
+  notificationSwitches,
   object,
   type CrmRecord,
   type CrmSettings,
   type Entity,
+  type NotificationKind,
 } from './schema.js';
 
 // The approval statuses that carry a message, named by the status.
@@ -174,11 +175,6 @@ export class CrmService {
   constructor(
     public readonly database: DatabaseManager,
     public readonly authz: AppAuthorization,
-    // The workflow service, looked up when needed because it is registered
-    // after this one; absent in tests and in an application without the
-    // workflow plugin, which then does the follow-through directly.
-    private readonly workflows: () =>
-      WorkflowServiceContract | undefined = () => undefined,
   ) {}
   async settings(
     query: QueryAdapter = this.database.query(),
@@ -280,9 +276,9 @@ export class CrmService {
       'manage',
       'settings',
     );
-    // Work registered during the transaction (the workflows a change
-    // starts) runs once it has committed, so a workflow reads what the
-    // change wrote and a rolled-back change starts nothing.
+    // Work registered during the transaction (the messages a change
+    // queues, the follow-ups it starts) runs once it has committed, so it
+    // reads what the change wrote and a rolled-back change starts nothing.
     const afterCommit: (() => Promise<void>)[] = [];
     prepared.after = (callback) => {
       afterCommit.push(callback);
@@ -338,6 +334,9 @@ export class CrmService {
       'staleDays',
     ] as const)
       if (!Number.isFinite(value[key]) || value[key] < 0 || value[key] > 525600)
+        throw new CrmError('invalidInput', 400, key);
+    for (const key of Object.values(notificationSwitches))
+      if (typeof value[key] !== 'boolean')
         throw new CrmError('invalidInput', 400, key);
     // A nurture review is planned in whole days, within a year, as the AI
     // gives it.
@@ -1923,14 +1922,14 @@ export class CrmService {
       if (entity === 'leads')
         await this.leadWorked(query, actor, id, note.createdAt);
     });
-    this.mentioned(actor, entity, id, note.id, mentioned, note.createdAt);
+    this.mentioned(actor, entity, id, note.id, mentioned);
     return {
       ...note,
       changes: noteChanges(body, mentioned),
       editedAt: null,
     };
   }
-  // The colleagues a note may mention: active companies other than the
+  // The colleagues a note may mention: active accounts other than the
   // writer, each once, at most twenty. Whether one may read the record is
   // not asked here: a message to someone who may not is never delivered
   // (deliverNotifications reads the record as its recipient).
@@ -1954,30 +1953,24 @@ export class CrmService {
     );
     return ids.filter((id) => active.has(id));
   }
-  // Tells each colleague a note newly mentions, through the
-  // record-notification workflow once the note is saved; the note's id and
-  // time key the message, so one mention is one message.
+  // Tells each colleague a note newly mentions, once the note is saved; the
+  // note's id keys the message, so one mention is one message.
   private mentioned(
     actor: Actor,
     entity: Entity,
     recordId: string,
     noteId: string,
     recipients: readonly string[],
-    at: string,
   ): void {
     for (const recipientId of recipients)
-      void this.trigger(
-        'record-notification',
-        {
-          entity,
-          recordId,
-          recipientId,
-          actorId: actor.id,
-          event: 'mentioned',
-          at,
-        },
-        `record-notification:${entity}:${recordId}:mentioned:${recipientId}:${noteId}`,
-      ).catch(() => undefined);
+      void this.queueMessage('recordChanges', {
+        entity,
+        recordId,
+        recipientId,
+        actorId: actor.id,
+        event: 'mentioned',
+        key: `record-notification:${entity}:${recordId}:mentioned:${recipientId}:${noteId}`,
+      }).catch(() => undefined);
   }
   // A new lead turns working once something has been done with it: a task
   // of it completed, a note written, mail exchanged (mail-timeline.ts).
@@ -2061,7 +2054,6 @@ export class CrmService {
       toText(note.recordId),
       noteId,
       mentioned.filter((id) => !before.has(id)),
-      editedAt,
     );
     return { ...note, changes: noteChanges(body, mentioned), editedAt };
   }
@@ -2217,9 +2209,8 @@ export class CrmService {
           .where('id', '=', row.id)
           .execute();
     const changed = await this.get(actor, 'approvals', id, tx);
-    // The message goes out through the approval-notification workflow once
-    // the change is committed: a submission or withdrawal to the approver,
-    // a decision to the applicant.
+    // The message is queued once the change is committed: a submission or
+    // withdrawal to the approver, a decision to the applicant.
     this.afterCommit(actor, () => this.notifyApproval(actor, changed));
     // A withdrawal counts too: it may be the last of those submitted
     // together to leave the queue (index.ts follows the deal up then).
@@ -2239,87 +2230,94 @@ export class CrmService {
     if (actor.after) actor.after(() => work().then(() => undefined));
     else void work();
   }
-  // The workflows the CRM starts. Every message the CRM sends goes through
-  // one of them, started once the change that caused it is committed, so
-  // each message leaves an inspectable run. They are the only senders:
-  // without the workflow service, or with a workflow not deployed or not
-  // enabled, nothing is sent.
-  private async trigger(
-    workflow: string,
-    input: Record<string, string | null>,
-    eventKey: string,
-  ): Promise<
-    Awaited<ReturnType<WorkflowServiceContract['trigger']>> | undefined
-  > {
-    const workflows = this.workflows();
-    if (!workflows) return undefined;
-    return workflows.trigger(workflow, input, { eventKey });
-  }
-  // "approval-notification": a submission or withdrawal to the approver, a
-  // decision to the applicant.
-  async notifyApproval(
-    actor: Actor,
-    record: CrmRecord,
-  ): Promise<
-    Awaited<ReturnType<WorkflowServiceContract['trigger']>> | undefined
-  > {
-    const event = toText(record.status);
-    if (!approvalEvents.includes(event)) return undefined;
-    const approvalId = toText(record.id);
-    const at = toText(record.updatedAt);
-    return this.trigger(
-      'approval-notification',
-      {
-        approvalId,
-        event,
-        recipientId: ['pending', 'withdrawn'].includes(event)
-          ? toText(record.approverId)
-          : toText(record.ownerId),
-        actorId: actor.id,
-        at,
-        opportunityId: record.opportunityId
-          ? toText(record.opportunityId)
-          : null,
-      },
-      `approval-notification:${approvalId}:${event}:${at}`,
+  // Every message the CRM sends: queued in crmOutbox, which CrmProvider's
+  // delivery pass sends as in-app notifications. A message is queued once
+  // the change that caused it has committed, keyed so the same message is
+  // never queued twice, and not at all to whoever made the change, for a
+  // record that is gone, or while the settings switch its kind off. These
+  // were workflows of the workflow plugin until the template stopped
+  // enabling the plugin (1.0.0-beta.58); the rules are the same.
+  private async queueMessage(
+    kind: NotificationKind,
+    message: {
+      entity: Entity;
+      recordId: string;
+      recipientId: string;
+      actorId: string;
+      event: string;
+      key: string;
+    },
+  ): Promise<boolean> {
+    if (!message.recipientId || message.recipientId === message.actorId)
+      return false;
+    if (!(await this.settings())[notificationSwitches[kind]]) return false;
+    const query = this.database.query();
+    const record = await query
+      .selectFrom(definitions[message.entity].table)
+      .select(['id', 'name'])
+      .where('id', '=', message.recordId)
+      .executeTakeFirst();
+    if (!record) return false;
+    return this.enqueue(
+      query,
+      { id: message.actorId },
+      message.entity,
+      record,
+      message.recipientId,
+      message.event,
+      message.key,
     );
   }
-  // "record-notification": a record changing hands, and a task's
-  // internal participants being invited, removed, rescheduled or told of
-  // a cancellation.
+  // A submission or withdrawal to the approver, a decision to the
+  // applicant.
+  async notifyApproval(actor: Actor, record: CrmRecord): Promise<boolean> {
+    const event = toText(record.status);
+    if (!approvalEvents.includes(event)) return false;
+    const approvalId = toText(record.id);
+    return this.queueMessage('approvals', {
+      entity: 'approvals',
+      recordId: approvalId,
+      recipientId: ['pending', 'withdrawn'].includes(event)
+        ? toText(record.approverId)
+        : toText(record.ownerId),
+      actorId: actor.id,
+      event,
+      key: `approval-notification:${approvalId}:${event}:${toText(record.updatedAt)}`,
+    });
+  }
+  // A record changing hands, and a task's internal participants being
+  // invited, removed, rescheduled or told of a cancellation.
   async notifyRecord(
     actor: Actor,
     entity: Entity,
     record: Row,
     recipientId: string,
     event: string,
-  ): Promise<
-    Awaited<ReturnType<WorkflowServiceContract['trigger']>> | undefined
-  > {
+  ): Promise<boolean> {
     const recordId = toText(record.id);
-    const at = toText(record.updatedAt);
-    return this.trigger(
-      'record-notification',
-      { entity, recordId, recipientId, actorId: actor.id, event, at },
-      `record-notification:${entity}:${recordId}:${event}:${recipientId}:${at}`,
-    );
+    return this.queueMessage('recordChanges', {
+      entity,
+      recordId,
+      recipientId,
+      actorId: actor.id,
+      event,
+      key: `record-notification:${entity}:${recordId}:${event}:${recipientId}:${toText(record.updatedAt)}`,
+    });
   }
-  // "task-reminder": a task about to start, to its owner and each
-  // internal participant; the event key is the reminder's identity, so a
-  // scan that sees the same task again starts nothing new.
-  async remindTask(
-    task: Row,
-    recipientId: string,
-  ): Promise<
-    Awaited<ReturnType<WorkflowServiceContract['trigger']>> | undefined
-  > {
+  // A task about to start, to its owner and each internal participant; the
+  // key is the reminder's identity, so a scan that sees the same task again
+  // queues nothing new.
+  async remindTask(task: Row, recipientId: string): Promise<boolean> {
     const taskId = toText(task.id);
     const dueAt = toText(task.dueAt);
-    return this.trigger(
-      'task-reminder',
-      { taskId, recipientId, dueAt },
-      `task:${taskId}:${dueAt}:${recipientId}`,
-    );
+    return this.queueMessage('taskReminders', {
+      entity: 'tasks',
+      recordId: taskId,
+      recipientId,
+      actorId: 'system',
+      event: 'starting',
+      key: `task:${taskId}:${dueAt}:${recipientId}`,
+    });
   }
   async enqueue(
     query: QueryAdapter,
@@ -2329,8 +2327,8 @@ export class CrmService {
     recipientId: string,
     event: string,
     key?: string,
-  ): Promise<void> {
-    if (!recipientId || recipientId === actor.id) return;
+  ): Promise<boolean> {
+    if (!recipientId || recipientId === actor.id) return false;
     const id = key ?? randomUUID();
     if (
       await query
@@ -2339,7 +2337,7 @@ export class CrmService {
         .where('id', '=', id)
         .executeTakeFirst()
     )
-      return;
+      return false;
     try {
       await query
         .insertInto('crmOutbox')
@@ -2358,7 +2356,9 @@ export class CrmService {
       // A keyed reminder raced another scan of the same row: the message
       // is already queued, which is the outcome wanted.
       if (!/UNIQUE|PRIMARYKEY|duplicate/i.test(String(error))) throw error;
+      return false;
     }
+    return true;
   }
   private async recordNotifications(
     query: QueryAdapter,
@@ -2369,9 +2369,8 @@ export class CrmService {
   ): Promise<void> {
     // Only a change of hands is worth a message; edits to a record by
     // someone else are visible in its history and were noise as alerts.
-    // Each message is a record-notification workflow run, started once
-    // this transaction has committed; a message to whoever made the
-    // change is not sent.
+    // Each message is queued once this transaction has committed; a
+    // message to whoever made the change is not sent.
     const messages: [string, string][] = [];
     if (previous?.ownerId !== record.ownerId)
       messages.push([toText(record.ownerId), 'assigned']);

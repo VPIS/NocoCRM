@@ -13,7 +13,6 @@ import { createCronJobManager, type CronJobManager } from '@nocobase/cron';
 import { authorizationToken } from '@nocobase/app-plugin-authorization';
 import { aiManagerToken } from '@nocobase/app-plugin-ai-employee/server';
 import { notificationServiceToken } from '@nocobase/app-plugin-notification/server';
-import { workflowServiceToken } from '@nocobase/app-plugin-workflow/server';
 import { schedulerServiceToken } from '@nocobase/app-plugin-scheduler/server/tokens';
 import { scanLeadSignals } from './lead-signals.js';
 import { isEndOfDay } from './zone-time.js';
@@ -81,13 +80,6 @@ export default class CrmProvider extends ServiceProvider<Application> {
   private reminding = false;
   private delivering = false;
   public override register(): void {
-    // The workflow run scripts under workflows/ run from the storage
-    // disk, where they can neither import this application nor share a
-    // package instance with it; they reach the database through this
-    // process-wide handle (the same symbol is spelled out in each package's
-    // server/queue.ts).
-    (globalThis as Record<symbol, unknown>)[Symbol.for('nococrm.database')] =
-      this.app.container.resolve(databaseManagerToken);
     this.app.container
       .resolve(i18nToken)
       .registry.register('crm-notifications', notificationLocales);
@@ -97,10 +89,6 @@ export default class CrmProvider extends ServiceProvider<Application> {
         new CrmService(
           this.app.container.resolve(databaseManagerToken),
           this.app.container.resolve(authorizationToken),
-          () =>
-            this.app.container.has(workflowServiceToken)
-              ? this.app.container.resolve(workflowServiceToken)
-              : undefined,
         ),
     );
     // New leads evaluated by the AI (lead-evaluation.ts).
@@ -454,8 +442,8 @@ export default class CrmProvider extends ServiceProvider<Application> {
     await this.deliverNotifications();
   }
   // Finds the tasks due at a time (not a date alone) about to come and
-  // starts one task-reminder
-  // workflow run per recipient; returns how many were started this pass.
+  // queues a reminder for each recipient; returns how many were queued
+  // this pass.
   async remindTasks(): Promise<number> {
     if (this.reminding) return 0;
     this.reminding = true;
@@ -478,9 +466,8 @@ export default class CrmProvider extends ServiceProvider<Application> {
           ).toISOString(),
         )
         .execute();
-      // Each reminder is a task-reminder workflow run, keyed by the
-      // task, its start and the recipient, so repeated scans of the
-      // same row start nothing new.
+      // Each reminder is keyed by the task, its start and the recipient,
+      // so repeated scans of the same row queue nothing new.
       // A date alone has no hour to be reminded of.
       for (const task of tasks.filter(
         (t) => !isEndOfDay(new Date(toText(t.dueAt)), settings.timeZone),
@@ -489,8 +476,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
           task.ownerId,
           ...array(task.internalParticipants),
         ])) {
-          await service.remindTask(task, toText(user));
-          reminded += 1;
+          if (await service.remindTask(task, toText(user))) reminded += 1;
         }
       return reminded;
     } finally {
@@ -523,13 +509,13 @@ export default class CrmProvider extends ServiceProvider<Application> {
           .execute();
         if (!claim.updatedCount) continue;
         try {
-          // A disabled company gets nothing: the row fails with the reason.
-          const company = await query
+          // A disabled account gets nothing: the row fails with the reason.
+          const account = await query
             .selectFrom('user')
             .select('disabledAt')
             .where('id', '=', row.recipientId)
             .executeTakeFirst();
-          if (company?.disabledAt != null) throw new CrmError('disabled', 403);
+          if (account?.disabledAt != null) throw new CrmError('disabled', 403);
           const preference = await query
             .selectFrom('crmUserPreferences')
             .select('locale')

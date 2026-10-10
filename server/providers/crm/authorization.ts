@@ -51,7 +51,7 @@ export interface Actor {
   capabilities?: Record<string, boolean>;
   users?: Row[];
   // Registers work to run once the current transaction has committed (the
-  // workflows a change starts); set by CrmService.mutate on the prepared
+  // messages a change queues); set by CrmService.mutate on the prepared
   // actor, absent when a caller runs its own transaction.
   after?: (callback: () => Promise<void>) => void;
   // Set when the change was proposed by the AI and confirmed by this user

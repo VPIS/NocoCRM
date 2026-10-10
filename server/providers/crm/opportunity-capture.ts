@@ -482,7 +482,8 @@ export async function captureOpportunity(
         .filter((found) => found.entity === 'companies')
         .map((found) => ({ id: found.id, name: found.name }))
     : [];
-  const companyId = companyOf || (companies.length === 1 ? companies[0].id : '');
+  const companyId =
+    companyOf || (companies.length === 1 ? companies[0].id : '');
   const people = d.people
     .map((p) => ({
       name: toText(p.name).trim().slice(0, TEXT_LIMIT),

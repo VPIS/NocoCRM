@@ -1512,6 +1512,25 @@ const wording = {
   ],
   business: ['Business defaults', '业务配置'],
   reminders: ['Reminders', '提醒设置'],
+  // The settings' switches for the in-app messages the CRM sends.
+  notifications: {
+    heading: ['In-app notifications', '站内通知'],
+    notifyApprovals: ['Approval notifications', '审批通知'],
+    notifyApprovalsHint: [
+      'To the approver when a request is submitted or withdrawn, and to the applicant when it is approved or rejected.',
+      '申请提交或撤回时通知审批人，通过或驳回时通知申请人。',
+    ],
+    notifyRecordChanges: ['Record change notifications', '记录变更通知'],
+    notifyRecordChangesHint: [
+      "To the new owner when a record changes hands, to a task's participants when they are invited or removed or the task is rescheduled or cancelled, and to a colleague a note mentions.",
+      '记录更换负责人时通知新负责人；任务参与人被邀请、移除，或任务改期、取消时通知参与人；备注里 @ 到的同事会收到通知。',
+    ],
+    notifyTaskReminders: ['Task reminders', '任务提醒'],
+    notifyTaskRemindersHint: [
+      'To the owner and participants before a task with a time starts; a task with a date alone is not reminded of.',
+      '有具体时刻的任务开始前提醒负责人和参与人；只填日期的任务不提醒。',
+    ],
+  },
   settingsSaved: ['Settings saved', '设置已保存'],
   searchRecords: ['Type to search', '输入关键字搜索'],
   noMatches: ['No matching records', '没有匹配的记录'],

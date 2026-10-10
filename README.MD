@@ -18,15 +18,15 @@ A CRM for B2B sales built on [NocoBase 3](https://www.nocobase.com), the open-so
 
 NocoBase 3 provides the NocoBase App Foundation, the application infrastructure coding agents need not rebuild, and NocoBase Solutions, complete applications to start from. NocoCRM is one of those Solutions: a NocoBase 3 application generated from NocoBase's application template, with its own data model, services, API and pages on top of the App Foundation, which supplies:
 
-| From the App Foundation                      | Used by NocoCRM for                                                                          |
-| -------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Application server, database layer and CLI   | The server, migrations, configuration, builds and deployment                                 |
-| Application template and UI Library          | Layouts, routing, theme, sign-in pages and the components every page is built from           |
-| Authentication, users and authorization      | Sign-in, user management, and the roles as permission sets with record and field permissions |
-| AI Employee plugin                           | The chat, LLM services, tool calling, confirmation cards, skills and reports                 |
-| Workflow, notification and scheduler plugins | The notification workflows, the in-app inbox and the daily checks                            |
-| Mail plugin                                  | Users' mailboxes: sync, reading, writing and sending                                         |
-| File and i18n plugins                        | Attachments and their previews, the interface languages                                      |
+| From the App Foundation                    | Used by NocoCRM for                                                                          |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| Application server, database layer and CLI | The server, migrations, configuration, builds and deployment                                 |
+| Application template and UI Library        | Layouts, routing, theme, sign-in pages and the components every page is built from           |
+| Authentication, users and authorization    | Sign-in, user management, and the roles as permission sets with record and field permissions |
+| AI Employee plugin                         | The chat, LLM services, tool calling, confirmation cards, skills and reports                 |
+| Notification and scheduler plugins         | The in-app inbox and the daily checks                                                        |
+| Mail plugin                                | Users' mailboxes: sync, reading, writing and sending                                         |
+| File and i18n plugins                      | Attachments and their previews, the interface languages                                      |
 
 ## Quick start
 
@@ -80,7 +80,7 @@ ai:
 
 The assistant is switched on and off with the **Enabled** switch of Noco on **Settings → AI → AI Employees**. Web search works with OpenAI and Qwen, not with DeepSeek. The business guidance in `server/ai/employees/crm-guidance.ts` and the skills in `ai/skills/` hold the sales practice the AI follows; edit them to make it yours.
 
-**Notifications.** In-app notifications need the channel `inbox` (`notification.channels.inbox: { provider: in-app }`, already in `config.example.yml`), and are sent by three workflows that must be enabled once per deployment on **Settings → Automation → Workflows**.
+**Notifications.** In-app notifications need the channel `inbox` (`notification.channels.inbox: { provider: in-app }`, already in `config.example.yml`), and are sent by the CRM itself; each kind (approvals, record changes, task reminders) can be switched off on **Settings → System settings → Reminders**.
 
 **Mail.** Declare the mail servers users may connect under `mail.providers` (examples in `config.example.yml`); each user then connects their mailbox on **Mail → Mail accounts**. Gmail and Microsoft 365 also need an OAuth client, with `<origin><base path>/mail/oauth/callback` registered as its redirect URL.
 
@@ -109,7 +109,7 @@ pnpm build --target linux-x64 --tar   # writes storage/exports/dist.tar.gz
 
 To serve the client's static files from a CDN, build with its prefix, `CDN_BASE_URL=https://cdn.example.com/crm/v1/ pnpm build` (or `docker build --build-arg CDN_BASE_URL=…`), upload `dist/client/` there with its paths kept and CORS allowed for the application's origin, and keep the complete `dist/client/` on the server too, which still serves the HTML. Unset, the files load from the application as before.
 
-Behind a reverse proxy, keep the public host and protocol and pass WebSocket upgrades. After deploying, set the AI keys, enable the three notification workflows, and check `/<base path>/api/healthz`. Back up the database and `storage/` before upgrading.
+Behind a reverse proxy, keep the public host and protocol and pass WebSocket upgrades. After deploying, set the AI keys and check `/<base path>/api/healthz`. Back up the database and `storage/` before upgrading.
 
 ## Development
 

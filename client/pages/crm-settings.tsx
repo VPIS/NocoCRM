@@ -5,6 +5,7 @@ import { useState, type ReactElement } from 'react';
 import { useSearchParams } from 'react-router';
 import { Button } from '../components/ui/button.js';
 import { Input } from '../components/ui/input.js';
+import { Switch } from '../components/ui/switch.js';
 import {
   Card,
   CardContent,
@@ -326,14 +327,51 @@ function SettingsForm({
           ) : section === 'business' ? (
             fields(['currency', 'timeZone', 'aiLanguage'])
           ) : section === 'reminders' ? (
-            fields([
-              'taskReminderMinutes',
-              'closeReminderDays',
-              'uncontactedDays',
-              'leadStaleDays',
-              'staleDays',
-              'nurtureReviewDays',
-            ])
+            <div className='space-y-6'>
+              {fields([
+                'taskReminderMinutes',
+                'closeReminderDays',
+                'uncontactedDays',
+                'leadStaleDays',
+                'staleDays',
+                'nurtureReviewDays',
+              ])}
+              {/* Each kind of in-app message the CRM sends, on unless
+                  switched off (service.ts, queueMessage). */}
+              <div className='space-y-2'>
+                <p className='text-sm font-medium'>
+                  {text('notifications.heading')}
+                </p>
+                <ul className='divide-y divide-border/60 rounded-lg border border-border/60 px-3'>
+                  {(
+                    [
+                      'notifyApprovals',
+                      'notifyRecordChanges',
+                      'notifyTaskReminders',
+                    ] as const
+                  ).map((key) => (
+                    <li
+                      key={key}
+                      className='flex items-start justify-between gap-4 py-2.5'
+                    >
+                      <div className='min-w-0 space-y-0.5'>
+                        <p className='text-sm'>
+                          {text(`notifications.${key}`)}
+                        </p>
+                        <p className='text-xs text-muted-foreground'>
+                          {text(`notifications.${key}Hint`)}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={settings[key] !== false}
+                        onCheckedChange={(on) => set(key, on)}
+                        aria-label={toText(text(`notifications.${key}`))}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           ) : null}
         </CardContent>
       </Card>

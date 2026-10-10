@@ -430,8 +430,21 @@ export interface CrmSettings {
   // assistant's prompt: `zh-CN` or `en-US`. The skills are English either
   // way. The chat always answers in the language the user writes in.
   aiLanguage: string;
+  // Whether the CRM sends each kind of in-app message (service.ts,
+  // queueMessage): approvals submitted, withdrawn and decided; records
+  // changing hands, task participants told of a change, mentions in a note;
+  // and reminders before a task starts.
+  notifyApprovals: boolean;
+  notifyRecordChanges: boolean;
+  notifyTaskReminders: boolean;
   options: Record<string, string[]>;
 }
+export type NotificationKind = 'approvals' | 'recordChanges' | 'taskReminders';
+export const notificationSwitches = {
+  approvals: 'notifyApprovals',
+  recordChanges: 'notifyRecordChanges',
+  taskReminders: 'notifyTaskReminders',
+} as const satisfies Record<NotificationKind, keyof CrmSettings>;
 export const aiLanguages = ['zh-CN', 'en-US'];
 export const defaultSettings: CrmSettings = {
   currency: 'USD',
@@ -443,6 +456,9 @@ export const defaultSettings: CrmSettings = {
   staleDays: 14,
   nurtureReviewDays: 90,
   aiLanguage: 'en-US',
+  notifyApprovals: true,
+  notifyRecordChanges: true,
+  notifyTaskReminders: true,
   options: {
     source: sources,
     industry: industries,
