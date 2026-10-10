@@ -391,18 +391,22 @@ export function EvaluateButton({
 }): ReactElement | null {
   const { text } = useCrmText();
   if (!request.available || request.asked) return null;
+  // Shaped as the suggestion's chip it gives way to (EvaluationStatus): as
+  // tall as the small buttons beside it, on the AI's tint, led by its mark.
   return (
-    <Button
-      size='sm'
-      variant='ghost'
-      className='text-ai hover:text-ai'
+    <button
+      type='button'
+      className='inline-flex h-7 items-center gap-1.5 rounded-lg border border-ai/30 bg-ai/5 px-2.5 font-sans text-xs font-medium tracking-normal text-ai transition-colors hover:bg-ai/10 disabled:opacity-60'
       disabled={request.busy}
       onClick={request.ask}
     >
-      {/* The AI's mark, as on every AI entry point. */}
-      {request.busy ? <Spinner /> : <Sparkles />}
-      {text('evaluation.again')}
-    </Button>
+      {request.busy ? (
+        <Spinner className='size-3.5' />
+      ) : (
+        <Sparkles className='size-3.5' />
+      )}
+      {text('evaluation.start')}
+    </button>
   );
 }
 

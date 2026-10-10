@@ -811,6 +811,8 @@ const wording = {
       pending: ['AI suggestion', 'AI 建议待处理'],
     },
     again: ['Follow up', '跟进'],
+    // Before the first suggestion: asking for one, as a chip.
+    start: ['AI follow-up', 'AI 跟进'],
     // At the end of the AI's latest suggestion's chip.
     askAgain: ['Rerun', '重新跟进'],
     running: [
@@ -1224,10 +1226,6 @@ const wording = {
   convert: ['Convert lead', '转化线索'],
   // The lead page's button, beside the heading that names the lead.
   convertShort: ['Convert', '转化'],
-  convertedHint: [
-    'This lead has been converted and is read-only. Continue from the records it was converted into.',
-    '此线索已转化，为只读状态，请在转化的记录中继续跟进。',
-  ],
   conversionHint: [
     'Create or link a company and contact. Existing values are preserved unless you select fields to overwrite. All changes are saved together.',
     '创建或关联公司与联系人。已有值默认保留，勾选的字段将被覆盖。所有变更将在同一事务中保存。',
@@ -1930,7 +1928,7 @@ const wording = {
     decidedAt: ['Decided', '审批时间'],
     decisionComment: ['Decision comment', '审批意见'],
     convertedAt: ['Converted', '转化时间'],
-    convertedCompanyId: ['Converted company', '转化后的公司'],
+    convertedCompanyId: ['Converted company', '转化的公司'],
     convertedContactId: ['Converted contact', '转化联系人'],
     convertedOpportunityId: ['Converted opportunity', '转化商机'],
     role: ['Contact role', '联系人角色'],

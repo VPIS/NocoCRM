@@ -622,13 +622,6 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                   }))}
                   onSave={patch}
                 />
-                {/* A converted lead is read-only: its work goes on in
-                        what it became, listed under its status. */}
-                {converted && (
-                  <p className='px-2 pb-1 text-xs text-muted-foreground'>
-                    {text('convertedHint')}
-                  </p>
-                )}
               </InfoRow>
               {converted && (
                 <>
@@ -934,38 +927,37 @@ export function DetailColumns({
             }`}
             onScroll={revealScrollbar}
           >
-            {/* The record's header, across both columns: the heading with
-                the actions at its right, also in a drawer or on a phone
-                while they fit (below it, still at the right, when they do
-                not), the AI's latest suggestion under it. */}
-            {/* In a drawer the frame's own padding already sets it off from
-                the drawer's bar, so the header adds none above. */}
-            <header
-              className={`@3xl:pr-2 @3xl:pb-3 @3xl:pl-10 md:@3xl:pr-3 md:@3xl:pl-16 ${
-                inDrawer ? 'pt-0' : 'pt-5 @3xl:pt-4'
-              }`}
-            >
-              <DetailBack entity={entity} />
-              <div className='flex flex-wrap items-start justify-between gap-x-6 gap-y-2'>
-                <div className='min-w-0 flex-1 basis-60 @3xl:basis-80'>
-                  {heading}
+            <div className='grid gap-6 @3xl:min-h-0 @3xl:flex-1 @3xl:grid-cols-[minmax(0,1fr)_22rem] @3xl:grid-rows-[auto_minmax(0,1fr)] @3xl:gap-0 md:@3xl:grid-cols-[minmax(0,1fr)_23rem]'>
+              {/* The record's header over the left column, the particulars
+                    beside it reaching to the top: the heading, and under it,
+                    from the left, the AI's latest suggestion and the actions,
+                    in a drawer and on a phone alike. Stacked, it comes first. */}
+              {/* In a drawer the frame's own padding already sets it off from
+                  the drawer's bar, so the header adds none above. */}
+              <header
+                className={`@3xl:col-start-1 @3xl:row-start-1 @3xl:pr-12 @3xl:pb-3 @3xl:pl-10 md:@3xl:pr-16 md:@3xl:pl-16 ${
+                  inDrawer ? 'pt-0' : 'pt-5 @3xl:pt-4'
+                }`}
+              >
+                <DetailBack entity={entity} />
+                <div className='grid gap-2'>
+                  <div className='min-w-0'>{heading}</div>
+                  {/* The AI's latest suggestion leads the actions, as what
+                      to do next; it draws nothing before the first. */}
+                  {actions || status ? (
+                    <div className='flex flex-wrap items-center gap-2 empty:hidden'>
+                      {status}
+                      {actions}
+                    </div>
+                  ) : null}
                 </div>
-                {/* The AI's latest suggestion leads the actions, as what
-                    to do next; it draws nothing before the first. */}
-                {actions || status ? (
-                  <div className='ml-auto flex flex-wrap items-center justify-end gap-2 empty:hidden @3xl:pt-1'>
-                    {status}
-                    {actions}
-                  </div>
-                ) : null}
-              </div>
-            </header>
-            <div className='grid gap-6 pt-5 @3xl:min-h-0 @3xl:flex-1 @3xl:grid-cols-[minmax(0,1fr)_22rem] @3xl:grid-rows-[minmax(0,1fr)] @3xl:gap-0 @3xl:pt-0 md:@3xl:grid-cols-[minmax(0,1fr)_23rem]'>
+              </header>
+
               {/* The timeline and the other tabs on the left, taking the
                   room, the particulars in a narrow column on the right.
-                  Stacked, the particulars come first (a phone number before
-                  the history): the source order, which side by side the
-                  column's order-2 turns round. */}
+                  Stacked, the particulars come first after the header (a
+                  phone number before the history): the source order, which
+                  side by side the grid's placement turns round. */}
               {/* The particulars as a stack of cards, one per group
                   (InfoGroup), with whatever leads them (a lead's duplicates)
                   above; side by side the stack scrolls on its own, ending in
@@ -973,7 +965,9 @@ export function DetailColumns({
                   dock. The rows keep 8px of their own on each side for an
                   inline editor's hover fill. */}
               <section
-                className='flex min-w-0 flex-col gap-3 @3xl:order-2 @3xl:mr-2 @3xl:overflow-y-auto @3xl:pb-24 md:@3xl:mr-3 scroll-quiet'
+                className={`flex min-w-0 flex-col gap-3 @3xl:col-start-2 @3xl:row-span-2 @3xl:row-start-1 @3xl:mr-2 @3xl:overflow-y-auto @3xl:pb-24 md:@3xl:mr-3 scroll-quiet ${
+                  inDrawer ? '' : '@3xl:pt-4'
+                }`}
                 onScroll={revealScrollbar}
               >
                 {left}
@@ -986,7 +980,7 @@ export function DetailColumns({
                   the content scrolls down (a long intro, unfolded, scrolls
                   within a part of the column of its own). Stacked, the page
                   scrolls and the tabs stick to its top. */}
-              <section className='flex min-w-0 flex-col @3xl:min-h-0 @3xl:overflow-hidden'>
+              <section className='flex min-w-0 flex-col @3xl:col-start-1 @3xl:row-start-2 @3xl:min-h-0 @3xl:overflow-hidden'>
                 {intro ? (
                   <div
                     className={`grid shrink-0 transition-[grid-template-rows,opacity] duration-200 ease-out ${
