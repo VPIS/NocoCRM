@@ -141,10 +141,8 @@ export function PrepPanel({
     : [];
   return (
     <section
-      // Waiting, it carries the AI's tint; decided, a neutral ground.
-      className={`@container grid grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border p-4 text-sm shadow-xs [&_:is(input,textarea):focus-visible]:border-ring/50! [&_:is(input,textarea):focus-visible]:ring-2! [&_:is(input,textarea):focus-visible]:ring-ring/10! ${
-        entry.status === 'pending' ? 'bg-ai/5' : 'bg-card'
-      }`}
+      // On the card's own white, waiting or decided.
+      className={`@container grid grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border p-4 text-sm shadow-xs [&_:is(input,textarea):focus-visible]:border-ring/50! [&_:is(input,textarea):focus-visible]:ring-2! [&_:is(input,textarea):focus-visible]:ring-ring/10! bg-card`}
     >
       {/* The heading and who decided it; in the timeline, whose line names
           it, what started it instead, the card otherwise opening on its

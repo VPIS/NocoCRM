@@ -733,12 +733,9 @@ export function VerdictPanel({
   )?.name;
   return (
     <section
-      // Waiting, it carries the AI's tint; decided, the same card on a
-      // neutral ground. Its fields show focus as lightly as the inline
-      // editor does.
-      className={`@container grid grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border p-4 text-sm shadow-xs [&_:is(input,textarea,[role=combobox]):focus-visible]:border-ring/50! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-2! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-ring/10! ${
-        entry.status === 'pending' ? 'bg-ai/5' : 'bg-card'
-      }`}
+      // On the card's own white, waiting or decided. Its fields show focus
+      // as lightly as the inline editor does.
+      className={`@container grid grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border p-4 text-sm shadow-xs [&_:is(input,textarea,[role=combobox]):focus-visible]:border-ring/50! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-2! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-ring/10! bg-card`}
     >
       {/* The heading, with asking and deciding at its top right; on a card
           too narrow for both (a phone), they take a row of their own under

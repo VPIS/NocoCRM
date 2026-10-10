@@ -160,11 +160,8 @@ export function ReviewPanel({
     ) : null;
   return (
     <section
-      // Waiting, it carries the AI's tint; decided, the same card on a
-      // neutral ground, as every AI card.
-      className={`@container grid grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border p-4 text-sm shadow-xs [&_:is(input,textarea,[role=combobox]):focus-visible]:border-ring/50! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-2! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-ring/10! ${
-        entry.status === 'pending' ? 'bg-ai/5' : 'bg-card'
-      }`}
+      // On the card's own white, waiting or decided, as every AI card.
+      className={`@container grid grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border p-4 text-sm shadow-xs [&_:is(input,textarea,[role=combobox]):focus-visible]:border-ring/50! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-2! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-ring/10! bg-card`}
     >
       {/* The heading, and who decided it or what became of it; in the
           timeline, whose line names it, only the latter, and nothing while
