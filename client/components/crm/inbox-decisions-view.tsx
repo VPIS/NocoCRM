@@ -1,6 +1,12 @@
 import { useTranslation } from '@nocobase/i18n/client';
 import { ArrowLeft, Maximize2, Sparkles } from 'lucide-react';
-import { lazy, Suspense, useState, type ReactElement } from 'react';
+import {
+  lazy,
+  Suspense,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { Link } from 'react-router';
 import { Badge } from '../ui/badge.js';
 import { Button } from '../ui/button.js';
@@ -35,12 +41,16 @@ export function DecisionList({
   onSelect,
   error,
   loading,
+  between,
 }: {
   items: DecisionItem[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   error: unknown;
   loading: boolean;
+  // What waits besides, under its own heading between those waiting and the
+  // handled ones: the changes suggested in conversations (inbox-plans.tsx).
+  between?: ReactNode;
 }): ReactElement {
   const { text, language } = useCrmText();
   const { nameOf, kindOf } = useWording();
@@ -169,11 +179,12 @@ export function DecisionList({
         <>
           {waiting.length ? (
             <ul className='space-y-0.5'>{waiting.map(row)}</ul>
-          ) : (
+          ) : between ? null : (
             <p className='px-3 py-2 text-sm text-muted-foreground'>
               {text('decisions.empty')}
             </p>
           )}
+          {between}
           {/* The handled ones always after them, under their heading. */}
           {handled.length ? (
             <div className='space-y-1 pt-4'>

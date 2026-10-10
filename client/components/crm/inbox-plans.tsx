@@ -39,60 +39,78 @@ export function PlanList({
         </Button>
       </div>
     );
+  // Waiting first, then those being carried out, then the decided ones.
+  const rank = (plan: PlanView): number =>
+    plan.status === 'pending' ? 0 : plan.status === 'executing' ? 1 : 2;
+  const ordered = [...plans].sort((a, b) => rank(a) - rank(b));
+  // Under a heading of their own: drawn after the AI's suggestions, whose
+  // handled ones end above them, a plan still waiting would otherwise read
+  // as handled.
   return (
-    <ul className='flex flex-col gap-0.5'>
-      {plans.map((plan) => {
-        const selected = plan.id === selectedId;
-        const waiting = plan.status === 'pending';
-        return (
-          <li key={plan.id}>
-            <button
-              type='button'
-              aria-current={selected ? 'true' : undefined}
-              onClick={() => onSelect(plan.id)}
-              className={`relative flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-[background-color,border-color] ${
-                selected
-                  ? 'border-transparent bg-card shadow-xs'
-                  : 'border-transparent hover:bg-accent/60'
-              } ${waiting ? '' : 'opacity-55'}`}
-            >
-              {/* What waits is marked as the AI's suggestions are. */}
-              <span
-                aria-hidden
-                className={`absolute top-3 bottom-3 left-0 w-0.5 rounded-full ${
-                  selected ? 'bg-primary' : waiting ? 'bg-ai' : 'bg-transparent'
-                }`}
-              />
-              <ClipboardList className='mt-0.5 size-4 shrink-0 text-muted-foreground' />
-              <span className='grid min-w-0 flex-1 gap-1'>
-                <span className='flex items-center gap-1.5 text-xs text-muted-foreground'>
-                  <span className='truncate'>
-                    {text('plans.meta', {
-                      agent: plan.agentName ?? text('plans.agent'),
-                      time: relativeTime(
-                        plan.createdAt,
-                        language,
-                        now,
-                        text('justNow'),
-                      ),
-                    })}
-                  </span>
-                  <span className='ml-auto shrink-0'>
-                    {text(`plans.status.${plan.status}`)}
-                  </span>
-                </span>
+    <section className='space-y-1 pt-4'>
+      <div className='border-b border-border pb-1.5'>
+        <h2 className='px-3 text-xs font-medium tracking-wider text-muted-foreground uppercase'>
+          {text('plans.category')}
+        </h2>
+      </div>
+      <ul className='flex flex-col gap-0.5'>
+        {ordered.map((plan) => {
+          const selected = plan.id === selectedId;
+          const waiting = plan.status === 'pending';
+          return (
+            <li key={plan.id}>
+              <button
+                type='button'
+                aria-current={selected ? 'true' : undefined}
+                onClick={() => onSelect(plan.id)}
+                className={`relative flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-[background-color,border-color] ${
+                  selected
+                    ? 'border-transparent bg-card shadow-xs'
+                    : 'border-transparent hover:bg-accent/60'
+                } ${waiting ? '' : 'opacity-55'}`}
+              >
+                {/* What waits is marked as the AI's suggestions are. */}
                 <span
-                  className={`truncate text-sm ${waiting ? 'font-medium' : ''}`}
-                  title={plan.title}
-                >
-                  {plan.title}
+                  aria-hidden
+                  className={`absolute top-3 bottom-3 left-0 w-0.5 rounded-full ${
+                    selected
+                      ? 'bg-primary'
+                      : waiting
+                        ? 'bg-ai'
+                        : 'bg-transparent'
+                  }`}
+                />
+                <ClipboardList className='mt-0.5 size-4 shrink-0 text-muted-foreground' />
+                <span className='grid min-w-0 flex-1 gap-1'>
+                  <span className='flex items-center gap-1.5 text-xs text-muted-foreground'>
+                    <span className='truncate'>
+                      {text('plans.meta', {
+                        agent: plan.agentName ?? text('plans.agent'),
+                        time: relativeTime(
+                          plan.createdAt,
+                          language,
+                          now,
+                          text('justNow'),
+                        ),
+                      })}
+                    </span>
+                    <span className='ml-auto shrink-0'>
+                      {text(`plans.status.${plan.status}`)}
+                    </span>
+                  </span>
+                  <span
+                    className={`truncate text-sm ${waiting ? 'font-medium' : ''}`}
+                    title={plan.title}
+                  >
+                    {plan.title}
+                  </span>
                 </span>
-              </span>
-            </button>
-          </li>
-        );
-      })}
-    </ul>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

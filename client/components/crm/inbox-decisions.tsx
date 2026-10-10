@@ -1,6 +1,7 @@
 import { crmNoticeRenderer } from './inbox-notices.js';
 import { useCan } from '@nocobase/app-plugin-authorization/client';
 import { useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router';
 import {
   infoCategory,
   type InboxRegistry,
@@ -52,7 +53,7 @@ export function useCrmInboxRegistry(): {
       feeds: [],
       categories: [
         ...(shown ? [decisionsCategory(label)] : []),
-        ...(plans ? [plansCategory(plansLabel)] : []),
+        ...(plans ? [plansCategory(plansLabel, shown)] : []),
         infoCategory,
       ],
     }),
@@ -88,6 +89,21 @@ function useDecisionsCollection({
 }: InboxCollectionInput): InboxCollectionState {
   const query = useDecisions();
   const items = useMemo(() => query.data?.data ?? [], [query.data]);
+  // The changes suggested in conversations are drawn in this group, between
+  // the suggestions waiting and the handled ones, since the inbox places a
+  // collection's group only after another's whole group; their own group is
+  // left empty (usePlansCollection). Picking one selects it as the plans'
+  // collection would: its parameter, every other selection dropped.
+  const plans = useInboxPlans();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pickPlan = (id: string): void =>
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.delete(DECISION_PARAM);
+      next.delete('item');
+      next.set(PLAN_PARAM, id);
+      return next;
+    });
   const waiting = items.filter((entry) => !isDecided(entry));
   const chosen = filter.kind === DECISIONS_CATEGORY;
   // Beside the list on a wide screen, the first suggestion stands open
@@ -118,13 +134,35 @@ function useDecisionsCollection({
       loading={query.isLoading}
     />
   );
+  const group = (
+    <DecisionList
+      items={items}
+      selectedId={selectedId}
+      onSelect={onSelect}
+      error={query.error}
+      loading={query.isLoading}
+      between={
+        plans.plans.length ? (
+          <PlanList
+            plans={plans.plans}
+            selectedId={searchParams.get(PLAN_PARAM)}
+            onSelect={pickPlan}
+            loading={plans.query.isLoading}
+            error={plans.query.error}
+            onRetry={() => void plans.query.refetch()}
+          />
+        ) : null
+      }
+    />
+  );
   return {
     // Shown while there is any, handled or not, so that the way to the
-    // handled ones stays in reach when nothing waits.
-    count: items.length,
+    // handled ones stays in reach when nothing waits; and while a plan is
+    // listed in it.
+    count: items.length + plans.plans.length,
     loaded: !query.isLoading,
     waiting: query.data?.meta.pending ?? 0,
-    group: list,
+    group,
     list,
   };
 }
@@ -133,7 +171,10 @@ function useDecisionsCollection({
 // suggestions: a group only while the reader has any.
 const PLANS_CATEGORY = 'crm-plans';
 const PLAN_PARAM = 'plan';
-function plansCategory(label: string): InboxCollectionCategory {
+function plansCategory(
+  label: string,
+  inSuggestions: boolean,
+): InboxCollectionCategory {
   return {
     type: 'collection',
     id: PLANS_CATEGORY,
@@ -141,7 +182,7 @@ function plansCategory(label: string): InboxCollectionCategory {
     param: PLAN_PARAM,
     views: ['todo'],
     after: DECISIONS_CATEGORY,
-    useCollection: usePlansCollection,
+    useCollection: inSuggestions ? usePlansInSuggestions : usePlansCollection,
     Detail: PlanDetail,
   };
 }
@@ -168,4 +209,13 @@ function usePlansCollection({
     group: list,
     list,
   };
+}
+
+// Beside the AI's suggestions, its group is drawn inside theirs
+// (useDecisionsCollection); listed alone through the kind filter, it is its
+// own list.
+function usePlansInSuggestions(
+  input: InboxCollectionInput,
+): InboxCollectionState {
+  return { ...usePlansCollection(input), count: 0, group: null };
 }

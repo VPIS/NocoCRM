@@ -2022,7 +2022,7 @@ const wording = {
   },
   // The plans an agent proposes, decided by the person they were proposed to.
   plans: {
-    category: ['Suggested changes', '建议的改动'],
+    category: ['Suggested in conversations', '对话建议的改动'],
     agent: ['Agent', 'Agent'],
     meta: [
       'Changes suggested by {{agent}} · {{time}}',
