@@ -578,14 +578,29 @@ export async function notesOf(
     const { data } = await service.historyOf(actor, entity, recordId, {
       pageSize: 200,
     });
+    // Each note with the replies under it, as a thread reads; a deleted
+    // note's empty place says nothing.
+    const read = (entry: Row, replyTo?: string): Row => ({
+      by: names.get(toText(entry.actorId)) ?? null,
+      at: toText(entry.createdAt ?? '').slice(0, 10) || null,
+      text: toText(object(entry.changes).text),
+      ...(replyTo ? { replyTo } : {}),
+    });
     return data
       .filter((entry) => entry.action === 'note')
       .slice(0, 20)
-      .map((entry) => ({
-        by: names.get(toText(entry.actorId)) ?? null,
-        at: toText(entry.createdAt ?? '').slice(0, 10) || null,
-        text: toText(object(entry.changes).text),
-      }));
+      .flatMap((entry) => [
+        read(entry),
+        ...(Array.isArray(entry.replies) ? (entry.replies as Row[]) : []).map(
+          (reply, _index, replies) => {
+            // Who wrote what it answers: the note, or a reply above it.
+            const answered =
+              replies.find((other) => other.id === reply.replyToId) ?? entry;
+            return read(reply, names.get(toText(answered.actorId)) ?? 'a note');
+          },
+        ),
+      ])
+      .filter((note) => note.text);
   } catch {
     return [];
   }

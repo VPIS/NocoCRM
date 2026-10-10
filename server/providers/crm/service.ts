@@ -114,8 +114,6 @@ export function searchWords(text: string): string[] {
 
 // A detail page's related lists and history come this many at a time.
 export const RELATED_PAGE = 20;
-// The conversations an entry of mail from before a record existed lists.
-const MAIL_BEFORE_SHOWN = 200;
 export interface ListResult {
   data: CrmRecord[];
   total: number;
@@ -845,6 +843,9 @@ export class CrmService {
       const own = eb.and([
         eb('entity', '=', entity),
         eb('recordId', '=', id),
+        // A reply is read with its note (below), not as an entry of its
+        // own; the notes alone (an AI's reading) take them all.
+        ...(options.action === 'note' ? [] : [eb('replyToId', 'is', null)]),
         ...(foldsMail
           ? [
               eb.or([
@@ -936,8 +937,9 @@ export class CrmService {
         .offset((page - 1) * pageSize)
         .execute();
     }
-    // The earlier mail, newest first, unless the reader filtered to the
-    // AI's or people's entries, which leave mail out anyway.
+    // The earlier mail, newest first (its latest gives the entry its time),
+    // unless the reader filtered to the AI's or people's entries, which leave
+    // mail out anyway.
     const earlier =
       foldsMail && !options.source
         ? await query
@@ -1069,6 +1071,42 @@ export class CrmService {
                   : { ai: null }),
               },
     );
+    // Each note's replies at any depth, oldest first, each naming what it
+    // answers (the page draws the tree).
+    const noteIds = data
+      .filter((row) => row.action === 'note' && options.action !== 'note')
+      .map((row) => toText(row.id));
+    if (noteIds.length) {
+      const replies = await this.repliesUnder(query, noteIds);
+      const parentOf = new Map(
+        replies.map((reply) => [toText(reply.id), toText(reply.replyToId)]),
+      );
+      const rootOf = (id: string): string => {
+        let at = id;
+        for (let depth = 0; parentOf.has(at) && depth < 50; depth += 1)
+          at = parentOf.get(at)!;
+        return at;
+      };
+      const byNote = new Map<string, Row[]>();
+      for (const reply of replies) {
+        const root = rootOf(toText(reply.id));
+        byNote.set(root, [
+          ...(byNote.get(root) ?? []),
+          {
+            id: reply.id,
+            replyToId: reply.replyToId,
+            actorId: reply.actorId,
+            createdAt: reply.createdAt,
+            editedAt: reply.editedAt ?? null,
+            source: reply.source ?? null,
+            changes: object(jsonValue(reply.changes) ?? {}),
+          },
+        ]);
+      }
+      for (const row of data)
+        if (row.action === 'note')
+          row.replies = byNote.get(toText(row.id)) ?? [];
+    }
     if (
       earlier.length &&
       position >= (page - 1) * pageSize &&
@@ -1083,16 +1121,8 @@ export class CrmService {
         source: 'mail',
         // When the latest of them took place.
         createdAt: earlier[0].createdAt,
-        changes: {
-          count: earlier.length,
-          conversations: earlier.slice(0, MAIL_BEFORE_SHOWN).map((row) => ({
-            id: row.id,
-            actorId: row.actorId,
-            sourceKey: row.sourceKey ?? null,
-            createdAt: row.createdAt,
-            changes: object(jsonValue(row.changes) ?? {}),
-          })),
-        },
+        // How many; the Mail tab lists them.
+        changes: { count: earlier.length },
         previous: null,
         ai: null,
       });
@@ -1899,10 +1929,14 @@ export class CrmService {
     // The colleagues the note @-mentions, by id; each is told once the note
     // is saved (mentioned()).
     mentions?: unknown,
+    // The note or reply of the same record it answers: a reply hangs
+    // under what it answers, a reply to a reply under that reply.
+    replyTo?: unknown,
   ): Promise<Row> {
     const body = noteText(text);
     await this.get(actor, entity, id);
     const mentioned = await this.mentionIds(actor, mentions);
+    const thread = replyTo ? await this.thread(entity, id, replyTo) : null;
     const note = {
       id: randomUUID(),
       entity,
@@ -1914,6 +1948,7 @@ export class CrmService {
       changes: JSON.stringify(noteChanges(body, mentioned)),
       previous: null,
       source: actor.via ?? null,
+      replyToId: thread?.parentId ?? null,
       createdAt: new Date().toISOString(),
     };
     await this.database.transaction(async ({ query }) => {
@@ -1923,11 +1958,94 @@ export class CrmService {
         await this.leadWorked(query, actor, id, note.createdAt);
     });
     this.mentioned(actor, entity, id, note.id, mentioned);
+    // A reply tells the thread: whoever wrote the note and whoever replied
+    // before, but not whom the reply mentions, who is told so already.
+    if (thread)
+      for (const recipientId of thread.people.filter(
+        (person) => !mentioned.includes(person),
+      ))
+        void this.queueMessage('recordChanges', {
+          entity,
+          recordId: id,
+          recipientId,
+          actorId: actor.id,
+          event: 'replied',
+          key: `record-notification:${entity}:${id}:replied:${recipientId}:${note.id}`,
+        }).catch(() => undefined);
     return {
       ...note,
       changes: noteChanges(body, mentioned),
       editedAt: null,
     };
+  }
+  // The thread a reply joins: what it answers, which must be a note or a
+  // reply of the same record, and everyone who has written in that thread,
+  // from its note down.
+  private async thread(
+    entity: Entity,
+    recordId: string,
+    replyTo: unknown,
+  ): Promise<{ parentId: string; people: string[] }> {
+    const query = this.database.query();
+    const parent = await query
+      .selectFrom('crmHistory')
+      .select(['id', 'replyToId'])
+      .where('id', '=', toText(replyTo))
+      .where('entity', '=', entity)
+      .where('recordId', '=', recordId)
+      .where('action', '=', 'note')
+      .executeTakeFirst();
+    if (!parent) throw new CrmError('notFound', 404);
+    // Up to the note the thread hangs from.
+    let root = parent;
+    for (let depth = 0; root.replyToId && depth < 50; depth += 1) {
+      const up = await query
+        .selectFrom('crmHistory')
+        .select(['id', 'replyToId'])
+        .where('id', '=', toText(root.replyToId))
+        .executeTakeFirst();
+      if (!up) break;
+      root = up;
+    }
+    const writers = await query
+      .selectFrom('crmHistory')
+      .select('actorId')
+      .where('id', 'in', [
+        toText(root.id),
+        ...(await this.repliesUnder(query, [toText(root.id)])).map((row) =>
+          toText(row.id),
+        ),
+      ])
+      .execute();
+    return {
+      parentId: toText(parent.id),
+      people: [
+        ...new Set(writers.map((row) => toText(row.actorId)).filter(Boolean)),
+      ],
+    };
+  }
+  // Every reply under the given notes, at any depth, oldest first.
+  private async repliesUnder(
+    query: QueryAdapter,
+    ids: readonly string[],
+  ): Promise<Row[]> {
+    const found: Row[] = [];
+    let level = [...ids];
+    for (let depth = 0; level.length && depth < 50; depth += 1) {
+      const rows = await query
+        .selectFrom('crmHistory')
+        .selectAll()
+        .where('replyToId', 'in', level)
+        .where('action', '=', 'note')
+        .execute();
+      found.push(...rows);
+      level = rows.map((row) => toText(row.id));
+    }
+    return found.sort(
+      (left, right) =>
+        toText(left.createdAt).localeCompare(toText(right.createdAt)) ||
+        toText(left.id).localeCompare(toText(right.id)),
+    );
   }
   // The colleagues a note may mention: active accounts other than the
   // writer, each once, at most twenty. Whether one may read the record is
@@ -2010,6 +2128,8 @@ export class CrmService {
   ): Promise<Row> {
     const body = noteText(text);
     const note = await this.ownNote(actor, noteId);
+    if (object(jsonValue(note.changes) ?? {}).deleted)
+      throw new CrmError('notFound', 404);
     const editedAt = new Date().toISOString();
     const previous = object(jsonValue(note.changes) ?? {});
     const mentioned = await this.mentionIds(actor, mentions);
@@ -2059,10 +2179,60 @@ export class CrmService {
   }
   // Removing a note leaves its place in the feed to say one was removed,
   // by whom and when, without the text its author took back.
+  // A note or a reply with replies under it keeps its place for them: its
+  // text goes and it reads as deleted. One without goes, and with it each
+  // deleted place above it that is left with nothing under it.
   async removeNote(actor: Actor, noteId: string): Promise<void> {
     const note = await this.ownNote(actor, noteId);
+    const under = await this.database
+      .query()
+      .selectFrom('crmHistory')
+      .select('id')
+      .where('replyToId', '=', noteId)
+      .execute();
+    if (under.length) {
+      await this.database
+        .query()
+        .updateTable('crmHistory')
+        .set({
+          changes: JSON.stringify({ text: '', deleted: true }),
+          previous: null,
+          editedAt: new Date().toISOString(),
+        })
+        .where('id', '=', noteId)
+        .execute();
+      return;
+    }
     await this.database.transaction(async ({ query }) => {
       await query.deleteFrom('crmHistory').where('id', '=', noteId).execute();
+      if (note.replyToId) {
+        let parentId = toText(note.replyToId);
+        for (let depth = 0; parentId && depth < 50; depth += 1) {
+          const parent = await query
+            .selectFrom('crmHistory')
+            .select(['id', 'changes', 'replyToId'])
+            .where('id', '=', parentId)
+            .executeTakeFirst();
+          const left = await query
+            .selectFrom('crmHistory')
+            .select('id')
+            .where('replyToId', '=', parentId)
+            .execute();
+          if (
+            !parent ||
+            left.length ||
+            !object(jsonValue(parent.changes) ?? {}).deleted
+          )
+            break;
+          await query
+            .deleteFrom('crmHistory')
+            .where('id', '=', parentId)
+            .execute();
+          parentId = toText(parent.replyToId ?? '');
+        }
+        // A reply's removal is the thread's own affair, not the timeline's.
+        return;
+      }
       await query
         .insertInto('crmHistory')
         .values({

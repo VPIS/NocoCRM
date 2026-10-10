@@ -1061,6 +1061,8 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           c.req.param('id'),
           body.text,
           body.mentions,
+          // A reply names the note it answers.
+          body.replyTo,
         ),
       });
     });

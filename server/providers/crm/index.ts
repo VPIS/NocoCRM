@@ -539,6 +539,8 @@ export default class CrmProvider extends ServiceProvider<Application> {
           const t = i18n.getFixedT('crm-notifications', recipient.locale);
           const title = t(`titles.${toText(row.event)}`, {
             entity: t(`entities.${toText(row.entity)}`),
+            // Named inside a sentence: "a lead".
+            record: t(`records.${toText(row.entity)}`),
           });
           // The record is named the way the pages name it (a lead by person
           // and company, a deal by company and name), not by its bare name.

@@ -55,6 +55,7 @@ import {
   Paperclip,
   PencilLine,
   Plus,
+  Reply,
   Sparkles,
   SquareCheckBig,
   Trash2,
@@ -896,7 +897,7 @@ export function DetailColumns({
           {/* Stacked, the header, the particulars and the tabs scroll as one;
               side by side, the header stays and each column scrolls. */}
           <div
-            className={`flex min-h-0 flex-1 flex-col overflow-y-auto pb-24 @3xl:overflow-hidden @3xl:pb-0 scroll-quiet ${
+            className={`flex min-h-0 flex-1 flex-col overflow-y-auto pb-36 @3xl:overflow-hidden @3xl:pb-0 scroll-quiet ${
               inDrawer ? '' : 'px-4 md:px-8 @3xl:px-0'
             }`}
             onScroll={revealScrollbar}
@@ -955,7 +956,7 @@ export function DetailColumns({
                   is kept whether or not a tab scrolls, so switching tabs never
                   narrows the column and re-wraps the intro. */}
               <section
-                className='flex min-w-0 flex-col @3xl:min-h-0 @3xl:overflow-y-auto @3xl:pb-24 @3xl:[scrollbar-gutter:stable] scroll-quiet'
+                className='flex min-w-0 flex-col @3xl:min-h-0 @3xl:overflow-y-auto @3xl:[scrollbar-gutter:stable] scroll-quiet'
                 onScroll={revealScrollbar}
               >
                 {intro ? (
@@ -971,8 +972,11 @@ export function DetailColumns({
                 </div>
                 {/* At least the column's height, so a short tab leaves the
                     column where it was scrolled to rather than snapping the
-                    intro back into view. */}
-                <div className='min-w-0 @3xl:min-h-full @3xl:pr-12 @3xl:pl-10 md:@3xl:pr-16 md:@3xl:pl-16'>
+                    intro back into view; its foot keeps room for the
+                    assistant's box over the page, open as well as closed, so
+                    the last entry scrolls clear of it. It never shrinks to the
+                    column, or its minimum would cut its own end off. */}
+                <div className='min-w-0 shrink-0 @3xl:min-h-full @3xl:pr-12 @3xl:pl-10 @3xl:pb-36 md:@3xl:pr-16 md:@3xl:pl-16'>
                   {right}
                 </div>
               </section>
@@ -1817,7 +1821,7 @@ export function HistoryChanges({
       <Button
         size='icon-xs'
         variant='outline'
-        className='rounded-full'
+        className={FOLD_TOGGLE}
         aria-expanded={open}
         aria-label={text(open ? 'collapse' : 'expand')}
         onClick={onToggle}
@@ -1829,6 +1833,11 @@ export function HistoryChanges({
     </>
   );
 }
+
+// The round toggle that opens a timeline entry (a save's fields, an AI
+// card, the mail from before the record): smaller than the buttons around,
+// its arrow too, so it reads as part of the line.
+const FOLD_TOGGLE = 'size-5 rounded-full [&_svg]:size-2.5!';
 
 // One person's edits of the same fields, one after another on the
 // timeline, read as the last of them from the value before the first: the
@@ -1988,46 +1997,32 @@ function MailEvent({
 }
 
 // The mail from before the record existed (historyOf's `mailBefore`): one
-// entry at the end of the timeline, closed, saying how many conversations
-// it holds; opened, each conversation on a line of its own as a mail entry
-// reads, under whose mailbox it is.
+// line at the end of the timeline saying how many conversations there were,
+// the count opening the Mail tab, which lists them whole, rather than a list
+// of its own that a narrow column cuts.
 function EarlierMail({
   event,
   last,
-  open,
-  onToggle,
   onOpenMail,
   now,
   timeZone,
 }: {
   event: Data;
   last: boolean;
-  open: boolean;
-  onToggle: () => void;
   onOpenMail?: (sourceKey: string) => void;
   now: number;
   timeZone: string;
 }): ReactElement {
   const { text, language } = useCrmText();
-  const { data: meta } = useMetadata();
-  const changes = (event.changes ?? {}) as Data;
-  const count = Number(changes.count) || 0;
-  const conversations = (
-    Array.isArray(changes.conversations) ? changes.conversations : []
-  ) as Data[];
-  const ago = (at: unknown): ReactElement => (
-    <time
-      dateTime={toText(at)}
-      title={localDate(at, language, timeZone)}
-      className='shrink-0 self-start text-xs leading-[26px] text-muted-foreground/80 tabular-nums'
-    >
-      {relativeTime(at, language, now, text('justNow'))}
-    </time>
-  );
+  const count = Number((event.changes as Data | undefined)?.count) || 0;
+  const label =
+    count === 1
+      ? text('feed.mail.conversationsOne')
+      : text('feed.mail.conversations', { count });
   return (
     <li
       id={`feed-${toText(event.id)}`}
-      className='group/entry relative flex scroll-mt-24 gap-3'
+      className='relative flex scroll-mt-24 gap-3'
     >
       <div className='flex w-5 shrink-0 flex-col items-center'>
         <span className='flex h-[26px] items-center justify-center'>
@@ -2041,48 +2036,26 @@ function EarlierMail({
             <span className='min-w-0 truncate text-muted-foreground'>
               {text('feed.mail.before')}
             </span>
-            <span className='shrink-0'>
-              {count === 1
-                ? text('feed.mail.conversationsOne')
-                : text('feed.mail.conversations', { count })}
-            </span>
-            {/* The same round toggle an AI entry opens with. */}
-            <Button
-              size='icon-xs'
-              variant='outline'
-              className='rounded-full'
-              aria-expanded={open}
-              aria-label={text(open ? 'collapse' : 'expand')}
-              onClick={onToggle}
-            >
-              <ChevronDown
-                className={`transition-transform ${open ? 'rotate-180' : ''}`}
-              />
-            </Button>
-          </span>
-          {ago(event.createdAt)}
-        </div>
-        {open ? (
-          <ul className='mt-1 grid gap-0.5'>
-            {conversations.map((conversation) => (
-              <li
-                key={toText(conversation.id)}
-                className='flex min-h-[26px] items-center gap-3 text-sm'
+            {onOpenMail ? (
+              <button
+                type='button'
+                className='shrink-0 underline-offset-2 hover:underline'
+                onClick={() => onOpenMail('')}
               >
-                <span className='flex min-w-0 flex-1 items-center gap-x-1.5 overflow-hidden whitespace-nowrap'>
-                  <span className='shrink-0 font-semibold text-foreground'>
-                    {
-                      meta?.users.find((u) => u.id === conversation.actorId)
-                        ?.name
-                    }
-                  </span>
-                  <MailEvent event={conversation} onOpen={onOpenMail} />
-                </span>
-                {ago(conversation.createdAt)}
-              </li>
-            ))}
-          </ul>
-        ) : null}
+                {label}
+              </button>
+            ) : (
+              <span className='shrink-0'>{label}</span>
+            )}
+          </span>
+          <time
+            dateTime={toText(event.createdAt)}
+            title={localDate(event.createdAt, language, timeZone)}
+            className='shrink-0 self-start text-xs leading-[26px] text-muted-foreground/80 tabular-nums'
+          >
+            {relativeTime(event.createdAt, language, now, text('justNow'))}
+          </time>
+        </div>
       </div>
     </li>
   );
@@ -2205,6 +2178,219 @@ function TaskEvent({
 // A note's text, as its entry keeps it.
 const noteText = (event: { changes?: unknown }): string =>
   toText((event.changes as Data | undefined)?.text ?? '');
+// A note deleted while it had replies: its place kept for them.
+const noteGone = (event: { changes?: unknown }): boolean =>
+  Boolean((event.changes as Data | undefined)?.deleted);
+
+// A note's replies, under it, oldest first, each on a line of its own as
+// a note reads (who, when, the text, folding when long), its author's edit
+// and delete on its hover, and a reply to a reply under the reply it
+// answers, indented a level deeper (no deeper than three, so a long
+// exchange keeps its room); the reply box opens under what it answers.
+function NoteThread({
+  entity,
+  recordId,
+  note,
+  replyingTo,
+  onReply,
+  onDone,
+  now,
+  timeZone,
+}: {
+  entity: Entity;
+  recordId: string;
+  note: Data;
+  // What is being answered: the note, or one of its replies.
+  replyingTo?: string;
+  onReply: (id: string) => void;
+  onDone: () => void;
+  now: number;
+  timeZone: string;
+}): ReactElement | null {
+  const { text, language } = useCrmText();
+  const { data: meta } = useMetadata();
+  const [editing, setEditing] = useState<string>();
+  const replies = (Array.isArray(note.replies) ? note.replies : []) as Data[];
+  const noteId = toText(note.id);
+  const ids = new Set(replies.map((reply) => toText(reply.id)));
+  if (!replies.length && replyingTo !== noteId) return null;
+  const name = (id: unknown): string =>
+    meta?.users.find((user) => user.id === id)?.name ?? '';
+  // What answers each: a reply whose answer is not in the thread hangs from
+  // the note.
+  const under = (id: string): Data[] =>
+    replies.filter((reply) => {
+      const parent = toText(reply.replyToId);
+      return id === noteId
+        ? parent === noteId || !ids.has(parent)
+        : parent === id;
+    });
+  const box = (replyTo: string): ReactElement | null =>
+    replyingTo === replyTo ? (
+      <ReplyBox
+        entity={entity}
+        recordId={recordId}
+        replyTo={replyTo}
+        onDone={onDone}
+      />
+    ) : null;
+  const branch = (id: string, depth: number): ReactElement | null => {
+    const children = under(id);
+    if (!children.length && replyingTo !== id) return null;
+    return (
+      <div
+        className={`grid gap-2 ${
+          depth <= 3 ? 'mt-2 border-l-2 border-border/60 pl-3' : 'mt-2'
+        }`}
+      >
+        {children.map((reply) => {
+          const replyId = toText(reply.id);
+          return (
+            <div key={replyId} className='min-w-0'>
+              <div className='group/reply'>
+                <div className='flex min-h-[26px] items-center gap-2 text-sm'>
+                  <span
+                    aria-hidden
+                    className='grid size-5 shrink-0 place-items-center rounded-full bg-muted text-[0.625rem] font-medium text-muted-foreground'
+                  >
+                    {initials(name(reply.actorId))}
+                  </span>
+                  <span className='min-w-0 flex-1 truncate font-semibold'>
+                    {name(reply.actorId)}
+                  </span>
+                  <NoteActions
+                    id={replyId}
+                    reply
+                    onReply={() => onReply(replyId)}
+                    onEdit={
+                      reply.actorId === meta?.userId && !noteGone(reply)
+                        ? () => setEditing(replyId)
+                        : undefined
+                    }
+                  />
+                  <time
+                    dateTime={toText(reply.createdAt)}
+                    title={localDate(reply.createdAt, language, timeZone)}
+                    className='shrink-0 text-xs text-muted-foreground/80 tabular-nums'
+                  >
+                    {reply.editedAt && !noteGone(reply)
+                      ? `${toText(text('notes.edited'))} · `
+                      : ''}
+                    {relativeTime(
+                      reply.createdAt,
+                      language,
+                      now,
+                      text('justNow'),
+                    )}
+                  </time>
+                </div>
+                {editing === replyId ? (
+                  <NoteEditor
+                    note={reply}
+                    onDone={() => setEditing(undefined)}
+                  />
+                ) : noteGone(reply) ? (
+                  <div className='pl-7 text-sm text-muted-foreground'>
+                    {text('notes.deleted')}
+                  </div>
+                ) : (
+                  <div className='pl-7 text-sm'>
+                    <FoldingText
+                      value={markdownMentions(
+                        noteText(reply),
+                        (reply.changes as Data | undefined)?.mentions,
+                        meta?.users ?? [],
+                      )}
+                    />
+                  </div>
+                )}
+              </div>
+              {branch(replyId, depth + 1)}
+            </div>
+          );
+        })}
+        {box(id)}
+      </div>
+    );
+  };
+  return branch(noteId, 1);
+}
+
+// The box answering a note, under its thread: @ mentions a colleague,
+// ⌘/Ctrl+Enter or Reply posts, Escape or Cancel leaves it.
+function ReplyBox({
+  entity,
+  recordId,
+  replyTo,
+  onDone,
+}: {
+  entity: Entity;
+  recordId: string;
+  replyTo: string;
+  onDone: () => void;
+}): ReactElement {
+  const { text } = useCrmText();
+  const { data: meta } = useMetadata();
+  const api = useCrmApi();
+  const refresh = useRefresh();
+  const [draft, setDraft] = useState('');
+  const [mentions, setMentions] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>();
+  const post = async (): Promise<void> => {
+    if (!draft.trim() || busy) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      await api(`${toText(entity)}/${toText(recordId)}/notes`, 'POST', {
+        text: draft,
+        mentions: mentionsIn(draft, mentions, meta?.users ?? []),
+        replyTo,
+      });
+      await refresh();
+      onDone();
+    } catch (cause) {
+      setError(cause);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className='grid gap-2'>
+      <MentionTextarea
+        autoFocus
+        aria-label={text('notes.reply')}
+        placeholder={text('notes.replyPlaceholder')}
+        value={draft}
+        maxLength={LONG_TEXT_LIMIT}
+        rows={1}
+        className='max-h-[50vh] min-h-9 resize-none text-sm bg-card shadow-xs border-border/60 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 dark:bg-card'
+        onChange={setDraft}
+        mentions={mentions}
+        onMentionsChange={setMentions}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+            event.preventDefault();
+            void post();
+          } else if (event.key === 'Escape') onDone();
+        }}
+      />
+      <div className='flex justify-end gap-2'>
+        <Button size='sm' variant='ghost' disabled={busy} onClick={onDone}>
+          {text('cancel')}
+        </Button>
+        <Button
+          size='sm'
+          disabled={busy || !draft.trim()}
+          onClick={() => void post()}
+        >
+          {text('notes.reply')}
+        </Button>
+      </div>
+      <ErrorNotice error={error} />
+    </div>
+  );
+}
 
 // A merge on the kept lead's timeline: the lead merged in, as it was, and
 // what came over with it (server/providers/crm/lead-merge.ts).
@@ -2399,6 +2585,8 @@ export function HistoryFeed({
       return next;
     });
   const [editingNote, setEditingNote] = useState<string>();
+  // The note or reply being answered.
+  const [replyingTo, setReplyingTo] = useState<string>();
   // What a record's closing says, told under that entry: an approval's
   // decision comment, a task's result.
   const closed =
@@ -2521,8 +2709,6 @@ export function HistoryFeed({
                         key={key}
                         event={event}
                         last={index === events.length - 1}
-                        open={isOpen(key)}
-                        onToggle={() => toggle(key)}
                         onOpenMail={onOpenMail}
                         now={now}
                         timeZone={timeZone}
@@ -2551,7 +2737,7 @@ export function HistoryFeed({
                             : ''
                         }`}
                       >
-                        <div className='flex min-h-[26px] items-center gap-3 text-sm'>
+                        <div className='group/note flex min-h-[26px] items-center gap-3 text-sm'>
                           {/* An entry is one line, never wrapped: what is
                               long (a change's values, a note's excerpt, a
                               verdict) gives way instead, cut where the line
@@ -2691,7 +2877,11 @@ export function HistoryFeed({
                                 after who wrote it; one of several lines, or
                                 longer than the line, reads whole below it,
                                 as Clarify shows a comment. */}
-                            {note ? (
+                            {note && noteGone(event) ? (
+                              <span className='text-muted-foreground'>
+                                {text('notes.deleted')}
+                              </span>
+                            ) : note ? (
                               <NoteExcerpt
                                 value={noteText(event)}
                                 mentions={
@@ -2726,7 +2916,7 @@ export function HistoryFeed({
                               <Button
                                 size='icon-xs'
                                 variant='outline'
-                                className='rounded-full'
+                                className={FOLD_TOGGLE}
                                 aria-expanded={open}
                                 aria-label={text(open ? 'collapse' : 'expand')}
                                 onClick={() => toggle(key)}
@@ -2737,11 +2927,18 @@ export function HistoryFeed({
                               </Button>
                             )}
                           </span>
-                          {/* Its author's edit and delete, on hover. */}
-                          {note && event.actorId === meta?.userId ? (
+                          {/* Reply for anyone; its author's edit and delete,
+                              on hover. */}
+                          {note ? (
                             <NoteActions
                               id={key}
-                              onEdit={() => setEditingNote(key)}
+                              onReply={() => setReplyingTo(key)}
+                              onEdit={
+                                event.actorId === meta?.userId &&
+                                !noteGone(event)
+                                  ? () => setEditingNote(key)
+                                  : undefined
+                              }
                             />
                           ) : null}
                           <time
@@ -2798,7 +2995,7 @@ export function HistoryFeed({
                             note={event}
                             onDone={() => setEditingNote(undefined)}
                           />
-                        ) : note && longNotes.has(key) ? (
+                        ) : note && longNotes.has(key) && !noteGone(event) ? (
                           <div className='mt-0.5 text-sm'>
                             {/* As the original message: five lines fading
                                 out, a click unfolding them. */}
@@ -2810,6 +3007,18 @@ export function HistoryFeed({
                               )}
                             />
                           </div>
+                        ) : null}
+                        {note ? (
+                          <NoteThread
+                            entity={entity}
+                            recordId={id}
+                            note={event}
+                            replyingTo={replyingTo}
+                            onReply={setReplyingTo}
+                            onDone={() => setReplyingTo(undefined)}
+                            now={now}
+                            timeZone={timeZone}
+                          />
                         ) : null}
                         {/* A waiting verdict is handled here once opened; any
                             other evaluation is its record. */}
@@ -3078,9 +3287,17 @@ function NoteExcerpt({
 function NoteActions({
   id,
   onEdit,
+  onReply,
+  reply = false,
 }: {
   id: string;
-  onEdit: () => void;
+  // Its author's edit and delete; absent for anyone else, and for a deleted
+  // note's place.
+  onEdit?: () => void;
+  // Answering it, which anyone who reads the record may.
+  onReply?: () => void;
+  // In a thread, shown on the reply's own hover rather than the note's.
+  reply?: boolean;
 }): ReactElement {
   const { text } = useCrmText();
   const api = useCrmApi();
@@ -3090,46 +3307,62 @@ function NoteActions({
   const [error, setError] = useState<unknown>();
   return (
     <span
-      className={`flex h-[26px] shrink-0 items-center gap-0.5 self-start transition-opacity group-hover/entry:opacity-100 focus-within:opacity-100 ${
-        confirming ? 'opacity-100' : 'opacity-0'
-      }`}
+      className={`flex h-[26px] shrink-0 items-center gap-0.5 self-start transition-opacity focus-within:opacity-100 ${
+        reply ? 'group-hover/reply:opacity-100' : 'group-hover/note:opacity-100'
+      } ${confirming ? 'opacity-100' : 'opacity-0'}`}
     >
-      <Button
-        size='icon-xs'
-        variant='ghost'
-        aria-label={text('edit')}
-        title={text('edit')}
-        disabled={busy}
-        onClick={onEdit}
-      >
-        <PencilLine />
-      </Button>
-      <Button
-        size={confirming ? 'xs' : 'icon-xs'}
-        variant={confirming ? 'destructive' : 'ghost'}
-        aria-label={text(confirming ? 'notes.confirmDelete' : 'delete')}
-        title={text('delete')}
-        disabled={busy}
-        onClick={() => {
-          if (!confirming) {
-            setConfirming(true);
-            return;
-          }
-          setBusy(true);
-          setError(undefined);
-          api(`notes/${toText(id)}`, 'DELETE')
-            .then(() => refresh())
-            .catch(setError)
-            .finally(() => {
-              setBusy(false);
-              setConfirming(false);
-            });
-        }}
-        onBlur={() => setConfirming(false)}
-      >
-        <Trash2 />
-        {confirming ? text('notes.confirmDelete') : null}
-      </Button>
+      {onReply ? (
+        <Button
+          size='icon-xs'
+          variant='ghost'
+          aria-label={text('notes.reply')}
+          title={text('notes.reply')}
+          disabled={busy}
+          onClick={onReply}
+        >
+          <Reply />
+        </Button>
+      ) : null}
+      {onEdit ? (
+        <Button
+          size='icon-xs'
+          variant='ghost'
+          aria-label={text('edit')}
+          title={text('edit')}
+          disabled={busy}
+          onClick={onEdit}
+        >
+          <PencilLine />
+        </Button>
+      ) : null}
+      {onEdit ? (
+        <Button
+          size={confirming ? 'xs' : 'icon-xs'}
+          variant={confirming ? 'destructive' : 'ghost'}
+          aria-label={text(confirming ? 'notes.confirmDelete' : 'delete')}
+          title={text('delete')}
+          disabled={busy}
+          onClick={() => {
+            if (!confirming) {
+              setConfirming(true);
+              return;
+            }
+            setBusy(true);
+            setError(undefined);
+            api(`notes/${toText(id)}`, 'DELETE')
+              .then(() => refresh())
+              .catch(setError)
+              .finally(() => {
+                setBusy(false);
+                setConfirming(false);
+              });
+          }}
+          onBlur={() => setConfirming(false)}
+        >
+          <Trash2 />
+          {confirming ? text('notes.confirmDelete') : null}
+        </Button>
+      ) : null}
       {error ? <ErrorNotice error={error} /> : null}
     </span>
   );

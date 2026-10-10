@@ -367,13 +367,18 @@ const wording = {
   },
   notes: {
     label: ['Note', '备注'],
-    placeholder: ['Leave a note, @ a colleague...', '留言，可 @ 同事...'],
+    placeholder: ['Leave a comment, @ someone...', '留言，可 @ 同事...'],
     add: ['Add note', '添加备注'],
     // The note box's button.
     post: ['Post', '发布'],
     shortcut: ['⌘/Ctrl + Enter to add', '⌘/Ctrl + Enter 添加'],
     edited: ['Edited', '已编辑'],
     confirmDelete: ['Delete it?', '确认删除'],
+    // Replies under a note, in its thread.
+    reply: ['Reply', '回复'],
+    replyPlaceholder: ['Reply, @ someone...', '回复，可 @ 同事...'],
+    // A note deleted while it had replies, its place kept for them.
+    deleted: ['This note was deleted', '此备注已删除'],
   },
   collapse: ['Hide details', '收起详情'],
   leadGroups: {

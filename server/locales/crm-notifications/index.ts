@@ -7,9 +7,11 @@ const labels: Record<string, [string, string]> = {
   rescheduled: ['Task rescheduled', '任务时间已变更'],
   // A colleague's note on a record named the reader.
   mentioned: [
-    '{{entity}} note mentions you',
+    'Someone mentions you in {{record}}',
     '有人在{{entity}}的备注里提到了你',
   ],
+  // Someone answered a note the reader wrote or replied to.
+  replied: ['{{entity}} has a new reply', '{{entity}}有新回复'],
   starting: ['Task coming up', '任务时间快到了'],
   pending: ['Approval requested', '待审批申请'],
   withdrawn: ['Request withdrawn', '审批已撤回'],
@@ -24,6 +26,16 @@ const entityLabels: Record<string, [string, string]> = {
   tasks: ['Task', '任务'],
   approvals: ['Approval', '审批'],
 };
+// The object as a sentence names it, inside a title: "a lead", "an
+// opportunity" (`record`); in Chinese the object's own name.
+const recordLabels: Record<string, [string, string]> = {
+  leads: ['a lead', '线索'],
+  companies: ['a company', '公司'],
+  contacts: ['a contact', '联系人'],
+  opportunities: ['an opportunity', '商机'],
+  tasks: ['a task', '任务'],
+  approvals: ['an approval', '审批'],
+};
 const pick = (
   table: Record<string, [string, string]>,
   index: 0 | 1,
@@ -35,20 +47,24 @@ export const notificationLocales = {
   'en-US': async (): Promise<{
     titles: Record<string, string>;
     entities: Record<string, string>;
+    records: Record<string, string>;
     body: string;
   }> => ({
     titles: pick(labels, 0),
     entities: pick(entityLabels, 0),
+    records: pick(recordLabels, 0),
     // The record's name alone: the inbox shows the title itself.
     body: '{{name}}',
   }),
   'zh-CN': async (): Promise<{
     titles: Record<string, string>;
     entities: Record<string, string>;
+    records: Record<string, string>;
     body: string;
   }> => ({
     titles: pick(labels, 1),
     entities: pick(entityLabels, 1),
+    records: pick(recordLabels, 1),
     body: '{{name}}',
   }),
 };

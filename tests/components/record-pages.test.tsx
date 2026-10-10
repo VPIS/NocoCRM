@@ -455,3 +455,110 @@ describe('the timeline', () => {
     expect(screen.getByText('0571-9')).toBeTruthy();
   });
 });
+
+// A note's replies read under it; anyone answers it from its line; a note
+// deleted while it had replies keeps its place for them.
+describe("a note's thread", () => {
+  const note = (id: string, actorId: string, text: string) => ({
+    id,
+    entity: 'companies',
+    recordId: 'rec-1',
+    actorId,
+    action: 'note',
+    changes: { text },
+    createdAt: '2026-10-02T03:00:00.000Z',
+  });
+  beforeEach(() => {
+    state.entity = 'companies';
+    state.record = { id: 'rec-1', name: '杭州海康威视', ownerId: 'rep' };
+  });
+
+  it('reads the replies under the note and posts a reply to it', async () => {
+    state.history = [
+      {
+        ...note('n1', 'manager', '客户想看演示'),
+        replies: [
+          {
+            id: 'r1',
+            actorId: 'rep',
+            createdAt: '2026-10-02T04:00:00.000Z',
+            changes: { text: '我来约时间' },
+          },
+        ],
+      },
+    ];
+    renderPage();
+    expect(screen.getByText('我来约时间')).toBeTruthy();
+    // The note's own reply, then the reply's.
+    const [answer] = screen.getAllByRole('button', { name: '回复' });
+    await userEvent.click(answer);
+    const box = screen.getByRole('textbox', { name: '回复' });
+    await userEvent.type(box, '好的');
+    await userEvent.keyboard('{Control>}{Enter}{/Control}');
+    expect(state.api).toHaveBeenCalledWith('companies/rec-1/notes', 'POST', {
+      text: '好的',
+      mentions: [],
+      replyTo: 'n1',
+    });
+  });
+
+  it('hangs a reply to a reply under it, and answers a reply there', async () => {
+    state.history = [
+      {
+        ...note('n1', 'manager', '客户想看演示'),
+        replies: [
+          {
+            id: 'r1',
+            replyToId: 'n1',
+            actorId: 'rep',
+            createdAt: '2026-10-02T04:00:00.000Z',
+            changes: { text: '我来约时间' },
+          },
+          {
+            id: 'r2',
+            replyToId: 'r1',
+            actorId: 'manager',
+            createdAt: '2026-10-02T05:00:00.000Z',
+            changes: { text: '周三下午可以' },
+          },
+        ],
+      },
+    ];
+    renderPage();
+    const first = screen.getByText('我来约时间').closest('.min-w-0');
+    // The answer to the reply is inside the reply's own branch.
+    expect(first?.textContent).toContain('周三下午可以');
+    // The reply's own Reply opens a box under it, answering it.
+    const replyButtons = screen.getAllByRole('button', { name: '回复' });
+    await userEvent.click(replyButtons[1]);
+    await userEvent.type(screen.getByRole('textbox', { name: '回复' }), '好');
+    await userEvent.keyboard('{Control>}{Enter}{/Control}');
+    expect(state.api).toHaveBeenCalledWith('companies/rec-1/notes', 'POST', {
+      text: '好',
+      mentions: [],
+      replyTo: 'r1',
+    });
+  });
+
+  it("keeps a deleted note's place for its replies", () => {
+    state.history = [
+      {
+        ...note('n1', 'rep', ''),
+        changes: { text: '', deleted: true },
+        replies: [
+          {
+            id: 'r1',
+            actorId: 'manager',
+            createdAt: '2026-10-02T04:00:00.000Z',
+            changes: { text: '收到' },
+          },
+        ],
+      },
+    ];
+    renderPage();
+    expect(screen.getByText('此备注已删除')).toBeTruthy();
+    expect(screen.getByText('收到')).toBeTruthy();
+    // Its author may no longer edit what is gone.
+    expect(screen.queryByRole('button', { name: '编辑' })).toBeNull();
+  });
+});
