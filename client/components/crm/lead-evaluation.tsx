@@ -295,9 +295,8 @@ export function EvaluationStatus({
   // for one); after, it reports the latest and asks for another.
   if (!meta?.assistant || !entry) return null;
   const verdict = entry.ai.result;
-  const pending = entry.status === 'pending';
-  // At work: the AI's state tag, as on a list's row and a board's card
-  // (ai-state-tag.tsx), in the chip's size; waiting, the chip as it was.
+  // On the AI's tint whatever it stands at, its dot saying where; at work,
+  // the AI's state tag's words, as on a list's row (ai-state-tag.tsx).
   const live = entry?.status === 'running';
   const decided = entry.status === 'accepted' || entry.status === 'dismissed';
   // One chip, not a row of its own: what the AI concluded and where that
@@ -321,13 +320,7 @@ export function EvaluationStatus({
   // in their type size.
   return (
     <div
-      className={`${wide ? 'flex w-full' : 'inline-flex max-w-full'} h-7 items-center rounded-lg border font-sans text-sm font-normal tracking-normal ${
-        live
-          ? 'border-transparent bg-ai/10 text-ai dark:bg-ai/20'
-          : pending
-            ? 'border-transparent bg-ai/10 dark:bg-ai/20'
-            : 'bg-card'
-      }`}
+      className={`${wide ? 'flex w-full' : 'inline-flex max-w-full'} h-7 items-center rounded-lg border font-sans text-sm font-normal tracking-normal border-transparent bg-ai/10 dark:bg-ai/20 ${live ? 'text-ai' : ''}`}
     >
       {/* The chip says only whose it is and where it stands; its hover
           says what it concluded, why, and where it stands in words. */}
@@ -347,7 +340,7 @@ export function EvaluationStatus({
               // Small, as the filter beside it.
               className={`flex h-full min-w-0 items-center gap-1.5 rounded-l-lg px-2 transition-colors ${
                 again ? '' : 'rounded-r-lg'
-              } ${live ? 'hover:bg-ai/15' : pending ? 'hover:bg-ai/15' : 'hover:bg-muted'} ${wide ? 'flex-1' : ''}`}
+              } hover:bg-ai/15 ${wide ? 'flex-1' : ''}`}
             />
           }
         >

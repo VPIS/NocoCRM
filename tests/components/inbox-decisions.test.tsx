@@ -199,24 +199,22 @@ describe("The inbox's AI suggestions", () => {
     ]);
     expect(tabs[0]!.textContent).toContain('1');
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
-    // Handled ones wait to be asked for; there is no type filter to pick.
-    expect(screen.queryByText('林悦')).toBeNull();
+    // The handled ones under those waiting, without asking; no type filter
+    // to pick, no mine/team switch, no keyboard hints.
+    expect(screen.getByText('林悦')).toBeTruthy();
     expect(screen.queryByRole('combobox')).toBeNull();
+    expect(screen.queryByText('查看已处理的建议')).toBeNull();
+    expect(screen.queryByRole('button', { name: '团队' })).toBeNull();
     expect(screen.getByTestId('where').textContent).toContain('decision=e1');
   });
 
-  it('shows and hides the handled ones from the list, and puts a pick in the address', async () => {
+  it('opens a handled one from the list and puts the pick in the address', async () => {
     renderAt('/inbox');
-    await userEvent.click(await screen.findByText('查看已处理的建议'));
     await userEvent.click(await screen.findByText('林悦'));
     await waitFor(() =>
       expect(screen.getByTestId('where').textContent).toContain('decision=e2'),
     );
     expect(screen.getByText('panel e2')).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: '收起' }));
-    // The list lets it go; the detail keeps the one being read.
-    expect(screen.getByText('查看已处理的建议')).toBeTruthy();
-    expect(screen.getAllByText('林悦')).toHaveLength(1);
   });
 
   it('opens nothing by itself on a narrow screen', async () => {

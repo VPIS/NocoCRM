@@ -47,6 +47,7 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-icon: var(--sidebar-icon);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -264,4 +265,16 @@
     0 0 0 3px color-mix(in oklch, var(--ai) 20%, transparent),
     0 8px 28px -8px color-mix(in oklch, var(--ai) 50%, transparent),
     var(--crm-ai-lift, 0 0 #0000);
+}
+
+/* The menu's icons in the menu's own deeper hue (--sidebar-icon), the
+   current entry's in its words' colour. Set from outside the sidebar
+   primitive, which stays as the shadcn CLI writes it. */
+[data-sidebar='menu-button'] > svg,
+[data-sidebar='menu-sub-button'] > svg {
+  color: var(--sidebar-icon);
+}
+[data-sidebar='menu-button'][data-active] > svg,
+[data-sidebar='menu-sub-button'][data-active] > svg {
+  color: currentColor;
 }

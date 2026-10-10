@@ -235,7 +235,14 @@ function NavigationItem({
             <SidebarMenuBadge
               aria-hidden
               title={live ? badgeText : undefined}
-              className={live ? 'gap-1 text-ai' : undefined}
+              // A count on a round ground of its own (an application change
+              // to the template's bare figures); work going on in the AI's
+              // tint.
+              className={`rounded-full px-1.5 ${
+                live
+                  ? 'gap-1 bg-ai/10 text-ai dark:bg-ai/20'
+                  : 'bg-foreground/8 dark:bg-foreground/15'
+              }`}
             >
               {/* Work going on: a pulsing dot in the AI's colour. */}
               {live && (

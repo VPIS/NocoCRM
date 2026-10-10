@@ -405,9 +405,8 @@ export function PrepStatus({
       .catch(setError)
       .finally(() => setBusy(false));
   };
-  const pending = entry?.status === 'pending';
-  // At work: the AI's state tag, as on a list's row (ai-state-tag.tsx), in
-  // the chip's size; waiting, the chip as it was.
+  // On the AI's tint whatever it stands at, its dot saying where; at work,
+  // the AI's state tag's words, as on a list's row (ai-state-tag.tsx).
   const live = entry?.status === 'running';
   const again = mayAsk && entry?.status !== 'running';
   const standing =
@@ -421,13 +420,7 @@ export function PrepStatus({
     <div className='flex flex-wrap items-center gap-1'>
       {entry ? (
         <div
-          className={`inline-flex h-7 max-w-full items-center rounded-lg border text-sm ${
-            live
-              ? 'border-transparent bg-ai/10 text-ai dark:bg-ai/20'
-              : pending
-                ? 'border-transparent bg-ai/10 dark:bg-ai/20'
-                : 'bg-card'
-          }`}
+          className={`inline-flex h-7 max-w-full items-center rounded-lg border text-sm border-transparent bg-ai/10 dark:bg-ai/20 ${live ? 'text-ai' : ''}`}
         >
           <Tooltip>
             <TooltipTrigger
@@ -440,7 +433,7 @@ export function PrepStatus({
                     .join(' · ')}
                   className={`flex h-full min-w-0 items-center gap-1.5 rounded-l-lg px-2 transition-colors ${
                     again ? '' : 'rounded-r-lg'
-                  } ${live ? 'hover:bg-ai/15' : pending ? 'hover:bg-ai/15' : 'hover:bg-muted'}`}
+                  } hover:bg-ai/15`}
                 />
               }
             >

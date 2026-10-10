@@ -1,4 +1,9 @@
-import { AlertCircleIcon, InboxIcon } from 'lucide-react';
+import {
+  AlertCircleIcon,
+  BellIcon,
+  InboxIcon,
+  SparklesIcon,
+} from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 
 import {
@@ -7,7 +12,6 @@ import {
   AlertDescription,
   AlertTitle,
 } from '#components/ui/alert';
-import { Badge } from '#components/ui/badge';
 import { Button } from '#components/ui/button';
 import {
   Empty,
@@ -17,7 +21,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '#components/ui/empty';
-import { Kbd } from '#components/ui/kbd';
 import {
   Select,
   SelectContent,
@@ -27,7 +30,6 @@ import {
 } from '#components/ui/select';
 import { Skeleton } from '#components/ui/skeleton';
 import { Spinner } from '#components/ui/spinner';
-import { Tabs, TabsList, TabsTrigger } from '#components/ui/tabs';
 import { cn } from 'cn';
 
 import { useInboxFrameText } from './frame.js';
@@ -41,7 +43,6 @@ import {
   type InboxEntry,
   type InboxFilter,
   type InboxGroups,
-  type InboxView,
 } from './model.js';
 import { categoriesOfRegistry, useInboxRegistry } from './registry.js';
 
@@ -295,7 +296,13 @@ export function InboxList({
           );
         })}
         {after(null)}
-        {query.hasNextPage ? (
+        {/* Application change: more of the feed only where the view lists
+            the feed's entries; the AI suggestions' view lists collections,
+            where a page more of notifications would show nothing new. */}
+        {query.hasNextPage &&
+        categoriesOf(view, categories).some(
+          (category) => category.type === 'entries',
+        ) ? (
           <div className='flex justify-center pt-1'>
             <Button
               variant='ghost'
@@ -315,108 +322,110 @@ export function InboxList({
 
   return (
     <>
-      {/* Application change: the views offered (`viewsOf`), tabs only when there are two. */}
-      {views.length > 1 || kinds.length > 2 || footer ? (
-        <div className='shrink-0 space-y-2 border-b px-3 py-2.5'>
-          {views.length > 1 ? (
-            <Tabs
-              value={view}
-              onValueChange={(value) => {
-                const next = value as InboxView;
-                onFilter({
-                  view: next,
-                  kind: kindsOf(next, categories).includes(kind) ? kind : 'all',
-                });
-              }}
-            >
-              <TabsList variant='line' className='w-full'>
-                {views.map((value) => {
-                  const count = value === 'todo' ? pending : unread;
-                  return (
-                    <TabsTrigger key={value} value={value}>
-                      {value === 'todo'
-                        ? t('inbox.views.todo', { defaultValue: 'To do' })
-                        : t('inbox.views.all', { defaultValue: 'All' })}
-                      {count > 0 ? (
-                        <Badge
-                          variant={value === 'todo' ? 'outline' : 'secondary'}
-                          className={cn(
-                            'h-4 px-1.5 tabular-nums',
-                            value === 'todo' &&
-                              'border-transparent bg-amber-500/15 text-amber-700 dark:text-amber-300',
-                          )}
-                          aria-label={
-                            value === 'todo'
-                              ? t('inbox.pendingDecisions', {
-                                  count,
-                                  defaultValue: '{{count}} waiting',
-                                })
-                              : t('inbox.unreadCount', {
-                                  count,
-                                  defaultValue: '{{count}} unread',
-                                })
-                          }
-                        >
-                          {count}
-                        </Badge>
-                      ) : null}
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-            </Tabs>
-          ) : null}
-          {/* Application change: the type filter only where a view offers more than one kind to choose between. */}
-          {kinds.length > 2 || footer ? (
-            <div className='flex flex-wrap items-center justify-between gap-2'>
-              {kinds.length > 2 ? (
-                <Select
-                  items={kinds}
-                  value={kind}
-                  onValueChange={(next: string | null) => {
-                    if (next) onFilter({ view, kind: next });
-                  }}
-                >
-                  <SelectTrigger
-                    size='sm'
-                    className='w-40'
-                    aria-label={t('inbox.kinds.label', {
-                      defaultValue: 'Type',
-                    })}
+      {/* Application change: the views offered (`viewsOf`), tabs only when
+          there are two, drawn as a record page's tabs are (DetailTabBar in
+          client/pages/crm-detail.tsx): from the left, each led by its icon,
+          the open one in the foreground over a 2px line, the others muted
+          until hovered, a count in muted figures, on a thin rule. */}
+      {views.length > 1 ? (
+        <div
+          role='tablist'
+          className='flex shrink-0 gap-x-5 border-b border-border/60 px-4'
+        >
+          {views.map((value) => {
+            const count = value === 'todo' ? pending : unread;
+            const selected = value === view;
+            const Icon = value === 'todo' ? SparklesIcon : BellIcon;
+            return (
+              <button
+                key={value}
+                type='button'
+                role='tab'
+                aria-selected={selected}
+                onClick={() => {
+                  onFilter({
+                    view: value,
+                    kind: kindsOf(value, categories).includes(kind)
+                      ? kind
+                      : 'all',
+                  });
+                }}
+                className={cn(
+                  '-mb-px flex h-10 items-center gap-1.5 border-b-2 text-sm font-medium transition-colors outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset',
+                  selected
+                    ? 'border-foreground text-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <Icon className='size-4' />
+                {value === 'todo'
+                  ? t('inbox.views.todo', { defaultValue: 'To do' })
+                  : t('inbox.views.all', { defaultValue: 'All' })}
+                {/* A count in muted figures, as a record page's tabs show theirs. */}
+                {count > 0 ? (
+                  <span
+                    className='text-xs text-muted-foreground tabular-nums'
+                    aria-label={
+                      value === 'todo'
+                        ? t('inbox.pendingDecisions', {
+                            count,
+                            defaultValue: '{{count}} waiting',
+                          })
+                        : t('inbox.unreadCount', {
+                            count,
+                            defaultValue: '{{count}} unread',
+                          })
+                    }
                   >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className='w-auto max-w-[min(var(--container-sm),var(--available-width))] min-w-(--anchor-width) [&_[data-slot=select-item]>:first-child]:whitespace-normal'>
-                    {kinds.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <span />
-              )}
-              {footer}
-            </div>
-          ) : null}
+                    {count}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+      {/* Application change: the type filter only where a view offers more than one kind to choose between. */}
+      {kinds.length > 2 || footer ? (
+        <div className='shrink-0 border-b border-border/60 px-3 py-2.5'>
+          <div className='flex flex-wrap items-center justify-between gap-2'>
+            {kinds.length > 2 ? (
+              <Select
+                items={kinds}
+                value={kind}
+                onValueChange={(next: string | null) => {
+                  if (next) onFilter({ view, kind: next });
+                }}
+              >
+                <SelectTrigger
+                  size='sm'
+                  className='w-40'
+                  aria-label={t('inbox.kinds.label', {
+                    defaultValue: 'Type',
+                  })}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className='w-auto max-w-[min(var(--container-sm),var(--available-width))] min-w-(--anchor-width) [&_[data-slot=select-item]>:first-child]:whitespace-normal'>
+                  {kinds.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <span />
+            )}
+            {footer}
+          </div>
         </div>
       ) : null}
       <div className='min-h-0 flex-1 overflow-y-auto px-2 py-3'>
         {head}
         {content}
       </div>
-      <p className='hidden shrink-0 items-center gap-3 border-t px-4 py-2 text-xs text-muted-foreground lg:flex'>
-        <span className='inline-flex items-center gap-1'>
-          <Kbd>J</Kbd>
-          <Kbd>K</Kbd>
-          {t('inbox.keyMove', { defaultValue: 'Move' })}
-        </span>
-        <span className='inline-flex items-center gap-1'>
-          <Kbd>Enter</Kbd>
-          {t('inbox.keyOpen', { defaultValue: 'Open' })}
-        </span>
-      </p>
+      {/* Application change: no keyboard hints at the list's foot. */}
     </>
   );
 }

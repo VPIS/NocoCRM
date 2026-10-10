@@ -13,9 +13,7 @@ import { useCrmText, useMetadata } from './api.js';
 import {
   DECISIONS_CATEGORY,
   DECISION_PARAM,
-  SCOPE_PARAM,
   isDecided,
-  scopeOf,
   useDecisions,
 } from './inbox-decisions-data.js';
 import { DecisionDetail, DecisionList } from './inbox-decisions-view.js';
@@ -72,7 +70,7 @@ function decisionsCategory(label: string): InboxCollectionCategory {
     id: DECISIONS_CATEGORY,
     label: () => label,
     param: DECISION_PARAM,
-    params: [SCOPE_PARAM],
+    params: [],
     // Only To do: in All the group would follow every notification loaded.
     views: ['todo'],
     useCollection: useDecisionsCollection,
@@ -85,10 +83,8 @@ function useDecisionsCollection({
   selectedId,
   onSelect,
   params,
-  onParams,
 }: InboxCollectionInput): InboxCollectionState {
-  const scope = scopeOf(params);
-  const query = useDecisions(scope);
+  const query = useDecisions();
   const items = useMemo(() => query.data?.data ?? [], [query.data]);
   const waiting = items.filter((entry) => !isDecided(entry));
   const chosen = filter.kind === DECISIONS_CATEGORY;
@@ -116,26 +112,8 @@ function useDecisionsCollection({
       items={items}
       selectedId={selectedId}
       onSelect={onSelect}
-      scope={scope}
-      onScope={(next) => {
-        const updated = new URLSearchParams(params);
-        if (next === 'team') updated.set(SCOPE_PARAM, 'team');
-        else updated.delete(SCOPE_PARAM);
-        updated.delete(DECISION_PARAM);
-        onParams(updated);
-      }}
       error={query.error}
       loading={query.isLoading}
-      // The handled ones are the category chosen, which the type filter,
-      // hidden while a view has one kind, does not offer: shown and hidden
-      // again from the list itself.
-      handledShown={chosen}
-      onHandled={(show) => {
-        const updated = new URLSearchParams(params);
-        if (show) updated.set('kind', DECISIONS_CATEGORY);
-        else updated.delete('kind');
-        onParams(updated);
-      }}
     />
   );
   return {

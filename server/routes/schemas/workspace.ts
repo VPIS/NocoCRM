@@ -211,8 +211,9 @@ export const Dashboard = z
   .catchall(z.unknown())
   .meta({ ref: 'CrmDashboard' });
 
+// The reader's own suggestions alone: a manager handles a colleague's from
+// the record's page.
 export const DecisionsQuery = z.object({
-  ...ScopeQuery.shape,
   ...PageQuery.shape,
   state: z.enum(['pending', 'all']).optional().meta({
     description: '`all` lists the decided ones too, after those waiting.',

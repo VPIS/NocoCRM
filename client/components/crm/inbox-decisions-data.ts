@@ -21,9 +21,8 @@ import {
 // The assistant's cards in a conversation are decided there, not here.
 
 export const DECISIONS_CATEGORY = 'crm-decisions';
-// The chosen suggestion, and whose: the reader's own or the team's.
+// The chosen suggestion.
 export const DECISION_PARAM = 'decision';
-export const SCOPE_PARAM = 'decisionScope';
 
 // Handled: decided on its card, or an approval's review voided because the
 // approval was withdrawn or decided on the approval itself. A card being
@@ -82,15 +81,13 @@ export const recordOf = (
 ): { id: string; name: string; ownerId: string | null } =>
   (entry.lead ?? entry.opportunity ?? entry.approval ?? entry.task)!;
 
-export const scopeOf = (params: URLSearchParams): 'mine' | 'team' =>
-  params.get(SCOPE_PARAM) === 'team' ? 'team' : 'mine';
-
 // Those waiting and, after them, those already decided. The list and the
 // detail read the same query.
-export function useDecisions(scope: 'mine' | 'team') {
+export function useDecisions() {
   const api = useCrmApi();
   const scopeKey = useCrmScopeKey();
-  const path = `decisions?scope=${scope}&state=all&pageSize=100`;
+  // The reader's own: a colleague's is handled from the record's page.
+  const path = 'decisions?state=all&pageSize=100';
   return useQuery({
     queryKey: [...scopeKey, path],
     queryFn: () =>
