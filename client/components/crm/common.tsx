@@ -82,7 +82,7 @@ export function CrmFrame({
           >
             <div className='flex items-center justify-between gap-3'>
               {typeof title === 'string' ? (
-                <h1 className='font-heading text-3xl font-semibold tracking-tight'>
+                <h1 className='font-heading text-2xl font-semibold tracking-tight'>
                   {title}
                 </h1>
               ) : (
@@ -91,7 +91,7 @@ export function CrmFrame({
                 <div
                   role='heading'
                   aria-level={1}
-                  className='flex min-w-0 flex-1 flex-wrap items-center font-heading text-3xl font-semibold tracking-tight'
+                  className='flex min-w-0 flex-1 flex-wrap items-center font-heading text-2xl font-semibold tracking-tight'
                 >
                   {title}
                 </div>
@@ -105,10 +105,10 @@ export function CrmFrame({
             )}
           </div>
           {/* Beside the title, the actions are centred on its first line: a
-            line of the title's type size (1lh at text-3xl), plus the padding
+            line of the title's type size (1lh at text-2xl), plus the padding
             an editable title carries. */}
           <div
-            className={`flex flex-wrap items-center gap-2 md:font-heading md:text-3xl ${editableTitle ? 'md:min-h-[calc(1lh+--spacing(3))]' : 'md:min-h-lh'}`}
+            className={`flex flex-wrap items-center gap-2 md:font-heading md:text-2xl ${editableTitle ? 'md:min-h-[calc(1lh+--spacing(3))]' : 'md:min-h-lh'}`}
           >
             {titleAside && <div className='hidden md:block'>{titleAside}</div>}
             {/* The assistant opens from the header's AI button, and about a

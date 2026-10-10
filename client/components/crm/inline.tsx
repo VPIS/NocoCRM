@@ -190,7 +190,7 @@ export function InlineField({
   const titleType =
     size === 'heading'
       ? 'font-heading text-xl font-semibold tracking-tight md:text-xl'
-      : 'font-heading text-3xl font-semibold tracking-tight md:text-3xl';
+      : 'font-heading text-2xl font-semibold tracking-tight md:text-2xl';
   const readText = titled ? titleType : 'text-sm';
   if (longText === 'popover' && field.type === 'textarea' && !titled)
     return (
@@ -520,7 +520,7 @@ export function InlineField({
           aria-label={label}
           className={
             titled
-              ? 'h-auto min-w-64 py-1 font-heading text-3xl font-semibold tracking-tight md:text-3xl'
+              ? 'h-auto min-w-64 py-1 font-heading text-2xl font-semibold tracking-tight md:text-2xl'
               : undefined
           }
           type={
