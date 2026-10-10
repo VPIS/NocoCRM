@@ -91,6 +91,10 @@
   --sidebar-accent-foreground: var(--foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
+  /* The menu's icons: the menu's own cool hue a few shades deeper, quieter
+     than the words beside them (the current entry's icon takes the words'
+     colour). */
+  --sidebar-icon: oklch(0.58 0.04 257);
 }
 
 :root.dark,
@@ -128,6 +132,7 @@
   --info: oklch(0.74 0.13 250);
   --sidebar: var(--card);
   --sidebar-foreground: var(--card-foreground);
+  --sidebar-icon: oklch(0.64 0.03 257);
   --sidebar-primary: color-mix(in oklch, var(--primary) 8%, var(--sidebar));
   --sidebar-primary-foreground: var(--primary);
   --sidebar-accent: var(--muted);
