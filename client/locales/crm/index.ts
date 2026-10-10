@@ -1,3 +1,5 @@
+import { adminWording } from './admin.js';
+
 const wording = {
   conversionRate: ['Conversion rate', '转化率'],
   uncontacted: ['Leads awaiting first contact', '待首次跟进线索'],
@@ -2098,6 +2100,11 @@ const wording = {
     mailbox: ['Mailbox', '邮箱'],
     // The menu's Settings section (client/routes.ts).
     settings: ['Settings', '设置'],
+    // The administration pages (client/pages/settings/).
+    users: ['Users', '用户'],
+    permissionSets: ['Permission sets', '权限集'],
+    apiKeys: ['API keys', 'API 密钥'],
+    scheduledTasks: ['Scheduled tasks', '定时任务'],
     // The Agents plugin's pages, in Settings (migration step 2).
     agentsGroup: ['Agent team', 'Agent 团队'],
     agentList: ['Agents', 'Agent'],
@@ -2106,6 +2113,7 @@ const wording = {
     usage: ['Usage', '用量'],
     agentChat: ['Agent conversations', 'Agent 对话'],
   },
+  admin: adminWording,
   entities: {
     leads: ['Leads', '线索'],
     companies: ['Companies', '公司'],

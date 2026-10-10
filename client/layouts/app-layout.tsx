@@ -3,7 +3,6 @@ import type { ReactElement } from 'react';
 import type { AppClientRegisteredRoute } from '@nocobase/app-client/plugins';
 import { Outlet, useLocation } from 'react-router';
 
-import { BrandWatermark } from '#components/brand-watermark';
 import { Breadcrumbs } from '#components/breadcrumbs';
 
 import { RouteTreeProvider } from '../routing/route-context.js';
@@ -141,8 +140,7 @@ export function AppLayout({ routes }: AppLayoutProps): ReactElement {
             {/* Application change: the global search's dialog, which ⌘K or
                 the menu's Search opens (search-dialog.tsx). */}
             <GlobalSearchDialog />
-            <main className='app-brand-surface relative isolate min-w-0 flex-1 overflow-hidden'>
-              <BrandWatermark className='-z-10' />
+            <main className='relative min-w-0 flex-1 overflow-hidden'>
               {/* main only positions; the page scrolls in here, so a child page layer laid over main is neither
             moved by the page's scrolling nor stretched by its height. */}
               <div className='h-full overflow-y-auto'>

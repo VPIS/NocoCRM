@@ -2,6 +2,7 @@ import {
   defineAppRoutes,
   type AppClientRouteContribution,
 } from '@nocobase/app-client/plugins';
+import type { AppClientRouteDefinition } from '@nocobase/app-client/plugins';
 import {
   agentsRoute,
   modelsRoute,
@@ -24,6 +25,10 @@ import {
   ShieldCheck,
   TrendingUp,
   Settings2,
+  ShieldUser,
+  UsersRound,
+  KeyRound,
+  CalendarClock,
   SquareCheckBig,
 } from 'lucide-react';
 
@@ -42,6 +47,19 @@ const page = (name: string) =>
     resource: { type: 'page', id: name },
     action: 'access',
   }) as const;
+
+// The overlays a permission set's header opens, declared under each of its
+// tabs, so they stack on the tab being shown; `tab` is that tab's route name.
+function permissionSetHeaderRoutes(tab: string): AppClientRouteDefinition[] {
+  return [
+    {
+      name: `${tab}-rename`,
+      path: 'edit',
+      componentLoader: () =>
+        import('./pages/settings/permission-sets/rename.js'),
+    },
+  ];
+}
 
 const appRoutes: AppClientRouteContribution = defineAppRoutes([
   {
@@ -291,6 +309,149 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
           action: 'manage',
         },
         componentLoader: () => import('./pages/crm-settings.js'),
+      },
+      // The administration pages the plugins left to the application in
+      // template 1.0.0-beta.60 (client/pages/settings/): each route checks
+      // what the plugin's own API checks.
+      {
+        // The users plugin's `user` record type, which it does not place in
+        // the permission catalog: only the unrestricted root set opens it.
+        name: 'settings-users',
+        path: '/settings/users',
+        auth: 'required',
+        navigation: { title: 'crm.navigation.users', icon: UsersRound },
+        authz: { resource: { type: 'user', id: '*' }, action: 'read' },
+        componentLoader: () => import('./pages/settings/users/index.js'),
+        children: [
+          {
+            name: 'settings-users-new',
+            path: 'new',
+            componentLoader: () => import('./pages/settings/users/new.js'),
+          },
+          {
+            name: 'settings-users-invite',
+            path: 'invite',
+            componentLoader: () => import('./pages/settings/users/invite.js'),
+          },
+          {
+            name: 'settings-users-edit',
+            path: ':userId/edit',
+            componentLoader: () => import('./pages/settings/users/edit.js'),
+          },
+          {
+            name: 'settings-users-roles',
+            path: ':userId/roles',
+            componentLoader: () => import('./pages/settings/users/roles.js'),
+          },
+          {
+            name: 'settings-users-password',
+            path: ':userId/password',
+            componentLoader: () => import('./pages/settings/users/password.js'),
+          },
+        ],
+      },
+      {
+        name: 'settings-permission-sets',
+        path: '/settings/permission-sets',
+        auth: 'required',
+        navigation: {
+          title: 'crm.navigation.permissionSets',
+          icon: ShieldUser,
+        },
+        authz: {
+          resource: { type: 'settings', id: 'authorization.permission-sets' },
+          action: 'read',
+        },
+        componentLoader: () =>
+          import('./pages/settings/permission-sets/index.js'),
+        children: [
+          {
+            name: 'settings-permission-sets-new',
+            path: 'new',
+            componentLoader: () =>
+              import('./pages/settings/permission-sets/new.js'),
+          },
+          {
+            name: 'settings-permission-sets-rename',
+            path: 'edit/:setKey',
+            componentLoader: () =>
+              import('./pages/settings/permission-sets/rename.js'),
+          },
+          {
+            // A set's own page, covering the list, with its two tabs; the
+            // header's Rename is declared under each tab.
+            name: 'settings-permission-set',
+            path: ':setKey',
+            componentLoader: () =>
+              import('./pages/settings/permission-sets/detail/index.js'),
+            children: [
+              {
+                name: 'settings-permission-set-permissions',
+                path: 'permissions',
+                componentLoader: () =>
+                  import('./pages/settings/permission-sets/detail/permissions.js'),
+                children: permissionSetHeaderRoutes(
+                  'settings-permission-set-permissions',
+                ),
+              },
+              {
+                name: 'settings-permission-set-members',
+                path: 'members',
+                componentLoader: () =>
+                  import('./pages/settings/permission-sets/detail/members.js'),
+                children: [
+                  ...permissionSetHeaderRoutes(
+                    'settings-permission-set-members',
+                  ),
+                  {
+                    name: 'settings-permission-set-members-add',
+                    path: 'add',
+                    componentLoader: () =>
+                      import('./pages/settings/permission-sets/detail/add-members.js'),
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        // Every signed-in person manages their own keys only; the API
+        // answers for the caller alone.
+        name: 'settings-api-keys',
+        path: '/settings/api-keys',
+        auth: 'required',
+        navigation: { title: 'crm.navigation.apiKeys', icon: KeyRound },
+        authz: 'skip',
+        componentLoader: () => import('./pages/settings/api-keys/index.js'),
+        children: [
+          {
+            name: 'settings-api-keys-new',
+            path: 'new',
+            componentLoader: () => import('./pages/settings/api-keys/new.js'),
+          },
+        ],
+      },
+      {
+        // The page grant the scheduler's API checks.
+        name: 'settings-scheduled-tasks',
+        path: '/settings/scheduled-tasks',
+        auth: 'required',
+        navigation: {
+          title: 'crm.navigation.scheduledTasks',
+          icon: CalendarClock,
+        },
+        authz: page('scheduler.schedules'),
+        componentLoader: () =>
+          import('./pages/settings/scheduled-tasks/index.js'),
+        children: [
+          {
+            name: 'settings-scheduled-task',
+            path: ':scheduleId',
+            componentLoader: () =>
+              import('./pages/settings/scheduled-tasks/detail.js'),
+          },
+        ],
       },
       // The Agents plugin's pages, which it leaves to the application to route
       // (migration step 2): the agents, their model services, the skill

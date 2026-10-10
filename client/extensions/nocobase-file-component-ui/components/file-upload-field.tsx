@@ -1,6 +1,6 @@
 import { messageKey } from '../lib/message-key.js';
 import { useTranslation } from '@nocobase/i18n/client';
-import { RotateCcw, Trash2, UploadCloud, X } from 'lucide-react';
+import { LoaderCircle, RotateCcw, Trash2, UploadCloud, X } from 'lucide-react';
 import {
   useEffect,
   useRef,
@@ -12,7 +12,6 @@ import {
 
 import type { FileRecord, FileUploadFieldProps } from '../types';
 import { Button } from '#components/ui/button';
-import { Spinner } from '#components/ui/spinner';
 import { FileThumbnail } from './file-thumbnail';
 
 type UploadItem = {
@@ -290,7 +289,8 @@ export function FileUploadField(
           <div key={item.key} className='w-36 rounded-md border p-2'>
             <div className='flex h-20 items-center justify-center overflow-hidden rounded-sm bg-muted/30'>
               {item.status === 'uploading' ? (
-                <Spinner
+                <LoaderCircle
+                  className='animate-spin'
                   aria-label={t('files.uploading', {
                     defaultValue: 'Uploading',
                   })}

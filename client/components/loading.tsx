@@ -1,7 +1,7 @@
 import { useTranslation } from '@nocobase/i18n/client';
 import type { ComponentPropsWithoutRef, ReactElement } from 'react';
 
-import { BrandLoadingMark } from '#components/brand-loading-mark';
+import { Spinner } from '#components/ui/spinner';
 import { cn } from 'cn';
 
 export interface LoadingProps extends ComponentPropsWithoutRef<'div'> {
@@ -22,15 +22,14 @@ export function Loading(inputProps: LoadingProps): ReactElement {
     <div
       aria-label={label}
       className={cn(
-        'flex flex-col items-center justify-center gap-3',
+        'flex items-center justify-center',
         fullscreen && 'min-h-svh w-full bg-background',
         className,
       )}
       role='status'
       {...props}
     >
-      <BrandLoadingMark />
-      <span className='text-sm text-muted-foreground'>{label}</span>
+      <Spinner aria-hidden='true' role={undefined} />
     </div>
   );
 }
