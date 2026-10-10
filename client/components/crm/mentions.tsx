@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-// Mentions in a note: which colleagues its text still names, and the text
+// Mentions in a comment: which colleagues its text still names, and the text
 // with them picked out, for a line or as Markdown (MentionTextarea writes
 // them).
 
@@ -16,12 +16,12 @@ export function mentionsIn(
   });
 }
 
-// How a mentioned colleague reads in a note: blue on a light blue fill, the
+// How a mentioned colleague reads in a comment: blue on a light blue fill, the
 // theme's info colour, as a chat app marks an @.
 export const MENTION_CLASS =
   'rounded-sm bg-info/10 px-0.5 font-medium text-info dark:bg-info/20';
 
-// A note's text with the colleagues it mentions picked out: each "@Name"
+// A comment's text with the colleagues it mentions picked out: each "@Name"
 // as a mention, as the pieces of a line.
 export function withMentions(
   text: string,
@@ -51,7 +51,7 @@ export function withMentions(
   });
 }
 
-// The same for a note shown as Markdown: each "@Name" a link to #mention,
+// The same for a comment shown as Markdown: each "@Name" a link to #mention,
 // which the CRM's Markdown draws as a mention rather than a link.
 export function markdownMentions(
   text: string,

@@ -363,7 +363,7 @@ export function CycleReport({
 }
 
 // What each member of the team did over the last four weeks and this week:
-// tasks completed, notes written and mail conversations with customers.
+// tasks completed, comments written and mail conversations with customers.
 export function ActivityReport({
   activity,
 }: {
@@ -379,7 +379,7 @@ export function ActivityReport({
     Number(((row.total ?? {}) as Data)[key] ?? 0);
   const columns = [
     ['tasks', 'reports.tasksDone'],
-    ['notes', 'reports.notesWritten'],
+    ['comments', 'reports.commentsWritten'],
     ['mails', 'reports.mailThreads'],
   ] as const;
   return (

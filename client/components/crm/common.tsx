@@ -551,7 +551,7 @@ export function Value({
   );
 }
 
-// A long text (a description, a message, a note) is Markdown, rendered as
+// A long text (a description, a message, a comment) is Markdown, rendered as
 // the chat's replies are (single line breaks kept, HTML escaped, images
 // only from this origin), and shows its first four lines and offers the
 // rest; the toggle, only when there is more to show,

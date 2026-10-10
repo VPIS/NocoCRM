@@ -149,8 +149,8 @@ export async function screenProposal(
               : { ok: true };
         return refuse('invalidInput', 'action');
       }
-      case 'add_note': {
-        // Anyone who may read the record may note on it.
+      case 'add_comment': {
+        // Anyone who may read the record may comment on it.
         const entity = asEntity(toText(input.entity));
         if (!id) return refuse('invalidInput', 'id');
         if (!toText(input.text ?? '').trim())

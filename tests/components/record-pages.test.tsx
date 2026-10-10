@@ -69,6 +69,13 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
         disabled: false,
         canApprove: false,
       },
+      {
+        id: 'manager',
+        name: '李明',
+        roles: ['sales-manager'],
+        disabled: false,
+        canApprove: true,
+      },
     ],
     permissions: {
       contacts: { create: false },
@@ -336,12 +343,15 @@ describe('the approval page', () => {
     };
   });
 
-  it('gives the approver the decision and the marker, its times left to the timeline', () => {
+  it('gives the approver the decision and the marker, created and updated among its details', () => {
     renderPage();
     expect(screen.getByRole('button', { name: /通过/ })).toBeTruthy();
     expect(screen.getByText('待你审批')).toBeTruthy();
-    for (const time of ['创建时间', '提交时间', '更新时间'])
-      expect(screen.queryByText(time)).toBeNull();
+    // When it was created and last changed close its details; the rest of
+    // its times are the timeline's.
+    for (const time of ['创建时间', '更新时间'])
+      expect(screen.getByText(time)).toBeTruthy();
+    expect(screen.queryByText('提交时间')).toBeNull();
     // Not decided yet: no comment.
     expect(screen.queryByText('审批意见')).toBeNull();
   });
@@ -456,15 +466,15 @@ describe('the timeline', () => {
   });
 });
 
-// A note's replies read under it; anyone answers it from its line; a note
+// A comment's replies read under it; anyone answers it from its line; a comment
 // deleted while it had replies keeps its place for them.
-describe("a note's thread", () => {
-  const note = (id: string, actorId: string, text: string) => ({
+describe("a comment's thread", () => {
+  const comment = (id: string, actorId: string, text: string) => ({
     id,
     entity: 'companies',
     recordId: 'rec-1',
     actorId,
-    action: 'note',
+    action: 'comment',
     changes: { text },
     createdAt: '2026-10-02T03:00:00.000Z',
   });
@@ -473,10 +483,10 @@ describe("a note's thread", () => {
     state.record = { id: 'rec-1', name: '杭州海康威视', ownerId: 'rep' };
   });
 
-  it('reads the replies under the note and posts a reply to it', async () => {
+  it('reads the replies under the comment and posts a reply to it', async () => {
     state.history = [
       {
-        ...note('n1', 'manager', '客户想看演示'),
+        ...comment('n1', 'manager', '客户想看演示'),
         replies: [
           {
             id: 'r1',
@@ -489,23 +499,25 @@ describe("a note's thread", () => {
     ];
     renderPage();
     expect(screen.getByText('我来约时间')).toBeTruthy();
-    // The note's own reply, then the reply's.
+    // The comment's own reply, then the reply's.
     const [answer] = screen.getAllByRole('button', { name: '回复' });
     await userEvent.click(answer);
+    // It opens addressed to the comment's author, a mention.
     const box = screen.getByRole('textbox', { name: '回复' });
+    expect((box as HTMLTextAreaElement).value).toBe('@李明 ');
     await userEvent.type(box, '好的');
     await userEvent.keyboard('{Control>}{Enter}{/Control}');
-    expect(state.api).toHaveBeenCalledWith('companies/rec-1/notes', 'POST', {
-      text: '好的',
-      mentions: [],
+    expect(state.api).toHaveBeenCalledWith('companies/rec-1/comments', 'POST', {
+      text: '@李明 好的',
+      mentions: ['manager'],
       replyTo: 'n1',
     });
   });
 
-  it('hangs a reply to a reply under it, and answers a reply there', async () => {
+  it('lists a reply to a reply at the same level, saying whom it answers, and answers a reply', async () => {
     state.history = [
       {
-        ...note('n1', 'manager', '客户想看演示'),
+        ...comment('n1', 'manager', '客户想看演示'),
         replies: [
           {
             id: 'r1',
@@ -525,25 +537,27 @@ describe("a note's thread", () => {
       },
     ];
     renderPage();
+    // One level, in the order they were written, each naming whom it answers.
     const first = screen.getByText('我来约时间').closest('.min-w-0');
-    // The answer to the reply is inside the reply's own branch.
-    expect(first?.textContent).toContain('周三下午可以');
-    // The reply's own Reply opens a box under it, answering it.
+    expect(first?.textContent).not.toContain('周三下午可以');
+    expect(screen.getByText('回复 李明')).toBeTruthy();
+    expect(screen.getByText('回复 赵敏')).toBeTruthy();
+    // A reply's own Reply opens the box at the thread's end, answering it.
     const replyButtons = screen.getAllByRole('button', { name: '回复' });
     await userEvent.click(replyButtons[1]);
     await userEvent.type(screen.getByRole('textbox', { name: '回复' }), '好');
     await userEvent.keyboard('{Control>}{Enter}{/Control}');
-    expect(state.api).toHaveBeenCalledWith('companies/rec-1/notes', 'POST', {
+    expect(state.api).toHaveBeenCalledWith('companies/rec-1/comments', 'POST', {
       text: '好',
       mentions: [],
       replyTo: 'r1',
     });
   });
 
-  it("keeps a deleted note's place for its replies", () => {
+  it("keeps a deleted comment's place for its replies", () => {
     state.history = [
       {
-        ...note('n1', 'rep', ''),
+        ...comment('n1', 'rep', ''),
         changes: { text: '', deleted: true },
         replies: [
           {
@@ -556,7 +570,7 @@ describe("a note's thread", () => {
       },
     ];
     renderPage();
-    expect(screen.getByText('此备注已删除')).toBeTruthy();
+    expect(screen.getByText('此评论已删除')).toBeTruthy();
     expect(screen.getByText('收到')).toBeTruthy();
     // Its author may no longer edit what is gone.
     expect(screen.queryByRole('button', { name: '编辑' })).toBeNull();

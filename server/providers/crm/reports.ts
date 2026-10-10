@@ -246,7 +246,7 @@ async function stageChanges(
 
 // What each seller did in each of the last four weeks (Monday to Sunday in
 // the business time zone, this week last): the tasks they completed, the
-// notes they wrote and the mail conversations of theirs that reached a
+// comments they wrote and the mail conversations of theirs that reached a
 // record's timeline.
 async function activity(
   service: CrmService,
@@ -279,12 +279,12 @@ async function activity(
     .query()
     .selectFrom('crmHistory')
     .select(['actorId', 'action', 'createdAt', 'occurredAt'])
-    .where('action', 'in', ['note', 'mail'])
+    .where('action', 'in', ['comment', 'mail'])
     .where('createdAt', '>=', from)
     .execute();
   const rows = sellers.map((seller) => {
     const id = toText(seller.id);
-    const counts = weeks.map(() => ({ tasks: 0, notes: 0, mails: 0 }));
+    const counts = weeks.map(() => ({ tasks: 0, comments: 0, mails: 0 }));
     for (const task of tasks) {
       // Completed when it was, else when it was due, as the overview's
       // month counts it (statistics.ts).
@@ -297,16 +297,16 @@ async function activity(
       if (toText(entry.actorId) !== id) continue;
       const week = weekOf(entry.occurredAt ?? entry.createdAt);
       if (week < 0) continue;
-      if (entry.action === 'note') counts[week].notes++;
+      if (entry.action === 'comment') counts[week].comments++;
       else counts[week].mails++;
     }
     const total = counts.reduce(
       (sum, c) => ({
         tasks: sum.tasks + c.tasks,
-        notes: sum.notes + c.notes,
+        comments: sum.comments + c.comments,
         mails: sum.mails + c.mails,
       }),
-      { tasks: 0, notes: 0, mails: 0 },
+      { tasks: 0, comments: 0, mails: 0 },
     );
     return { id, name: seller.name, weeks: counts, total };
   });

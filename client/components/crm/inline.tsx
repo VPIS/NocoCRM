@@ -335,7 +335,7 @@ export function InlineField({
       // A title's editor is as wide as its text, like the title it replaces,
       // and wraps only once it reaches the edge of the heading.
       // No ring of its own: the control inside shows the focus, as lightly
-      // as the note box does (the primitives' focus ring is meant for a
+      // as the comment box does (the primitives' focus ring is meant for a
       // form, and doubled with a ring here it outweighed the value).
       className={`rounded-md [&_:focus-visible]:border-ring/50! [&_:focus-visible]:ring-2! [&_:focus-visible]:ring-ring/10! ${titled ? 'min-w-0 max-w-full' : ''}`}
       // Saving on blur is the whole point, but focus moving between the parts of

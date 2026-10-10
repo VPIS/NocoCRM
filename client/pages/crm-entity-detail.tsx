@@ -107,6 +107,7 @@ import {
   TabHeading,
   InfoGroup,
   InfoRow,
+  RecordTimes,
   RecordAttachments,
   WebsiteField,
 } from './crm-detail.js';
@@ -1058,6 +1059,7 @@ export default function EntityDetail({
           {/* When it is, if it is. */}
           {row('dueAt')}
           {['leadId', 'companyId', 'opportunityId'].map(row)}
+          <RecordTimes record={record} />
         </InfoGroup>
       </>,
     );
@@ -1126,6 +1128,7 @@ export default function EntityDetail({
           {row('expectedCloseAt')}
           {['companyId', 'businessType', 'source'].map(row)}
           {convertedRow}
+          <RecordTimes record={record} />
         </InfoGroup>
       </>,
     );
@@ -1155,6 +1158,7 @@ export default function EntityDetail({
           {/* The reason stays editable while the company is churned. */}
           {currentStatus === 'churned' && row('churnReason')}
           {['type', 'source'].map(row)}
+          <RecordTimes record={record} />
         </InfoGroup>
         <InfoGroup title={text('companyGroups.company')}>
           <InfoRow field='website' label={text('fields.website')}>
@@ -1189,6 +1193,7 @@ export default function EntityDetail({
           ].map(row)}
           {convertedRow}
           {['jobTitle', 'phone', 'email'].map(row)}
+          <RecordTimes record={record} />
         </InfoGroup>
       </>,
     );
@@ -1232,6 +1237,7 @@ export default function EntityDetail({
           </InfoRow>
         )}
         {['topic', 'approverId', 'opportunityId'].map(row)}
+        <RecordTimes record={record} />
       </InfoGroup>
     </>,
   );

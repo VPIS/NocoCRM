@@ -139,9 +139,9 @@ export interface DemoContent {
   // Each company's two contacts: the decision maker, then the technical one.
   readonly people: readonly (readonly [DemoPerson, DemoPerson])[];
   readonly contactJobTitles: readonly [string, string];
-  readonly contactNotes: readonly [string, string];
-  // The notes on the company that churned.
-  readonly churnNotes: string;
+  readonly contactComments: readonly [string, string];
+  // The comments on the company that churned.
+  readonly churnComments: string;
   // The opportunities' names, by index.
   readonly deals: readonly string[];
   readonly leads: readonly DemoLead[];

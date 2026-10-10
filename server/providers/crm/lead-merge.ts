@@ -36,13 +36,13 @@ import { array, type CrmService } from './service.js';
 // or the same person at the same company, among the open leads the reader
 // may see. Merging keeps one lead, takes for each field the value the
 // person picks (either lead's, or for the long texts both), moves the
-// other's tasks, notes and attachments over, notes the merge on the
+// other's tasks, comments and attachments over, comments the merge on the
 // kept lead's timeline with what the other lead held, and deletes the
 // other. The AI proposes which lead to keep and which values are right;
 // the person decides in the dialog. Converted and invalid leads take no
 // part: a converted one is read-only, an invalid one already handled.
 // Whoever may edit both leads may merge them: nothing is lost (the other
-// lead's values stay on the merge's timeline entry, its tasks and notes
+// lead's values stay on the merge's timeline entry, its tasks and comments
 // move), so it asks for edit access, not for the right to delete, which a
 // salesperson does not have even for their own leads.
 
@@ -318,13 +318,13 @@ export async function findDuplicates(
 interface MergeSide {
   lead: CrmRecord;
   tasks: number;
-  notes: number;
+  comments: number;
   // Which of the two the reader may keep (and so delete the other).
   keepable: boolean;
 }
 
 export interface MergeProposal {
-  leads: (CrmRecord & { tasks: number; notes: number })[];
+  leads: (CrmRecord & { tasks: number; comments: number })[];
   // The lead to keep, the other's id being the other one.
   keepId: string;
   // Which lead's value each differing group takes (its first field names
@@ -379,17 +379,17 @@ async function side(
     .select('id')
     .where('leadId', '=', id)
     .execute();
-  const notes = await query
+  const comments = await query
     .selectFrom('crmHistory')
     .select('id')
     .where('entity', '=', 'leads')
     .where('recordId', '=', id)
-    .where('action', '=', 'note')
+    .where('action', '=', 'comment')
     .execute();
   return {
     lead,
     tasks: tasks.length,
-    notes: notes.length,
+    comments: comments.length,
     // Whether it may be changed; the caller adds whether the other may go.
     keepable: await may(service, actor, id, 'update'),
   };
@@ -426,7 +426,7 @@ const filled = (lead: Row, group: readonly string[]): boolean =>
   group.some((key) => !blank(lead[key]));
 
 // The plain proposal: keep the lead with more history (more tasks,
-// then more notes, then the older one), and for each field its value, or
+// then more comments, then the older one), and for each field its value, or
 // the other's where it has none; two different long texts are both kept.
 export function plainProposal(
   a: MergeSide,
@@ -434,7 +434,7 @@ export function plainProposal(
 ): Pick<MergeProposal, 'keepId' | 'picks'> {
   const weight = (s: MergeSide): [number, number, number] => [
     s.tasks,
-    s.notes,
+    s.comments,
     -Date.parse(toText(s.lead.createdAt)) || 0,
   ];
   const [wa, wb] = [weight(a), weight(b)];
@@ -488,7 +488,7 @@ export async function mergeProposal(
     throw new CrmError('invalidInput', 400, 'with');
   const a = await side(service, actor, id);
   const b: MergeSide = unsaved
-    ? { lead: unsavedLead(raw.input), tasks: 0, notes: 0, keepable: false }
+    ? { lead: unsavedLead(raw.input), tasks: 0, comments: 0, keepable: false }
     : await side(service, actor, otherId);
   if (!matchReasons(a.lead, b.lead).length)
     throw new CrmError('invalidInput', 400, 'with');
@@ -500,7 +500,7 @@ export async function mergeProposal(
   const leads = [a, b].map((s) => ({
     ...s.lead,
     tasks: s.tasks,
-    notes: s.notes,
+    comments: s.comments,
   }));
   const plain = plainProposal(a, b);
   // A lead not yet saved brings only what it holds: a field it leaves
@@ -560,7 +560,7 @@ export async function mergeProposal(
             day(s.lead.createdAt),
             day(s.lead.updatedAt),
             s.tasks,
-            s.notes,
+            s.comments,
           )[lang(zh)],
       ...groups.flatMap((group) =>
         group.map((key) => {
@@ -710,7 +710,7 @@ function mergePrompt(
   const t = pick(mergeLabels, zh);
   return `The two leads are very likely the same enquiry and are to be merged into one. Give a merge plan: which lead to keep (keep), and for each differing field below, which lead's value to take (pick).
 Rules:
-- Keep the one with more history (more tasks and notes) and the further follow-up; when they are about even, keep the one created earlier.${only ? `\n- Only ${only} may be kept.` : ''}
+- Keep the one with more history (more tasks and comments) and the further follow-up; when they are about even, keep the one created earlier.${only ? `\n- Only ${only} may be kept.` : ''}
 - For each field: take the more complete, more specific, more recent value (for example, a company's full name beats a short name, and a phone number confirmed later beats an old number); never pick an empty value.
 - When a person's or company's name differs only in how it is written (a typo, a homophone, simplified or traditional characters, letter case), take the kept lead's spelling: the lead followed up more has been checked through contact, and the newly entered one is more likely a slip; take the other only when it is clearly more complete (such as a company's full name), and explain it in why.
 - message (the original enquiry) and companyDescription: when both leads have one and they differ, pick both, keeping both texts; when they repeat each other, pick the more complete one.
@@ -814,7 +814,7 @@ export async function mergeLeads(
           ),
           captured: true,
           tasks: 0,
-          notes: 0,
+          comments: 0,
         },
       );
       return service.get(prepared, 'leads', keepId, tx);
@@ -844,13 +844,13 @@ export async function mergeLeads(
         { leadId: fromId },
       );
     }
-    // Its notes, edits and removals included, now on the kept lead.
-    const notes = await tx
+    // Its comments, edits and removals included, now on the kept lead.
+    const comments = await tx
       .updateTable('crmHistory')
       .set({ recordId: keepId })
       .where('entity', '=', 'leads')
       .where('recordId', '=', fromId)
-      .where('action', 'in', ['note', 'noteEdited', 'noteDeleted'])
+      .where('action', 'in', ['comment', 'commentEdited', 'commentDeleted'])
       .execute();
     // A follow-up of the other still waiting or running has nothing left
     // to act on.
@@ -876,7 +876,7 @@ export async function mergeLeads(
           Object.entries(other).filter(([key]) => key !== 'attachments'),
         ),
         tasks: tasks.length,
-        notes: Number(notes.updatedCount ?? 0),
+        comments: Number(comments.updatedCount ?? 0),
       },
     );
     // Gone, its tasks moved: deleted here rather than through

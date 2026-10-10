@@ -172,7 +172,7 @@ export function LongTextField({
 }
 
 // A long text with room to unfold in place, across the left column (a
-// lead's original message under the record's title, a note, a task's
+// lead's original message under the record's title, a comment, a task's
 // result or a decision's comment in the timeline): five lines that fade
 // out while there is more,
 // a click unfolding the whole and another folding it back; a double-click

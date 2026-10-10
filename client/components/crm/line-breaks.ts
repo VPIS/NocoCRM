@@ -9,7 +9,7 @@ export function keepLineBreaks(text: string): string {
 }
 
 // Markdown read as one line of plain text, for the places that show a long
-// text cut to a line (a note's excerpt, a change on the timeline): its
+// text cut to a line (a comment's excerpt, a change on the timeline): its
 // marks dropped, links and images by their text, lines run together. A
 // heading (a line that is only a heading or bold text, as the AI writes an
 // task's outcome) ends with a colon, so it reads as leading what

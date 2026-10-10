@@ -415,7 +415,7 @@ export interface CrmSettings {
   closeReminderDays: number;
   // A new lead nobody has contacted in this many days (the daily lead check).
   uncontactedDays: number;
-  // A lead or a deal with no exchange (a task done, a note, mail) in this
+  // A lead or a deal with no exchange (a task done, a comment, mail) in this
   // many days: stalled on the
   // dashboard, followed up by the daily checks.
   leadStaleDays: number;
@@ -432,7 +432,7 @@ export interface CrmSettings {
   aiLanguage: string;
   // Whether the CRM sends each kind of in-app message (service.ts,
   // queueMessage): approvals submitted, withdrawn and decided; records
-  // changing hands, task participants told of a change, mentions in a note;
+  // changing hands, task participants told of a change, mentions in a comment;
   // and reminders before a task starts.
   notifyApprovals: boolean;
   notifyRecordChanges: boolean;

@@ -798,11 +798,11 @@ describe('CRM API security and domain rules', () => {
       leadId: lead.id,
       dueAt: '2026-09-09T01:00:00Z',
     });
-    // A task still to do is no contact yet; a note of one made is.
+    // A task still to do is no contact yet; a comment on one made is.
     expect((await service.get(actor('rep'), 'leads', lead.id)).status).toBe(
       'new',
     );
-    await service.addNote(actor('rep'), 'leads', lead.id, 'Called them.');
+    await service.addComment(actor('rep'), 'leads', lead.id, 'Called them.');
     expect((await service.get(actor('rep'), 'leads', lead.id)).status).toBe(
       'working',
     );
@@ -1514,7 +1514,7 @@ describe('CRM API security and domain rules', () => {
     const record = await service.save(actor('rep'), 'leads', {
       name: 'Restricted sample',
       email: 'secret-canary@example.test',
-      message: 'Hidden note',
+      message: 'Hidden comment',
     });
     const read = await service.get(actor('restricted'), 'leads', record.id);
     expect(read.email).toBeUndefined();
@@ -1992,7 +1992,7 @@ describe('CRM API security and domain rules', () => {
       'summarize_records',
     ]);
     expect(crmEmployee.tools?.map((tool) => tool.name).sort()).toEqual([
-      'add_note',
+      'add_comment',
       'approval_action',
       'convert_lead',
       'create_record',
@@ -2045,8 +2045,8 @@ describe('CRM API security and domain rules', () => {
     );
     expect(followThrough).toContain('Showing a list is not agreement');
     expect(followThrough).toContain("Never change a lead's message");
-    // An exchange that took place is a note; mail is never logged.
-    expect(followThrough).toContain('is written as a note on the record');
+    // An exchange that took place is a comment; mail is never logged.
+    expect(followThrough).toContain('is written as a comment on the record');
     expect(followThrough).toContain('never log an email');
     for (const tool of tools) {
       expect(tool.defaultPermission).toBe('ALLOW');
@@ -2229,10 +2229,13 @@ describe('CRM API security and domain rules', () => {
       pageSize: 2,
     });
     expect(second.data.map((entry) => entry.action)).toEqual(['mailBefore']);
-    // The notes alone carry none of it.
+    // The comments alone carry none of it.
     expect(
-      (await service.historyOf(actor('rep'), 'leads', id, { action: 'note' }))
-        .data,
+      (
+        await service.historyOf(actor('rep'), 'leads', id, {
+          action: 'comment',
+        })
+      ).data,
     ).toEqual([]);
     // Its mail goes, so the mail timeline's tests read only their own.
     await database
@@ -2511,7 +2514,7 @@ describe('CRM API security and domain rules', () => {
       tools.map((tool) => [tool.definition.name, tool]),
     );
     expect(Object.keys(byName).sort()).toEqual([
-      'add_note',
+      'add_comment',
       'approval_action',
       'convert_lead',
       'create_record',
@@ -4166,7 +4169,7 @@ describe('CRM lead evaluation', () => {
       });
       // What the team learned since, from a call and in the feed, goes
       // with it.
-      await service.addNote(
+      await service.addComment(
         actor('rep'),
         'leads',
         toText(lead.id),
@@ -4184,7 +4187,7 @@ describe('CRM lead evaluation', () => {
       // The search is allowed; the CRM tools are not needed.
       expect(prompts[0]).toContain('Use subAgentWebSearch to look up');
       expect(prompts[1]).toContain('# Web research results');
-      expect(prompts[1]).toContain("# The team's notes");
+      expect(prompts[1]).toContain("# The team's comments");
       expect(prompts[1]).toContain('已在用 SAP，只做对接');
       expect(prompts[1]).toContain("# The lead's tasks");
       expect(prompts[1]).toContain('30 万预算只含软件，实施另算');
@@ -5238,7 +5241,7 @@ describe('CRM opportunity follow-up', () => {
   });
 
   // An approval rejected is proposed again only once something has happened
-  // since: what was missing supplied (a note, a task done).
+  // since: what was missing supplied (a comment, a task done).
   it('proposes a rejected kind again only after something new', async () => {
     const enabled = vi
       .spyOn(service, 'assistantEnabled')
@@ -5296,7 +5299,7 @@ describe('CRM opportunity follow-up', () => {
         terms: [{ status: 'rejected', approval: '3 月底上线' }],
       });
       // The milestones written down since: proposed.
-      await service.addNote(
+      await service.addComment(
         actor('rep'),
         'opportunities',
         toText(opportunity.id),
@@ -5360,8 +5363,8 @@ describe('CRM opportunity follow-up', () => {
       };
       // The same facts read again: not offered.
       expect(await again()).toEqual([]);
-      // A note since: offered.
-      await service.addNote(
+      // A comment since: offered.
+      await service.addComment(
         actor('rep'),
         'opportunities',
         toText(opportunity.id),
@@ -6002,7 +6005,7 @@ describe('lead signals', () => {
         now,
       ),
     ).toBe(undefined);
-    // Contact made two days ago (a note, a task done, mail): nothing yet.
+    // Contact made two days ago (a comment, a task done, mail): nothing yet.
     expect(
       leadSignal(
         { status: 'new', createdAt: daysAgo(3) },
@@ -6343,7 +6346,7 @@ describe('demo dataset', () => {
     });
     const starts = spread.data.map((a) => Date.parse(toText(a.dueAt)));
     // Weekdays between thirty and twenty days back, whatever today is; most
-    // of what took place there with a customer is a note, not a task, so a
+    // of what took place there with a customer is a comment, not a task, so a
     // few tasks are all the window is sure to hold.
     expect(
       starts.filter((t) => t < now - 20 * day).length,
@@ -6703,11 +6706,11 @@ describe("a record's timeline and its tasks", () => {
         name: '需求摸底电话（二）',
       },
     });
-    // The notes tab stays the notes alone.
+    // The comments tab stays the comments alone.
     expect(
       (
         await service.historyOf(actor('rep'), 'leads', lead.id, {
-          action: 'note',
+          action: 'comment',
         })
       ).data,
     ).toEqual([]);
@@ -7213,6 +7216,63 @@ it('reverses the CRM migration on a real SQLite database', async () => {
         createdAt: at,
       })
       .execute();
+    // Notes become comments, their edits and merges' counts with them, and
+    // back.
+    await isolated
+      .query()
+      .insertInto('crmHistory')
+      .values([
+        {
+          id: 'note-edit',
+          entity: kept.entity,
+          recordId: kept.recordId,
+          actorId: 'rep',
+          action: 'noteEdited',
+          changes: JSON.stringify({ text: 'Agreed.', noteId: 'reply' }),
+          createdAt: at,
+        },
+        {
+          id: 'merge',
+          entity: kept.entity,
+          recordId: kept.recordId,
+          actorId: 'rep',
+          action: 'merged',
+          changes: JSON.stringify({ lead: {}, tasks: 1, notes: 2 }),
+          createdAt: at,
+        },
+      ])
+      .execute();
+    const actions = async () =>
+      (
+        await isolated
+          .query()
+          .selectFrom('crmHistory')
+          .select(['id', 'action', 'changes'])
+          .where('id', 'in', ['reply', 'note-edit', 'merge'])
+          .orderBy('id')
+          .execute()
+      ).map((row) => [row.id, row.action, JSON.parse(toText(row.changes))]);
+    expect((await migrator.upTo('202610100003_crm_comments')).executed).toEqual(
+      ['202610100003_crm_comments'],
+    );
+    expect(await actions()).toEqual([
+      ['merge', 'merged', { lead: {}, tasks: 1, comments: 2 }],
+      ['note-edit', 'commentEdited', { text: 'Agreed.', commentId: 'reply' }],
+      ['reply', 'comment', { text: 'Agreed.' }],
+    ]);
+    expect((await migrator.rollback()).rolledBack).toEqual([
+      '202610100003_crm_comments',
+    ]);
+    expect(await actions()).toEqual([
+      ['merge', 'merged', { lead: {}, tasks: 1, notes: 2 }],
+      ['note-edit', 'noteEdited', { text: 'Agreed.', noteId: 'reply' }],
+      ['reply', 'note', { text: 'Agreed.' }],
+    ]);
+    await isolated
+      .query()
+      .deleteFrom('crmHistory')
+      .where('id', 'in', ['note-edit', 'merge'])
+      .execute();
     expect((await migrator.rollback()).rolledBack).toEqual([
       '202610100002_crm_history_reply_to',
     ]);
@@ -7481,20 +7541,20 @@ describe('record notifications', () => {
         .execute()
     ).map((r) => [toText(r.event), toText(r.recipientId), toText(r.id)]);
 
-  it('tells the colleagues a note mentions, each once', async () => {
+  it('tells the colleagues a comment mentions, each once', async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: 'Mentioned lead',
       ownerId: 'rep',
     });
     // The writer and an unknown account are dropped; the manager is kept.
-    const note = await service.addNote(
+    const comment = await service.addComment(
       actor('rep'),
       'leads',
       toText(lead.id),
       '@Manager please look',
       ['manager', 'rep', 'nobody', 'manager'],
     );
-    expect(note.changes).toEqual({
+    expect(comment.changes).toEqual({
       text: '@Manager please look',
       mentions: ['manager'],
     });
@@ -7503,14 +7563,14 @@ describe('record notifications', () => {
         [
           'mentioned',
           'manager',
-          `record-notification:leads:${toText(lead.id)}:mentioned:manager:${toText(note.id)}`,
+          `record-notification:leads:${toText(lead.id)}:mentioned:manager:${toText(comment.id)}`,
         ],
       ]),
     );
     // An edit tells only whom it adds.
-    const edited = await service.editNote(
+    const edited = await service.editComment(
       actor('rep'),
-      toText(note.id),
+      toText(comment.id),
       '@Manager @Other please look',
       ['manager', 'other'],
     );
@@ -7528,23 +7588,28 @@ describe('record notifications', () => {
     );
   });
 
-  it('threads replies under a note, tells the thread, and keeps it when the note goes', async () => {
+  it('threads replies under a comment, tells the thread, and keeps it when the comment goes', async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: 'Thread lead',
       ownerId: 'rep',
     });
     const id = toText(lead.id);
-    const note = await service.addNote(actor('rep'), 'leads', id, 'Called.');
-    const first = await service.addNote(
+    const comment = await service.addComment(
+      actor('rep'),
+      'leads',
+      id,
+      'Called.',
+    );
+    const first = await service.addComment(
       actor('manager'),
       'leads',
       id,
       'What did they say?',
       [],
-      note.id,
+      comment.id,
     );
     // A reply to a reply hangs under that reply, in the same thread.
-    const second = await service.addNote(
+    const second = await service.addComment(
       actor('other'),
       'leads',
       id,
@@ -7566,43 +7631,43 @@ describe('record notifications', () => {
     );
     // The timeline reads the thread as one entry, its replies oldest first.
     const timeline = (await service.historyOf(actor('rep'), 'leads', id)).data;
-    const entry = timeline.find((row) => row.id === note.id);
-    expect(timeline.filter((row) => row.action === 'note')).toHaveLength(1);
+    const entry = timeline.find((row) => row.id === comment.id);
+    expect(timeline.filter((row) => row.action === 'comment')).toHaveLength(1);
     expect(
       (entry?.replies as { id: string }[]).map((reply) => reply.id),
     ).toEqual([first.id, second.id]);
-    // A note of another record is no thread to join.
+    // A comment of another record is no thread to join.
     const elsewhere = await service.save(actor('rep'), 'leads', {
       name: 'Other lead',
       ownerId: 'rep',
     });
     await expect(
-      service.addNote(
+      service.addComment(
         actor('rep'),
         'leads',
         toText(elsewhere.id),
         'x',
         [],
-        note.id,
+        comment.id,
       ),
     ).rejects.toMatchObject({ code: 'notFound' });
-    // The note goes, the thread stays under its empty place; a reply with
+    // The comment goes, the thread stays under its empty place; a reply with
     // one under it does the same; the last reply going takes every empty
     // place above it with it.
-    await service.removeNote(actor('rep'), toText(note.id));
+    await service.removeComment(actor('rep'), toText(comment.id));
     const kept = (await service.historyOf(actor('rep'), 'leads', id)).data.find(
-      (row) => row.id === note.id,
+      (row) => row.id === comment.id,
     );
     expect(kept?.changes).toEqual({ text: '', deleted: true });
     expect(kept?.replies).toHaveLength(2);
     await expect(
-      service.editNote(actor('rep'), toText(note.id), 'Back', []),
+      service.editComment(actor('rep'), toText(comment.id), 'Back', []),
     ).rejects.toMatchObject({ code: 'notFound' });
-    await service.removeNote(actor('manager'), toText(first.id));
-    await service.removeNote(actor('other'), toText(second.id));
+    await service.removeComment(actor('manager'), toText(first.id));
+    await service.removeComment(actor('other'), toText(second.id));
     expect(
       (await service.historyOf(actor('rep'), 'leads', id)).data.some(
-        (row) => row.action === 'note' || row.action === 'noteDeleted',
+        (row) => row.action === 'comment' || row.action === 'commentDeleted',
       ),
     ).toBe(false);
   });
@@ -7679,8 +7744,8 @@ describe('record notifications', () => {
   });
 });
 
-describe('notes in the activity feed', () => {
-  it('lets anyone who may read a record add a note, and only its author change or remove it', async () => {
+describe('comments in the activity feed', () => {
+  it('lets anyone who may read a record add a comment, and only its author change or remove it', async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: 'Noted',
       source: 'website',
@@ -7688,59 +7753,66 @@ describe('notes in the activity feed', () => {
     const id = toText(lead.id);
     // Unauthenticated, empty, or for someone who may not read the lead.
     expect(
-      (await request(`/leads/${id}/notes`, undefined, 'POST', { text: 'x' }))
+      (await request(`/leads/${id}/comments`, undefined, 'POST', { text: 'x' }))
         .status,
     ).toBe(401);
     expect(
-      (await request(`/leads/${id}/notes`, 'rep', 'POST', { text: '  ' }))
+      (await request(`/leads/${id}/comments`, 'rep', 'POST', { text: '  ' }))
         .status,
     ).toBe(400);
     expect(
-      (await request(`/leads/${id}/notes`, 'outsider', 'POST', { text: 'x' }))
-        .status,
+      (
+        await request(`/leads/${id}/comments`, 'outsider', 'POST', {
+          text: 'x',
+        })
+      ).status,
     ).toBe(403);
     // The owner, and another rep who may read but not edit the lead.
     const own = await (
-      await request(`/leads/${id}/notes`, 'rep', 'POST', {
+      await request(`/leads/${id}/comments`, 'rep', 'POST', {
         text: 'Already runs SAP; wants an integration only.',
       })
     ).json();
     expect(
-      (await request(`/leads/${id}/notes`, 'other', 'POST', { text: 'Seen' }))
-        .status,
+      (
+        await request(`/leads/${id}/comments`, 'other', 'POST', {
+          text: 'Seen',
+        })
+      ).status,
     ).toBe(200);
     const feed = await service.historyOf(actor('rep'), 'leads', id);
-    const notes = feed.data.filter((entry) => entry.action === 'note');
-    expect(notes.map((note) => object(note.changes).text).sort()).toEqual([
-      'Already runs SAP; wants an integration only.',
-      'Seen',
-    ]);
-    // Notes can be read alone (the AI follow-ups read them so).
+    const comments = feed.data.filter((entry) => entry.action === 'comment');
+    expect(
+      comments.map((comment) => object(comment.changes).text).sort(),
+    ).toEqual(['Already runs SAP; wants an integration only.', 'Seen']);
+    // Comments can be read alone (the AI follow-ups read them so).
     expect(
       (
-        await service.historyOf(actor('rep'), 'leads', id, { action: 'note' })
-      ).data.every((entry) => entry.action === 'note'),
+        await service.historyOf(actor('rep'), 'leads', id, {
+          action: 'comment',
+        })
+      ).data.every((entry) => entry.action === 'comment'),
     ).toBe(true);
-    // A person's note counts among the people's entries.
+    // A person's comment counts among the people's entries.
     expect(
       (
         await service.historyOf(actor('rep'), 'leads', id, { source: 'user' })
-      ).data.filter((entry) => entry.action === 'note'),
+      ).data.filter((entry) => entry.action === 'comment'),
     ).toHaveLength(2);
     // Only the author changes or removes it.
-    const noteId = toText(own.data.id);
+    const commentId = toText(own.data.id);
     expect(
       (
-        await request(`/notes/${noteId}`, 'other', 'PATCH', {
+        await request(`/comments/${commentId}`, 'other', 'PATCH', {
           text: 'Not mine',
         })
       ).status,
     ).toBe(403);
-    expect((await request(`/notes/${noteId}`, 'other', 'DELETE')).status).toBe(
-      403,
-    );
+    expect(
+      (await request(`/comments/${commentId}`, 'other', 'DELETE')).status,
+    ).toBe(403);
     const edited = await (
-      await request(`/notes/${noteId}`, 'rep', 'PATCH', {
+      await request(`/comments/${commentId}`, 'rep', 'PATCH', {
         text: 'Runs SAP ECC; integration only.',
       })
     ).json();
@@ -7749,73 +7821,76 @@ describe('notes in the activity feed', () => {
     );
     const [after] = (
       await service.historyOf(actor('rep'), 'leads', id)
-    ).data.filter((entry) => entry.id === noteId);
+    ).data.filter((entry) => entry.id === commentId);
     expect(after?.editedAt).toBeTruthy();
     expect(object(after?.previous).text).toBe(
       'Already runs SAP; wants an integration only.',
     );
-    // The feed says, at the time of the edit, who changed which note (the
-    // timeline leads there) and to what; the notes tab lists the note alone.
+    // The feed says, at the time of the edit, who changed which comment (the
+    // timeline leads there) and to what; the comments tab lists the comment alone.
     expect(
       (await service.historyOf(actor('rep'), 'leads', id)).data,
     ).toContainEqual(
       expect.objectContaining({
-        action: 'noteEdited',
+        action: 'commentEdited',
         actorId: 'rep',
-        changes: { text: 'Runs SAP ECC; integration only.', noteId },
+        changes: { text: 'Runs SAP ECC; integration only.', commentId },
       }),
     );
     expect(
       (
-        await service.historyOf(actor('rep'), 'leads', id, { action: 'note' })
-      ).data.some((entry) => entry.action === 'noteEdited'),
+        await service.historyOf(actor('rep'), 'leads', id, {
+          action: 'comment',
+        })
+      ).data.some((entry) => entry.action === 'commentEdited'),
     ).toBe(false);
-    // Other entries are not notes and stay as they are.
+    // Other entries are not comments and stay as they are.
     const created = feed.data.find((entry) => entry.action === 'created');
     expect(
       (
-        await request(`/notes/${toText(created?.id)}`, 'rep', 'PATCH', {
+        await request(`/comments/${toText(created?.id)}`, 'rep', 'PATCH', {
           text: 'x',
         })
       ).status,
     ).toBe(404);
-    expect((await request(`/notes/${noteId}`, 'rep', 'DELETE')).status).toBe(
-      200,
-    );
+    expect(
+      (await request(`/comments/${commentId}`, 'rep', 'DELETE')).status,
+    ).toBe(200);
     const after2 = (await service.historyOf(actor('rep'), 'leads', id)).data;
-    expect(after2.some((entry) => entry.id === noteId)).toBe(false);
-    // The feed says a note was removed, and by whom, without its text.
+    expect(after2.some((entry) => entry.id === commentId)).toBe(false);
+    // The feed says a comment was removed, and by whom, without its text.
     expect(after2).toContainEqual(
       expect.objectContaining({
-        action: 'noteDeleted',
+        action: 'commentDeleted',
         actorId: 'rep',
         changes: {},
       }),
     );
   });
-  it('lets the AI propose a note, screened like the others and recorded as its proposal', async () => {
+  it('lets the AI propose a comment, screened like the others and recorded as its proposal', async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: 'AI noted',
       source: 'website',
     });
     const id = toText(lead.id);
-    const input = { entity: 'leads', id, title: 'Note', text: 'Runs SAP' };
-    // Anyone who may read the lead may note on it; nobody else, and not
-    // with an empty note.
+    const input = { entity: 'leads', id, title: 'Comment', text: 'Runs SAP' };
+    // Anyone who may read the lead may comment on it; nobody else, and not
+    // with an empty comment.
     expect(
-      await screenProposal(service, actor('other'), 'add_note', input),
+      await screenProposal(service, actor('other'), 'add_comment', input),
     ).toEqual({ ok: true });
     expect(
-      (await screenProposal(service, actor('outsider'), 'add_note', input)).ok,
+      (await screenProposal(service, actor('outsider'), 'add_comment', input))
+        .ok,
     ).toBe(false);
     expect(
-      await screenProposal(service, actor('rep'), 'add_note', {
+      await screenProposal(service, actor('rep'), 'add_comment', {
         ...input,
         text: ' ',
       }),
     ).toMatchObject({ ok: false, code: 'invalidInput', field: 'text' });
     const tool = crmWriteTools(service, authorization).find(
-      (candidate) => candidate.definition.name === 'add_note',
+      (candidate) => candidate.definition.name === 'add_comment',
     );
     const result = (await tool!.invoke(
       { actor: { id: 'other', roles: [], isRoot: false } },
@@ -7823,10 +7898,10 @@ describe('notes in the activity feed', () => {
       { toolCallId: 'call', writer: () => undefined },
     )) as Record<string, unknown>;
     expect(object(result.values).text).toBe('Runs SAP');
-    const [note] = (
+    const [comment] = (
       await service.historyOf(actor('rep'), 'leads', id)
-    ).data.filter((entry) => entry.action === 'note');
-    expect(note).toMatchObject({ actorId: 'other', source: 'assistant' });
+    ).data.filter((entry) => entry.action === 'comment');
+    expect(comment).toMatchObject({ actorId: 'other', source: 'assistant' });
   });
 });
 
@@ -7898,7 +7973,7 @@ describe('duplicate leads and their merge', () => {
     expect(proposal).toMatchObject({ keepId: second.id, ai: false });
     expect(proposal.keepable.sort()).toEqual([first.id, second.id].sort());
   });
-  it('merges one lead into another: picked values, tasks and notes moved, the merge on the timeline', async () => {
+  it('merges one lead into another: picked values, tasks and comments moved, the merge on the timeline', async () => {
     const kept = await service.save(actor('rep'), 'leads', {
       name: '林涛',
       company: '合并测试乙',
@@ -7920,7 +7995,7 @@ describe('duplicate leads and their merge', () => {
       dueAt: '2026-10-21T02:00:00Z',
       leadId: merged.id,
     });
-    await service.addNote(actor('rep'), 'leads', merged.id, '预算已批');
+    await service.addComment(actor('rep'), 'leads', merged.id, '预算已批');
     const response = await request(`/leads/${kept.id}/merge`, 'rep', 'POST', {
       from: merged.id,
       picks: { company: merged.id, message: 'both' },
@@ -7944,14 +8019,14 @@ describe('duplicate leads and their merge', () => {
     });
     const history = (await service.historyOf(actor('rep'), 'leads', kept.id))
       .data;
-    expect(history.find((e) => e.action === 'note')).toMatchObject({
+    expect(history.find((e) => e.action === 'comment')).toMatchObject({
       changes: { text: '预算已批' },
     });
     expect(history.find((e) => e.action === 'merged')).toMatchObject({
       changes: {
         lead: { id: merged.id, company: '合并测试乙有限公司' },
         tasks: 1,
-        notes: 1,
+        comments: 1,
       },
     });
   });
@@ -8448,7 +8523,7 @@ describe('opportunity signals', () => {
     expect(chinese).toContain('预计成交日期 5 天内到达');
     const english = crmGuidance(days, 'en-US');
     expect(english).toContain('not contacted for more than 3 days');
-    expect(english).toContain('note or mail) for more than 10 days');
+    expect(english).toContain('comment or mail) for more than 10 days');
     expect(english).toContain('expected close date within 5 days');
     expect(english).not.toMatch(/[\u4e00-\u9fff]/);
     // English is the default, as the setting's.
@@ -8888,7 +8963,7 @@ describe('tasks', () => {
       }),
     ).toMatchObject({ companyId: company.id });
   });
-  it('counts a completed task, a note or mail as contact, and an open task due ahead as planned', async () => {
+  it('counts a completed task, a comment or mail as contact, and an open task due ahead as planned', async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: 'Exchanges',
       source: 'website',
@@ -8908,7 +8983,7 @@ describe('tasks', () => {
     expect((await lastExchanges(database.query(), 'leads')).has(id)).toBe(
       false,
     );
-    await service.addNote(actor('rep'), 'leads', id, 'Spoke on the phone.');
+    await service.addComment(actor('rep'), 'leads', id, 'Spoke on the phone.');
     expect(
       (await lastExchanges(database.query(), 'leads')).get(id),
     ).toBeGreaterThan(Date.now() - 60_000);
@@ -9050,13 +9125,13 @@ describe('overview reports', () => {
     expect(result).not.toHaveProperty('activity');
   });
 
-  it("counts each seller's completed tasks and notes by week, for the team", async () => {
+  it("counts each seller's completed tasks and comments by week, for the team", async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: 'Activity lead',
       company: 'Activity Co',
       source: 'website',
     });
-    await service.addNote(actor('rep'), 'leads', toText(lead.id), 'Called');
+    await service.addComment(actor('rep'), 'leads', toText(lead.id), 'Called');
     await service.save(actor('rep'), 'tasks', {
       name: 'Done this week',
       leadId: lead.id,
@@ -9072,16 +9147,16 @@ describe('overview reports', () => {
       weeks: string[];
       rows: {
         id: string;
-        weeks: { tasks: number; notes: number }[];
-        total: { tasks: number; notes: number };
+        weeks: { tasks: number; comments: number }[];
+        total: { tasks: number; comments: number };
       }[];
     };
     expect(activity.weeks).toHaveLength(4);
     const rep = activity.rows[0];
     expect(rep.id).toBe('rep');
     expect(rep.weeks.at(-1)?.tasks).toBeGreaterThanOrEqual(1);
-    expect(rep.weeks.at(-1)?.notes).toBeGreaterThanOrEqual(1);
-    expect(rep.total.notes).toBeGreaterThanOrEqual(1);
+    expect(rep.weeks.at(-1)?.comments).toBeGreaterThanOrEqual(1);
+    expect(rep.total.comments).toBeGreaterThanOrEqual(1);
   });
 });
 

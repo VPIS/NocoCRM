@@ -680,10 +680,10 @@ export async function populateDemo(
         },
         Math.min(day - 2, -1),
       );
-    // A call or a meeting that took place is a note on the record it was
+    // A call or a meeting that took place is a comment on the record it was
     // about, written by whoever held it, at the time it ended, headed by
     // what it was without the customer's name.
-    const note = async (
+    const comment = async (
       entity: 'leads' | 'opportunities' | 'companies' | 'contacts',
       recordId: unknown,
       authorId: unknown,
@@ -699,7 +699,7 @@ export async function populateDemo(
           entity,
           recordId: toText(recordId),
           actorId: toText(authorId),
-          action: 'note',
+          action: 'comment',
           changes: JSON.stringify({
             text: heading ? `**${heading}**\n\n${body}` : body,
           }),
@@ -707,25 +707,25 @@ export async function populateDemo(
         })
         .execute();
     };
-    // What is known of each contact, and why the churned company left: notes
+    // What is known of each contact, and why the churned company left: comments
     // by their owners, written when the record was.
     for (const [i, pair] of contacts.entries())
       for (const [j, contact] of pair.entries())
-        await note(
+        await comment(
           'contacts',
           contact.id,
           contact.ownerId,
           '',
-          text.contactNotes[j],
+          text.contactComments[j],
           i === 4 ? -4 - j : -70 + i * 5 + j,
           9,
         );
-    await note(
+    await comment(
       'companies',
       companies_[7].id,
       companies_[7].ownerId,
       '',
-      text.churnNotes,
+      text.churnComments,
       -20,
       9,
     );
@@ -733,7 +733,7 @@ export async function populateDemo(
       leadId: leads[i].id,
       ownerId: leadOwner(i).id,
     });
-    await note(
+    await comment(
       'leads',
       leads[0].id,
       leadOwner(0).id,
@@ -742,7 +742,7 @@ export async function populateDemo(
       -12,
       10,
     );
-    await note(
+    await comment(
       'leads',
       leads[1].id,
       leadOwner(1).id,
@@ -779,7 +779,7 @@ export async function populateDemo(
       await historyAt(q, at(day));
       leads[i] = converted;
     }
-    // Completed notes and upcoming meetings across the active pipeline.
+    // Completed comments and upcoming meetings across the active pipeline.
     for (let i = 0; i < 6; i++) {
       const a = deals[i][0];
       const links: Row = {
@@ -787,7 +787,7 @@ export async function populateDemo(
         opportunityId: opportunities[i].id,
         ownerId: companyOwner(a).id,
       };
-      await note(
+      await comment(
         'opportunities',
         links.opportunityId,
         links.ownerId,
@@ -852,11 +852,11 @@ export async function populateDemo(
         : status === 'cancelled'
           ? text.leadTaskMatters.cancelled
           : text.leadTaskMatters.planned;
-    // A contact that took place is a note; what is still to do, or called
+    // A contact that took place is a comment; what is still to do, or called
     // off, a task.
     for (const [i, day, hour, status] of leadTasks)
       if (status === 'completed')
-        await note(
+        await comment(
           'leads',
           leads[i].id,
           leadOwner(i).id,
@@ -882,7 +882,7 @@ export async function populateDemo(
       .filter(
         ({ lead }) => !['converted', 'invalid'].includes(toText(lead.status)),
       );
-    // Which of the past matters took place with the customer (a note of
+    // Which of the past matters took place with the customer (a comment of
     // it) and which were the team's own work (a task done).
     const cadenceExchange = [true, true, true, false, true, false];
     const weekdayOf = new Intl.DateTimeFormat('en-US', {
@@ -915,7 +915,7 @@ export async function populateDemo(
         if (n % 3 === 2 && openLeads.length) {
           const { lead, index } = openLeads[n % openLeads.length];
           if (status === 'completed' && exchange && feedback)
-            await note(
+            await comment(
               'leads',
               lead.id,
               leadOwner(index).id,
@@ -929,7 +929,7 @@ export async function populateDemo(
           const { deal, index } = activeDeals[n % activeDeals.length];
           const a = deals[index][0];
           if (status === 'completed' && exchange && feedback)
-            await note(
+            await comment(
               'opportunities',
               deal.id,
               companyOwner(a).id,

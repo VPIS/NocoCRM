@@ -29,5 +29,5 @@ export const followUpWords = {
   editionExample: ['专业版', 'Professional'],
   // How a suggested value names the CRM material it came from.
   originalMessage: ['原始信息', 'original message'],
-  note: ['备注', 'note'],
+  comment: ['评论', 'comment'],
 } as const satisfies Pairs;

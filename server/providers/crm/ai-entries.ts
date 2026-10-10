@@ -149,7 +149,7 @@ export interface Enrichment {
   value: string;
   // The page it was found on, for the web.
   source: string | null;
-  // The CRM's own material it came from (a task's name, a note, the
+  // The CRM's own material it came from (a task's name, a comment, the
   // original message), when not the web.
   basis?: string;
   current: string | null;

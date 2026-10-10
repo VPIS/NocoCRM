@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { useState, type ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-// A note's box lists colleagues on @ and remembers whom a pick names; only
-// those whose "@Name" the text still holds are sent with the note.
+// A comment's box lists colleagues on @ and remembers whom a pick names; only
+// those whose "@Name" the text still holds are sent with the comment.
 
 const users = [
   { id: 'me', name: 'Ada', disabled: false, roles: ['sales-representative'] },
@@ -42,7 +42,7 @@ function Box(): ReactElement {
   return (
     <>
       <MentionTextarea
-        aria-label='Note'
+        aria-label='Comment'
         value={text}
         onChange={setText}
         mentions={mentions}
@@ -69,7 +69,7 @@ describe('MentionTextarea', () => {
   it('lists active colleagues with a role, other than the writer, on @', async () => {
     render(<Box />);
     await userEvent.type(
-      screen.getByRole('textbox', { name: 'Note' }),
+      screen.getByRole('textbox', { name: 'Comment' }),
       'Hi @L',
     );
     const names = screen.getAllByRole('option').map((o) => o.textContent);
@@ -80,7 +80,7 @@ describe('MentionTextarea', () => {
   // middle of what is written; an email address is no mention.
   it('lists them after Chinese text and in the middle, not inside an email address', async () => {
     render(<Box />);
-    const box = screen.getByRole('textbox', { name: 'Note' });
+    const box = screen.getByRole('textbox', { name: 'Comment' });
     await userEvent.type(box, '请@L');
     expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual([
       'Li Ming',
@@ -103,7 +103,7 @@ describe('MentionTextarea', () => {
 
   it('writes the picked name and sends whom the text still names', async () => {
     render(<Box />);
-    const box = screen.getByRole('textbox', { name: 'Note' });
+    const box = screen.getByRole('textbox', { name: 'Comment' });
     await userEvent.type(box, 'Ask @wa');
     await userEvent.keyboard('{Enter}');
     expect((box as HTMLTextAreaElement).value).toBe('Ask @Wang Fang ');
@@ -125,7 +125,7 @@ describe('MentionTextarea', () => {
 
   it('closes the list on Escape without leaving the box', async () => {
     render(<Box />);
-    const box = screen.getByRole('textbox', { name: 'Note' });
+    const box = screen.getByRole('textbox', { name: 'Comment' });
     await userEvent.type(box, '@');
     expect(screen.getByRole('listbox')).toBeTruthy();
     await userEvent.keyboard('{Escape}');

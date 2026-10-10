@@ -40,7 +40,7 @@ type WriteTool =
   | 'delete_record'
   | 'convert_lead'
   | 'approval_action'
-  | 'add_note';
+  | 'add_comment';
 
 const object = (value: unknown): Data =>
   value && typeof value === 'object' && !Array.isArray(value)
@@ -220,11 +220,11 @@ function Proposal({
     return (
       <p className='text-sm text-muted-foreground'>{text('toolCard.delete')}</p>
     );
-  // A note is its text, corrected in place before it is confirmed.
-  if (tool === 'add_note')
+  // A comment is its text, corrected in place before it is confirmed.
+  if (tool === 'add_comment')
     return editable ? (
       <Textarea
-        aria-label={text('notes.label')}
+        aria-label={text('comments.label')}
         value={toText(input.text)}
         maxLength={LONG_TEXT_LIMIT}
         className='min-h-20 text-sm'
@@ -312,8 +312,8 @@ function operationLabel(tool: WriteTool, input: Data): string {
       return 'delete';
     case 'convert_lead':
       return 'convert';
-    case 'add_note':
-      return 'notes.add';
+    case 'add_comment':
+      return 'comments.add';
     default:
       return toText(input.action) || 'approve';
   }

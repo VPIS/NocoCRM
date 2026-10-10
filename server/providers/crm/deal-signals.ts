@@ -37,7 +37,7 @@ export interface DealSignalPass {
 }
 
 // The signal a deal gives at `now`, if any, from its stage, its dates and
-// its tasks and its last exchange (a task completed, a note, mail;
+// its tasks and its last exchange (a task completed, a comment, mail;
 // exchanges.ts), 0 when it has had none. A paused deal only says when its
 // pause is over; an open one first that its close date is near or past,
 // else that it went quiet.

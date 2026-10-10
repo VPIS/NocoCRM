@@ -7,7 +7,7 @@ const writeTools = [
   'delete_record',
   'convert_lead',
   'approval_action',
-  'add_note',
+  'add_comment',
 ];
 
 // The CRM's write tools, each rendered by the confirmation card: standalone

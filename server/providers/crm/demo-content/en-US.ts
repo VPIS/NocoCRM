@@ -104,11 +104,11 @@ export const enUS: DemoContent = {
     ],
   ],
   contactJobTitles: ['Head of IT', 'Technical Manager'],
-  contactNotes: [
+  contactComments: [
     'Main business decision maker.',
     'Contact for the technical evaluation.',
   ],
-  churnNotes:
+  churnComments:
     'The group standardised on another low-code platform, and the dealer management system moved with it.',
   deals: [
     'Production management platform (Enterprise + implementation)',

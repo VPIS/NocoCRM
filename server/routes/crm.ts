@@ -1048,37 +1048,37 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
         })),
       });
     });
-    // Notes in a record's activity feed: added by anyone who may read the
-    // record, changed or removed by their author (CrmService.addNote).
-    // Registered before the record routes, which would take /notes/:id.
-    // A note's body is its text and the colleagues it @-mentions.
-    routes.post('/:entity/:id/notes', async (c) => {
+    // Comments in a record's activity feed: added by anyone who may read the
+    // record, changed or removed by their author (CrmService.addComment).
+    // Registered before the record routes, which would take /comments/:id.
+    // A comment's body is its text and the colleagues it @-mentions.
+    routes.post('/:entity/:id/comments', async (c) => {
       const body = object(await c.req.json());
       return c.json({
-        data: await service.addNote(
+        data: await service.addComment(
           c.get('actor'),
           asEntity(c.req.param('entity')),
           c.req.param('id'),
           body.text,
           body.mentions,
-          // A reply names the note it answers.
+          // A reply names the comment it answers.
           body.replyTo,
         ),
       });
     });
-    routes.patch('/notes/:noteId', async (c) => {
+    routes.patch('/comments/:commentId', async (c) => {
       const body = object(await c.req.json());
       return c.json({
-        data: await service.editNote(
+        data: await service.editComment(
           c.get('actor'),
-          c.req.param('noteId'),
+          c.req.param('commentId'),
           body.text,
           body.mentions,
         ),
       });
     });
-    routes.delete('/notes/:noteId', async (c) => {
-      await service.removeNote(c.get('actor'), c.req.param('noteId'));
+    routes.delete('/comments/:commentId', async (c) => {
+      await service.removeComment(c.get('actor'), c.req.param('commentId'));
       return c.json({ data: { deleted: true } });
     });
     routes.get('/:entity/:id', async (c) => {

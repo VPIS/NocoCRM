@@ -147,16 +147,16 @@ export function deletionChecks(entity: Entity): [Entity, string][] {
 // The roles that may own records; see save().
 const sellerRoles = ['sales-representative', 'sales-manager'];
 
-// A note's text: something to say, within a long text's length.
-// A note's stored changes: its text and, when it has any, the colleagues it
+// A comment's text: something to say, within a long text's length.
+// A comment's stored changes: its text and, when it has any, the colleagues it
 // mentions.
-function noteChanges(
+function commentChanges(
   text: string,
   mentions: readonly string[],
 ): { text: string; mentions?: string[] } {
   return mentions.length ? { text, mentions: [...mentions] } : { text };
 }
-function noteText(value: unknown): string {
+function commentText(value: unknown): string {
   const text = typeof value === 'string' ? value.trim() : '';
   if (!text || text.length > LONG_TEXT_LIMIT)
     throw new CrmError('invalidInput', 400, 'text');
@@ -769,7 +769,7 @@ export class CrmService {
       page?: number;
       pageSize?: number;
       source?: string;
-      // Only the notes, for the notes beside a record's particulars.
+      // Only the comments, for the comments beside a record's particulars.
       action?: string;
     } = {},
   ): Promise<{ data: Row[]; total: number; page: number; pageSize: number }> {
@@ -782,7 +782,7 @@ export class CrmService {
     const createdAt = Number.isNaN(born)
       ? undefined
       : new Date(born).toISOString();
-    const foldsMail = Boolean(createdAt) && options.action !== 'note';
+    const foldsMail = Boolean(createdAt) && options.action !== 'comment';
     // An approval's AI review is its approver's working draft: it reads
     // with the approver's access (precedents on companies the applicant may
     // not see) and leans on a decision not yet made, so no one else reads it.
@@ -801,7 +801,7 @@ export class CrmService {
     // The tasks linked to the record that the reader may see: their
     // planning, edits and outcome are part of the record's story (one
     // deleted is told on the record itself, as taskDeleted). Not for
-    // the notes alone.
+    // the comments alone.
     const link = (
       {
         leads: 'leadId',
@@ -810,7 +810,7 @@ export class CrmService {
       } as Partial<Record<Entity, keyof ListOptions>>
     )[entity];
     const tasks = new Map<string, CrmRecord>();
-    if (link && options.action !== 'note')
+    if (link && options.action !== 'comment')
       for (const task of (
         await this.list(actor, 'tasks', { [link]: id, pageSize: 1000 })
       ).data)
@@ -820,7 +820,7 @@ export class CrmService {
     // withdrawn are part of the deal's story too. Only their status
     // changes: an approval's AI review stays its approver's.
     const approvals = new Map<string, CrmRecord>();
-    if (entity === 'opportunities' && options.action !== 'note')
+    if (entity === 'opportunities' && options.action !== 'comment')
       for (const approval of (
         await this.list(actor, 'approvals', {
           opportunityId: id,
@@ -843,9 +843,9 @@ export class CrmService {
       const own = eb.and([
         eb('entity', '=', entity),
         eb('recordId', '=', id),
-        // A reply is read with its note (below), not as an entry of its
-        // own; the notes alone (an AI's reading) take them all.
-        ...(options.action === 'note' ? [] : [eb('replyToId', 'is', null)]),
+        // A reply is read with its comment (below), not as an entry of its
+        // own; the comments alone (an AI's reading) take them all.
+        ...(options.action === 'comment' ? [] : [eb('replyToId', 'is', null)]),
         ...(foldsMail
           ? [
               eb.or([
@@ -893,8 +893,8 @@ export class CrmService {
       const shown = hideReviews
         ? sourced.where('action', 'not in', ['ai', 'aiRevise'])
         : sourced;
-      return options.action === 'note'
-        ? shown.where('action', '=', 'note')
+      return options.action === 'comment'
+        ? shown.where('action', '=', 'comment')
         : shown;
     };
     // A task's edit tells the record only when it changes who has it
@@ -1007,13 +1007,13 @@ export class CrmService {
                 },
               };
             })()
-          : // A note's text is the note, not a field of the record; an edit
+          : // A comment's text is the comment, not a field of the record; an edit
             // entry carries the text as changed, and a person's instruction to
             // the AI to redo a card (aiRevise) its words, and a mail
             // conversation (mail-timeline.ts) its summary.
-            event.action === 'note' ||
+            event.action === 'comment' ||
               event.action === 'mail' ||
-              event.action === 'noteEdited' ||
+              event.action === 'commentEdited' ||
               event.action === 'aiRevise' ||
               event.action === 'taskDeleted'
             ? {
@@ -1040,7 +1040,7 @@ export class CrmService {
                             ),
                           ),
                           tasks: merge.tasks ?? 0,
-                          notes: merge.notes ?? 0,
+                          comments: merge.comments ?? 0,
                           // A lead not yet saved, merged from the capture review.
                           ...(merge.captured ? { captured: true } : {}),
                         };
@@ -1071,13 +1071,13 @@ export class CrmService {
                   : { ai: null }),
               },
     );
-    // Each note's replies at any depth, oldest first, each naming what it
+    // Each comment's replies at any depth, oldest first, each naming what it
     // answers (the page draws the tree).
-    const noteIds = data
-      .filter((row) => row.action === 'note' && options.action !== 'note')
+    const commentIds = data
+      .filter((row) => row.action === 'comment' && options.action !== 'comment')
       .map((row) => toText(row.id));
-    if (noteIds.length) {
-      const replies = await this.repliesUnder(query, noteIds);
+    if (commentIds.length) {
+      const replies = await this.repliesUnder(query, commentIds);
       const parentOf = new Map(
         replies.map((reply) => [toText(reply.id), toText(reply.replyToId)]),
       );
@@ -1087,11 +1087,11 @@ export class CrmService {
           at = parentOf.get(at)!;
         return at;
       };
-      const byNote = new Map<string, Row[]>();
+      const byComment = new Map<string, Row[]>();
       for (const reply of replies) {
         const root = rootOf(toText(reply.id));
-        byNote.set(root, [
-          ...(byNote.get(root) ?? []),
+        byComment.set(root, [
+          ...(byComment.get(root) ?? []),
           {
             id: reply.id,
             replyToId: reply.replyToId,
@@ -1104,8 +1104,8 @@ export class CrmService {
         ]);
       }
       for (const row of data)
-        if (row.action === 'note')
-          row.replies = byNote.get(toText(row.id)) ?? [];
+        if (row.action === 'comment')
+          row.replies = byComment.get(toText(row.id)) ?? [];
     }
     if (
       earlier.length &&
@@ -1585,7 +1585,7 @@ export class CrmService {
         )
           throw new CrmError('leadOrCompany');
         // A new lead is being worked once something has been done with it:
-        // a task of it completed (as a note or mail does).
+        // a task of it completed (as a comment or mail does).
         if (input.status === 'completed' && previous?.status !== 'completed')
           await this.leadWorked(tx, actor, toText(input.leadId), now);
       }
@@ -1917,48 +1917,48 @@ export class CrmService {
       })
       .execute();
   }
-  // Notes: what a person (or the AI, confirmed) writes into a record's
-  // activity feed, stored with its history as action 'note' and the text in
+  // Comments: what a person (or the AI, confirmed) writes into a record's
+  // activity feed, stored with its history as action 'comment' and the text in
   // `changes`. Anyone who may read the record may add one; only the author
   // may change or remove it, and only while they may still read the record.
-  async addNote(
+  async addComment(
     actor: Actor,
     entity: Entity,
     id: string,
     text: unknown,
-    // The colleagues the note @-mentions, by id; each is told once the note
+    // The colleagues the comment @-mentions, by id; each is told once the comment
     // is saved (mentioned()).
     mentions?: unknown,
-    // The note or reply of the same record it answers: a reply hangs
+    // The comment or reply of the same record it answers: a reply hangs
     // under what it answers, a reply to a reply under that reply.
     replyTo?: unknown,
   ): Promise<Row> {
-    const body = noteText(text);
+    const body = commentText(text);
     await this.get(actor, entity, id);
     const mentioned = await this.mentionIds(actor, mentions);
     const thread = replyTo ? await this.thread(entity, id, replyTo) : null;
-    const note = {
+    const comment = {
       id: randomUUID(),
       entity,
       recordId: id,
       actorId: actor.id,
-      action: 'note',
+      action: 'comment',
       fromValue: null,
       toValue: null,
-      changes: JSON.stringify(noteChanges(body, mentioned)),
+      changes: JSON.stringify(commentChanges(body, mentioned)),
       previous: null,
       source: actor.via ?? null,
       replyToId: thread?.parentId ?? null,
       createdAt: new Date().toISOString(),
     };
     await this.database.transaction(async ({ query }) => {
-      await query.insertInto('crmHistory').values(note).execute();
+      await query.insertInto('crmHistory').values(comment).execute();
       // Writing down what happened with a new lead is working it.
       if (entity === 'leads')
-        await this.leadWorked(query, actor, id, note.createdAt);
+        await this.leadWorked(query, actor, id, comment.createdAt);
     });
-    this.mentioned(actor, entity, id, note.id, mentioned);
-    // A reply tells the thread: whoever wrote the note and whoever replied
+    this.mentioned(actor, entity, id, comment.id, mentioned);
+    // A reply tells the thread: whoever wrote the comment and whoever replied
     // before, but not whom the reply mentions, who is told so already.
     if (thread)
       for (const recipientId of thread.people.filter(
@@ -1970,17 +1970,17 @@ export class CrmService {
           recipientId,
           actorId: actor.id,
           event: 'replied',
-          key: `record-notification:${entity}:${id}:replied:${recipientId}:${note.id}`,
+          key: `record-notification:${entity}:${id}:replied:${recipientId}:${comment.id}`,
         }).catch(() => undefined);
     return {
-      ...note,
-      changes: noteChanges(body, mentioned),
+      ...comment,
+      changes: commentChanges(body, mentioned),
       editedAt: null,
     };
   }
-  // The thread a reply joins: what it answers, which must be a note or a
+  // The thread a reply joins: what it answers, which must be a comment or a
   // reply of the same record, and everyone who has written in that thread,
-  // from its note down.
+  // from its comment down.
   private async thread(
     entity: Entity,
     recordId: string,
@@ -1993,10 +1993,10 @@ export class CrmService {
       .where('id', '=', toText(replyTo))
       .where('entity', '=', entity)
       .where('recordId', '=', recordId)
-      .where('action', '=', 'note')
+      .where('action', '=', 'comment')
       .executeTakeFirst();
     if (!parent) throw new CrmError('notFound', 404);
-    // Up to the note the thread hangs from.
+    // Up to the comment the thread hangs from.
     let root = parent;
     for (let depth = 0; root.replyToId && depth < 50; depth += 1) {
       const up = await query
@@ -2024,7 +2024,7 @@ export class CrmService {
       ],
     };
   }
-  // Every reply under the given notes, at any depth, oldest first.
+  // Every reply under the given comments, at any depth, oldest first.
   private async repliesUnder(
     query: QueryAdapter,
     ids: readonly string[],
@@ -2036,7 +2036,7 @@ export class CrmService {
         .selectFrom('crmHistory')
         .selectAll()
         .where('replyToId', 'in', level)
-        .where('action', '=', 'note')
+        .where('action', '=', 'comment')
         .execute();
       found.push(...rows);
       level = rows.map((row) => toText(row.id));
@@ -2047,7 +2047,7 @@ export class CrmService {
         toText(left.id).localeCompare(toText(right.id)),
     );
   }
-  // The colleagues a note may mention: active accounts other than the
+  // The colleagues a comment may mention: active accounts other than the
   // writer, each once, at most twenty. Whether one may read the record is
   // not asked here: a message to someone who may not is never delivered
   // (deliverNotifications reads the record as its recipient).
@@ -2071,13 +2071,13 @@ export class CrmService {
     );
     return ids.filter((id) => active.has(id));
   }
-  // Tells each colleague a note newly mentions, once the note is saved; the
-  // note's id keys the message, so one mention is one message.
+  // Tells each colleague a comment newly mentions, once the comment is saved; the
+  // comment's id keys the message, so one mention is one message.
   private mentioned(
     actor: Actor,
     entity: Entity,
     recordId: string,
-    noteId: string,
+    commentId: string,
     recipients: readonly string[],
   ): void {
     for (const recipientId of recipients)
@@ -2087,11 +2087,11 @@ export class CrmService {
         recipientId,
         actorId: actor.id,
         event: 'mentioned',
-        key: `record-notification:${entity}:${recordId}:mentioned:${recipientId}:${noteId}`,
+        key: `record-notification:${entity}:${recordId}:mentioned:${recipientId}:${commentId}`,
       }).catch(() => undefined);
   }
   // A new lead turns working once something has been done with it: a task
-  // of it completed, a note written, mail exchanged (mail-timeline.ts).
+  // of it completed, a comment written, mail exchanged (mail-timeline.ts).
   // Anything else leaves it as it is.
   async leadWorked(
     query: QueryAdapter,
@@ -2120,48 +2120,48 @@ export class CrmService {
       'working',
     );
   }
-  async editNote(
+  async editComment(
     actor: Actor,
-    noteId: string,
+    commentId: string,
     text: unknown,
     mentions?: unknown,
   ): Promise<Row> {
-    const body = noteText(text);
-    const note = await this.ownNote(actor, noteId);
-    if (object(jsonValue(note.changes) ?? {}).deleted)
+    const body = commentText(text);
+    const comment = await this.ownComment(actor, commentId);
+    if (object(jsonValue(comment.changes) ?? {}).deleted)
       throw new CrmError('notFound', 404);
     const editedAt = new Date().toISOString();
-    const previous = object(jsonValue(note.changes) ?? {});
+    const previous = object(jsonValue(comment.changes) ?? {});
     const mentioned = await this.mentionIds(actor, mentions);
     // Only those the edit adds are told; who was mentioned already was told
     // when they were.
     const before = new Set(
       (Array.isArray(previous.mentions) ? previous.mentions : []).map(toText),
     );
-    // The note changes in place; the feed also says, at the time of the
-    // edit, who changed a note and to what.
+    // The comment changes in place; the feed also says, at the time of the
+    // edit, who changed a comment and to what.
     await this.database.transaction(async ({ query }) => {
       await query
         .updateTable('crmHistory')
         .set({
-          changes: JSON.stringify(noteChanges(body, mentioned)),
+          changes: JSON.stringify(commentChanges(body, mentioned)),
           previous: JSON.stringify({ text: toText(previous.text ?? '') }),
           editedAt,
         })
-        .where('id', '=', noteId)
+        .where('id', '=', commentId)
         .execute();
       await query
         .insertInto('crmHistory')
         .values({
           id: randomUUID(),
-          entity: note.entity,
-          recordId: note.recordId,
+          entity: comment.entity,
+          recordId: comment.recordId,
           actorId: actor.id,
-          action: 'noteEdited',
+          action: 'commentEdited',
           fromValue: null,
           toValue: null,
-          // Which note: the timeline's "edited a note" leads to it.
-          changes: JSON.stringify({ text: body, noteId }),
+          // Which comment: the timeline's "edited a comment" leads to it.
+          changes: JSON.stringify({ text: body, commentId }),
           previous: null,
           source: actor.via ?? null,
           createdAt: editedAt,
@@ -2170,25 +2170,25 @@ export class CrmService {
     });
     this.mentioned(
       actor,
-      asEntity(toText(note.entity)),
-      toText(note.recordId),
-      noteId,
+      asEntity(toText(comment.entity)),
+      toText(comment.recordId),
+      commentId,
       mentioned.filter((id) => !before.has(id)),
     );
-    return { ...note, changes: noteChanges(body, mentioned), editedAt };
+    return { ...comment, changes: commentChanges(body, mentioned), editedAt };
   }
-  // Removing a note leaves its place in the feed to say one was removed,
+  // Removing a comment leaves its place in the feed to say one was removed,
   // by whom and when, without the text its author took back.
-  // A note or a reply with replies under it keeps its place for them: its
+  // A comment or a reply with replies under it keeps its place for them: its
   // text goes and it reads as deleted. One without goes, and with it each
   // deleted place above it that is left with nothing under it.
-  async removeNote(actor: Actor, noteId: string): Promise<void> {
-    const note = await this.ownNote(actor, noteId);
+  async removeComment(actor: Actor, commentId: string): Promise<void> {
+    const comment = await this.ownComment(actor, commentId);
     const under = await this.database
       .query()
       .selectFrom('crmHistory')
       .select('id')
-      .where('replyToId', '=', noteId)
+      .where('replyToId', '=', commentId)
       .execute();
     if (under.length) {
       await this.database
@@ -2199,14 +2199,17 @@ export class CrmService {
           previous: null,
           editedAt: new Date().toISOString(),
         })
-        .where('id', '=', noteId)
+        .where('id', '=', commentId)
         .execute();
       return;
     }
     await this.database.transaction(async ({ query }) => {
-      await query.deleteFrom('crmHistory').where('id', '=', noteId).execute();
-      if (note.replyToId) {
-        let parentId = toText(note.replyToId);
+      await query
+        .deleteFrom('crmHistory')
+        .where('id', '=', commentId)
+        .execute();
+      if (comment.replyToId) {
+        let parentId = toText(comment.replyToId);
         for (let depth = 0; parentId && depth < 50; depth += 1) {
           const parent = await query
             .selectFrom('crmHistory')
@@ -2237,10 +2240,10 @@ export class CrmService {
         .insertInto('crmHistory')
         .values({
           id: randomUUID(),
-          entity: note.entity,
-          recordId: note.recordId,
+          entity: comment.entity,
+          recordId: comment.recordId,
           actorId: actor.id,
-          action: 'noteDeleted',
+          action: 'commentDeleted',
           fromValue: null,
           toValue: null,
           changes: JSON.stringify({}),
@@ -2251,20 +2254,24 @@ export class CrmService {
         .execute();
     });
   }
-  // A note the actor wrote on a record they may still read; any other
-  // entry, or someone else's note, is refused.
-  private async ownNote(actor: Actor, noteId: string): Promise<Row> {
-    const note = await this.database
+  // A comment the actor wrote on a record they may still read; any other
+  // entry, or someone else's comment, is refused.
+  private async ownComment(actor: Actor, commentId: string): Promise<Row> {
+    const comment = await this.database
       .query()
       .selectFrom('crmHistory')
       .selectAll()
-      .where('id', '=', noteId)
-      .where('action', '=', 'note')
+      .where('id', '=', commentId)
+      .where('action', '=', 'comment')
       .executeTakeFirst();
-    if (!note) throw new CrmError('notFound', 404);
-    await this.get(actor, asEntity(toText(note.entity)), toText(note.recordId));
-    if (note.actorId !== actor.id) throw new CrmError('forbidden', 403);
-    return note;
+    if (!comment) throw new CrmError('notFound', 404);
+    await this.get(
+      actor,
+      asEntity(toText(comment.entity)),
+      toText(comment.recordId),
+    );
+    if (comment.actorId !== actor.id) throw new CrmError('forbidden', 403);
+    return comment;
   }
   async checkApprover(actor: Actor, id: string): Promise<void> {
     if (id === actor.id) throw new CrmError('selfApproval');

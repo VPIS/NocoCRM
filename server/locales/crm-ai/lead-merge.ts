@@ -13,8 +13,8 @@ export const mergeLabels = {
   thisLead: ['本页这条', 'this lead'],
   otherLead: ['另一条', 'the other lead'],
   unsavedSummary: [
-    '刚由 AI 从销售粘贴的文字整理出来，还没有保存成线索，没有任务和备注',
-    'Just organised by the AI from text a salesperson pasted; not yet saved as a lead, with no tasks or notes',
+    '刚由 AI 从销售粘贴的文字整理出来，还没有保存成线索，没有任务和评论',
+    'Just organised by the AI from text a salesperson pasted; not yet saved as a lead, with no tasks or comments',
   ],
 } as const satisfies Pairs;
 
@@ -38,10 +38,10 @@ export const leadSummary = (
   created: string,
   updated: string,
   tasks: number,
-  notes: number,
+  comments: number,
 ): Pair => [
-  `创建于 ${created}，更新于 ${updated}；任务 ${tasks} 条，备注 ${notes} 条`,
-  `Created ${created}, updated ${updated}; ${tasks} tasks, ${notes} notes`,
+  `创建于 ${created}，更新于 ${updated}；任务 ${tasks} 条，评论 ${comments} 条`,
+  `Created ${created}, updated ${updated}; ${tasks} tasks, ${comments} comments`,
 ];
 
 // The Chinese words at the end of a company's name that only say what kind

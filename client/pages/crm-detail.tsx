@@ -659,6 +659,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                 </>
               )}
               {leadGroups[0][1].map(fieldRow)}
+              <RecordTimes record={record} />
             </InfoGroup>
             {leadGroups.slice(1).map(([group, keys]) => (
               <InfoGroup key={group} title={text(`leadGroups.${group}`)}>
@@ -2076,7 +2077,7 @@ function TaskEvent({
   names: Record<string, string>;
   fileNames: Record<string, string>;
   // Whether a completed task's result is too long for the line, which the
-  // timeline then shows whole below it, as a note's text.
+  // timeline then shows whole below it, as a comment's text.
   resultLong?: boolean;
   onResultLong?: (long: boolean) => void;
 }): ReactElement {
@@ -2156,7 +2157,7 @@ function TaskEvent({
         ) : null
       ) : toText(event.toValue) === 'completed' && task.result ? (
         // Only the room the name leaves, so a long result never cuts the
-        // name: one that fits reads on the line, as a note's text does; one
+        // name: one that fits reads on the line, as a comment's text does; one
         // of several lines, or longer than the line, reads whole below it.
         <>
           {resultLong ? null : (
@@ -2164,7 +2165,7 @@ function TaskEvent({
               ·
             </span>
           )}
-          <NoteExcerpt
+          <CommentExcerpt
             value={toText(task.result)}
             long={resultLong}
             onLong={(long) => onResultLong?.(long)}
@@ -2175,22 +2176,23 @@ function TaskEvent({
   );
 }
 
-// A note's text, as its entry keeps it.
-const noteText = (event: { changes?: unknown }): string =>
+// A comment's text, as its entry keeps it.
+const commentText = (event: { changes?: unknown }): string =>
   toText((event.changes as Data | undefined)?.text ?? '');
-// A note deleted while it had replies: its place kept for them.
-const noteGone = (event: { changes?: unknown }): boolean =>
+// A comment deleted while it had replies: its place kept for them.
+const commentGone = (event: { changes?: unknown }): boolean =>
   Boolean((event.changes as Data | undefined)?.deleted);
 
-// A note's replies, under it, oldest first, each on a line of its own as
-// a note reads (who, when, the text, folding when long), its author's edit
-// and delete on its hover, and a reply to a reply under the reply it
-// answers, indented a level deeper (no deeper than three, so a long
-// exchange keeps its room); the reply box opens under what it answers.
-function NoteThread({
+// A comment's replies, under it at one level, oldest first, so the
+// exchange reads in the order it took place, on a line as fine as the
+// timeline's own between its icons: each on a line of its own as a comment
+// reads (who, whom it answers, when, the text, folding when long), its
+// author's edit and delete on its hover; the reply box at the thread's end,
+// whichever it answers.
+function CommentThread({
   entity,
   recordId,
-  note,
+  comment,
   replyingTo,
   onReply,
   onDone,
@@ -2199,8 +2201,8 @@ function NoteThread({
 }: {
   entity: Entity;
   recordId: string;
-  note: Data;
-  // What is being answered: the note, or one of its replies.
+  comment: Data;
+  // What is being answered: the comment, or one of its replies.
   replyingTo?: string;
   onReply: (id: string) => void;
   onDone: () => void;
@@ -2210,131 +2212,152 @@ function NoteThread({
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
   const [editing, setEditing] = useState<string>();
-  const replies = (Array.isArray(note.replies) ? note.replies : []) as Data[];
-  const noteId = toText(note.id);
-  const ids = new Set(replies.map((reply) => toText(reply.id)));
-  if (!replies.length && replyingTo !== noteId) return null;
+  const replies = (
+    Array.isArray(comment.replies) ? comment.replies : []
+  ) as Data[];
+  const commentId = toText(comment.id);
+  // Answering the comment or one of its replies.
+  const answering =
+    replyingTo !== undefined &&
+    (replyingTo === commentId ||
+      replies.some((reply) => toText(reply.id) === replyingTo));
+  if (!replies.length && !answering) return null;
   const name = (id: unknown): string =>
     meta?.users.find((user) => user.id === id)?.name ?? '';
-  // What answers each: a reply whose answer is not in the thread hangs from
-  // the note.
-  const under = (id: string): Data[] =>
-    replies.filter((reply) => {
-      const parent = toText(reply.replyToId);
-      return id === noteId
-        ? parent === noteId || !ids.has(parent)
-        : parent === id;
-    });
   const box = (replyTo: string): ReactElement | null =>
-    replyingTo === replyTo ? (
+    answering ? (
       <ReplyBox
+        key={replyTo}
         entity={entity}
         recordId={recordId}
         replyTo={replyTo}
+        // Whom it answers: the comment's author, or the reply's.
+        addressee={toText(
+          (replies.find((reply) => toText(reply.id) === replyTo) ?? comment)
+            .actorId,
+        )}
         onDone={onDone}
       />
     ) : null;
-  const branch = (id: string, depth: number): ReactElement | null => {
-    const children = under(id);
-    if (!children.length && replyingTo !== id) return null;
-    return (
-      <div
-        className={`grid gap-2 ${
-          depth <= 3 ? 'mt-2 border-l-2 border-border/60 pl-3' : 'mt-2'
-        }`}
-      >
-        {children.map((reply) => {
-          const replyId = toText(reply.id);
-          return (
-            <div key={replyId} className='min-w-0'>
-              <div className='group/reply'>
-                <div className='flex min-h-[26px] items-center gap-2 text-sm'>
-                  <span
-                    aria-hidden
-                    className='grid size-5 shrink-0 place-items-center rounded-full bg-muted text-[0.625rem] font-medium text-muted-foreground'
-                  >
-                    {initials(name(reply.actorId))}
+  return (
+    <div className='mt-2 grid gap-2 border-l border-border/50 pl-3'>
+      {replies.map((reply) => {
+        const replyId = toText(reply.id);
+        return (
+          <div key={replyId} className='min-w-0'>
+            <div className='group/reply'>
+              <div className='flex min-h-[26px] items-center gap-2 text-sm'>
+                <span
+                  aria-hidden
+                  className='grid size-5 shrink-0 place-items-center rounded-full bg-muted text-[0.625rem] font-medium text-muted-foreground'
+                >
+                  {initials(name(reply.actorId))}
+                </span>
+                {/* Who wrote it, and whom it answers: the comment's
+                      author, or the reply's above it. */}
+                <span className='min-w-0 flex-1 truncate'>
+                  <span className='font-semibold'>{name(reply.actorId)}</span>{' '}
+                  <span className='text-muted-foreground'>
+                    {text('comments.replyTo', {
+                      name: name(
+                        (
+                          replies.find(
+                            (other) =>
+                              toText(other.id) === toText(reply.replyToId),
+                          ) ?? comment
+                        ).actorId,
+                      ),
+                    })}
                   </span>
-                  <span className='min-w-0 flex-1 truncate font-semibold'>
-                    {name(reply.actorId)}
-                  </span>
-                  <NoteActions
-                    id={replyId}
-                    reply
-                    onReply={() => onReply(replyId)}
-                    onEdit={
-                      reply.actorId === meta?.userId && !noteGone(reply)
-                        ? () => setEditing(replyId)
-                        : undefined
-                    }
-                  />
-                  <time
-                    dateTime={toText(reply.createdAt)}
-                    title={localDate(reply.createdAt, language, timeZone)}
-                    className='shrink-0 text-xs text-muted-foreground/80 tabular-nums'
-                  >
-                    {reply.editedAt && !noteGone(reply)
-                      ? `${toText(text('notes.edited'))} · `
-                      : ''}
-                    {relativeTime(
-                      reply.createdAt,
-                      language,
-                      now,
-                      text('justNow'),
-                    )}
-                  </time>
-                </div>
-                {editing === replyId ? (
-                  <NoteEditor
-                    note={reply}
-                    onDone={() => setEditing(undefined)}
-                  />
-                ) : noteGone(reply) ? (
-                  <div className='pl-7 text-sm text-muted-foreground'>
-                    {text('notes.deleted')}
-                  </div>
-                ) : (
-                  <div className='pl-7 text-sm'>
-                    <FoldingText
-                      value={markdownMentions(
-                        noteText(reply),
-                        (reply.changes as Data | undefined)?.mentions,
-                        meta?.users ?? [],
-                      )}
-                    />
-                  </div>
-                )}
+                </span>
+                <CommentActions
+                  id={replyId}
+                  reply
+                  onReply={() => onReply(replyId)}
+                  onEdit={
+                    reply.actorId === meta?.userId && !commentGone(reply)
+                      ? () => setEditing(replyId)
+                      : undefined
+                  }
+                />
+                <time
+                  dateTime={toText(reply.createdAt)}
+                  title={localDate(reply.createdAt, language, timeZone)}
+                  className='shrink-0 text-xs text-muted-foreground/80 tabular-nums'
+                >
+                  {reply.editedAt && !commentGone(reply)
+                    ? `${toText(text('comments.edited'))} · `
+                    : ''}
+                  {relativeTime(
+                    reply.createdAt,
+                    language,
+                    now,
+                    text('justNow'),
+                  )}
+                </time>
               </div>
-              {branch(replyId, depth + 1)}
+              {editing === replyId ? (
+                <CommentEditor
+                  comment={reply}
+                  onDone={() => setEditing(undefined)}
+                />
+              ) : commentGone(reply) ? (
+                <div className='pl-7 text-sm text-muted-foreground'>
+                  {text('comments.deleted')}
+                </div>
+              ) : (
+                <div className='pl-7 text-sm'>
+                  <FoldingText
+                    value={markdownMentions(
+                      commentText(reply),
+                      (reply.changes as Data | undefined)?.mentions,
+                      meta?.users ?? [],
+                    )}
+                  />
+                </div>
+              )}
             </div>
-          );
-        })}
-        {box(id)}
-      </div>
-    );
-  };
-  return branch(noteId, 1);
+          </div>
+        );
+      })}
+      {box(replyingTo ?? commentId)}
+    </div>
+  );
 }
 
-// The box answering a note, under its thread: @ mentions a colleague,
+// The box answering a comment, under its thread: @ mentions a colleague,
 // ⌘/Ctrl+Enter or Reply posts, Escape or Cancel leaves it.
 function ReplyBox({
   entity,
   recordId,
   replyTo,
+  addressee,
   onDone,
 }: {
   entity: Entity;
   recordId: string;
   replyTo: string;
+  // Who wrote what it answers: the box opens on "@Name " to them, a real
+  // mention, unless that is the writer.
+  addressee?: string;
   onDone: () => void;
 }): ReactElement {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
   const api = useCrmApi();
   const refresh = useRefresh();
-  const [draft, setDraft] = useState('');
-  const [mentions, setMentions] = useState<string[]>([]);
+  const to =
+    addressee && addressee !== meta?.userId
+      ? meta?.users.find((user) => user.id === addressee)
+      : undefined;
+  const [draft, setDraft] = useState(() => (to ? `@${to.name} ` : ''));
+  const [mentions, setMentions] = useState<string[]>(() => (to ? [to.id] : []));
+  // The caret after the name, ready to write.
+  const boxRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const area = boxRef.current?.querySelector('textarea');
+    area?.setSelectionRange(area.value.length, area.value.length);
+  }, []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   const post = async (): Promise<void> => {
@@ -2342,7 +2365,7 @@ function ReplyBox({
     setBusy(true);
     setError(undefined);
     try {
-      await api(`${toText(entity)}/${toText(recordId)}/notes`, 'POST', {
+      await api(`${toText(entity)}/${toText(recordId)}/comments`, 'POST', {
         text: draft,
         mentions: mentionsIn(draft, mentions, meta?.users ?? []),
         replyTo,
@@ -2356,11 +2379,11 @@ function ReplyBox({
     }
   };
   return (
-    <div className='grid gap-2'>
+    <div ref={boxRef} className='grid gap-2'>
       <MentionTextarea
         autoFocus
-        aria-label={text('notes.reply')}
-        placeholder={text('notes.replyPlaceholder')}
+        aria-label={text('comments.reply')}
+        placeholder={text('comments.replyPlaceholder')}
         value={draft}
         maxLength={LONG_TEXT_LIMIT}
         rows={1}
@@ -2384,7 +2407,7 @@ function ReplyBox({
           disabled={busy || !draft.trim()}
           onClick={() => void post()}
         >
-          {text('notes.reply')}
+          {text('comments.reply')}
         </Button>
       </div>
       <ErrorNotice error={error} />
@@ -2399,15 +2422,15 @@ function MergedLead({ changes }: { changes?: unknown }): ReactElement {
   const values = (changes ?? {}) as Data;
   const lead = (values.lead ?? {}) as Data;
   const tasks = Number(values.tasks ?? 0);
-  const notes = Number(values.notes ?? 0);
+  const comments = Number(values.comments ?? 0);
   return (
     <>
       <span className='min-w-0 truncate'>
         {[lead.name, lead.company].filter(Boolean).map(toText).join(' / ')}
       </span>
-      {tasks || notes ? (
+      {tasks || comments ? (
         <span className='shrink-0 text-xs text-muted-foreground'>
-          {text('feed.mergedMoved', { tasks, notes })}
+          {text('feed.mergedMoved', { tasks, comments })}
         </span>
       ) : null}
     </>
@@ -2421,11 +2444,11 @@ const eventIcons: Record<string, LucideIcon> = {
   converted: ArrowRightLeft,
   deleted: Trash2,
   ai: Sparkles,
-  // A note's entries by what they concern, as files' are: added, edited or
-  // removed, all under the note.
-  note: MessageSquareText,
-  noteEdited: MessageSquareText,
-  noteDeleted: MessageSquareText,
+  // A comment's entries by what they concern, as files' are: added, edited or
+  // removed, all under the comment.
+  comment: MessageSquareText,
+  commentEdited: MessageSquareText,
+  commentDeleted: MessageSquareText,
   // A person asking the AI to redo its card, in their words.
   aiRevise: MessageCircle,
   merged: Merge,
@@ -2571,7 +2594,7 @@ export function HistoryFeed({
     if (focus && !loaded && more.hasMore && !more.loading) void more.loadMore();
   }, [focus, loaded, more]);
   const allNames = { ...names, ...more.titles };
-  // The notes read whole below their line (several lines, or too long for
+  // The comments read whole below their line (several lines, or too long for
   // it), and the one its author is editing.
   const [longNotes, setLongNotes] = useState<ReadonlySet<string>>(
     () => new Set(),
@@ -2585,7 +2608,7 @@ export function HistoryFeed({
       return next;
     });
   const [editingNote, setEditingNote] = useState<string>();
-  // The note or reply being answered.
+  // The comment or reply being answered.
   const [replyingTo, setReplyingTo] = useState<string>();
   // What a record's closing says, told under that entry: an approval's
   // decision comment, a task's result.
@@ -2612,15 +2635,15 @@ export function HistoryFeed({
         )?.id ?? '',
       )
     : '';
-  // A note's edits show on the note itself, marked edited, not as entries.
+  // A comment's edits show on the comment itself, marked edited, not as entries.
   const shown = collapseEdits(
-    more.records.filter((event) => event.action !== 'noteEdited'),
+    more.records.filter((event) => event.action !== 'commentEdited'),
   );
   return (
     <>
-      {/* A note or a comment is written here, atop the timeline, and reads
-          whole in it: there is no Notes tab. */}
-      <NoteComposer entity={entity} id={id} />
+      {/* A comment is written here, atop the timeline, and reads
+          whole in it: there is no Comments tab. */}
+      <CommentComposer entity={entity} id={id} />
       {!shown.length ? (
         <p className='text-sm text-muted-foreground'>{text('feed.empty')}</p>
       ) : (
@@ -2639,12 +2662,12 @@ export function HistoryFeed({
                 {events.map((event, index) => {
                   const key = toText(event.id);
                   const ai = event.action === 'ai';
-                  // A note: its text whole under its line, as it now reads,
+                  // A comment: its text whole under its line, as it now reads,
                   // marked edited. Its edits are not entries of their own
                   // here; its removal says that it happened, without the
                   // text.
-                  const note = event.action === 'note';
-                  // What closed it, read under its line as a note's text
+                  const comment = event.action === 'comment';
+                  // What closed it, read under its line as a comment's text
                   // is and not among the changed fields: an approval's
                   // decision comment, a task's result. An entry from before
                   // the comment was kept on it takes the record's own for
@@ -2655,7 +2678,7 @@ export function HistoryFeed({
                       event.action === 'status' &&
                       closed.statuses.includes(toText(event.toValue))) ||
                     key === closedOn;
-                  const comment =
+                  const closingText =
                     closed && closing
                       ? toText(
                           (event.changes as Data | undefined)?.[closed.field] ??
@@ -2737,9 +2760,9 @@ export function HistoryFeed({
                             : ''
                         }`}
                       >
-                        <div className='group/note flex min-h-[26px] items-center gap-3 text-sm'>
+                        <div className='group/comment flex min-h-[26px] items-center gap-3 text-sm'>
                           {/* An entry is one line, never wrapped: what is
-                              long (a change's values, a note's excerpt, a
+                              long (a change's values, a comment's excerpt, a
                               verdict) gives way instead, cut where the line
                               ends. */}
                           {/* Clipped at its end: on a narrow column (a
@@ -2794,9 +2817,9 @@ export function HistoryFeed({
                                             ? 'feed.reviewed'
                                             : 'feed.evaluated',
                                     )
-                                  : // A note is its text, right after who
+                                  : // A comment is its text, right after who
                                     // wrote it, with no word before it.
-                                    filesOnly(event) || note
+                                    filesOnly(event) || comment
                                     ? ''
                                     : // A status or stage move reads as any
                                       // other field's update.
@@ -2846,9 +2869,9 @@ export function HistoryFeed({
                                 values it started with are the record's own
                                 first state. */}
                             {!ai &&
-                              !note &&
+                              !comment &&
                               event.action !== 'created' &&
-                              !toText(event.action).startsWith('note') &&
+                              !toText(event.action).startsWith('comment') &&
                               event.action !== 'aiRevise' &&
                               event.action !== 'merged' &&
                               event.action !== 'mail' &&
@@ -2873,17 +2896,17 @@ export function HistoryFeed({
                             {event.action === 'merged' ? (
                               <MergedLead changes={event.changes} />
                             ) : null}
-                            {/* A note that fits reads on its line right
+                            {/* A comment that fits reads on its line right
                                 after who wrote it; one of several lines, or
                                 longer than the line, reads whole below it,
                                 as Clarify shows a comment. */}
-                            {note && noteGone(event) ? (
+                            {comment && commentGone(event) ? (
                               <span className='text-muted-foreground'>
-                                {text('notes.deleted')}
+                                {text('comments.deleted')}
                               </span>
-                            ) : note ? (
-                              <NoteExcerpt
-                                value={noteText(event)}
+                            ) : comment ? (
+                              <CommentExcerpt
+                                value={commentText(event)}
                                 mentions={
                                   (event.changes as Data | undefined)?.mentions
                                 }
@@ -2893,7 +2916,7 @@ export function HistoryFeed({
                             ) : null}
                             {event.action === 'aiRevise' ? (
                               <span className='min-w-0 truncate'>
-                                「{noteText(event).replace(/\s+/g, ' ')}」
+                                「{commentText(event).replace(/\s+/g, ' ')}」
                               </span>
                             ) : null}
                             {/* The AI's part in a person's change, last on the
@@ -2929,13 +2952,13 @@ export function HistoryFeed({
                           </span>
                           {/* Reply for anyone; its author's edit and delete,
                               on hover. */}
-                          {note ? (
-                            <NoteActions
+                          {comment ? (
+                            <CommentActions
                               id={key}
                               onReply={() => setReplyingTo(key)}
                               onEdit={
                                 event.actorId === meta?.userId &&
-                                !noteGone(event)
+                                !commentGone(event)
                                   ? () => setEditingNote(key)
                                   : undefined
                               }
@@ -2953,9 +2976,9 @@ export function HistoryFeed({
                             // line unfolds below it.
                             className='shrink-0 self-start text-xs leading-[26px] text-muted-foreground/80 tabular-nums'
                           >
-                            {/* An edited note says so right before its
+                            {/* An edited comment says so right before its
                                 time, the edit's time on hover. */}
-                            {note && event.editedAt ? (
+                            {comment && event.editedAt ? (
                               <span
                                 title={localDate(
                                   event.editedAt,
@@ -2963,7 +2986,7 @@ export function HistoryFeed({
                                   timeZone,
                                 )}
                               >
-                                {text('notes.edited')} ·{' '}
+                                {text('comments.edited')} ·{' '}
                               </span>
                             ) : null}
                             {relativeTime(
@@ -2974,13 +2997,13 @@ export function HistoryFeed({
                             )}
                           </time>
                         </div>
-                        {comment ? (
+                        {closingText ? (
                           <div className='mt-0.5 text-sm'>
-                            <FoldingText value={comment} />
+                            <FoldingText value={closingText} />
                           </div>
                         ) : null}
                         {/* A task's result too long for its line, whole
-                            below it as a note's text is. */}
+                            below it as a comment's text is. */}
                         {taskEvent &&
                         longNotes.has(key) &&
                         toText((event.task as Data | undefined)?.result) ? (
@@ -2990,29 +3013,31 @@ export function HistoryFeed({
                             />
                           </div>
                         ) : null}
-                        {note && editingNote === key ? (
-                          <NoteEditor
-                            note={event}
+                        {comment && editingNote === key ? (
+                          <CommentEditor
+                            comment={event}
                             onDone={() => setEditingNote(undefined)}
                           />
-                        ) : note && longNotes.has(key) && !noteGone(event) ? (
+                        ) : comment &&
+                          longNotes.has(key) &&
+                          !commentGone(event) ? (
                           <div className='mt-0.5 text-sm'>
                             {/* As the original message: five lines fading
                                 out, a click unfolding them. */}
                             <FoldingText
                               value={markdownMentions(
-                                noteText(event),
+                                commentText(event),
                                 (event.changes as Data | undefined)?.mentions,
                                 meta?.users ?? [],
                               )}
                             />
                           </div>
                         ) : null}
-                        {note ? (
-                          <NoteThread
+                        {comment ? (
+                          <CommentThread
                             entity={entity}
                             recordId={id}
-                            note={event}
+                            comment={event}
                             replyingTo={replyingTo}
                             onReply={setReplyingTo}
                             onDone={() => setReplyingTo(undefined)}
@@ -3096,9 +3121,9 @@ export function HistoryFeed({
                         )}
                         {/* A save's fields, unfolded under the whole entry. */}
                         {!ai &&
-                          !note &&
+                          !comment &&
                           event.action !== 'created' &&
-                          !toText(event.action).startsWith('note') &&
+                          !toText(event.action).startsWith('comment') &&
                           event.action !== 'aiRevise' &&
                           !taskEvent &&
                           !approvalEvent && (
@@ -3146,9 +3171,9 @@ function initials(name: string): string {
     : '?';
 }
 
-// The note box atop a record's timeline. Anyone who may read the record may
-// add a note, which everyone who may read it sees; Ctrl/⌘+Enter adds it.
-function NoteComposer({
+// The comment box atop a record's timeline. Anyone who may read the record may
+// add a comment, which everyone who may read it sees; Ctrl/⌘+Enter adds it.
+function CommentComposer({
   entity,
   id,
 }: {
@@ -3169,7 +3194,7 @@ function NoteComposer({
     setBusy(true);
     setError(undefined);
     try {
-      await api(`${toText(entity)}/${toText(id)}/notes`, 'POST', {
+      await api(`${toText(entity)}/${toText(id)}/comments`, 'POST', {
         text: draft,
         mentions: mentionsIn(draft, mentions, meta?.users ?? []),
       });
@@ -3199,11 +3224,11 @@ function NoteComposer({
         </span>
         {/* @ and a name mentions a colleague, who is told. */}
         <MentionTextarea
-          aria-label={text('notes.label')}
+          aria-label={text('comments.label')}
           value={draft}
           mentions={mentions}
           onMentionsChange={setMentions}
-          placeholder={text('notes.placeholder')}
+          placeholder={text('comments.placeholder')}
           maxLength={LONG_TEXT_LIMIT}
           // One line until more is written, as tall as the avatar beside
           // it, then as tall as the text (the primitive sizes to its
@@ -3224,10 +3249,10 @@ function NoteComposer({
       {draft.trim() ? (
         <div className='flex items-center justify-end gap-3'>
           <span className='text-xs text-muted-foreground'>
-            {text('notes.shortcut')}
+            {text('comments.shortcut')}
           </span>
           <Button size='sm' disabled={busy} onClick={() => void add()}>
-            {text('notes.post')}
+            {text('comments.post')}
           </Button>
         </div>
       ) : null}
@@ -3236,18 +3261,18 @@ function NoteComposer({
   );
 }
 
-// A note's text on its entry's line. It tells the timeline whether it is
+// A comment's text on its entry's line. It tells the timeline whether it is
 // long (several lines, or wider than the line), which then shows it whole
 // below and keeps this in place, unseen, to measure the line again as it
 // widens or narrows.
-function NoteExcerpt({
+function CommentExcerpt({
   value,
   long,
   onLong,
   mentions,
 }: {
   value: string;
-  // The colleagues the note mentions, picked out in bold.
+  // The colleagues the comment mentions, picked out in bold.
   mentions?: unknown;
   long: boolean;
   onLong: (long: boolean) => void;
@@ -3281,10 +3306,10 @@ function NoteExcerpt({
   );
 }
 
-// A note's author's edit and delete, on the entry's line while it is
+// A comment's author's edit and delete, on the entry's line while it is
 // hovered or focused, centred on its first line (26px, as the time is);
 // delete asks once more.
-function NoteActions({
+function CommentActions({
   id,
   onEdit,
   onReply,
@@ -3292,11 +3317,11 @@ function NoteActions({
 }: {
   id: string;
   // Its author's edit and delete; absent for anyone else, and for a deleted
-  // note's place.
+  // comment's place.
   onEdit?: () => void;
   // Answering it, which anyone who reads the record may.
   onReply?: () => void;
-  // In a thread, shown on the reply's own hover rather than the note's.
+  // In a thread, shown on the reply's own hover rather than the comment's.
   reply?: boolean;
 }): ReactElement {
   const { text } = useCrmText();
@@ -3308,15 +3333,17 @@ function NoteActions({
   return (
     <span
       className={`flex h-[26px] shrink-0 items-center gap-0.5 self-start transition-opacity focus-within:opacity-100 ${
-        reply ? 'group-hover/reply:opacity-100' : 'group-hover/note:opacity-100'
+        reply
+          ? 'group-hover/reply:opacity-100'
+          : 'group-hover/comment:opacity-100'
       } ${confirming ? 'opacity-100' : 'opacity-0'}`}
     >
       {onReply ? (
         <Button
           size='icon-xs'
           variant='ghost'
-          aria-label={text('notes.reply')}
-          title={text('notes.reply')}
+          aria-label={text('comments.reply')}
+          title={text('comments.reply')}
           disabled={busy}
           onClick={onReply}
         >
@@ -3339,7 +3366,7 @@ function NoteActions({
         <Button
           size={confirming ? 'xs' : 'icon-xs'}
           variant={confirming ? 'destructive' : 'ghost'}
-          aria-label={text(confirming ? 'notes.confirmDelete' : 'delete')}
+          aria-label={text(confirming ? 'comments.confirmDelete' : 'delete')}
           title={text('delete')}
           disabled={busy}
           onClick={() => {
@@ -3349,7 +3376,7 @@ function NoteActions({
             }
             setBusy(true);
             setError(undefined);
-            api(`notes/${toText(id)}`, 'DELETE')
+            api(`comments/${toText(id)}`, 'DELETE')
               .then(() => refresh())
               .catch(setError)
               .finally(() => {
@@ -3360,7 +3387,7 @@ function NoteActions({
           onBlur={() => setConfirming(false)}
         >
           <Trash2 />
-          {confirming ? text('notes.confirmDelete') : null}
+          {confirming ? text('comments.confirmDelete') : null}
         </Button>
       ) : null}
       {error ? <ErrorNotice error={error} /> : null}
@@ -3368,21 +3395,21 @@ function NoteActions({
   );
 }
 
-// A note changed in place by its author, under its line.
-function NoteEditor({
-  note,
+// A comment changed in place by its author, under its line.
+function CommentEditor({
+  comment,
   onDone,
 }: {
-  note: Data;
+  comment: Data;
   onDone: () => void;
 }): ReactElement {
   const { text } = useCrmText();
   const api = useCrmApi();
   const refresh = useRefresh();
   const { data: meta } = useMetadata();
-  const [draft, setDraft] = useState(() => noteText(note));
+  const [draft, setDraft] = useState(() => commentText(comment));
   const [mentions, setMentions] = useState<string[]>(() => {
-    const kept = (note.changes as Data | undefined)?.mentions;
+    const kept = (comment.changes as Data | undefined)?.mentions;
     return Array.isArray(kept) ? kept.map(toText) : [];
   });
   const [busy, setBusy] = useState(false);
@@ -3391,7 +3418,7 @@ function NoteEditor({
     <div className='mt-1 grid gap-2'>
       <MentionTextarea
         autoFocus
-        aria-label={text('notes.label')}
+        aria-label={text('comments.label')}
         value={draft}
         maxLength={LONG_TEXT_LIMIT}
         className='max-h-[50vh] min-h-10 resize-none text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border/60 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 dark:bg-card'
@@ -3409,7 +3436,7 @@ function NoteEditor({
           onClick={() => {
             setBusy(true);
             setError(undefined);
-            api(`notes/${toText(note.id)}`, 'PATCH', {
+            api(`comments/${toText(comment.id)}`, 'PATCH', {
               text: draft,
               mentions: mentionsIn(draft, mentions, meta?.users ?? []),
             })
@@ -3568,6 +3595,25 @@ export function InfoRow({
         <Copyable>{children}</Copyable>
       </dd>
     </div>
+  );
+}
+
+// When the record was created and last changed, read only, closing its
+// first group of particulars; the timeline tells what happened in between.
+export function RecordTimes({ record }: { record: CrmRecord }): ReactElement {
+  const { text, language } = useCrmText();
+  const { data: meta } = useMetadata();
+  const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
+  return (
+    <>
+      {(['createdAt', 'updatedAt'] as const).map((key) => (
+        <InfoRow key={key} field={key} label={text(`fields.${key}`)}>
+          <div className='px-2 py-1.5 text-sm tabular-nums'>
+            {localDate(record[key], language, timeZone)}
+          </div>
+        </InfoRow>
+      ))}
+    </>
   );
 }
 

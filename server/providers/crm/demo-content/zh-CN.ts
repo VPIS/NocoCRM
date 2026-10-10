@@ -100,8 +100,8 @@ export const zhCN: DemoContent = {
     ],
   ],
   contactJobTitles: ['信息化负责人', '技术经理'],
-  contactNotes: ['主要业务决策人。', '技术评估对接人。'],
-  churnNotes: '集团统一采用了另一家低代码平台，经销商管理系统随之迁移。',
+  contactComments: ['主要业务决策人。', '技术评估对接人。'],
+  churnComments: '集团统一采用了另一家低代码平台，经销商管理系统随之迁移。',
   deals: [
     '生产管理平台（企业版 + 实施）',
     '会员与供应商协同（升级专业版）',

@@ -305,7 +305,7 @@ const wording = {
   // The lead timeline's menu of asks to the AI.
   moreActions: ['More…', '更多…'],
   expand: ['Show details', '展开详情'],
-  // Notes in a record's activity feed.
+  // Comments in a record's activity feed.
   mail: {
     tab: ['Mail', '邮件'],
     write: ['Write email', '写邮件'],
@@ -365,20 +365,22 @@ const wording = {
       '你与公司的 {{count}} 位联系人的往来邮件',
     ],
   },
-  notes: {
-    label: ['Note', '备注'],
-    placeholder: ['Leave a comment, @ someone...', '留言，可 @ 同事...'],
-    add: ['Add note', '添加备注'],
-    // The note box's button.
+  comments: {
+    label: ['Comment', '评论'],
+    placeholder: ['Leave a comment, @ someone...', '评论，可 @ 某人...'],
+    add: ['Add comment', '添加评论'],
+    // The comment box's button.
     post: ['Post', '发布'],
     shortcut: ['⌘/Ctrl + Enter to add', '⌘/Ctrl + Enter 添加'],
     edited: ['Edited', '已编辑'],
     confirmDelete: ['Delete it?', '确认删除'],
-    // Replies under a note, in its thread.
+    // Replies under a comment, in its thread.
     reply: ['Reply', '回复'],
-    replyPlaceholder: ['Reply, @ someone...', '回复，可 @ 同事...'],
-    // A note deleted while it had replies, its place kept for them.
-    deleted: ['This note was deleted', '此备注已删除'],
+    // After a reply's author: whom it answers.
+    replyTo: ['replied to {{name}}', '回复 {{name}}'],
+    replyPlaceholder: ['Reply, @ someone...', '回复，可 @ 某人...'],
+    // A comment deleted while it had replies, its place kept for them.
+    deleted: ['This comment was deleted', '此评论已删除'],
   },
   collapse: ['Hide details', '收起详情'],
   leadGroups: {
@@ -475,7 +477,7 @@ const wording = {
       '近四周合计及本周，按周一至周日统计',
     ],
     tasksDone: ['Tasks completed', '完成任务'],
-    notesWritten: ['Notes', '备注'],
+    commentsWritten: ['Comments', '评论'],
     mailThreads: ['Mail conversations', '邮件会话'],
     thisWeekCount: ['{{count}} this week', '本周 {{count}}'],
   },
@@ -484,16 +486,16 @@ const wording = {
     leads: {
       title: ['Lead follow-up', '线索跟进'],
       description: [
-        'Reads a lead with its tasks, notes and mail, looks the company up on the web when it is new or out of date, and recommends following up, nurturing, converting or closing it as invalid, with a grade and the next step.',
-        '读取线索及其任务、备注和邮件，公司信息缺失或过期时联网调研，给出继续跟进、放入培育、转化或无效的建议，附等级和下一步。',
+        'Reads a lead with its tasks, comments and mail, looks the company up on the web when it is new or out of date, and recommends following up, nurturing, converting or closing it as invalid, with a grade and the next step.',
+        '读取线索及其任务、评论和邮件，公司信息缺失或过期时联网调研，给出继续跟进、放入培育、转化或无效的建议，附等级和下一步。',
       ],
       skill: ['Skill: Follow up a lead', '技能：跟进线索'],
     },
     opportunities: {
       title: ['Opportunity follow-up', '商机跟进'],
       description: [
-        'Reads a deal with its company, contacts, tasks, notes, approvals and mail, checks its terms against the approval standards, and recommends advancing, keeping at it, pausing or losing it, with the approvals to submit and the next step.',
-        '读取商机及其公司、联系人、任务、备注、审批和邮件，按审批标准核对商务条款，给出推进、继续、暂停或输单的建议，以及需要提交的审批和下一步。',
+        'Reads a deal with its company, contacts, tasks, comments, approvals and mail, checks its terms against the approval standards, and recommends advancing, keeping at it, pausing or losing it, with the approvals to submit and the next step.',
+        '读取商机及其公司、联系人、任务、评论、审批和邮件，按审批标准核对商务条款，给出推进、继续、暂停或输单的建议，以及需要提交的审批和下一步。',
       ],
       skill: ['Skill: Follow up an opportunity', '技能：跟进商机'],
     },
@@ -777,15 +779,15 @@ const wording = {
       updated: ['updated', '更新'],
       deleted: ['deleted the record', '删除了记录'],
       converted: ['converted the lead', '转化了线索'],
-      noteEdited: ['edited a note', '编辑了备注'],
-      noteDeleted: ['removed a note', '删除了一条备注'],
+      commentEdited: ['edited a comment', '编辑了评论'],
+      commentDeleted: ['removed a comment', '删除了一条评论'],
       aiRevise: ['asked the AI to revise the suggestion', '让 AI 修改建议'],
       merged: ['merged in the lead', '合并了线索'],
     },
     // What a merge moved over, after the lead merged in.
     mergedMoved: [
-      '{{tasks}} tasks and {{notes}} notes moved over',
-      '移入任务 {{tasks}} 条、备注 {{notes}} 条',
+      '{{tasks}} tasks and {{comments}} comments moved over',
+      '移入任务 {{tasks}} 条、评论 {{comments}} 条',
     ],
     empty: ['Nothing here yet.', '还没有记录。'],
   },
@@ -1185,8 +1187,8 @@ const wording = {
     action: ['Merge', '合并'],
     title: ['Merge duplicate leads', '合并重复线索'],
     hint: [
-      'Keep one lead and pick the value to keep for each field. The other lead’s tasks, notes and attachments move to the lead kept, and the other lead is deleted; what it held is recorded on the kept lead’s timeline.',
-      '保留一条线索，逐项选择要保留的值。另一条线索的任务、备注和附件会移到保留的线索，然后删除它；它原来的信息记在保留线索的动态里。',
+      'Keep one lead and pick the value to keep for each field. The other lead’s tasks, comments and attachments move to the lead kept, and the other lead is deleted; what it held is recorded on the kept lead’s timeline.',
+      '保留一条线索，逐项选择要保留的值。另一条线索的任务、评论和附件会移到保留的线索，然后删除它；它原来的信息记在保留线索的动态里。',
     ],
     // From the capture review: what the AI organised, into a lead held.
     hintUnsaved: [
@@ -1199,8 +1201,8 @@ const wording = {
     newLabel: ['new', '新整理'],
     unsaved: ['Not saved yet, organised by the AI', '尚未保存，由 AI 整理'],
     history: [
-      'Created {{date}} · {{tasks}} tasks · {{notes}} notes',
-      '创建于 {{date}} · 任务 {{tasks}} · 备注 {{notes}}',
+      'Created {{date}} · {{tasks}} tasks · {{comments}} comments',
+      '创建于 {{date}} · 任务 {{tasks}} · 评论 {{comments}}',
     ],
     both: ['Keep both', '两段都保留'],
     rest: [
@@ -1527,8 +1529,8 @@ const wording = {
     ],
     notifyRecordChanges: ['Record change notifications', '记录变更通知'],
     notifyRecordChangesHint: [
-      "To the new owner when a record changes hands, to a task's participants when they are invited or removed or the task is rescheduled or cancelled, and to a colleague a note mentions.",
-      '记录更换负责人时通知新负责人；任务参与人被邀请、移除，或任务改期、取消时通知参与人；备注里 @ 到的同事会收到通知。',
+      "To the new owner when a record changes hands, to a task's participants when they are invited or removed or the task is rescheduled or cancelled, and to a colleague a comment mentions.",
+      '记录更换负责人时通知新负责人；任务参与人被邀请、移除，或任务改期、取消时通知参与人；评论里 @ 到的同事会收到通知。',
     ],
     notifyTaskReminders: ['Task reminders', '任务提醒'],
     notifyTaskRemindersHint: [
@@ -1821,7 +1823,7 @@ const wording = {
     employees: ['Employees', '员工数'],
     // The street part of a location, under its heading 地址.
     address: ['Address', '详细地址'],
-    notes: ['Notes', '备注'],
+    comments: ['Comments', '评论'],
     companyId: ['Company', '所属公司'],
     related: {
       leadId: ['Related lead', '关联线索'],

@@ -12,10 +12,10 @@ import {
 import { Textarea } from '../ui/textarea.js';
 import { useMetadata } from './api.js';
 
-// A note's box that @-mentions colleagues: typing @ and the start of a name
+// A comment's box that @-mentions colleagues: typing @ and the start of a name
 // lists the matching colleagues under the box (arrows and Enter or Tab to
 // pick, Escape to close, or a click), and a pick writes "@Name " and
-// remembers who it is. The ids reach the note only while their "@Name" is
+// remembers who it is. The ids reach the comment only while their "@Name" is
 // still in the text (mentionsIn in mentions.tsx).
 
 // The colleagues one may mention: active accounts with a CRM role, other

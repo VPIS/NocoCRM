@@ -35,7 +35,7 @@ export function Markdown({
         remarkPlugins={[remarkGfm]}
         components={{
           img: ({ node: _node, ...props }) => <SafeImage {...props} />,
-          // A note's @-mention (markdownMentions) is a link to #mention:
+          // A comment's @-mention (markdownMentions) is a link to #mention:
           // drawn as a mention, not followed.
           a: ({ node: _node, href, children: label, ...props }) =>
             href === '#mention' ? (

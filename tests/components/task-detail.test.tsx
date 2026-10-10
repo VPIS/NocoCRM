@@ -253,10 +253,10 @@ describe('the task page', () => {
     expect(screen.getAllByText('客户确认了报价')).toHaveLength(1);
   });
 
-  it('shows a note of several lines whole under its line, and edits it in place', async () => {
-    const note = {
-      id: 'note-1',
-      action: 'note',
+  it('shows a comment of several lines whole under its line, and edits it in place', async () => {
+    const comment = {
+      id: 'comment-1',
+      action: 'comment',
       entity: 'tasks',
       recordId: 'act-1',
       actorId: 'rep',
@@ -266,19 +266,19 @@ describe('the task page', () => {
     };
     state.history = [
       {
-        ...note,
+        ...comment,
         id: 'edit-1',
-        action: 'noteEdited',
-        changes: { text: note.changes.text, noteId: 'note-1' },
+        action: 'commentEdited',
+        changes: { text: comment.changes.text, commentId: 'comment-1' },
         createdAt: '2026-09-23T02:00:00.000Z',
       },
-      note,
+      comment,
     ];
     renderPage();
-    // No word before a note on its line; a note of several lines reads
+    // No word before a comment on its line; a comment of several lines reads
     // whole below it, as Clarify shows a comment, and its edits are not
     // entries.
-    expect(screen.queryByText('备注：')).toBeNull();
+    expect(screen.queryByText('评论：')).toBeNull();
     // (The line keeps its one-line text unseen, to measure.)
     expect(
       screen
@@ -286,23 +286,23 @@ describe('the task page', () => {
         .filter((node) => !node.closest('[aria-hidden="true"]')),
     ).toHaveLength(1);
     expect(screen.getByText(/已编辑/)).toBeTruthy();
-    expect(screen.queryByText('编辑了备注')).toBeNull();
+    expect(screen.queryByText('编辑了评论')).toBeNull();
     // Its author changes it in place, from the line's edit button.
     await userEvent.click(screen.getByRole('button', { name: '编辑' }));
     expect(
       (
         screen
-          .getAllByRole('textbox', { name: '备注' })
+          .getAllByRole('textbox', { name: '评论' })
           .at(-1) as HTMLTextAreaElement
       ).value,
     ).toContain('需要准备报价单');
   });
 
-  it('writes notes in the timeline, with no Notes tab, and keeps the tab in the address', async () => {
+  it('writes comments in the timeline, with no Comments tab, and keeps the tab in the address', async () => {
     renderPage();
     expect(screen.getByRole('tab', { name: /动态/ }).textContent).toBe('动态');
-    expect(screen.queryByRole('tab', { name: /备注/ })).toBeNull();
-    expect(screen.getByRole('textbox', { name: '备注' })).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: /评论/ })).toBeNull();
+    expect(screen.getByRole('textbox', { name: '评论' })).toBeTruthy();
     await userEvent.click(screen.getByRole('tab', { name: /附件/ }));
     expect(screen.getByTestId('where').textContent).toBe(
       '/crm/tasks/act-1/attachments',

@@ -36,7 +36,7 @@ export interface LeadSignalPass {
 }
 
 // The signal a lead gives at `now`, if any, from its status, its age, its
-// tasks and its last exchange (a task completed, a note, mail;
+// tasks and its last exchange (a task completed, a comment, mail;
 // exchanges.ts), 0 when it has had none.
 export function leadSignal(
   lead: Row,

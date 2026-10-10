@@ -317,21 +317,21 @@ export function crmWriteTools(
     defineTools({
       ...common,
       introduction: {
-        title: 'Add a note to a record',
+        title: 'Add a comment to a record',
         about:
-          "Adds a note to a record's activity feed once the user confirms the text.",
+          "Adds a comment to a record's activity feed once the user confirms the text.",
       },
       definition: {
-        name: 'add_note',
+        name: 'add_comment',
         description:
-          'Add a note to one record\'s activity feed, where everyone who may read the record sees it: a fact the record has no field for (the customer already runs SAP, the budget covers software only) or a conclusion the user wants the team to see. Write it short and self-contained, in the user\'s language. Anyone who may read the record may add one. Include a one-line "title".',
+          'Add a comment to one record\'s activity feed, where everyone who may read the record sees it: a fact the record has no field for (the customer already runs SAP, the budget covers software only) or a conclusion the user wants the team to see. Write it short and self-contained, in the user\'s language. Anyone who may read the record may add one. Include a one-line "title".',
         schema: {
           type: 'object',
           properties: {
             entity: entityProperty,
             id: { type: 'string', description: 'The record id.' },
-            title: { type: 'string', description: 'What this notes.' },
-            text: { type: 'string', description: 'The note.' },
+            title: { type: 'string', description: 'What it is about.' },
+            text: { type: 'string', description: 'The comment.' },
           },
           required: ['entity', 'id', 'title', 'text'],
         },
@@ -341,7 +341,7 @@ export function crmWriteTools(
         return guarded(async () => {
           const args = (raw ?? {}) as Row;
           const entity = asEntity(toText(args.entity));
-          const note = await service.addNote(
+          const comment = await service.addComment(
             actor,
             entity,
             toText(args.id),
@@ -350,8 +350,8 @@ export function crmWriteTools(
           return {
             entity,
             id: args.id,
-            noteId: note.id,
-            values: { text: toText(object(note.changes).text) },
+            commentId: comment.id,
+            values: { text: toText(object(comment.changes).text) },
           };
         });
       },
