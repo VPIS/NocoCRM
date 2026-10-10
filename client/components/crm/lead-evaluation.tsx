@@ -16,6 +16,7 @@ import {
   PencilLine,
   Sparkles,
   TriangleAlert,
+  X,
 } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox.js';
 import { Badge } from '../ui/badge.js';
@@ -412,6 +413,7 @@ export function VerdictPanel({
   heading,
   full,
   onRevised,
+  inFeed = false,
 }: {
   entity?: FollowedEntity;
   entry: EvaluationEntry;
@@ -425,6 +427,9 @@ export function VerdictPanel({
   // Everything the verdict says, not only its reason: while it waits, and
   // when a decided one is opened in the timeline.
   full?: boolean;
+  // Opened from its line in a record's timeline, which already names it and
+  // its verdict: the card leads with what started it instead.
+  inFeed?: boolean;
 }): ReactElement | null {
   const { data: meta } = useMetadata();
   const { text, language } = useCrmText();
@@ -613,14 +618,28 @@ export function VerdictPanel({
     ];
   });
   const decider = meta.users.find((u) => u.id === entry.ai.decidedById)?.name;
+  // What started a follow-up the system began, said on the card.
+  const startedBy = entry.ai.trigger
+    ? entry.ai.decidedApprovals?.length
+      ? text('evaluation.trigger.approvalsDecided', {
+          approvals: entry.ai.decidedApprovals
+            .map(
+              (approval) =>
+                `${approval.name} ${text(`options.${approval.status}`)}`,
+            )
+            .join(' · '),
+        })
+      : text(`evaluation.trigger.${entry.ai.trigger}`, { defaultValue: '' })
+    : '';
   const instructor = meta.users.find(
     (u) => u.id === entry.ai.instructedById,
   )?.name;
   return (
     <section
       // Waiting, it carries the AI's tint; decided, the same card on a
-      // neutral ground.
-      className={`@container grid grid-cols-[minmax(0,1fr)] gap-2 rounded-xl border border-border/60 p-4 text-sm shadow-xs ${
+      // neutral ground. Its fields show focus as lightly as the inline
+      // editor does.
+      className={`@container grid grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border/60 p-4 text-sm shadow-xs [&_:is(input,textarea,[role=combobox]):focus-visible]:border-ring/50! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-2! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-ring/10! ${
         entry.status === 'pending' ? 'bg-ai/5' : 'bg-card'
       }`}
     >
@@ -628,16 +647,24 @@ export function VerdictPanel({
           too narrow for both (a phone), they take a row of their own under
           it, from the left, rather than hang at the right of a second row. */}
       <div className='flex flex-wrap items-center gap-2'>
-        <Sparkles className='size-4 shrink-0 text-ai' />
-        {heading ?? (
-          <span className='shrink-0 font-medium'>
-            {text('evaluation.title')}
+        {inFeed ? (
+          <span className='min-w-0 flex-1 text-muted-foreground empty:hidden'>
+            {startedBy}
           </span>
-        )}
-        {verdict && (
-          <Badge variant={entry.status === 'pending' ? 'ai' : 'muted'}>
-            {label(verdict)}
-          </Badge>
+        ) : (
+          <>
+            <Sparkles className='size-4 shrink-0 text-ai' />
+            {heading ?? (
+              <span className='shrink-0 font-medium'>
+                {text('evaluation.title')}
+              </span>
+            )}
+            {verdict && (
+              <Badge variant={entry.status === 'pending' ? 'ai' : 'muted'}>
+                {label(verdict)}
+              </Badge>
+            )}
+          </>
         )}
         {(entry.status === 'accepted' || entry.status === 'dismissed') && (
           <span className='text-xs text-muted-foreground'>
@@ -750,7 +777,7 @@ export function VerdictPanel({
                   disabled={Boolean(busy)}
                   onClick={() => void decide('dismiss')}
                 >
-                  {busy === 'dismiss' && <Spinner />}
+                  {busy === 'dismiss' ? <Spinner /> : <X />}
                   {text('evaluation.dismiss')}
                 </Button>
               </>
@@ -759,22 +786,9 @@ export function VerdictPanel({
         )}
       </div>
       {/* A follow-up the system started says what started it. */}
-      {entry.ai.trigger && (
-        <p className='text-muted-foreground'>
-          {entry.ai.decidedApprovals?.length
-            ? text('evaluation.trigger.approvalsDecided', {
-                approvals: entry.ai.decidedApprovals
-                  .map(
-                    (approval) =>
-                      `${approval.name} ${text(`options.${approval.status}`)}`,
-                  )
-                  .join(' · '),
-              })
-            : text(`evaluation.trigger.${entry.ai.trigger}`, {
-                defaultValue: '',
-              })}
-        </p>
-      )}
+      {!inFeed && startedBy ? (
+        <p className='text-muted-foreground'>{startedBy}</p>
+      ) : null}
       {/* A card redone on someone's word says whose and what. */}
       {entry.ai.instruction && (
         <p className='text-muted-foreground'>
@@ -1756,8 +1770,13 @@ function Findings({
             <span className='min-w-0 break-words'>
               {finding.current !== null && (
                 <>
-                  <span className='text-muted-foreground line-through'>
-                    {shown(finding.field, finding.current)}
+                  {/* What it replaces, cut to a line's worth: only that it
+                      differs needs reading here (the whole on hover). */}
+                  <span
+                    className='text-muted-foreground line-through'
+                    title={finding.current}
+                  >
+                    {shown(finding.field, clip(finding.current, 20))}
                   </span>
                   <span className='mx-1.5 text-muted-foreground'>→</span>
                 </>
@@ -1944,6 +1963,12 @@ function ConversionPlan({
   );
 }
 
+// A long value cut to `length` characters, its end an ellipsis.
+function clip(value: string, length: number): string {
+  const flat = value.replace(/\s+/g, ' ').trim();
+  return flat.length > length ? `${flat.slice(0, length).trimEnd()}…` : flat;
+}
+
 // A labelled row of the verdict's list: the label, in the reader's
 // punctuation, and its value.
 // A card's row, label and value (also the approval review's,
@@ -1951,18 +1976,22 @@ function ConversionPlan({
 export function Row({
   label,
   children,
+  wide = false,
 }: {
   label: string;
   children: ReactNode;
+  // A value with a layout of its own (an email draft) under its label,
+  // across the whole list rather than in the values' column.
+  wide?: boolean;
 }): ReactElement {
   const { language } = useCrmText();
   return (
     <>
-      <dt className='text-muted-foreground'>
+      <dt className={`text-muted-foreground ${wide ? 'col-span-2' : ''}`}>
         {label}
         {language.startsWith('zh') ? '：' : ':'}
       </dt>
-      <dd className='min-w-0'>{children}</dd>
+      <dd className={`min-w-0 ${wide ? 'col-span-2' : ''}`}>{children}</dd>
     </>
   );
 }
@@ -2005,10 +2034,14 @@ function VerdictList({
         : text('evaluation.today'),
     );
   return (
-    <dl className='grid grid-cols-[max-content_minmax(0,1fr)] gap-x-2 gap-y-1.5'>
-      <Row label={text('evaluation.reason')}>{verdict.summary}</Row>
+    <div className='grid gap-3'>
+      {/* The reason, the card's conclusion, leads it as a sentence; the
+          rest is the list under it. */}
+      <p className='leading-relaxed font-medium text-foreground'>
+        {verdict.summary}
+      </p>
       {full && (
-        <>
+        <dl className='grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-2'>
           {/* What accepting does: the contact it plans, the stage it moves
               to or the status it sets. */}
           {deal?.recommendation === 'advance' && deal.stage && (
@@ -2102,13 +2135,13 @@ function VerdictList({
             </Row>
           )}
           {!planned && verdict.email && (
-            <Row label={text('evaluation.email')}>
+            <Row label={text('evaluation.email')} wide>
               {emailStep ?? <EmailDraft draft={verdict.email} />}
             </Row>
           )}
-        </>
+        </dl>
       )}
-    </dl>
+    </div>
   );
 }
 

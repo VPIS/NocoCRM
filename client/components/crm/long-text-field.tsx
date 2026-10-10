@@ -262,3 +262,44 @@ export function FadePreview({
     </div>
   );
 }
+
+// A long text a timeline entry changed, read whole: its one line on the
+// entry opens, on a click, a pop-up as the particulars' long texts do,
+// read only, with the field's name and the text it was given.
+export function LongTextPeek({
+  label,
+  value,
+  children,
+}: {
+  label: string;
+  value: string;
+  // What the entry's line shows: the text cut where the line ends.
+  children: ReactNode;
+}): ReactElement {
+  return (
+    <Popover>
+      <PopoverTrigger
+        nativeButton={false}
+        render={<span />}
+        className='min-w-0 shrink cursor-pointer truncate rounded-sm underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&_*]:whitespace-nowrap'
+      >
+        {children}
+      </PopoverTrigger>
+      <PopoverContent
+        side='bottom'
+        align='start'
+        sideOffset={6}
+        // No taller than the room below the line (or, flipped, above it),
+        // so it never runs out of both and lands in the window's corner.
+        className='max-h-[min(36rem,var(--available-height))] w-[28rem] max-w-[calc(100vw-2rem)] gap-2 overflow-y-auto p-4'
+      >
+        <span className='truncate text-xs font-medium text-muted-foreground'>
+          {label}
+        </span>
+        <div className='text-sm leading-relaxed break-words'>
+          <Markdown compact>{value}</Markdown>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}

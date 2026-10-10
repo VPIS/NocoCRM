@@ -734,7 +734,7 @@ const wording = {
     // Who did an AI entry on the timeline.
     ai: ['AI', 'AI'],
     aiProposed: ['AI proposed', 'AI 提议'],
-    aiCaptured: ['Organised by AI', 'AI 整理'],
+    aiCaptured: ['AI organised', 'AI 整理'],
     addedFiles: ['added', '添加了附件'],
     removedFiles: ['removed', '删除了附件'],
     evaluated: ['recommended a follow-up', '给出跟进建议'],
@@ -989,10 +989,11 @@ const wording = {
     acceptReport: ['Record the outcome', '记录结果'],
     acceptInvalid: ['Accept and mark invalid', '采纳并标记无效'],
     dismiss: ['Dismiss', '忽略'],
-    ask: ['Ask AI', '问 AI'],
+    // Talking a card over with the AI in a conversation of its own.
+    ask: ['Discuss', '讨论'],
     revise: ['Adjust', '调整'],
     adjusting: ['Adjusting…', '正在调整…'],
-    revisePlaceholder: ['Tell the AI what to change', '告诉 AI 怎么改'],
+    revisePlaceholder: ['Tell AI what to change', '告诉 AI 怎么改'],
     revising: ['The AI is revising the suggestion…', 'AI 正在修改建议…'],
     instructionBy: ['{{name}} asked: {{text}}', '{{name}} 的意见：{{text}}'],
     email: ['Email draft', '邮件草稿'],
@@ -1186,11 +1187,19 @@ const wording = {
   // Leads that repeat a lead, and their merge (lead-merge.tsx).
   merge: {
     notice: ['Possible duplicate leads', '可能重复的线索'],
+    // A duplicate as a sentence: what it shares with this lead, the lead
+    // named where {{lead}} stands, then the way to merge it.
+    same: ['Same {{what}} as {{lead}}', '与 {{lead}} {{what}}相同'],
     matched: {
-      email: ['same email', '邮箱相同'],
-      phone: ['same phone', '电话相同'],
-      person: ['same person and company', '同一公司同一人'],
+      email: ['email', '邮箱'],
+      phone: ['phone', '电话'],
+      person: ['person and company', '人和公司'],
     },
+    // Between what it shares ("email and phone", "邮箱、电话").
+    and: [' and ', '、'],
+    // Before the way to merge, at the sentence's end.
+    then: [' · ', '，'],
+    go: ['Merge', '去合并'],
     action: ['Merge', '合并'],
     title: ['Merge duplicate leads', '合并重复线索'],
     hint: [
@@ -1266,7 +1275,7 @@ const wording = {
     risks: ['Risks', '风险'],
     missing: ['To add', '需补充'],
     comment: ['Decision comment', '审批意见'],
-    revisePlaceholder: ['Tell the AI what to change', '告诉 AI 怎么改'],
+    revisePlaceholder: ['Tell AI what to change', '告诉 AI 怎么改'],
     // On an approval's row in the list, for its approver.
     onRow: {
       running: ['AI reviewing', 'AI 生成建议中'],
@@ -1474,7 +1483,7 @@ const wording = {
     openRecord: ['Open the lead', '打开线索'],
     adjust: ['Adjust', '调整'],
     adjusting: ['Adjusting…', '正在调整…'],
-    adjustPlaceholder: ['Tell the AI what to change', '告诉 AI 怎么改'],
+    adjustPlaceholder: ['Tell AI what to change', '告诉 AI 怎么改'],
     original: ['Your text', '原文'],
     adjustTitle: ['Adjust with the AI', '让 AI 调整'],
     noneLeft: [

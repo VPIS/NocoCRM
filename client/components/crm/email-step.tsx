@@ -164,7 +164,9 @@ export function EmailStep({
   useLayoutEffect(() => {
     const box = bodyRef.current;
     if (!box) return;
-    const limit = Math.round(window.innerHeight / 2);
+    // A long draft scrolls within a third of the screen, so the card
+    // around it stays one view.
+    const limit = Math.round(Math.min(window.innerHeight / 3, 320));
     box.style.height = 'auto';
     box.style.height = `${String(Math.min(box.scrollHeight, limit))}px`;
     box.style.overflowY = box.scrollHeight > limit ? 'auto' : 'hidden';
@@ -245,7 +247,7 @@ export function EmailStep({
     }
   };
   const field =
-    'w-full rounded-md border bg-background px-2 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60';
+    'w-full rounded-md border bg-background px-2 py-1 text-sm outline-none focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 disabled:opacity-60';
   // Decided, or the reader may not act: the draft as written.
   if (!editable)
     return (

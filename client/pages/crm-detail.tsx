@@ -44,6 +44,7 @@ import {
   ArrowUpRight,
   Check,
   ChevronDown,
+  ChevronRight,
   CirclePlus,
   Copy,
   Ellipsis,
@@ -68,7 +69,10 @@ import {
 import { Button, buttonVariants } from '../components/ui/button.js';
 import { useFollowUpRequest } from '../components/crm/follow-up-request.js';
 import { FieldIcon } from '../components/crm/field-icons.js';
-import { FoldingText } from '../components/crm/long-text-field.js';
+import {
+  FoldingText,
+  LongTextPeek,
+} from '../components/crm/long-text-field.js';
 import { LocationField } from '../components/crm/location-field.js';
 import { Spinner } from '../components/ui/spinner.js';
 import { LONG_TEXT_LIMIT } from '../../server/providers/crm/limits.js';
@@ -994,7 +998,7 @@ export function DetailColumns({
                     <div className='min-h-0 overflow-hidden'>
                       <div
                         ref={introRef}
-                        className='pb-7 @3xl:max-h-[40vh] @3xl:overflow-y-auto @3xl:pr-12 @3xl:pl-10 md:@3xl:pr-16 md:@3xl:pl-16 scroll-quiet'
+                        className='pb-7 @3xl:max-h-[40vh] @3xl:overflow-y-auto @3xl:[scrollbar-gutter:stable] @3xl:pr-12 @3xl:pl-10 md:@3xl:pr-16 md:@3xl:pl-16 scroll-quiet'
                         onScroll={revealScrollbar}
                       >
                         {intro}
@@ -1005,7 +1009,10 @@ export function DetailColumns({
                 {/* The gap under the tabs is the bar's own, on the page's
                     background, so content scrolling up passes under it
                     rather than meeting the tabs' edge. */}
-                <div className='sticky top-0 z-10 flex shrink-0 flex-wrap items-center bg-background pt-1 pb-4 @3xl:pt-0 @3xl:pr-12 @3xl:pl-10 md:@3xl:pr-16 md:@3xl:pl-16'>
+                {/* Side by side it keeps the room of the content's scrollbar
+                    too (none where scrollbars lie over the page), so the
+                    tabs' rule ends where the content does. */}
+                <div className='sticky top-0 z-10 flex shrink-0 flex-wrap items-center bg-background pt-1 pb-4 @3xl:overflow-hidden @3xl:[scrollbar-gutter:stable] @3xl:pt-0 @3xl:pr-12 @3xl:pl-10 md:@3xl:pr-16 md:@3xl:pl-16 scroll-quiet'>
                   {tabBar}
                 </div>
                 {/* The tab's content, which alone scrolls side by side; its
@@ -1136,7 +1143,7 @@ export function DetailTabBar({
             role='tab'
             aria-selected={selected}
             onClick={() => onSelect(name)}
-            className={`-mb-px flex h-10 items-center gap-1.5 border-b-2 text-sm font-medium transition-colors outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring/50 ${
+            className={`-mb-px flex h-10 items-center gap-1.5 border-b-2 text-sm font-medium transition-colors outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset ${
               selected
                 ? 'border-foreground text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -1787,11 +1794,27 @@ export function HistoryChanges({
   // list before and after.
   const fileList = (ids: string[]): string =>
     ids.map((id) => fileNames[id] ?? id.slice(0, 8)).join('、');
-  // On hover: what it was, when it held anything, and what it became.
-  const titleOf = (key: string): string =>
-    before && key in before && toText(before[key] ?? '').trim()
-      ? `${toText(before[key])} → ${toText(changed[key] ?? '')}`
-      : toText(changed[key]);
+  // A text that may run to several lines: a long text, and a street
+  // address, which the particulars show over lines of their own too.
+  const longText = (key: string): boolean =>
+    key === 'address' || fields.find((f) => f.key === key)?.type === 'textarea';
+  // A lead's introduction by the short name its particulars show (the
+  // company is implied); every other field by its own.
+  const labelOf = (key: string): string =>
+    text(
+      entity === 'leads' && key === 'companyDescription'
+        ? 'fields.companyIntro'
+        : fieldLabelKey(entity, key),
+      { defaultValue: key },
+    );
+  // On hover: what it was, when it held anything, and what it became; a
+  // long text says it in its pop-up instead.
+  const titleOf = (key: string): string | undefined =>
+    longText(key)
+      ? undefined
+      : before && key in before && toText(before[key] ?? '').trim()
+        ? `${toText(before[key])} → ${toText(changed[key] ?? '')}`
+        : toText(changed[key]);
   // An arrow to the new value only, clamped so one long value cannot turn
   // an entry into a paragraph; the old value and the full text stay on
   // hover (titleOf). The descendant rule beats the value renderer's own
@@ -1808,9 +1831,16 @@ export function HistoryChanges({
           aria-hidden
           className='size-3 shrink-0 self-center text-muted-foreground'
         />
-        <span className='min-w-0 shrink truncate [&_*]:whitespace-nowrap'>
-          {show(changed, key)}
-        </span>
+        {longText(key) ? (
+          // A long text opens whole in a pop-up.
+          <LongTextPeek label={labelOf(key)} value={toText(changed[key])}>
+            {show(changed, key)}
+          </LongTextPeek>
+        ) : (
+          <span className='min-w-0 shrink truncate [&_*]:whitespace-nowrap'>
+            {show(changed, key)}
+          </span>
+        )}
       </>
     );
   const rows = shown.map((key, index) => {
@@ -1845,16 +1875,7 @@ export function HistoryChanges({
       );
     }
     const label = (
-      <span className='shrink-0 text-muted-foreground'>
-        {/* A lead's introduction by the short name its particulars show
-            (the company is implied); every other field by its own. */}
-        {text(
-          entity === 'leads' && key === 'companyDescription'
-            ? 'fields.companyIntro'
-            : fieldLabelKey(entity, key),
-          { defaultValue: key },
-        )}
-      </span>
+      <span className='shrink-0 text-muted-foreground'>{labelOf(key)}</span>
     );
     return (
       <span
@@ -1882,7 +1903,7 @@ export function HistoryChanges({
   });
   if (part === 'rows')
     return folds && open ? (
-      <div className='mt-1 grid gap-1 rounded-lg border bg-muted/40 px-3 py-2 text-sm'>
+      <div className='mt-1 grid gap-1 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-sm'>
         {rows}
       </div>
     ) : null;
@@ -1892,33 +1913,49 @@ export function HistoryChanges({
       <span className='text-muted-foreground'>
         {text('feed.fieldCount', { count: shown.length })}
       </span>
-      {/* The same round toggle an AI entry opens with. */}
-      <Button
-        size='icon-xs'
-        variant='outline'
-        className={FOLD_TOGGLE}
-        aria-expanded={open}
-        aria-label={text(open ? 'collapse' : 'expand')}
-        onClick={onToggle}
-      >
-        <ChevronDown
-          className={`transition-transform ${open ? 'rotate-180' : ''}`}
-        />
-      </Button>
+      {/* The same toggle an AI entry opens with. */}
+      <FoldToggle open={open} onToggle={onToggle} />
     </>
   );
 }
 
-// The round toggle that opens a timeline entry (a save's fields, an AI
-// card, the mail from before the record): smaller than the buttons around,
-// its arrow too, so it reads as part of the line.
-const FOLD_TOGGLE = 'size-5 rounded-full [&_svg]:size-2.5!';
+// The toggle that opens a timeline entry (a save's fields, an AI card): a
+// small arrow on the line, pointing right while closed and down once
+// open, with no frame of its own until hovered, so it reads as part of the
+// line.
+function FoldToggle({
+  open,
+  onToggle,
+}: {
+  open: boolean;
+  onToggle?: () => void;
+}): ReactElement {
+  const { text } = useCrmText();
+  return (
+    <Button
+      size='icon-xs'
+      variant='ghost'
+      className='size-5 rounded-md text-muted-foreground hover:text-foreground [&_svg]:size-3.5!'
+      aria-expanded={open}
+      aria-label={text(open ? 'collapse' : 'expand')}
+      onClick={onToggle}
+    >
+      <ChevronRight
+        className={`transition-transform ${open ? 'rotate-90' : ''}`}
+      />
+    </Button>
+  );
+}
 
-// One person's edits of the same fields, one after another on the
-// timeline, read as the last of them from the value before the first: the
-// timeline tells what a field became, not each attempt at getting it right.
-// Only the record's own updates and status moves, from the same source (an
-// AI proposal confirmed stays apart from a person's own edit).
+// One person's edits one after another on the timeline read as one entry:
+// edits of the same fields whenever they were made, and their updates
+// within half an hour of each other whatever the fields, as one save of
+// all the fields they changed, each from the value before the first edit
+// to the last (status moves only when they move the same field). The timeline
+// tells what the record became, not each attempt at getting it right. Only
+// the record's own entries, from the same source (an AI proposal confirmed
+// stays apart from a person's own edit).
+const MERGE_WINDOW = 30 * 60 * 1000;
 const editedKeys = (event: Data): string =>
   Object.keys((event.changes as Data | undefined) ?? {})
     .sort()
@@ -1930,20 +1967,38 @@ const sameEdit = (newer: Data, older: Data): boolean =>
   newer.recordId === older.recordId &&
   newer.actorId === older.actorId &&
   toText(newer.source) === toText(older.source) &&
-  editedKeys(newer) === editedKeys(older);
+  (editedKeys(newer) === editedKeys(older) ||
+    (newer.action === 'updated' &&
+      new Date(toText(newer.mergedFrom ?? newer.createdAt)).getTime() -
+        new Date(toText(older.createdAt)).getTime() <=
+        MERGE_WINDOW));
 function collapseEdits(events: Data[]): Data[] {
   const kept: Data[] = [];
   // The feed comes newest first: an older entry folds into the one kept
-  // above it, handing it what the field held before.
+  // above it, adding the fields only it changed and handing it what each
+  // field held before. The time between edits is measured from the older
+  // of the two, so a long run of edits a few minutes apart stays one.
   for (const event of events) {
     const newer = kept[kept.length - 1];
-    if (newer && sameEdit(newer, event))
+    if (newer && sameEdit(newer, event)) {
+      const olderPrevious = event.previous as Data | undefined;
+      const newerPrevious = newer.previous as Data | undefined;
       kept[kept.length - 1] = {
         ...newer,
-        previous: event.previous ?? newer.previous,
+        changes: {
+          ...(event.changes ?? {}),
+          ...(newer.changes ?? {}),
+        },
+        previous:
+          olderPrevious || newerPrevious
+            ? { ...(newerPrevious ?? {}), ...(olderPrevious ?? {}) }
+            : undefined,
         fromValue: event.fromValue ?? newer.fromValue,
+        // The run's edges: its time stays the latest edit's, the window
+        // reaches back from its oldest.
+        mergedFrom: event.createdAt,
       };
-    else kept.push(event);
+    } else kept.push(event);
   }
   return kept;
 }
@@ -2106,6 +2161,7 @@ function EarlierMail({
         {!last && <span className='min-h-3 w-px flex-1 bg-border/50' />}
       </div>
       <div className='min-w-0 flex-1 pb-3'>
+        {/* Grey, as the field changes and other plain activity. */}
         <div className='flex min-h-[26px] items-center gap-3 text-sm'>
           <span className='flex min-w-0 flex-1 items-center gap-x-1.5 overflow-hidden whitespace-nowrap'>
             <span className='min-w-0 truncate text-muted-foreground'>
@@ -2114,13 +2170,15 @@ function EarlierMail({
             {onOpenMail ? (
               <button
                 type='button'
-                className='shrink-0 underline-offset-2 hover:underline'
+                className='shrink-0 font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline'
                 onClick={() => onOpenMail('')}
               >
                 {label}
               </button>
             ) : (
-              <span className='shrink-0'>{label}</span>
+              <span className='shrink-0 font-medium text-muted-foreground'>
+                {label}
+              </span>
             )}
           </span>
           <time
@@ -2910,8 +2968,8 @@ export function HistoryFeed({
                   const approvalEvent =
                     event.entity === 'approvals' && entity !== 'approvals';
                   // Plain activity (a field changed, a status moved, the
-                  // record created) reads as fine print, so what people
-                  // wrote stands out; comments are cards, and the AI's work,
+                  // record created) reads in grey, its actor too, so what
+                  // people wrote stands out; comments are cards, and the AI's work,
                   // tasks, approvals and mail sit between the two.
                   // A comment with replies joins its author's avatar to
                   // theirs by one line.
@@ -2973,19 +3031,15 @@ export function HistoryFeed({
                           comment
                             ? // A comment, with its replies, on a card of its
                               // own: people talking, set apart from activity.
-                              `mb-3 rounded-xl border border-border/60 px-3 py-2 shadow-xs ${
-                                focus === key ? 'crm-arrive bg-ai/5' : 'bg-card'
-                              }`
-                            : focus === key
-                              ? 'crm-arrive -mx-2 rounded-lg bg-ai/5 px-2 pb-3'
-                              : 'pb-3'
+                              'mb-3 rounded-xl border border-border/60 bg-card px-3 py-2 shadow-xs'
+                            : // An entry the page was sent to is scrolled
+                              // to, not marked.
+                              'pb-3'
                         }`}
                       >
                         <div
                           data-comment={comment ? key : undefined}
-                          className={`group/comment relative flex min-h-[26px] items-center gap-3 ${
-                            quiet ? 'text-xs' : 'text-sm'
-                          }`}
+                          className='group/comment relative flex min-h-[26px] items-center gap-3 text-sm'
                         >
                           {threaded ? <ThreadLine part='below' /> : null}
                           {/* An entry is one line, never wrapped: what is
@@ -3181,18 +3235,10 @@ export function HistoryFeed({
                             {/* An AI card opens from its line (not while
                                 it runs: there is nothing to open). */}
                             {ai && event.aiStatus !== 'running' && (
-                              <Button
-                                size='icon-xs'
-                                variant='outline'
-                                className={FOLD_TOGGLE}
-                                aria-expanded={open}
-                                aria-label={text(open ? 'collapse' : 'expand')}
-                                onClick={() => toggle(key)}
-                              >
-                                <ChevronDown
-                                  className={`transition-transform ${open ? 'rotate-180' : ''}`}
-                                />
-                              </Button>
+                              <FoldToggle
+                                open={open}
+                                onToggle={() => toggle(key)}
+                              />
                             )}
                           </span>
                           {/* Reply for anyone; its author's edit and delete,
@@ -3341,6 +3387,7 @@ export function HistoryFeed({
                               recordName={recordName}
                               editable={editable}
                               onChanged={refresh}
+                              inFeed
                             />
                           </div>
                         ) : ai && open ? (
@@ -3362,6 +3409,7 @@ export function HistoryFeed({
                               // The lead's latest evaluation may be run again;
                               // an earlier one is only its record.
                               editable={editable && key === latestEvaluation}
+                              inFeed
                               onChanged={refresh}
                               full
                             />

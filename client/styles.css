@@ -129,22 +129,6 @@
   }
 }
 
-/* A timeline entry the page was opened at (?focus=, from "Waiting on me"):
-   it flashes as it comes into view, then stays softly marked. */
-@keyframes crm-arrive {
-  0%,
-  40% {
-    background-color: color-mix(in oklab, var(--ai) 16%, transparent);
-    box-shadow: 0 0 0 2px color-mix(in oklab, var(--ai) 55%, transparent);
-  }
-  100% {
-    box-shadow: 0 0 0 2px transparent;
-  }
-}
-.crm-arrive {
-  animation: crm-arrive 2.4s ease-out;
-}
-
 /* A message in a comment's thread, pointed out from a reply that answers
    it: its background alone takes the grey of a hovered particular, so a
    comment's line and its text below read as one. */

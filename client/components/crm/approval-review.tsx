@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, X } from 'lucide-react';
 import { Badge } from '../ui/badge.js';
 import { Button } from '../ui/button.js';
 import { Spinner } from '../ui/spinner.js';
@@ -152,7 +152,7 @@ export function ReviewPanel({
     <section
       // Waiting, it carries the AI's tint; decided, the same card on a
       // neutral ground, as every AI card.
-      className={`@container grid grid-cols-[minmax(0,1fr)] gap-2 rounded-xl border border-border/60 p-4 text-sm shadow-xs ${
+      className={`@container grid grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border/60 p-4 text-sm shadow-xs [&_:is(input,textarea,[role=combobox]):focus-visible]:border-ring/50! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-2! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-ring/10! ${
         entry.status === 'pending' ? 'bg-ai/5' : 'bg-card'
       }`}
     >
@@ -257,7 +257,7 @@ export function ReviewPanel({
                   disabled={Boolean(busy)}
                   onClick={() => decide('dismiss')}
                 >
-                  {busy === 'dismiss' && <Spinner />}
+                  {busy === 'dismiss' ? <Spinner /> : <X />}
                   {text('evaluation.dismiss')}
                 </Button>
               </>
@@ -289,9 +289,14 @@ export function ReviewPanel({
       {entry.status === 'failed' && (
         <p className='text-muted-foreground'>{text('approvalReview.failed')}</p>
       )}
+      {/* The conclusion leads as a sentence, as on the follow-up's card. */}
       {review && (
-        <dl className='grid grid-cols-[max-content_minmax(0,1fr)] gap-x-2 gap-y-1.5'>
-          <Row label={text('approvalReview.summary')}>{review.summary}</Row>
+        <p className='leading-relaxed font-medium text-foreground'>
+          {review.summary}
+        </p>
+      )}
+      {review && (
+        <dl className='grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-2'>
           <Row label={text('approvalReview.asked')}>{review.asked}</Row>
           {review.conditions && (
             <Row label={text('approvalReview.conditions')}>

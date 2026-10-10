@@ -84,6 +84,9 @@ const BOTH = new Set(['message', 'companyDescription']);
 const empty = (value: unknown): boolean =>
   value === null || value === undefined || value === '';
 
+// Where a sentence names the lead, split around for its link.
+const LEAD_SLOT = '\u0000lead\u0000';
+
 export function LeadDuplicates({
   lead,
   onMerged,
@@ -103,56 +106,71 @@ export function LeadDuplicates({
   if (!open || !data?.length) return null;
   return (
     // A card as the particulars' groups below it are (InfoGroup): the same
-    // padding, a title with its icon, rows set in as theirs; in the warning
-    // colour. Each duplicate reads on two lines, its name, then why it
-    // matched, whose it is and when it came, ending in the way to merge it.
-    <div className='rounded-xl border border-warning/40 bg-warning/10 px-2 py-3'>
+    // padding, border and shadow, a title with its icon, rows set in as
+    // theirs; its fill a faint wash of the warning colour over the card's.
+    // Each duplicate reads as one sentence: what it shares with this lead,
+    // the lead, and the way to merge it.
+    <div className='rounded-xl border border-border/60 bg-[color-mix(in_oklab,var(--warning)_7%,var(--card))] px-2 py-3 shadow-xs'>
       <h3 className='flex items-center gap-1.5 px-2 pb-1.5 text-sm font-medium'>
         <TriangleAlert className='size-4 text-warning' aria-hidden />
         {text('merge.notice')}
       </h3>
       <ul>
         {data.map((duplicate) => (
-          <li key={duplicate.id} className='min-w-0 px-2 py-1.5 text-sm'>
-            <RecordLink
-              entity='leads'
-              record={{
-                id: duplicate.id,
-                name: [duplicate.name, duplicate.company]
-                  .filter(Boolean)
-                  .join(' / '),
-              }}
-            />
-            <div className='flex min-w-0 items-baseline gap-1.5 text-xs text-muted-foreground'>
-              <span className='min-w-0 truncate'>
-                {[
-                  duplicate.matched
-                    .map((m) => text(`merge.matched.${m}`))
-                    .join('、'),
-                  meta?.users.find((u) => u.id === duplicate.ownerId)?.name,
-                  localDate(
-                    duplicate.createdAt,
-                    '',
-                    meta?.settings.timeZone ?? 'Asia/Shanghai',
-                    false,
-                  ),
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </span>
-              {duplicate.mergeable && (
+          // One sentence, wrapping where its line ends: what it shares
+          // with this lead, the lead named in it, and the way to merge it;
+          // whose it is and when it came on hover.
+          <li
+            key={duplicate.id}
+            className='min-w-0 px-2 py-1.5 text-sm leading-relaxed break-words'
+            title={[
+              meta?.users.find((u) => u.id === duplicate.ownerId)?.name,
+              localDate(
+                duplicate.createdAt,
+                '',
+                meta?.settings.timeZone ?? 'Asia/Shanghai',
+                false,
+              ),
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          >
+            {(() => {
+              const [before, after] = text('merge.same', {
+                what: duplicate.matched
+                  .map((m) => text(`merge.matched.${m}`))
+                  .join(text('merge.and')),
+                lead: LEAD_SLOT,
+              }).split(LEAD_SLOT);
+              return (
                 <>
-                  <span aria-hidden>·</span>
-                  <button
-                    type='button'
-                    className='shrink-0 font-medium text-foreground hover:underline'
-                    onClick={() => setMerging(duplicate)}
-                  >
-                    {text('merge.action')}
-                  </button>
+                  {before}
+                  <RecordLink
+                    entity='leads'
+                    lines='all'
+                    record={{
+                      id: duplicate.id,
+                      name: [duplicate.name, duplicate.company]
+                        .filter(Boolean)
+                        .join(' / '),
+                    }}
+                  />
+                  {after}
                 </>
-              )}
-            </div>
+              );
+            })()}
+            {duplicate.mergeable && (
+              <>
+                {text('merge.then')}
+                <button
+                  type='button'
+                  className='font-medium text-primary hover:underline'
+                  onClick={() => setMerging(duplicate)}
+                >
+                  {text('merge.go')}
+                </button>
+              </>
+            )}
           </li>
         ))}
       </ul>
