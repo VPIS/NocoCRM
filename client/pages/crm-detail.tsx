@@ -512,30 +512,31 @@ function LeadDetail({ id }: { id: string }): ReactElement {
           {text('convertShort')}
         </Button>
       )}
-      {detail.permissions.delete && (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            aria-label={text('moreActions')}
-            className={buttonVariants({
-              size: 'icon-sm',
-              variant: 'outline',
-            })}
-          >
-            <Ellipsis />
-          </DropdownMenuTrigger>
-          {/* As wide as its longest item: the trigger is a small icon. */}
-          <DropdownMenuContent align='end' className='w-max'>
-            <DropdownMenuItem
-              variant='destructive'
-              onClick={() => setConfirmDelete(true)}
-            >
-              <Trash2 />
-              {text('deleteRecord', { entity: text('entity.leads') })}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
     </>
+  );
+  // Deleting, in a "More" menu at the end of the heading's line.
+  const leadMore = detail.permissions.delete && (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={text('moreActions')}
+        className={buttonVariants({
+          size: 'icon-sm',
+          variant: 'ghost',
+        })}
+      >
+        <Ellipsis />
+      </DropdownMenuTrigger>
+      {/* As wide as its longest item: the trigger is a small icon. */}
+      <DropdownMenuContent align='end' className='w-max'>
+        <DropdownMenuItem
+          variant='destructive'
+          onClick={() => setConfirmDelete(true)}
+        >
+          <Trash2 />
+          {text('deleteRecord', { entity: text('entity.leads') })}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
   // Atop the particulars, where the AI's latest follow-up stands, which
   // opens it in the timeline.
@@ -554,6 +555,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       entity='leads'
       heading={heading}
       actions={leadActions}
+      more={leadMore}
       status={leadStatus}
       tabBar={tabBar}
       notice={<ErrorNotice error={error ?? loadError} />}
@@ -855,6 +857,7 @@ export function DetailColumns({
   entity,
   heading,
   actions,
+  more,
   status,
   tabBar,
   notice,
@@ -866,8 +869,12 @@ export function DetailColumns({
   // The kind of record, named over the heading on a phone.
   entity: Entity;
   heading: ReactNode;
-  // Everything the reader can do with the record, right of the heading.
+  // Everything the reader can do with the record, on a row under the
+  // heading.
   actions: ReactNode;
+  // The rarer things (deleting), in a menu at the end of the heading's
+  // line, so a record with nothing else leaves no row for it.
+  more?: ReactNode;
   // Where the AI's latest work on the record stands, at the head of the
   // actions at the top right.
   status?: ReactNode;
@@ -949,7 +956,10 @@ export function DetailColumns({
               >
                 <DetailBack entity={entity} />
                 <div className='grid gap-2'>
-                  <div className='min-w-0'>{heading}</div>
+                  <div className='flex items-start gap-2'>
+                    <div className='min-w-0 flex-1'>{heading}</div>
+                    {more ? <div className='shrink-0'>{more}</div> : null}
+                  </div>
                   {/* The AI's latest suggestion leads the actions, as what
                       to do next; it draws nothing before the first. */}
                   {actions || status ? (

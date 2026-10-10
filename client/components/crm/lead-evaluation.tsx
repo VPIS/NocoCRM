@@ -15,6 +15,7 @@ import {
   Globe,
   Mail,
   PencilLine,
+  RotateCw,
   Sparkles,
   TriangleAlert,
   X,
@@ -41,6 +42,7 @@ import {
 import { OutcomeBox } from './outcome.js';
 import { useMailSetup } from './mail.js';
 import { EmailStep } from './email-step.js';
+import { statusDot } from './status-dot.js';
 import type { FollowUpRequest } from './follow-up-request.js';
 import { Choice } from './form.js';
 import { Input } from '../ui/input.js';
@@ -297,10 +299,24 @@ export function EvaluationStatus({
   // stands. It opens the evaluation in the timeline, where it is handled;
   // the details say more on hover.
   const again = request?.available && entry.status !== 'running';
-  // As tall as the small buttons beside it (h-7), the main action's.
+  // Where it stands, in words: who decided it and when, once decided.
+  const statusLine = toText(
+    decided
+      ? text('evaluation.decidedBy', {
+          status: text(`evaluation.statuses.${entry.status}`),
+          name:
+            meta.users.find((u) => u.id === entry.ai.decidedById)?.name ?? '',
+          time: localDate(entry.ai.decidedAt, language, meta.settings.timeZone),
+        })
+      : entry.status === 'failed'
+        ? text('evaluation.failed')
+        : text(`evaluation.statuses.${entry.status}`),
+  );
+  // As tall as the small buttons beside it (h-7), the main action's, and
+  // in their type size.
   return (
     <div
-      className={`${wide ? 'flex w-full' : 'inline-flex max-w-full'} h-7 items-center rounded-lg border font-sans text-xs font-normal tracking-normal ${
+      className={`${wide ? 'flex w-full' : 'inline-flex max-w-full'} h-7 items-center rounded-lg border font-sans text-sm font-normal tracking-normal ${
         entry.status === 'running'
           ? 'crm-ai-working'
           : pending
@@ -308,72 +324,85 @@ export function EvaluationStatus({
             : 'bg-card'
       }`}
     >
-      <button
-        type='button'
-        onClick={() => onOpen(entry.id)}
-        title={
-          decided
-            ? text('evaluation.decidedBy', {
-                status: text(`evaluation.statuses.${entry.status}`),
-                name:
-                  meta.users.find((u) => u.id === entry.ai.decidedById)?.name ??
-                  '',
-                time: localDate(
-                  entry.ai.decidedAt,
-                  language,
-                  meta.settings.timeZone,
-                ),
-              })
-            : entry.status === 'failed'
-              ? text('evaluation.failed')
-              : undefined
-        }
-        // Small, as the filter beside it.
-        className={`flex min-w-0 items-center h-full gap-1.5 rounded-l-lg px-2 transition-colors ${
-          again ? '' : 'rounded-r-lg'
-        } ${pending ? 'hover:bg-ai/10' : 'hover:bg-muted'} ${wide ? 'flex-1' : ''}`}
-      >
-        {entry.status === 'running' ? (
-          <Spinner className='size-3.5 text-ai' />
-        ) : (
-          <Sparkles className='size-3.5 text-ai' />
-        )}
-        {/* The AI's mark says whose it is: the verdict, then its status,
-          one line, no box within the box. In a narrow column the verdict,
-          the one part that can run long, is cut with an ellipsis (shown
-          whole on hover). */}
-        {verdict && (
-          <span className='min-w-0 truncate font-medium' title={label(verdict)}>
-            {label(verdict)}
-          </span>
-        )}
-        {verdict && (
-          <span aria-hidden className='shrink-0 text-muted-foreground/60'>
-            ·
-          </span>
-        )}
-        {/* Its status in the timeline's words, waiting in the AI's colour. */}
-        <span
-          className={`shrink-0 whitespace-nowrap ${
-            pending ? 'font-medium text-ai' : 'text-muted-foreground'
-          }`}
+      {/* The chip says only whose it is and where it stands; its hover
+          says what it concluded, why, and where it stands in words. */}
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <button
+              type='button'
+              onClick={() => onOpen(entry.id)}
+              aria-label={[
+                text('evaluation.start'),
+                verdict ? label(verdict) : '',
+                statusLine,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+              // Small, as the filter beside it.
+              className={`flex h-full min-w-0 items-center gap-1.5 rounded-l-lg px-2 transition-colors ${
+                again ? '' : 'rounded-r-lg'
+              } ${pending ? 'hover:bg-ai/10' : 'hover:bg-muted'} ${wide ? 'flex-1' : ''}`}
+            />
+          }
         >
-          {text(`evaluation.statuses.${entry.status}`)}
-        </span>
-      </button>
+          {entry.status === 'running' ? (
+            <Spinner className='size-3.5 text-ai' />
+          ) : (
+            <Sparkles className='size-3.5 text-ai' />
+          )}
+          <span className='min-w-0 truncate font-medium'>
+            {text('evaluation.start')}
+          </span>
+          <span
+            aria-hidden
+            className={`size-1.5 shrink-0 rounded-full ${statusDot(entry.status)}`}
+          />
+        </TooltipTrigger>
+        <TooltipContent
+          side='bottom'
+          align='start'
+          className='max-w-80 flex-col items-start gap-1'
+        >
+          {verdict ? <p className='font-medium'>{label(verdict)}</p> : null}
+          {verdict?.summary ? (
+            <p className='line-clamp-3 opacity-90'>{verdict.summary}</p>
+          ) : null}
+          {/* Where it stands, and what a click does, on one line. */}
+          <p className='opacity-80'>
+            {statusLine}
+            {language.startsWith('zh') ? '，' : ' · '}
+            {text('evaluation.chipHint')}
+          </p>
+        </TooltipContent>
+      </Tooltip>
       {/* Following it up again, after where it stands. */}
       {again ? (
         <>
           <span aria-hidden className='h-3.5 w-px shrink-0 bg-border' />
-          <button
-            type='button'
-            disabled={request.busy}
-            onClick={request.ask}
-            className='flex shrink-0 items-center gap-1 h-full rounded-r-lg px-2 font-medium whitespace-nowrap text-ai transition-colors hover:bg-ai/10 disabled:opacity-50'
-          >
-            {request.busy ? <Spinner className='size-3' /> : null}
-            {text('evaluation.askAgain')}
-          </button>
+          {/* Following it up again, as an icon, its words on hover. */}
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type='button'
+                  disabled={request.busy}
+                  onClick={request.ask}
+                  aria-label={toText(text('evaluation.askAgain'))}
+                  className='flex h-full shrink-0 items-center rounded-r-lg px-1.5 text-ai transition-colors hover:bg-ai/10 disabled:opacity-50'
+                />
+              }
+            >
+              {request.busy ? (
+                <Spinner className='size-3.5' />
+              ) : (
+                <RotateCw className='size-3.5' />
+              )}
+            </TooltipTrigger>
+            <TooltipContent side='bottom'>
+              {text('evaluation.askAgain')}
+            </TooltipContent>
+          </Tooltip>
         </>
       ) : null}
     </div>
@@ -396,7 +425,7 @@ export function EvaluateButton({
   return (
     <button
       type='button'
-      className='inline-flex h-7 items-center gap-1.5 rounded-lg border border-ai/30 bg-ai/5 px-2.5 font-sans text-xs font-medium tracking-normal text-ai transition-colors hover:bg-ai/10 disabled:opacity-60'
+      className='inline-flex h-7 items-center gap-1.5 rounded-lg border border-ai/30 bg-ai/5 px-2.5 font-sans text-sm font-medium tracking-normal text-ai transition-colors hover:bg-ai/10 disabled:opacity-60'
       disabled={request.busy}
       onClick={request.ask}
     >

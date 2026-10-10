@@ -936,12 +936,13 @@ export default function EntityDetail({
       {after ? <AfterSlash>{after}</AfterSlash> : null}
     </div>
   );
-  // The rarer deleting, last, in a "More" menu.
+  // The rarer deleting, in a "More" menu at the end of the heading's
+  // line (DetailColumns' `more`).
   const moreMenu = detail.permissions.delete ? (
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={text('moreActions')}
-        className={buttonVariants({ size: 'icon-sm', variant: 'outline' })}
+        className={`${buttonVariants({ size: 'icon-sm', variant: 'ghost' })} text-muted-foreground`}
       >
         <Ellipsis />
       </DropdownMenuTrigger>
@@ -997,6 +998,27 @@ export default function EntityDetail({
       }))}
     />
   );
+  // What a deal or a company is, under its heading as a lead's original
+  // message: with neither heading nor label, five lines unfolding on a
+  // click, the editor's own 8px pulled out so the text lines up. Empty, it
+  // offers itself to whoever may write it.
+  const descriptionIntro = (placeholderKey: string): ReactNode =>
+    editable || toText(record.description).trim() ? (
+      <div className='-mx-2 min-w-0 text-sm'>
+        <Copyable>
+          <InlineField
+            entity={entity}
+            record={record}
+            field={field('description')}
+            editable={editable}
+            lookup={names}
+            label={text(fieldLabelKey(entity, 'description'))}
+            placeholder={toText(text(placeholderKey))}
+            longText='fold'
+          />
+        </Copyable>
+      </div>
+    ) : undefined;
   const page = (
     heading: ReactNode,
     actions: Actions,
@@ -1013,6 +1035,7 @@ export default function EntityDetail({
       tabBar={tabBar}
       notice={<ErrorNotice error={error ?? loadError} />}
       intro={intro}
+      more={moreMenu}
       left={left}
       right={tabContent}
     >
@@ -1033,7 +1056,6 @@ export default function EntityDetail({
               {text('completeTask')}
             </Button>
           )}
-          {moreMenu}
         </>,
       ),
       <>
@@ -1082,7 +1104,6 @@ export default function EntityDetail({
       actionsOf(
         <>
           <EvaluateButton request={followUp} />
-          {moreMenu}
         </>,
       ),
       <>
@@ -1126,6 +1147,8 @@ export default function EntityDetail({
                   editable={editable}
                   lookup={names}
                   label={text('fields.amount')}
+                  // Empty, it asks for the number beside its currency.
+                  placeholder={toText(text('amountPlaceholder'))}
                   bare
                 />
               </div>
@@ -1137,33 +1160,14 @@ export default function EntityDetail({
           <RecordTimes record={record} />
         </InfoGroup>
       </>,
-      // What the deal is, under its heading as a lead's original message:
-      // with neither heading nor label, five lines unfolding on a click,
-      // the editor's own 8px pulled out so the text lines up. Empty, it
-      // offers itself to whoever may write it.
-      editable || toText(record.description).trim() ? (
-        <div className='-mx-2 min-w-0 text-sm'>
-          <Copyable>
-            <InlineField
-              entity={entity}
-              record={record}
-              field={field('description')}
-              editable={editable}
-              lookup={names}
-              label={text(fieldLabelKey(entity, 'description'))}
-              placeholder={toText(text('dealDescriptionPlaceholder'))}
-              longText='fold'
-            />
-          </Copyable>
-        </div>
-      ) : undefined,
+      descriptionIntro('dealDescriptionPlaceholder'),
     );
   }
 
   if (entity === 'companies')
     return page(
       headingOf(),
-      actionsOf(<>{moreMenu}</>),
+      actionsOf(null),
       <>
         {/* Who has it and where it stands (a churned company's reason
             beside its status). */}
@@ -1209,22 +1213,24 @@ export default function EntityDetail({
                   editable={editable}
                   lookup={names}
                   label={text('fields.annualRevenue')}
+                  // Empty, it asks for the number beside its currency.
+                  placeholder={toText(text('amountPlaceholder'))}
                   bare
                 />
               </div>
             </div>
           </InfoRow>
           {locationRow}
-          {row('description')}
           {convertedRow}
         </InfoGroup>
       </>,
+      descriptionIntro('companyDescriptionPlaceholder'),
     );
 
   if (entity === 'contacts')
     return page(
       headingOf(undefined, companyCrumb),
-      actionsOf(<>{moreMenu}</>),
+      actionsOf(null),
       <>
         <InfoGroup title={text('detailsGroup')}>
           {[
@@ -1250,7 +1256,6 @@ export default function EntityDetail({
     actionsOf(
       <>
         <ApprovalActions approval={record} names={names} />
-        {moreMenu}
       </>,
     ),
     <>

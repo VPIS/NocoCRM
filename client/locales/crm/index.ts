@@ -7,8 +7,11 @@ const wording = {
   emptyChoose: ['Choose {{field}}', '选择{{field}}'],
   // A lead's empty original message, under its heading.
   messagePlaceholder: ['Add the original message...', '填写原始信息...'],
+  // An empty amount beside its currency (a deal's, a company's revenue).
+  amountPlaceholder: ['Add amount', '填写金额'],
   // An opportunity's empty description, under its heading.
   dealDescriptionPlaceholder: ['Add a description...', '填写商机描述...'],
+  companyDescriptionPlaceholder: ['Add an introduction...', '填写公司介绍...'],
   stale: ['Stalled', '停滞'],
   convertedThisMonth: ['Converted this month', '本月转化'],
   converted: ['Converted leads', '已转化线索'],
@@ -694,7 +697,9 @@ const wording = {
   // The company, contact and approval pages' particulars, likewise.
   companyGroups: {
     general: ['General', '概况'],
-    company: ['Company', '公司'],
+    // What the company is (its site, trade, size, revenue, place): not
+    // "Company" again on a company's own page.
+    company: ['Profile', '公司档案'],
   },
   region: ['Region', '地区'],
   // The region and the street address in one row.
@@ -815,8 +820,10 @@ const wording = {
     again: ['Follow up', '跟进'],
     // Before the first suggestion: asking for one, as a chip.
     start: ['AI follow-up', 'AI 跟进'],
+    // Under the chip's hover.
+    chipHint: ['click to open it in the timeline', '点击在动态里查看'],
     // At the end of the AI's latest suggestion's chip.
-    askAgain: ['Rerun', '重新跟进'],
+    askAgain: ['Rerun the AI follow-up', '重新运行 AI 跟进'],
     running: [
       'The AI is reviewing it and preparing a suggestion…',
       'AI 正在查看、准备跟进建议…',
@@ -1288,7 +1295,7 @@ const wording = {
     superseded: ['decided on the approval itself', '已在审批上直接处理'],
     // Where the latest review stands, and asking for another, on its chip.
     working: ['Reviewing', '分析中'],
-    again: ['Rerun', '重新分析'],
+    again: ['Rerun the AI review', '重新运行 AI 审批建议'],
     // Voided because the approval left the queue without the card.
     retired: {
       withdrawn: [

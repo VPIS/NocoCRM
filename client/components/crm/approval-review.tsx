@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { Sparkles, X } from 'lucide-react';
+import { RotateCw, Sparkles, X } from 'lucide-react';
 import { Badge } from '../ui/badge.js';
 import { Button } from '../ui/button.js';
 import { Spinner } from '../ui/spinner.js';
 import { Textarea } from '../ui/textarea.js';
 import { ErrorNotice } from './common.js';
 import { Row } from './lead-evaluation.js';
+import { statusDot } from './status-dot.js';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip.js';
 import {
   localDate,
   toText,
@@ -418,7 +420,7 @@ export function ReviewStatus({
   wide?: boolean;
 }): ReactElement | null {
   const { data: meta } = useMetadata();
-  const { text } = useCrmText();
+  const { text, language } = useCrmText();
   const api = useCrmApi();
   const refresh = useRefresh();
   const [busy, setBusy] = useState(false);
@@ -468,7 +470,7 @@ export function ReviewStatus({
           then asking again; before the first review, a button asks. */}
       {entry ? (
         <div
-          className={`${wide ? 'flex min-w-0 flex-1' : 'inline-flex max-w-full'} h-7 items-center rounded-lg border text-xs ${
+          className={`${wide ? 'flex min-w-0 flex-1' : 'inline-flex max-w-full'} h-7 items-center rounded-lg border text-sm ${
             entry.status === 'running'
               ? 'crm-ai-working'
               : pending
@@ -476,50 +478,92 @@ export function ReviewStatus({
                 : 'bg-card'
           }`}
         >
-          <button
-            type='button'
-            onClick={() => onOpen(entry.id)}
-            className={`flex min-w-0 items-center h-full gap-1.5 rounded-l-lg px-2 transition-colors ${
-              again ? '' : 'rounded-r-lg'
-            } ${pending ? 'hover:bg-ai/10' : 'hover:bg-muted'} ${wide ? 'flex-1' : ''}`}
-          >
-            {entry.status === 'running' ? (
-              <Spinner className='size-3.5 text-ai' />
-            ) : (
-              <Sparkles className='size-3.5 text-ai' />
-            )}
-            {review && (
-              <>
-                <span className='min-w-0 truncate font-medium'>
+          {/* Only whose it is and where it stands; its hover says what it
+              recommends, why, and where it stands in words. */}
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type='button'
+                  onClick={() => onOpen(entry.id)}
+                  aria-label={[
+                    text('approvalReview.title'),
+                    review
+                      ? text(
+                          `approvalReview.recommendations.${review.recommendation}`,
+                        )
+                      : '',
+                    standing,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                  className={`flex h-full min-w-0 items-center gap-1.5 rounded-l-lg px-2 transition-colors ${
+                    again ? '' : 'rounded-r-lg'
+                  } ${pending ? 'hover:bg-ai/10' : 'hover:bg-muted'} ${wide ? 'flex-1' : ''}`}
+                />
+              }
+            >
+              {entry.status === 'running' ? (
+                <Spinner className='size-3.5 text-ai' />
+              ) : (
+                <Sparkles className='size-3.5 text-ai' />
+              )}
+              <span className='min-w-0 truncate font-medium'>
+                {text('approvalReview.title')}
+              </span>
+              <span
+                aria-hidden
+                className={`size-1.5 shrink-0 rounded-full ${statusDot(toText(entry.status))}`}
+              />
+            </TooltipTrigger>
+            <TooltipContent
+              side='bottom'
+              align='start'
+              className='max-w-80 flex-col items-start gap-1'
+            >
+              {review ? (
+                <p className='font-medium'>
                   {text(
                     `approvalReview.recommendations.${review.recommendation}`,
                   )}
-                </span>
-                <span aria-hidden className='shrink-0 text-muted-foreground/60'>
-                  ·
-                </span>
-              </>
-            )}
-            <span
-              className={`shrink-0 whitespace-nowrap ${
-                pending ? 'font-medium text-ai' : 'text-muted-foreground'
-              }`}
-            >
-              {standing}
-            </span>
-          </button>
+                </p>
+              ) : null}
+              {review?.summary ? (
+                <p className='line-clamp-3 opacity-90'>{review.summary}</p>
+              ) : null}
+              {/* Where it stands, and what a click does, on one line. */}
+              <p className='opacity-80'>
+                {standing}
+                {language.startsWith('zh') ? '，' : ' · '}
+                {text('evaluation.chipHint')}
+              </p>
+            </TooltipContent>
+          </Tooltip>
           {again ? (
             <>
               <span aria-hidden className='h-3.5 w-px shrink-0 bg-border' />
-              <button
-                type='button'
-                disabled={busy}
-                onClick={ask}
-                className='flex shrink-0 items-center gap-1 h-full rounded-r-lg px-2 font-medium whitespace-nowrap text-ai transition-colors hover:bg-ai/10 disabled:opacity-50'
-              >
-                {busy ? <Spinner className='size-3' /> : null}
-                {text('approvalReview.again')}
-              </button>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type='button'
+                      disabled={busy}
+                      onClick={ask}
+                      aria-label={toText(text('approvalReview.again'))}
+                      className='flex h-full shrink-0 items-center rounded-r-lg px-1.5 text-ai transition-colors hover:bg-ai/10 disabled:opacity-50'
+                    />
+                  }
+                >
+                  {busy ? (
+                    <Spinner className='size-3.5' />
+                  ) : (
+                    <RotateCw className='size-3.5' />
+                  )}
+                </TooltipTrigger>
+                <TooltipContent side='bottom'>
+                  {text('approvalReview.again')}
+                </TooltipContent>
+              </Tooltip>
             </>
           ) : null}
         </div>
