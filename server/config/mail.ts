@@ -56,13 +56,16 @@ const mail: AppConfigFactory<MailConfig> = defineAppConfig({
     }),
     MAIL_PUSH_WEBHOOK_URL: envString('pushWebhookUrl', {
       description: 'The public base URL of the mail push webhook.',
+      required: false,
     }),
     MAIL_PUSH_WEBHOOK_SECRET: envString('pushWebhookSecret', {
       description: 'The secret in the mail push webhook URL.',
       secret: true,
+      required: false,
     }),
     MAIL_JOBS: envString('jobs', {
       description: 'The jobs configuration mail synchronization runs on.',
+      required: false,
     }),
   },
 });

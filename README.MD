@@ -109,7 +109,7 @@ pnpm build --target linux-x64 --tar   # writes storage/exports/dist.tar.gz
 
 To serve the client's static files from a CDN, build with its prefix, `CDN_BASE_URL=https://cdn.example.com/crm/v1/ pnpm build` (or `docker build --build-arg CDN_BASE_URL=…`), upload `dist/client/` there with its paths kept and CORS allowed for the application's origin, and keep the complete `dist/client/` on the server too, which still serves the HTML. Unset, the files load from the application as before.
 
-Behind a reverse proxy, keep the public host and protocol and pass WebSocket upgrades. After deploying, set the AI keys and check `/<base path>/api/healthz`. Back up the database and `storage/` before upgrading.
+Behind a reverse proxy, keep the public host and protocol and pass WebSocket upgrades. After deploying, set the AI keys (`DASHSCOPE_API_KEY`, `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`, each optional: the Qwen, DeepSeek and OpenAI services are defined in the code, and one without its key is left out) and check `/<base path>/api/healthz`. Back up the database and `storage/` before upgrading.
 
 ## Development
 
