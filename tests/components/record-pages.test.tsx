@@ -502,14 +502,14 @@ describe("a comment's thread", () => {
     // The comment's own reply, then the reply's.
     const [answer] = screen.getAllByRole('button', { name: '回复' });
     await userEvent.click(answer);
-    // It opens addressed to the comment's author, a mention.
+    // It opens empty: the reply says whom it answers without a mention.
     const box = screen.getByRole('textbox', { name: '回复' });
-    expect((box as HTMLTextAreaElement).value).toBe('@李明 ');
+    expect((box as HTMLTextAreaElement).value).toBe('');
     await userEvent.type(box, '好的');
     await userEvent.keyboard('{Control>}{Enter}{/Control}');
     expect(state.api).toHaveBeenCalledWith('companies/rec-1/comments', 'POST', {
-      text: '@李明 好的',
-      mentions: ['manager'],
+      text: '好的',
+      mentions: [],
       replyTo: 'n1',
     });
   });

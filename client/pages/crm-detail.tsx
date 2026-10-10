@@ -117,6 +117,11 @@ import {
   type EvaluationEntry,
 } from '../components/crm/lead-evaluation.js';
 import { FileLinks, UploadZone } from '../components/crm/attachments.js';
+import { AttachButton, CommentFiles } from '../components/crm/comment-files.js';
+import {
+  useCommentFileList,
+  useCommentUploads,
+} from '../components/crm/comment-uploads.js';
 import EntityDetail from './crm-entity-detail.js';
 import {
   DropdownMenu,
@@ -279,6 +284,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
     error: loadError,
     isLoading,
   } = useCrmQuery<Detail>(`leads/${toText(id)}`);
+  const commentFiles = useCommentFileList('leads', id);
   const { data: meta } = useMetadata();
   const api = useCrmApi();
   const refresh = useRefresh();
@@ -366,6 +372,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
     ...rows(detail.related.tasks).flatMap((task) =>
       arrayValues(task.attachments).map(toText),
     ),
+    ...commentFiles.map((file) => file.fileId),
   ]).size;
   // Soonest first, in the server's order so pages join.
   const tasks = moreTasks.records;
@@ -1442,8 +1449,12 @@ export function RecordAttachments({
   const api = useCrmApi();
   const refresh = useRefresh();
   const { text } = useCrmText();
+  const { data: meta } = useMetadata();
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState('');
+  // The comments' files, removed only by editing their comment; one shown
+  // among the record's own or a linked record's is listed there.
+  const commentFiles = useCommentFileList(entity, toText(record.id));
   const sources = new Map<string, { entity: Entity; record: Data }>();
   for (const id of arrayValues(record.attachments))
     sources.set(toText(id), { entity, record });
@@ -1529,9 +1540,13 @@ export function RecordAttachments({
           <FileLinks files={own} onRemove={editable ? setPending : undefined} />
         </div>
       )}
-      {!hasOwnFiles && !linked.some((g) => g.records.length > 0) && (
-        <p className='text-sm text-muted-foreground'>{text('noAttachments')}</p>
-      )}
+      {!hasOwnFiles &&
+        !commentFiles.length &&
+        !linked.some((g) => g.records.length > 0) && (
+          <p className='text-sm text-muted-foreground'>
+            {text('noAttachments')}
+          </p>
+        )}
       {linked
         .filter((group) => group.entity !== entity && group.records.length > 0)
         .map((group) => (
@@ -1556,6 +1571,33 @@ export function RecordAttachments({
             />
           </div>
         ))}
+      {commentFiles.some((file) => !sources.has(file.fileId)) ? (
+        <div className='space-y-2'>
+          <p className='text-xs font-medium text-muted-foreground'>
+            {text('attachmentsFromComments')}
+          </p>
+          <FileLinks
+            files={[
+              ...new Set(
+                commentFiles
+                  .filter((file) => !sources.has(file.fileId))
+                  .map((file) => file.fileId),
+              ),
+            ]}
+            // Who attached it, as the timeline names the comment's writer.
+            sourceLabel={(fileId) => {
+              const writer = commentFiles.find(
+                (file) => file.fileId === fileId,
+              )?.actorId;
+              return (
+                <span className='text-muted-foreground'>
+                  {meta?.users.find((user) => user.id === writer)?.name ?? ''}
+                </span>
+              );
+            }}
+          />
+        </div>
+      ) : null}
       {pending && (
         <ConfirmDialog
           title={text('removeFileTitle')}
@@ -2183,6 +2225,9 @@ const commentText = (event: { changes?: unknown }): string =>
 // A comment deleted while it had replies: its place kept for them.
 const commentGone = (event: { changes?: unknown }): boolean =>
   Boolean((event.changes as Data | undefined)?.deleted);
+// The files attached to a comment, by id.
+const commentFilesOf = (event: { changes?: unknown }): string[] =>
+  arrayValues((event.changes as Data | undefined)?.attachments).map(toText);
 
 // A comment's replies, under it at one level, oldest first, so the
 // exchange reads in the order it took place, on a line as fine as the
@@ -2261,11 +2306,6 @@ function CommentThread({
         entity={entity}
         recordId={recordId}
         replyTo={replyTo}
-        // Whom it answers: the comment's author, or the reply's.
-        addressee={toText(
-          (replies.find((reply) => toText(reply.id) === replyTo) ?? comment)
-            .actorId,
-        )}
         onDone={onDone}
       />
     ) : null;
@@ -2291,7 +2331,9 @@ function CommentThread({
             ) : null}
             <div className='relative min-w-0 pt-2'>
               <ThreadLine part='above' />
-              {index < shown.length - 1 ? <ThreadLine part='after' /> : null}
+              {index < shown.length - 1 || answering ? (
+                <ThreadLine part='after' />
+              ) : null}
               <div
                 data-comment={replyId}
                 className='group/reply -mx-1 rounded-md px-1'
@@ -2359,13 +2401,16 @@ function CommentThread({
                   </div>
                 ) : (
                   <div className='pl-7 text-sm'>
-                    <FoldingText
-                      value={markdownMentions(
-                        commentText(reply),
-                        (reply.changes as Data | undefined)?.mentions,
-                        meta?.users ?? [],
-                      )}
-                    />
+                    {commentText(reply) ? (
+                      <FoldingText
+                        value={markdownMentions(
+                          commentText(reply),
+                          (reply.changes as Data | undefined)?.mentions,
+                          meta?.users ?? [],
+                        )}
+                      />
+                    ) : null}
+                    <CommentFiles ids={commentFilesOf(reply)} />
                   </div>
                 )}
               </div>
@@ -2374,7 +2419,10 @@ function CommentThread({
         );
       })}
       {answering ? (
-        <div className='pt-2'>{box(replyingTo ?? commentId)}</div>
+        <div className='relative pt-2'>
+          <ThreadLine part='box' />
+          {box(replyingTo ?? commentId)}
+        </div>
       ) : null}
     </div>
   );
@@ -2407,7 +2455,8 @@ function ThreadLine({
   // `below` an avatar on the block's first line (the comment's), `above`
   // and `after` a reply's avatar under its top padding, `through` a block
   // with none (the comment's text, the folded replies' button).
-  part?: 'below' | 'above' | 'after' | 'through';
+  // `box` above the reply box's avatar, in the middle of its taller line.
+  part?: 'below' | 'above' | 'after' | 'through' | 'box';
 }): ReactElement {
   // Clear of the avatar by 3px, as the timeline's line is of its icons:
   // the avatar's middle is 13px down its line, its half spacing * 2.5.
@@ -2416,6 +2465,7 @@ function ThreadLine({
     above: 'top-0 h-[calc(13px-var(--spacing)*0.5-3px)]',
     after: 'top-[calc(var(--spacing)*4.5+16px)] bottom-0',
     through: 'inset-y-0',
+    box: 'top-0 h-[calc(var(--spacing)*4-3px)]',
   }[part];
   return (
     <span
@@ -2431,37 +2481,28 @@ function ReplyBox({
   entity,
   recordId,
   replyTo,
-  addressee,
   onDone,
 }: {
   entity: Entity;
   recordId: string;
   replyTo: string;
-  // Who wrote what it answers: the box opens on "@Name " to them, a real
-  // mention, unless that is the writer.
-  addressee?: string;
   onDone: () => void;
 }): ReactElement {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
   const api = useCrmApi();
   const refresh = useRefresh();
-  const to =
-    addressee && addressee !== meta?.userId
-      ? meta?.users.find((user) => user.id === addressee)
-      : undefined;
-  const [draft, setDraft] = useState(() => (to ? `@${to.name} ` : ''));
-  const [mentions, setMentions] = useState<string[]>(() => (to ? [to.id] : []));
-  // The caret after the name, ready to write.
-  const boxRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const area = boxRef.current?.querySelector('textarea');
-    area?.setSelectionRange(area.value.length, area.value.length);
-  }, []);
+  // Empty: whom it answers is told as one who wrote in the thread, and the
+  // reply says whom it answers; @ is for bringing someone else in.
+  const [draft, setDraft] = useState('');
+  const [mentions, setMentions] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
+  const uploads = useCommentUploads(entity, recordId);
+  const ready =
+    (draft.trim() || uploads.files.length > 0) && !uploads.uploading;
   const post = async (): Promise<void> => {
-    if (!draft.trim() || busy) return;
+    if (!ready || busy) return;
     setBusy(true);
     setError(undefined);
     try {
@@ -2469,6 +2510,7 @@ function ReplyBox({
         text: draft,
         mentions: mentionsIn(draft, mentions, meta?.users ?? []),
         replyTo,
+        ...(uploads.files.length ? { attachments: uploads.files } : {}),
       });
       await refresh();
       onDone();
@@ -2478,39 +2520,60 @@ function ReplyBox({
       setBusy(false);
     }
   };
+  const me = meta?.users.find((user) => user.id === meta.userId)?.name ?? '';
+  // As the comment box, a size down: the writer's initials before it, in
+  // the thread's avatar column, the paperclip at its end, and below it the
+  // shortcut, Cancel and Reply.
   return (
-    <div ref={boxRef} className='grid gap-2'>
-      <MentionTextarea
-        autoFocus
-        aria-label={text('comments.reply')}
-        placeholder={text('comments.replyPlaceholder')}
-        value={draft}
-        maxLength={LONG_TEXT_LIMIT}
-        rows={1}
-        className='max-h-[50vh] min-h-9 resize-none text-sm bg-card shadow-xs border-border/60 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 dark:bg-card'
-        onChange={setDraft}
-        mentions={mentions}
-        onMentionsChange={setMentions}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-            event.preventDefault();
-            void post();
-          } else if (event.key === 'Escape') onDone();
-        }}
-      />
-      <div className='flex justify-end gap-2'>
-        <Button size='sm' variant='ghost' disabled={busy} onClick={onDone}>
-          {text('cancel')}
-        </Button>
-        <Button
-          size='sm'
-          disabled={busy || !draft.trim()}
-          onClick={() => void post()}
-        >
-          {text('comments.reply')}
-        </Button>
+    <div className='grid gap-2'>
+      <div className='flex items-start gap-2'>
+        <span className='flex h-9 shrink-0 items-center'>
+          <CommentAvatar name={me} />
+        </span>
+        <div className='relative min-w-0 flex-1'>
+          <MentionTextarea
+            autoFocus
+            aria-label={text('comments.reply')}
+            placeholder={text('comments.replyPlaceholder')}
+            value={draft}
+            maxLength={LONG_TEXT_LIMIT}
+            rows={1}
+            className='max-h-[50vh] min-h-9 resize-none pr-10 text-sm py-[calc((--spacing(9)-1lh-2px)/2)] bg-card shadow-xs border-border/60 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 data-dropping:border-ring data-dropping:ring-2 data-dropping:ring-ring/20 dark:bg-card'
+            onChange={setDraft}
+            mentions={mentions}
+            onMentionsChange={setMentions}
+            {...uploads.dropProps}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                event.preventDefault();
+                void post();
+              } else if (event.key === 'Escape') onDone();
+            }}
+          />
+          <span className='absolute top-1 right-1.5'>
+            <AttachButton onPick={uploads.add} busy={uploads.uploading} />
+          </span>
+        </div>
       </div>
-      <ErrorNotice error={error} />
+      <div className='grid gap-2 pl-7'>
+        <CommentUploads uploads={uploads} />
+        <div className='flex items-center justify-end gap-2'>
+          <span className='mr-1 text-xs text-muted-foreground'>
+            {text('comments.shortcut')}
+          </span>
+          <Button size='sm' variant='ghost' disabled={busy} onClick={onDone}>
+            {text('cancel')}
+          </Button>
+          <Button
+            size='sm'
+            disabled={busy || !ready}
+            onClick={() => void post()}
+          >
+            {text('comments.reply')}
+          </Button>
+        </div>
+        <ErrorNotice error={error ?? uploads.error} />
+      </div>
     </div>
   );
 }
@@ -2821,10 +2884,15 @@ export function HistoryFeed({
                   // tasks, approvals and mail sit between the two.
                   // A comment with replies joins its author's avatar to
                   // theirs by one line.
+                  const replyIds = Array.isArray(event.replies)
+                    ? (event.replies as Data[]).map((reply) => toText(reply.id))
+                    : [];
                   const threaded =
                     comment &&
-                    Array.isArray(event.replies) &&
-                    event.replies.length > 0;
+                    (replyIds.length > 0 ||
+                      replyingTo === key ||
+                      (replyingTo !== undefined &&
+                        replyIds.includes(replyingTo)));
                   const quiet =
                     !comment &&
                     !ai &&
@@ -3185,6 +3253,16 @@ export function HistoryFeed({
                             />
                           </div>
                         ) : null}
+                        {/* Its files, under its text, in line with it. */}
+                        {comment &&
+                        editingNote !== key &&
+                        !commentGone(event) &&
+                        commentFilesOf(event).length ? (
+                          <div data-comment={key} className='relative pl-7'>
+                            {threaded ? <ThreadLine /> : null}
+                            <CommentFiles ids={commentFilesOf(event)} />
+                          </div>
+                        ) : null}
                         {comment ? (
                           <CommentThread
                             entity={entity}
@@ -3341,17 +3419,22 @@ function CommentComposer({
   const [mentions, setMentions] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
+  const uploads = useCommentUploads(entity, id);
+  const ready =
+    (draft.trim() || uploads.files.length > 0) && !uploads.uploading;
   const add = async (): Promise<void> => {
-    if (!draft.trim() || busy) return;
+    if (!ready || busy) return;
     setBusy(true);
     setError(undefined);
     try {
       await api(`${toText(entity)}/${toText(id)}/comments`, 'POST', {
         text: draft,
         mentions: mentionsIn(draft, mentions, meta?.users ?? []),
+        ...(uploads.files.length ? { attachments: uploads.files } : {}),
       });
       setDraft('');
       setMentions([]);
+      uploads.clear();
       await refresh();
     } catch (cause) {
       setError(cause);
@@ -3374,41 +3457,56 @@ function CommentComposer({
         >
           {initials(me)}
         </span>
-        {/* @ and a name mentions a colleague, who is told. */}
-        <MentionTextarea
-          aria-label={text('comments.label')}
-          value={draft}
-          mentions={mentions}
-          onMentionsChange={setMentions}
-          placeholder={text('comments.placeholder')}
-          maxLength={LONG_TEXT_LIMIT}
-          // One line until more is written, as tall as the avatar beside
-          // it, then as tall as the text (the primitive sizes to its
-          // content), up to half the screen; the line centred in that
-          // height. White with the card's faint border and shadow, and a
-          // soft ring when focused rather than the primitive's grey one.
-          rows={1}
-          className='max-h-[50vh] min-h-10 resize-none text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border/60 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 dark:bg-card'
-          onChange={setDraft}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-              event.preventDefault();
-              void add();
-            }
-          }}
-        />
+        {/* @ and a name mentions a colleague, who is told; files dropped
+            or pasted into it are attached, as its paperclip picks them. */}
+        <div className='relative min-w-0 flex-1'>
+          <MentionTextarea
+            {...uploads.dropProps}
+            aria-label={text('comments.label')}
+            value={draft}
+            mentions={mentions}
+            onMentionsChange={setMentions}
+            placeholder={text('comments.placeholder')}
+            maxLength={LONG_TEXT_LIMIT}
+            // One line until more is written, as tall as the avatar beside
+            // it, then as tall as the text (the primitive sizes to its
+            // content), up to half the screen; the line centred in that
+            // height. White with the card's faint border and shadow, and a
+            // soft ring when focused rather than the primitive's grey one.
+            rows={1}
+            className='max-h-[50vh] min-h-10 resize-none pr-10 text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border/60 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 data-dropping:border-ring data-dropping:ring-2 data-dropping:ring-ring/20 dark:bg-card'
+            onChange={setDraft}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                event.preventDefault();
+                void add();
+              }
+            }}
+          />
+          {/* The paperclip at the box's end, on its first line. */}
+          <span className='absolute top-[calc((--spacing(10)-var(--spacing)*7)/2)] right-1.5'>
+            <AttachButton onPick={uploads.add} busy={uploads.uploading} />
+          </span>
+        </div>
       </div>
-      {draft.trim() ? (
+      <div className='pl-13'>
+        <CommentUploads uploads={uploads} />
+      </div>
+      {draft.trim() || uploads.files.length ? (
         <div className='flex items-center justify-end gap-3'>
           <span className='text-xs text-muted-foreground'>
             {text('comments.shortcut')}
           </span>
-          <Button size='sm' disabled={busy} onClick={() => void add()}>
+          <Button
+            size='sm'
+            disabled={busy || !ready}
+            onClick={() => void add()}
+          >
             {text('comments.post')}
           </Button>
         </div>
       ) : null}
-      <ErrorNotice error={error} />
+      <ErrorNotice error={error ?? uploads.error} />
     </div>
   );
 }
@@ -3566,31 +3664,43 @@ function CommentEditor({
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
+  // Its files as they stand, to take some away or add more.
+  const uploads = useCommentUploads(
+    toText(comment.entity) as Entity,
+    toText(comment.recordId),
+    commentFilesOf(comment),
+  );
+  const ready =
+    (draft.trim() || uploads.files.length > 0) && !uploads.uploading;
   return (
     <div className='mt-1 grid gap-2'>
       <MentionTextarea
+        {...uploads.dropProps}
         autoFocus
         aria-label={text('comments.label')}
         value={draft}
         maxLength={LONG_TEXT_LIMIT}
-        className='max-h-[50vh] min-h-10 resize-none text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border/60 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 dark:bg-card'
+        className='max-h-[50vh] min-h-10 resize-none text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border/60 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 data-dropping:border-ring data-dropping:ring-2 data-dropping:ring-ring/20 dark:bg-card'
         onChange={setDraft}
         mentions={mentions}
         onMentionsChange={setMentions}
       />
-      <div className='flex justify-end gap-2'>
-        <Button size='sm' variant='ghost' onClick={onDone}>
+      <CommentUploads uploads={uploads} />
+      <div className='flex items-center gap-2'>
+        <AttachButton onPick={uploads.add} busy={uploads.uploading} />
+        <Button size='sm' variant='ghost' className='ml-auto' onClick={onDone}>
           {text('cancel')}
         </Button>
         <Button
           size='sm'
-          disabled={busy || !draft.trim()}
+          disabled={busy || !ready}
           onClick={() => {
             setBusy(true);
             setError(undefined);
             api(`comments/${toText(comment.id)}`, 'PATCH', {
               text: draft,
               mentions: mentionsIn(draft, mentions, meta?.users ?? []),
+              attachments: uploads.files,
             })
               .then(() => refresh())
               .then(onDone)
@@ -3601,7 +3711,28 @@ function CommentEditor({
           {text('save')}
         </Button>
       </div>
-      <ErrorNotice error={error} />
+      <ErrorNotice error={error ?? uploads.error} />
+    </div>
+  );
+}
+
+// The files a box holds while it is written, each to take away again, and
+// a word while more are on their way up.
+function CommentUploads({
+  uploads,
+}: {
+  uploads: ReturnType<typeof useCommentUploads>;
+}): ReactElement | null {
+  const { text } = useCrmText();
+  if (!uploads.files.length && !uploads.uploading) return null;
+  return (
+    <div>
+      <CommentFiles ids={uploads.files} onRemove={uploads.remove} />
+      {uploads.uploading ? (
+        <p className='mt-1 text-xs text-muted-foreground'>
+          {text('comments.uploading')}
+        </p>
+      ) : null}
     </div>
   );
 }

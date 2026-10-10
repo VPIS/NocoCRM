@@ -578,16 +578,47 @@ export async function commentsOf(
     const { data } = await service.historyOf(actor, entity, recordId, {
       pageSize: 200,
     });
+    // The names of the files the comments carry, which say what was sent
+    // or received even where a comment has no text (the files themselves
+    // are not read).
+    const comments = data.filter((entry) => entry.action === 'comment');
+    const attached = (entry: Row): unknown[] => {
+      const ids = object(entry.changes).attachments;
+      return Array.isArray(ids) ? ids : [];
+    };
+    const fileIds = [
+      ...comments,
+      ...comments.flatMap((entry) =>
+        Array.isArray(entry.replies) ? (entry.replies as Row[]) : [],
+      ),
+    ].flatMap((entry) => attached(entry).map(toText));
+    const fileNames = new Map(
+      fileIds.length
+        ? (
+            await service.database
+              .query()
+              .selectFrom('crmFiles')
+              .select(['id', 'filename'])
+              .where('id', 'in', fileIds)
+              .execute()
+          ).map((file) => [toText(file.id), toText(file.filename)])
+        : [],
+    );
     // Each comment with the replies under it, as a thread reads; a deleted
     // comment's empty place says nothing.
-    const read = (entry: Row, replyTo?: string): Row => ({
-      by: names.get(toText(entry.actorId)) ?? null,
-      at: toText(entry.createdAt ?? '').slice(0, 10) || null,
-      text: toText(object(entry.changes).text),
-      ...(replyTo ? { replyTo } : {}),
-    });
-    return data
-      .filter((entry) => entry.action === 'comment')
+    const read = (entry: Row, replyTo?: string): Row => {
+      const files = attached(entry)
+        .map((id) => fileNames.get(toText(id)))
+        .filter(Boolean);
+      return {
+        by: names.get(toText(entry.actorId)) ?? null,
+        at: toText(entry.createdAt ?? '').slice(0, 10) || null,
+        text: toText(object(entry.changes).text),
+        ...(files.length ? { files } : {}),
+        ...(replyTo ? { replyTo } : {}),
+      };
+    };
+    return comments
       .slice(0, 20)
       .flatMap((entry) => [
         read(entry),
@@ -603,7 +634,7 @@ export async function commentsOf(
           },
         ),
       ])
-      .filter((comment) => comment.text);
+      .filter((comment) => comment.text || comment.files);
   } catch {
     return [];
   }

@@ -496,7 +496,11 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
     routes.post('/files', async (c) => {
       const actor = c.get('actor');
       const entity = asEntity(c.req.query('entity') ?? 'leads');
-      await conditions(actor, entity, 'create');
+      // A comment's files: whoever may read the record may comment on it,
+      // and so attach to what they write.
+      const recordId = c.req.query('recordId');
+      if (recordId) await service.get(actor, entity, recordId);
+      else await conditions(actor, entity, 'create');
       const body = await c.req.parseBody({ all: true });
       const files = Array.isArray(body.file) ? body.file : [body.file];
       if (
@@ -1051,7 +1055,17 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
     // Comments in a record's activity feed: added by anyone who may read the
     // record, changed or removed by their author (CrmService.addComment).
     // Registered before the record routes, which would take /comments/:id.
-    // A comment's body is its text and the colleagues it @-mentions.
+    // A comment's body is its text, the colleagues it @-mentions and the
+    // files attached to it.
+    routes.get('/:entity/:id/comments/files', async (c) =>
+      c.json({
+        data: await service.commentFiles(
+          c.get('actor'),
+          asEntity(c.req.param('entity')),
+          c.req.param('id'),
+        ),
+      }),
+    );
     routes.post('/:entity/:id/comments', async (c) => {
       const body = object(await c.req.json());
       return c.json({
@@ -1063,6 +1077,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           body.mentions,
           // A reply names the comment it answers.
           body.replyTo,
+          body.attachments,
         ),
       });
     });
@@ -1074,6 +1089,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
           c.req.param('commentId'),
           body.text,
           body.mentions,
+          body.attachments,
         ),
       });
     });

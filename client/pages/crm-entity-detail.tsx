@@ -112,6 +112,7 @@ import {
   WebsiteField,
 } from './crm-detail.js';
 import { UploadZone } from '../components/crm/attachments.js';
+import { useCommentFileList } from '../components/crm/comment-uploads.js';
 import { RecordOutcomeDialog } from '../components/crm/outcome.js';
 import { RecordMailPanel } from '../components/crm/record-mail.js';
 import { emailsOf, useMailSetup } from '../components/crm/mail.js';
@@ -148,6 +149,7 @@ export default function EntityDetail({
     error: loadError,
     isLoading,
   } = useCrmQuery<Detail>(`${toText(entity)}/${toText(id)}`);
+  const commentFiles = useCommentFileList(entity, id);
   const { data: meta } = useMetadata();
   const mailSetup = useMailSetup();
   // The objects whose people mail is exchanged with.
@@ -325,6 +327,7 @@ export default function EntityDetail({
       rows(o.attachments as unknown[]).map(toText),
     ),
     ...approvals.flatMap((a) => rows(a.attachments as unknown[]).map(toText)),
+    ...commentFiles.map((file) => file.fileId),
   ]).size;
   const statusKey = definition.statusField;
   const currentStatus = statusKey ? toText(record[statusKey]) : '';
@@ -380,10 +383,11 @@ export default function EntityDetail({
           detail.relatedTotals?.[name] ?? rows(detail.related[name]).length,
         ] as [string, string, number],
     ),
-    // Attachments last, on every record that has them. A contact keeps no
+    // Attachments last, on every record that has them, and on a contact
+    // once its comments carry files. A contact keeps no
     // files of its own; the ones it appears in are read from the task or
     // opportunity that holds them.
-    ...(hasOwnFiles
+    ...(hasOwnFiles || commentFiles.length
       ? [
           ['attachments', 'fields.attachments', attachmentCount] as [
             string,

@@ -147,18 +147,24 @@ export function deletionChecks(entity: Entity): [Entity, string][] {
 // The roles that may own records; see save().
 const sellerRoles = ['sales-representative', 'sales-manager'];
 
-// A comment's text: something to say, within a long text's length.
 // A comment's stored changes: its text and, when it has any, the colleagues it
-// mentions.
+// mentions and the files attached to it (ids of `crmFiles`).
 function commentChanges(
   text: string,
   mentions: readonly string[],
-): { text: string; mentions?: string[] } {
-  return mentions.length ? { text, mentions: [...mentions] } : { text };
+  attachments: readonly string[] = [],
+): { text: string; mentions?: string[]; attachments?: string[] } {
+  return {
+    text,
+    ...(mentions.length ? { mentions: [...mentions] } : {}),
+    ...(attachments.length ? { attachments: [...attachments] } : {}),
+  };
 }
-function commentText(value: unknown): string {
+// A comment's text: within a long text's length, and something to say
+// unless files say it.
+function commentText(value: unknown, files = false): string {
   const text = typeof value === 'string' ? value.trim() : '';
-  if (!text || text.length > LONG_TEXT_LIMIT)
+  if ((!text && !files) || text.length > LONG_TEXT_LIMIT)
     throw new CrmError('invalidInput', 400, 'text');
   return text;
 }
@@ -1729,6 +1735,32 @@ export class CrmService {
       if (records.some((record) => array(record.attachments).includes(id)))
         return true;
     }
+    // A file on a comment is read by whoever may read the comment's record.
+    const comments = await query
+      .selectFrom('crmHistory')
+      .select(['entity', 'recordId', 'changes'])
+      .where('action', '=', 'comment')
+      .where('changes', 'like', `%${id}%`)
+      .execute();
+    for (const comment of comments) {
+      if (
+        !array(object(jsonValue(comment.changes) ?? {}).attachments).includes(
+          id,
+        )
+      )
+        continue;
+      try {
+        await this.get(
+          actor,
+          asEntity(toText(comment.entity)),
+          toText(comment.recordId),
+          query,
+        );
+        return true;
+      } catch {
+        continue;
+      }
+    }
     return false;
   }
   async remove(
@@ -1932,8 +1964,12 @@ export class CrmService {
     // The comment or reply of the same record it answers: a reply hangs
     // under what it answers, a reply to a reply under that reply.
     replyTo?: unknown,
+    // Files uploaded for it, by id, which the record's readers may then
+    // open (canReadFile) and its attachments tab lists.
+    attachments?: unknown,
   ): Promise<Row> {
-    const body = commentText(text);
+    const files = await this.commentFileIds(actor, attachments);
+    const body = commentText(text, files.length > 0);
     await this.get(actor, entity, id);
     const mentioned = await this.mentionIds(actor, mentions);
     const thread = replyTo ? await this.thread(entity, id, replyTo) : null;
@@ -1945,7 +1981,7 @@ export class CrmService {
       action: 'comment',
       fromValue: null,
       toValue: null,
-      changes: JSON.stringify(commentChanges(body, mentioned)),
+      changes: JSON.stringify(commentChanges(body, mentioned, files)),
       previous: null,
       source: actor.via ?? null,
       replyToId: thread?.parentId ?? null,
@@ -1974,9 +2010,53 @@ export class CrmService {
         }).catch(() => undefined);
     return {
       ...comment,
-      changes: commentChanges(body, mentioned),
+      changes: commentChanges(body, mentioned, files),
       editedAt: null,
     };
+  }
+  // The files a comment carries: a list of file ids, each one the writer may
+  // read (their own upload, or a file already on what they read); those it
+  // carried before (`kept`) stay without asking again.
+  private async commentFileIds(
+    actor: Actor,
+    value: unknown,
+    kept: readonly string[] = [],
+  ): Promise<string[]> {
+    if (value === undefined || value === null) return [];
+    if (!Array.isArray(value) || value.length > LIST_LIMIT)
+      throw new CrmError('invalidInput', 400, 'attachments');
+    const ids = [...new Set(value.map(toText).filter(Boolean))];
+    for (const fileId of ids)
+      if (!kept.includes(fileId) && !(await this.canReadFile(actor, fileId)))
+        throw new CrmError('notFound', 404, 'attachments');
+    return ids;
+  }
+  // The files on a record's comments and replies, newest first, each with
+  // the comment that carries it and who wrote it: the record's attachments
+  // tab lists them beside its own.
+  async commentFiles(
+    actor: Actor,
+    entity: Entity,
+    id: string,
+  ): Promise<{ fileId: string; commentId: string; actorId: string }[]> {
+    await this.get(actor, entity, id);
+    const rows = await this.database
+      .query()
+      .selectFrom('crmHistory')
+      .select(['id', 'actorId', 'changes', 'createdAt'])
+      .where('entity', '=', entity)
+      .where('recordId', '=', id)
+      .where('action', '=', 'comment')
+      .where('changes', 'like', '%attachments%')
+      .orderBy('createdAt', 'desc')
+      .execute();
+    return rows.flatMap((row) =>
+      array(object(jsonValue(row.changes) ?? {}).attachments).map((fileId) => ({
+        fileId: toText(fileId),
+        commentId: toText(row.id),
+        actorId: toText(row.actorId),
+      })),
+    );
   }
   // The thread a reply joins: what it answers, which must be a comment or a
   // reply of the same record, and everyone who has written in that thread,
@@ -2125,13 +2205,20 @@ export class CrmService {
     commentId: string,
     text: unknown,
     mentions?: unknown,
+    // Its files as they now stand; left out, they stay as they were.
+    attachments?: unknown,
   ): Promise<Row> {
-    const body = commentText(text);
     const comment = await this.ownComment(actor, commentId);
     if (object(jsonValue(comment.changes) ?? {}).deleted)
       throw new CrmError('notFound', 404);
     const editedAt = new Date().toISOString();
     const previous = object(jsonValue(comment.changes) ?? {});
+    const had = array(previous.attachments).map(toText);
+    const files =
+      attachments === undefined
+        ? had
+        : await this.commentFileIds(actor, attachments, had);
+    const body = commentText(text, files.length > 0);
     const mentioned = await this.mentionIds(actor, mentions);
     // Only those the edit adds are told; who was mentioned already was told
     // when they were.
@@ -2144,7 +2231,7 @@ export class CrmService {
       await query
         .updateTable('crmHistory')
         .set({
-          changes: JSON.stringify(commentChanges(body, mentioned)),
+          changes: JSON.stringify(commentChanges(body, mentioned, files)),
           previous: JSON.stringify({ text: toText(previous.text ?? '') }),
           editedAt,
         })
@@ -2175,7 +2262,11 @@ export class CrmService {
       commentId,
       mentioned.filter((id) => !before.has(id)),
     );
-    return { ...comment, changes: commentChanges(body, mentioned), editedAt };
+    return {
+      ...comment,
+      changes: commentChanges(body, mentioned, files),
+      editedAt,
+    };
   }
   // Removing a comment leaves its place in the feed to say one was removed,
   // by whom and when, without the text its author took back.

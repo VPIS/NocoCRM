@@ -1,4 +1,3 @@
-import type { FileRecord } from '@nocobase/app-plugin-file/client';
 import { Download, Paperclip, Trash2, Upload } from 'lucide-react';
 import { useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { FilePreviewDialog } from '#extensions/nocobase-file-component-ui';
@@ -16,41 +15,15 @@ import {
   type Data,
   type Entity,
 } from './api.js';
+import { fileRecord, type CrmFile } from './file-record.js';
 
 // Attachments, wherever they appear: the list of files on a record's tab
 // and in a dialog's form, the preview dialog a file opens in, and the drop
 // zone that adds files. One look everywhere.
 
-export interface CrmFile {
-  id: string;
-  filename: string;
-  createdAt: string;
-  // The stored type, or null when the upload recorded none.
-  mimeType: string | null;
-  size: number | null;
-  url: string;
-}
-
-// The preview dialog is the file plugin's (client/extensions/
-// nocobase-file-component-ui): images, PDF, text and Markdown, and Word,
-// Excel and PowerPoint rendered in the browser. It takes the plugin's file
-// record shape; the CRM serves the bytes from its own route, with
-// "?inline=1" so the browser may show what it renders itself.
-function fileRecord(file: CrmFile): FileRecord {
-  const dot = file.filename.lastIndexOf('.');
-  return {
-    id: file.id,
-    disk: '',
-    key: '',
-    filename: file.filename,
-    ext: dot < 0 ? '' : file.filename.slice(dot + 1).toLowerCase(),
-    mimeType: file.mimeType ?? 'application/octet-stream',
-    size: file.size ?? 0,
-    createdAt: file.createdAt,
-    updatedAt: file.createdAt,
-    contentUrl: `${file.url}?inline=1`,
-  };
-}
+// The CRM's file rows and the preview dialog's record shape, in their own
+// module so this one exports components only.
+export type { CrmFile } from './file-record.js';
 
 export function FileLinks({
   files,

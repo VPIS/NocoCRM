@@ -383,6 +383,9 @@ const wording = {
     replyPlaceholder: ['Reply, @ someone...', '回复，可 @ 某人...'],
     // A comment deleted while it had replies, its place kept for them.
     deleted: ['This comment was deleted', '此评论已删除'],
+    // The comment and reply boxes' paperclip, and its files on their way up.
+    attach: ['Attach files', '添加附件'],
+    uploading: ['Uploading…', '上传中…'],
   },
   collapse: ['Hide details', '收起详情'],
   leadGroups: {
@@ -1111,6 +1114,8 @@ const wording = {
     '来自关联商机的附件',
   ],
   attachmentsFromApprovals: ['From linked approvals', '来自关联审批的附件'],
+  // Files attached to the record's comments and replies, by their writer.
+  attachmentsFromComments: ['From comments', '来自评论的附件'],
   deleteCompanyTasks: [
     'This also deletes {{count}} task record(s) linked only to this {{entity}}.',
     '将同时删除 {{count}} 条仅关联此{{entity}}的任务。',

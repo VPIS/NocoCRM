@@ -152,8 +152,8 @@ export function ReviewPanel({
     <section
       // Waiting, it carries the AI's tint; decided, the same card on a
       // neutral ground, as every AI card.
-      className={`@container grid grid-cols-[minmax(0,1fr)] gap-2 rounded-xl border p-4 text-sm ${
-        entry.status === 'pending' ? 'border-ai/30 bg-ai/5' : 'bg-muted/40'
+      className={`@container grid grid-cols-[minmax(0,1fr)] gap-2 rounded-xl border border-border/60 p-4 text-sm shadow-xs ${
+        entry.status === 'pending' ? 'bg-ai/5' : 'bg-card'
       }`}
     >
       {/* The heading, with asking and deciding at its top right; on a card

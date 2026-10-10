@@ -7588,6 +7588,84 @@ describe('record notifications', () => {
     );
   });
 
+  it('attaches files to a comment, which the readers of its record may then open', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Comment file lead',
+      ownerId: 'rep',
+    });
+    const id = toText(lead.id);
+    const query = database.query();
+    for (const [file, owner] of [
+      ['comment-file', 'rep'],
+      ['someone-elses-file', 'other'],
+    ]) {
+      await query
+        .insertInto('crmFiles')
+        .values({
+          id: file,
+          disk: 'local',
+          key: file,
+          filename: `${file}.pdf`,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .execute();
+      await query
+        .insertInto('crmFileUploads')
+        .values({ id: file, ownerId: owner })
+        .execute();
+    }
+    expect(await service.canReadFile(actor('manager'), 'comment-file')).toBe(
+      false,
+    );
+    // Files alone say something; a file the writer may not read is refused.
+    await expect(
+      service.addComment(actor('rep'), 'leads', id, '', [], undefined, [
+        'someone-elses-file',
+      ]),
+    ).rejects.toMatchObject({ code: 'notFound' });
+    const comment = await service.addComment(
+      actor('rep'),
+      'leads',
+      id,
+      '',
+      [],
+      undefined,
+      ['comment-file', 'comment-file'],
+    );
+    expect(comment.changes).toEqual({
+      text: '',
+      attachments: ['comment-file'],
+    });
+    expect(await service.canReadFile(actor('manager'), 'comment-file')).toBe(
+      true,
+    );
+    expect(await service.commentFiles(actor('manager'), 'leads', id)).toEqual([
+      { fileId: 'comment-file', commentId: comment.id, actorId: 'rep' },
+    ]);
+    // An edit that leaves the files out keeps them; one that takes them
+    // away leaves the file to its uploader again, and with no text either
+    // says nothing.
+    await service.editComment(actor('rep'), toText(comment.id), 'The quote');
+    expect(await service.commentFiles(actor('rep'), 'leads', id)).toHaveLength(
+      1,
+    );
+    await expect(
+      service.editComment(actor('rep'), toText(comment.id), ' ', [], []),
+    ).rejects.toMatchObject({ code: 'invalidInput' });
+    await service.editComment(
+      actor('rep'),
+      toText(comment.id),
+      'The quote',
+      [],
+      [],
+    );
+    expect(await service.canReadFile(actor('manager'), 'comment-file')).toBe(
+      false,
+    );
+    expect(await service.canReadFile(actor('rep'), 'comment-file')).toBe(true);
+  });
+
   it('threads replies under a comment, tells the thread, and keeps it when the comment goes', async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: 'Thread lead',
