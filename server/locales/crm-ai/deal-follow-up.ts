@@ -1,7 +1,7 @@
 // The words an opportunity's follow-up (server/providers/crm/opportunity-
 // evaluation.ts) puts in front of people or of the model, Chinese first.
 
-import type { Pair, Pairs } from './index.js';
+import type { Pairs } from './index.js';
 
 // The deal's stages by key, as the model reads and repeats them.
 export const dealStageNames = {
@@ -27,15 +27,11 @@ export const dealContactRoles = {
   other: ['其他', 'Other'],
 } as const satisfies Pairs;
 
-// The follow-up's conversation title.
-export const dealFollowUpTitle: Pair = ['跟进商机', 'Opportunity follow-up'];
-
 // What the model writes in `changes` when nothing changed, and for a side
-// that has nothing; and in the research when nothing was found.
+// that has nothing.
 export const dealWords = {
   noChange: ['没有变化', 'No change'],
   none: ['无', 'none'],
-  nothingFound: ['未查到', 'Nothing found'],
   // After a term the code found beyond the standard with no approval
   // covering it, as the description of the approval it proposes.
   termNeedsApproval: [

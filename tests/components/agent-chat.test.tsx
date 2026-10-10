@@ -151,7 +151,7 @@ const { default: AgentChatPage } =
 
 const agent = {
   id: 'a1',
-  name: 'Noco',
+  name: 'AI',
   description: null,
   nameText: null,
   descriptionText: null,
@@ -170,7 +170,7 @@ const conversation = (id: string, title: string) => ({
   mode: 'online',
   agent: {
     id: 'a1',
-    name: 'Noco',
+    name: 'AI',
     nameText: null,
     avatar: null,
     archived: false,
@@ -325,7 +325,7 @@ describe('the agent conversations', () => {
         revision: 1,
         proposerUserId: 'root',
         agentId: 'a1',
-        agentName: 'Noco',
+        agentName: 'AI',
         runId: 'r1',
         conversationId: 'c1',
         deciderUserId: null,
@@ -353,7 +353,7 @@ describe('the agent conversations', () => {
   it('sends on Enter, never on Shift+Enter or while composing', async () => {
     state.open = [conversation('c1', '展会线索')];
     renderAt('/crm/agent-chat/c1');
-    const box = screen.getByRole('textbox', { name: '问问 Noco…' });
+    const box = screen.getByRole('textbox', { name: '问问 AI…' });
     await userEvent.type(box, '本周新线索有几条');
     fireEvent.keyDown(box, { key: 'Enter', isComposing: true, keyCode: 229 });
     fireEvent.keyDown(box, { key: 'Enter', shiftKey: true });
@@ -388,7 +388,7 @@ describe('the agent conversations', () => {
     expect(screen.queryByRole('navigation')).toBeNull();
     expect(screen.queryByText('没有已归档的对话')).toBeNull();
     expect(screen.queryByRole('button', { name: '新建对话' })).toBeNull();
-    expect(screen.getByRole('textbox', { name: '问问 Noco…' })).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: '问问 AI…' })).toBeTruthy();
   });
 
   it("shows none of the reader's plans in a conversation not yet started", async () => {
@@ -402,7 +402,7 @@ describe('the agent conversations', () => {
         revision: 1,
         proposerUserId: 'root',
         agentId: 'a1',
-        agentName: 'Noco',
+        agentName: 'AI',
         runId: 'r1',
         conversationId: 'c9',
         deciderUserId: null,
@@ -432,7 +432,7 @@ describe('the agent conversations', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    expect(screen.getByRole('textbox', { name: '问问 Noco…' })).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: '问问 AI…' })).toBeTruthy();
     expect(screen.queryByText('别处的计划')).toBeNull();
   });
 
@@ -460,7 +460,7 @@ describe('the agent conversations', () => {
     ];
     renderAt('/crm/agent-chat/new');
     await userEvent.type(
-      screen.getByRole('textbox', { name: '问问 Noco…' }),
+      screen.getByRole('textbox', { name: '问问 AI…' }),
       '你好',
     );
     expect(screen.getByRole('button', { name: '发送' })).toBeDisabled();

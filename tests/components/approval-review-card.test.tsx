@@ -8,7 +8,7 @@ import {
   defaultSettings,
 } from '../../server/providers/crm/schema.js';
 
-// Noco can answer, so the cards offer Discuss (tests/setup/agent-chat-fake).
+// The assistant can answer, so the cards offer Discuss (tests/setup/agent-chat-fake).
 vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) =>
   (await import('../setup/agent-chat-fake.js')).fakeChatModule(
     await importOriginal(),

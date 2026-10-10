@@ -90,7 +90,7 @@ const plan = (overrides: Partial<PlanView> = {}): PlanView => ({
   revision: 3,
   proposerUserId: 'rep',
   agentId: 'a1',
-  agentName: 'Noco',
+  agentName: 'AI',
   runId: 'r1',
   conversationId: 'c1',
   deciderUserId: null,

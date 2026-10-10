@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SidebarProvider } from '../../client/components/ui/sidebar.js';
 import { crmEn } from '../../client/locales/crm/index.js';
 
-// The user's conversations with Noco under the menu: which are listed and
+// The user's conversations with the assistant under the menu: which are listed and
 // how, what a row and "New conversation" ask of the panel, and archiving one.
 
 function english(key: string, options: Record<string, unknown> = {}): string {
@@ -28,7 +28,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
     useCrmText: () => ({ text: english, language: 'en-US' }),
   };
 });
-// Noco on the Agents plugin (tests/setup/agent-chat-fake).
+// The assistant on the Agents plugin (tests/setup/agent-chat-fake).
 vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) =>
   (await import('../setup/agent-chat-fake.js')).fakeChatModule(
     await importOriginal(),
@@ -130,7 +130,7 @@ describe('the sidebar conversations', () => {
     expect(await screen.findByText(english('chats.failed'))).toBeTruthy();
   });
 
-  it('is absent while Noco cannot answer or the agents load', () => {
+  it('is absent while the assistant cannot answer or the agents load', () => {
     chatFake.agents = [];
     const none = renderChats();
     expect(screen.queryByRole('group')).toBeNull();

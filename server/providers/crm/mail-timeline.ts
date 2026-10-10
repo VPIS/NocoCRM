@@ -9,8 +9,7 @@ import {
   type ServiceToken,
 } from '@nocobase/service-provider';
 import { randomUUID } from 'node:crypto';
-import { crmActor } from '../../ai/tools/crm-records.js';
-import { listUsers } from './authorization.js';
+import { listUsers, crmActor } from './authorization.js';
 import { domainOf } from './mail-target.js';
 import { toText } from './schema.js';
 import type { CrmService } from './service.js';

@@ -12,10 +12,6 @@ import { crmEn } from '../../client/locales/crm/index.js';
 // The overview's ask box: its suggested questions always shown, what it asks
 // the panel for, and how it waits for the metadata and the chat.
 
-const state = vi.hoisted(() => ({
-  panelOpen: false,
-}));
-
 // The crm locale's English text by its dotted key.
 function english(key: string): string {
   let value: unknown = crmEn;
@@ -32,12 +28,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
     useCrmText: () => ({ text: english, language: 'en-US' }),
   };
 });
-vi.mock('../../client/components/crm/assistant-state.js', () => ({
-  CRM_ASSISTANT: 'crm-assistant',
-  CLOSE_EMPLOYEE_PANEL: 'crm-assistant-close',
-  usePanelOpen: () => state.panelOpen,
-}));
-// Noco on the Agents plugin, with two models (tests/setup/agent-chat-fake).
+// The assistant on the Agents plugin, with two models (tests/setup/agent-chat-fake).
 vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) =>
   (await import('../setup/agent-chat-fake.js')).fakeChatModule(
     await importOriginal(),
@@ -49,7 +40,7 @@ const QWEN = { modelService: 'qwen', model: 'qwen-max' };
 const { AssistantAskBox } =
   await import('../../client/components/crm/assistant-ask-box.js');
 
-// What was asked of Noco: each question as created and sent.
+// What was asked of the assistant: each question as created and sent.
 function asked(): Record<string, unknown>[] {
   return chatFake.sent.map((message, index) => ({
     text: message.content,
@@ -62,7 +53,7 @@ const suggestion = (key: string) =>
 
 describe("the overview's ask box", () => {
   beforeEach(() => {
-    state.panelOpen = false;
+    chatFake.open = false;
     chatFake.reset();
     localStorage.clear();
   });
@@ -144,20 +135,21 @@ describe("the overview's ask box", () => {
   });
 
   it('takes focus back when the panel closes with focus left in it', () => {
-    state.panelOpen = true;
+    chatFake.open = true;
     const panel = document.createElement('div');
-    panel.setAttribute('data-crm-assistant-panel', '');
+    panel.setAttribute('data-crm-agent-panel', '');
     const composer = document.createElement('textarea');
     panel.append(composer);
     document.body.append(panel);
     const { rerender } = render(<AssistantAskBox />);
     composer.focus();
-    state.panelOpen = false;
+    // The panel unmounts as it closes, taking the focused composer along.
+    chatFake.open = false;
+    panel.remove();
     act(() => rerender(<AssistantAskBox />));
     expect(
       screen.getByRole('textbox', { name: english('dock.placeholder') }),
     ).toHaveFocus();
-    panel.remove();
   });
 
   it('grows past one line: Shift+Enter breaks the line, Enter sends both', async () => {

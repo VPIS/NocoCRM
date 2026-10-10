@@ -6,7 +6,8 @@ import { crmEn } from '../../client/locales/crm/index.js';
 import { defaultSettings } from '../../server/providers/crm/schema.js';
 
 // The settings page's in-app notification switches: each kind of message
-// the CRM sends, on by default, saved with the rest of the settings.
+// the CRM sends, on by default, saved with the rest of the settings; and the
+// business guidance, the shipped one until an administrator writes over it.
 
 const state = vi.hoisted(() => ({
   api: vi.fn(),
@@ -81,6 +82,45 @@ describe('the settings page', () => {
         notifyRecordChanges: true,
         notifyTaskReminders: true,
       }),
+    );
+  });
+
+  it('shows the shipped business guidance, saves one written over it, and restores the default', async () => {
+    const user = userEvent.setup();
+    state.api.mockReset();
+    state.api.mockResolvedValue({ data: {} });
+    render(
+      <MemoryRouter initialEntries={['/settings/crm?section=guidance']}>
+        <SettingsPage />
+      </MemoryRouter>,
+    );
+    const box = screen.getByRole('textbox', { name: crmEn.guidance });
+    // The shipped guidance, in the AI language (English by default).
+    expect((box as HTMLTextAreaElement).value).toContain('Company: NocoBase');
+    expect(screen.getByText(crmEn.guidanceShipped)).toBeTruthy();
+    const restore = screen.getByRole('button', {
+      name: crmEn.guidanceRestore,
+    });
+    expect(restore).toHaveProperty('disabled', true);
+    await user.clear(box);
+    await user.type(box, '# Our rules{Enter}- Quote list prices only');
+    expect(screen.getByText(crmEn.guidanceCustom)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: crmEn.save }));
+    expect(state.api).toHaveBeenLastCalledWith(
+      'systemSettings',
+      'PUT',
+      expect.objectContaining({
+        businessGuidance: '# Our rules\n- Quote list prices only',
+      }),
+    );
+    // Back to the shipped one: saved as empty.
+    await user.click(restore);
+    expect((box as HTMLTextAreaElement).value).toContain('Company: NocoBase');
+    await user.click(screen.getByRole('button', { name: crmEn.save }));
+    expect(state.api).toHaveBeenLastCalledWith(
+      'systemSettings',
+      'PUT',
+      expect.objectContaining({ businessGuidance: '' }),
     );
   });
 });

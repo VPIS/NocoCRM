@@ -1,16 +1,8 @@
-import {
-  AgentServiceError,
-  agentServiceFactoryToken,
-  aiConversationsManagerToken,
-} from '@nocobase/app-plugin-ai-employee/server';
-import { loggingToken } from '@nocobase/app-server/logging';
 import type { ServiceResolver } from '@nocobase/service-provider';
-import { CRM_ASSISTANT } from '../../ai/employees/crm-assistant.js';
-import { lang, pick } from '../../locales/crm-ai/index.js';
-import {
-  feedbackHeadings,
-  feedbackTitle,
-} from '../../locales/crm-ai/feedback.js';
+import { pick } from '../../locales/crm-ai/index.js';
+import { feedbackHeadings } from '../../locales/crm-ai/feedback.js';
+import { modelFailure, openSession } from './ai-model.js';
+import { settingsGuidance } from './guidance.js';
 import type { Actor } from './authorization.js';
 import type { FollowUpTrigger, LeadEvaluator } from './lead-evaluation.js';
 import { agentOn } from './agents.js';
@@ -23,7 +15,7 @@ import type { CrmService } from './service.js';
 // feedback: what the other side said, the facts settled, what was agreed
 // and the next step, from those notes alone. Nothing is saved: the text
 // goes back to the card, where the person reads it, changes it and records
-// it. Run as the person, with every tool off, in a conversation of its own.
+// it. One call to the CRM's model (ai-model.ts).
 export async function organiseFeedback(
   service: CrmService,
   container: ServiceResolver,
@@ -37,88 +29,40 @@ export async function organiseFeedback(
   if (!notes) throw new CrmError('required', 400, 'text');
   if (notes.length > LONG_TEXT_LIMIT)
     throw new CrmError('invalidInput', 400, 'text');
-  if (
-    !container.has(agentServiceFactoryToken) ||
-    !(await service.assistantEnabled())
-  )
+  if (!(await service.assistantEnabled()))
     throw new CrmError('assistantUnavailable', 409);
   const settings = await service.settings();
   const zh = settings.aiLanguage.startsWith('zh');
   const lead = task.leadId
     ? await service.get(actor, 'leads', toText(task.leadId)).catch(() => null)
     : null;
-  const skillSettings = {
-    toolsVersion: 1,
-    tools: [],
-    skillsVersion: 1,
-    skills: [],
-  };
-  const conversation = await container
-    .resolve(aiConversationsManagerToken)
-    .create({
-      userId: actor.id,
-      aiEmployee: { username: CRM_ASSISTANT },
-      title: feedbackTitle[lang(zh)],
-      from: 'sub-agent',
-      options: { skillSettings },
-    });
-  const logger = container.resolve(loggingToken).getLogger('crm-task-feedback');
+  const session = await openSession(container, {
+    timeZone: settings.timeZone,
+    guidance: settingsGuidance(settings),
+  });
+  if (!session) throw new CrmError('assistantUnavailable', 409);
+  let text: string;
   try {
-    const agent = await container
-      .resolve(agentServiceFactoryToken)
-      .createAIEmployee({
-        username: CRM_ASSISTANT,
-        state: {
-          sessionId: conversation.sessionId,
-          timezone: settings.timeZone,
-        },
-        actor: {
-          id: actor.id,
-          roles: ['member'],
-          isRoot: false,
-          locale: actor.locale,
-        },
-        runtime: { logger },
-        from: 'sub-agent',
-        skillSettings,
-      });
-    const result = await agent.invoke({
-      userMessages: [
+    text = await session.ask(
+      feedbackPrompt(
+        notes,
         {
-          role: 'user',
-          content: {
-            type: 'text',
-            content: feedbackPrompt(
-              notes,
-              {
-                subject: task.name,
-                due: task.dueAt ?? null,
-                lead: lead
-                  ? [lead.name, lead.company].filter(Boolean).join(' / ')
-                  : null,
-              },
-              zh,
-            ),
-          },
+          subject: task.name,
+          due: task.dueAt ?? null,
+          lead: lead
+            ? [lead.name, lead.company].filter(Boolean).join(' / ')
+            : null,
         },
-      ],
-      signal: AbortSignal.timeout(120_000),
-    });
-    const text = replyText(result.message?.content).trim();
-    if (!text) throw new CrmError('feedbackFailed', 502);
-    return { text: text.slice(0, LONG_TEXT_LIMIT) };
+        zh,
+      ),
+      AbortSignal.timeout(120_000),
+    );
   } catch (error) {
-    if (error instanceof AgentServiceError)
-      throw new CrmError(
-        error.code === 'CONFIGURATION_ERROR'
-          ? 'assistantUnavailable'
-          : 'feedbackFailed',
-        error.code === 'CONFIGURATION_ERROR' ? 409 : 502,
-        undefined,
-        error.rootMessage,
-      );
-    throw error;
+    throw modelFailure(error, 'feedbackFailed');
   }
+  text = text.trim();
+  if (!text) throw new CrmError('feedbackFailed', 502);
+  return { text: text.slice(0, LONG_TEXT_LIMIT) };
 }
 
 function feedbackPrompt(
@@ -142,20 +86,6 @@ ${JSON.stringify(task, null, 2)}
 
 # What was jotted down
 ${notes}`;
-}
-
-// A reply's text, as the plugin returns it.
-function replyText(content: unknown): string {
-  if (typeof content === 'string') return content;
-  if (Array.isArray(content))
-    return content
-      .map((part) =>
-        typeof part === 'string'
-          ? part
-          : toText((part as { text?: unknown } | null)?.text ?? ''),
-      )
-      .join('');
-  return toText((content as { content?: unknown } | null)?.content ?? '');
 }
 
 // What came of a planned task, recorded: the task completed with its

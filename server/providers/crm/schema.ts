@@ -467,6 +467,11 @@ export interface CrmSettings {
   notifyApprovals: boolean;
   notifyRecordChanges: boolean;
   notifyTaskReminders: boolean;
+  // The deployment's business guidance as an administrator wrote it on the
+  // settings page (Markdown); empty for the one shipped in guidance.ts, in
+  // the AI language with the reminders' days. Every conversation and every
+  // background run of the AI works from it (settingsGuidance).
+  businessGuidance: string;
   options: Record<string, string[]>;
 }
 export type NotificationKind = 'approvals' | 'recordChanges' | 'taskReminders';
@@ -489,6 +494,7 @@ export const defaultSettings: CrmSettings = {
   notifyApprovals: true,
   notifyRecordChanges: true,
   notifyTaskReminders: true,
+  businessGuidance: '',
   options: {
     source: sources,
     industry: industries,

@@ -2,7 +2,6 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { Markdown } from '../../client/components/crm/markdown.js';
 import { keepLineBreaks } from '../../client/components/crm/line-breaks.js';
-import { MarkdownMessage } from '../../client/extensions/nocobase-ai/components/chat/markdown-message.js';
 
 describe('Markdown', () => {
   it('renders GFM structure', () => {
@@ -28,17 +27,14 @@ describe('Markdown', () => {
 
   it('shows an image from another origin as a link instead of loading it', () => {
     const leak = 'https://attacker.example/p.png?d=secret';
-    for (const output of [
-      render(<Markdown compact>{`![chart](${leak})`}</Markdown>),
-      render(<MarkdownMessage>{`![chart](${leak})`}</MarkdownMessage>),
-    ]) {
-      expect(output.container.querySelector('img')).toBeNull();
-      const link = output.container.querySelector('a');
-      expect(link).toHaveAttribute('href', leak);
-      expect(link).toHaveAttribute('rel', 'noopener noreferrer nofollow');
-      expect(link).toHaveTextContent('chart');
-      output.unmount();
-    }
+    const { container } = render(
+      <Markdown compact>{`![chart](${leak})`}</Markdown>,
+    );
+    expect(container.querySelector('img')).toBeNull();
+    const link = container.querySelector('a');
+    expect(link).toHaveAttribute('href', leak);
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer nofollow');
+    expect(link).toHaveTextContent('chart');
   });
 
   it('loads images of its own origin', () => {

@@ -1,9 +1,3 @@
-import {
-  AgentServiceError,
-  agentServiceFactoryToken,
-  aiConversationsManagerToken,
-  aiManagerToken,
-} from '@nocobase/app-plugin-ai-employee/server';
 import { loggingToken } from '@nocobase/app-server/logging';
 import type { QueryAdapter, Row } from '@nocobase/db';
 import {
@@ -14,19 +8,18 @@ import {
 import { JobInterruptedError } from '@nocobase/jobs';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { CRM_ASSISTANT } from '../../ai/employees/crm-assistant.js';
-import { crmActor } from '../../ai/tools/crm-records.js';
 import {
-  reviewTitle,
   roleNames,
   stageNames,
   statusNames,
   topicNames,
 } from '../../locales/crm-ai/approval-review.js';
-import { lang, pick } from '../../locales/crm-ai/index.js';
-import { runModel } from './ai-model.js';
+import { pick } from '../../locales/crm-ai/index.js';
+import { jsonIn, openSession, readSkill, RUN_TURN_MS } from './ai-model.js';
+import { settingsGuidance } from './guidance.js';
 import { EVALUATION, readEntry, type EvaluationEntry } from './ai-entries.js';
 import type { Actor } from './authorization.js';
+import { crmActor } from './authorization.js';
 import { markStarted, within, type FollowUpPayload } from './follow-up-jobs.js';
 import {
   tasksOf,
@@ -35,7 +28,6 @@ import {
   stringValues,
   unref,
 } from './lead-evaluation.js';
-import { jsonIn } from './lead-capture.js';
 import { LONG_TEXT_LIMIT, TEXT_LIMIT } from './limits.js';
 import { CrmError, toText, type CrmRecord } from './schema.js';
 import type { CrmService } from './service.js';
@@ -375,13 +367,9 @@ export class ApprovalReviewer {
     private readonly container: ServiceResolver,
   ) {}
 
+  // Whether it can run: there is a model to ask (ai-model.ts).
   async available(): Promise<boolean> {
-    return (
-      this.container.has(agentServiceFactoryToken) &&
-      this.container.has(aiConversationsManagerToken) &&
-      this.container.has(aiManagerToken) &&
-      (await this.service.assistantEnabled())
-    );
+    return this.service.assistantEnabled();
   }
 
   // A review of a pending approval for its approver, asked by whoever
@@ -556,7 +544,6 @@ export class ApprovalReviewer {
       .resolve(loggingToken)
       .getLogger('crm-approval-review');
     await markStarted(this.service.database, id, true);
-    let sessionId: string | undefined;
     let asked: EvaluationEntry<ApprovalReview>['ai'] | undefined;
     try {
       const locale = language ?? (await this.service.localeOf(approverId));
@@ -589,52 +576,17 @@ export class ApprovalReviewer {
         asked?.instruction && before
           ? { instruction: asked.instruction, review: before }
           : null;
-      const skill = await this.container
-        .resolve(aiManagerToken)
-        .skillsManager.getSkills('approval-review');
-      const skillSettings = {
-        toolsVersion: 1,
-        tools: [],
-        skillsVersion: 1,
-        skills: [],
-      };
-      const conversation = await this.container
-        .resolve(aiConversationsManagerToken)
-        .create({
-          userId: approverId,
-          aiEmployee: { username: CRM_ASSISTANT },
-          title: reviewTitle[lang(zh)],
-          from: 'sub-agent',
-          options: { skillSettings },
-        });
-      sessionId = conversation.sessionId;
-      const { model, textJson } = await runModel(this.container);
-      const agent = await this.container
-        .resolve(agentServiceFactoryToken)
-        .createAIEmployee({
-          username: CRM_ASSISTANT,
-          state: {
-            sessionId,
-            timezone: settings.timeZone,
-            ...(model ? { model } : {}),
-          },
-          actor: { id: approverId, roles: ['member'], isRoot: false, locale },
-          runtime: { logger },
-          from: 'sub-agent',
-          skillSettings,
-        });
+      const skill = await readSkill(this.container, 'approval-review');
+      const session = await openSession(this.container, {
+        timeZone: settings.timeZone,
+        guidance: settingsGuidance(settings),
+      });
+      if (!session) throw new Error('No model to ask');
+      // The JSON object the prompt spells out, in the reply.
       const ask = (content: string) =>
-        agent.invoke({
-          userMessages: [{ role: 'user', content: { type: 'text', content } }],
-          ...(textJson ? {} : { responseFormat: reviewShape }),
-          signal: within(180_000, signal),
-        });
-      const read = (result: Awaited<ReturnType<typeof ask>>) =>
-        reviewShape.safeParse(
-          stringValues(
-            result.structuredResponse ?? jsonIn(result.message?.content),
-          ),
-        );
+        session.ask(content, within(RUN_TURN_MS, signal));
+      const read = (text: string) =>
+        reviewShape.safeParse(stringValues(jsonIn(text)));
       const context = await contextOf(
         this.service,
         actor,
@@ -645,7 +597,7 @@ export class ApprovalReviewer {
       let parsed = read(
         await ask(
           prompt({
-            skill: toText(skill?.content ?? ''),
+            skill,
             context: context.text,
             today: new Intl.DateTimeFormat('sv-SE', {
               timeZone: settings.timeZone,
@@ -664,12 +616,11 @@ export class ApprovalReviewer {
         );
       if (!parsed.success) {
         logger.warn(
-          { sessionId, issues: parsed.error.issues.slice(0, 5) },
+          { issues: parsed.error.issues.slice(0, 5) },
           'approval review returned no usable review',
         );
         await this.finish(id, 'failed', {
           kind: EVALUATION,
-          sessionId,
           error: 'unreadable',
           ...(asked ? carried(asked) : {}),
         });
@@ -677,7 +628,6 @@ export class ApprovalReviewer {
       }
       await this.finish(id, 'pending', {
         kind: EVALUATION,
-        sessionId,
         ...(asked ? carried(asked) : {}),
         result: clip(parsed.data, context.names),
       });
@@ -686,17 +636,14 @@ export class ApprovalReviewer {
         await markStarted(this.service.database, id, false);
         throw new JobInterruptedError();
       }
-      logger.warn({ sessionId, error }, 'approval review failed');
+      logger.warn({ error }, 'approval review failed');
       await this.finish(id, 'failed', {
         kind: EVALUATION,
-        ...(sessionId ? { sessionId } : {}),
         ...(asked ? carried(asked) : {}),
         error:
-          error instanceof AgentServiceError
-            ? error.rootMessage || error.code
-            : error instanceof Error
-              ? error.message.slice(0, TEXT_LIMIT)
-              : 'failed',
+          error instanceof Error
+            ? error.message.slice(0, TEXT_LIMIT)
+            : 'failed',
       });
     }
   }

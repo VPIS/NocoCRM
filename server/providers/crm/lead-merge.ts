@@ -1,25 +1,18 @@
-import {
-  AgentServiceError,
-  agentServiceFactoryToken,
-  aiConversationsManagerToken,
-} from '@nocobase/app-plugin-ai-employee/server';
 import { loggingToken } from '@nocobase/app-server/logging';
 import type { Row } from '@nocobase/db';
 import type { ServiceResolver } from '@nocobase/service-provider';
 import { z } from 'zod';
-import { CRM_ASSISTANT } from '../../ai/employees/crm-assistant.js';
 import { lang, pick } from '../../locales/crm-ai/index.js';
 import {
   companySuffixes,
   createdOn,
   leadSummary,
   mergeLabels,
-  mergeTitle,
   nameLine,
 } from '../../locales/crm-ai/lead-merge.js';
-import { structuredRunModel } from './ai-model.js';
+import { openSession } from './ai-model.js';
+import { settingsGuidance } from './guidance.js';
 import { compileFilter, conditions, type Actor } from './authorization.js';
-import { jsonIn } from './lead-capture.js';
 import { LONG_TEXT_LIMIT } from './limits.js';
 import {
   CrmError,
@@ -517,12 +510,7 @@ export async function mergeProposal(
     groups: groups.map((g) => toText(g[0])),
     ai: false,
   };
-  if (
-    !groups.length ||
-    !container.has(agentServiceFactoryToken) ||
-    !(await service.assistantEnabled())
-  )
-    return fallback;
+  if (!groups.length || !(await service.assistantEnabled())) return fallback;
   const settings = await service.settings();
   const zh = settings.aiLanguage.startsWith('zh');
   const users = await service.users(actor);
@@ -573,78 +561,31 @@ export async function mergeProposal(
         }),
       ),
     ].join('\n');
-  const skillSettings = {
-    toolsVersion: 1,
-    tools: [],
-    skillsVersion: 1,
-    skills: [],
-  };
   const logger = container.resolve(loggingToken).getLogger('crm-lead-merge');
   try {
-    const conversation = await container
-      .resolve(aiConversationsManagerToken)
-      .create({
-        userId: actor.id,
-        aiEmployee: { username: CRM_ASSISTANT },
-        title: mergeTitle[lang(zh)],
-        from: 'sub-agent',
-        options: { skillSettings },
-      });
-    const model = await structuredRunModel(container);
-    const agent = await container
-      .resolve(agentServiceFactoryToken)
-      .createAIEmployee({
-        username: CRM_ASSISTANT,
-        state: {
-          sessionId: conversation.sessionId,
-          timezone: settings.timeZone,
-          ...(model ? { model } : {}),
-        },
-        actor: {
-          id: actor.id,
-          roles: ['member'],
-          isRoot: false,
-          locale: actor.locale,
-        },
-        runtime: { logger },
-        from: 'sub-agent',
-        skillSettings,
-      });
-    const ask = async () => {
-      const result = await agent.invoke({
-        userMessages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              content: mergePrompt(
-                describe(a),
-                describe(b),
-                groups.map((g) => g[0]),
-                a.keepable && b.keepable ? null : a.keepable ? 'A' : 'B',
-                zh,
-              ),
-            },
-          },
-        ],
-        responseFormat: proposalShape,
-        signal: AbortSignal.timeout(90_000),
-      });
-      return proposalShape.safeParse(
-        result.structuredResponse ?? jsonIn(result.message?.content),
-      );
-    };
+    const session = await openSession(container, {
+      timeZone: settings.timeZone,
+      guidance: settingsGuidance(settings),
+    });
+    if (!session) return fallback;
     // A reply without the proposal (it happens now and then) is asked for
     // once more before the plain proposal stands in.
-    let parsed = await ask();
-    if (!parsed.success) parsed = await ask();
-    if (!parsed.success) {
-      logger.warn(
-        { issues: parsed.error.issues.slice(0, 5) },
-        'lead merge proposal unreadable',
-      );
+    const proposal = await session.askJson(
+      mergePrompt(
+        describe(a),
+        describe(b),
+        groups.map((g) => g[0]),
+        a.keepable && b.keepable ? null : a.keepable ? 'A' : 'B',
+        zh,
+      ),
+      proposalShape,
+      AbortSignal.timeout(90_000),
+    );
+    if (!proposal) {
+      logger.warn('lead merge proposal unreadable');
       return fallback;
     }
+    const parsed = { data: proposal };
     const pickOf = { A: toText(a.lead.id), B: toText(b.lead.id) };
     const keepId =
       parsed.data.keep === 'A'
@@ -692,7 +633,7 @@ export async function mergeProposal(
       ai: true,
     };
   } catch (error) {
-    if (error instanceof AgentServiceError || error instanceof Error) {
+    if (error instanceof Error) {
       logger.warn({ err: error }, 'lead merge proposal failed');
       return fallback;
     }

@@ -4,9 +4,6 @@
 
 import type { Pair, Pairs } from './index.js';
 
-// The title of the unattended conversation a follow-up runs in.
-export const followUpTitle: Pair = ['跟进线索', 'Lead follow-up'];
-
 // The name of the review task a nurtured lead gets, after the company name.
 export const nurtureReviewName: Pair = ['培育复查', 'nurture review'];
 
@@ -21,10 +18,6 @@ export const followUpWords = {
   noChange: ['没有变化', 'No change'],
   // A side of a change that had or has no value.
   none: ['无', 'None'],
-  // The reason noting that this run did not search the web.
-  notResearched: ['本次未联网', 'Not researched on the web this time'],
-  // What the research turn writes when the search found nothing.
-  notFound: ['未查到', 'Nothing found'],
   // An example of an edition's name.
   editionExample: ['专业版', 'Professional'],
   // How a suggested value names the CRM material it came from.

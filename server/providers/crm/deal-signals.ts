@@ -1,11 +1,11 @@
 import type { Row } from '@nocobase/db';
-import { crmActor } from '../../ai/tools/crm-records.js';
 import { readEntry } from './ai-entries.js';
 import type { OpportunityEvaluator } from './opportunity-evaluation.js';
 import { toText } from './schema.js';
 import { lastExchanges } from './exchanges.js';
 import type { CrmService } from './service.js';
 import { agentOn } from './agents.js';
+import { crmActor } from './authorization.js';
 
 // The daily look over the open deals for what should have happened and has
 // not, as lead-signals.ts does for leads: a deal gone quiet for fourteen

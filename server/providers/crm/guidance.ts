@@ -1,8 +1,11 @@
-// The business guidance in the CRM assistant's role: how this deployment
+import type { CrmSettings } from './schema.js';
+
+// The business guidance the CRM's AI works from: how this deployment
 // sells, what counts as progress, when to follow up and when to ask for
-// approval. It is part of the employee's system prompt (Settings → AI
-// employees → NocoCRM → Role settings shows it after the general rules), so
-// a deployment states its own rules here rather than in a setting. It ships
+// approval. Every conversation with an agent gets it as the CRM's rules
+// (crm-agents/rules.ts), and every background run as its system prompt
+// (ai-model.ts). This is the one shipped; an administrator may write the
+// deployment's own over it on the settings page (businessGuidance). It ships
 // with NocoBase's own sales rules, which the demo dataset follows; editions
 // and prices are those published on nocobase.com/cn/commercial.
 // The follow-up thresholds come from the CRM's settings (the reminders
@@ -20,6 +23,33 @@ export const crmGuidance = (
   language = 'en-US',
 ): string =>
   language.startsWith('zh') ? chineseGuidance(days) : englishGuidance(days);
+
+// The guidance the AI works from: what an administrator wrote on the
+// settings page, else the shipped one with the settings' reminders' days, in
+// their AI language; the defaults without settings. The settings page shows
+// the shipped one through it too, so it has no imports the browser lacks.
+export const settingsGuidance = (
+  settings: Pick<
+    CrmSettings,
+    | 'uncontactedDays'
+    | 'leadStaleDays'
+    | 'closeReminderDays'
+    | 'aiLanguage'
+    | 'businessGuidance'
+  > | null,
+): string =>
+  settings?.businessGuidance?.trim()
+    ? settings.businessGuidance
+    : settings
+      ? crmGuidance(
+          {
+            uncontacted: settings.uncontactedDays,
+            stale: settings.leadStaleDays,
+            closing: settings.closeReminderDays,
+          },
+          settings.aiLanguage,
+        )
+      : crmGuidance();
 
 const chineseGuidance = (days: GuidanceDays): string => `# 公司定位
 - 公司名称：NocoBase（开源、AI 驱动的无代码/低代码开发平台，用于搭建企业内部系统和业务应用）。

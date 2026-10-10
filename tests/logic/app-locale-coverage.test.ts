@@ -49,7 +49,7 @@ const namedKey =
 const interpolatedKey = /\bt\(\s*\x60([^\x60]*?)\x24\{/gu;
 /**
  * `useTranslation('@nocobase/app-plugin-file')`: the file translates in a plugin's namespace, not the application's,
- * as the AI Employee plugin's Registry copy in `extensions/nocobase-ai` and the CRM's tool cards do.
+ * as the file plugin's Registry copy in `extensions/nocobase-file-component-ui` does.
  */
 const pluginNamespace = /\buseTranslation\(\s*'/u;
 

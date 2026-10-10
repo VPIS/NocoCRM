@@ -81,12 +81,6 @@ import {
 } from '../../server/providers/crm/resources.js';
 import { CrmService } from '../../server/providers/crm/service.js';
 import { createCrmUserRoleScope } from '../../server/providers/crm/user-roles.js';
-import { crmRecordTools } from '../../server/ai/tools/crm-records.js';
-import { crmWriteTools } from '../../server/ai/tools/crm-writes.js';
-import { screenProposal } from '../../server/ai/screen.js';
-import crmEmployee, {
-  crmAssistant,
-} from '../../server/ai/employees/crm-assistant.js';
 import {
   conversionPreview,
   convertLead,
@@ -112,7 +106,8 @@ import {
 import { registerContextKinds } from '../../server/providers/crm-agents/context.js';
 import { defaultSettings } from '../../server/providers/crm/schema.js';
 import { crmConversationRules } from '../../server/providers/crm-agents/rules.js';
-import { provisionNoco } from '../../server/providers/crm-agents/noco.js';
+import { provisionAssistant } from '../../server/providers/crm-agents/assistant.js';
+import { provisionSkills } from '../../server/providers/crm-agents/library.js';
 import {
   findApiDocumentSchemaProblems,
   findUndeclaredApiRoutes,
@@ -136,11 +131,6 @@ import {
   recordOutcome,
 } from '../../server/providers/crm/feedback.js';
 import {
-  agentServiceFactoryToken,
-  aiConversationsManagerToken,
-  aiManagerToken,
-} from '@nocobase/app-plugin-ai-employee/server';
-import {
   LeadEvaluator,
   tasksOf,
   carried,
@@ -149,7 +139,6 @@ import {
   aiStates,
   latestEvaluation,
   pendingDecisions,
-  researchDue,
   unwrittenFindings,
   stringValues,
 } from '../../server/providers/crm/lead-evaluation.js';
@@ -159,7 +148,6 @@ import {
 } from '../../server/providers/crm/approval-review.js';
 import {
   OpportunityEvaluator,
-  companyResearchDue,
   checkTerms,
   latestOpportunityEvaluation,
 } from '../../server/providers/crm/opportunity-evaluation.js';
@@ -171,8 +159,11 @@ import {
   dealSignal,
   scanDealSignals,
 } from '../../server/providers/crm/deal-signals.js';
-import { crmGuidance } from '../../server/ai/employees/crm-guidance.js';
-import { loggingToken } from '@nocobase/app-server/logging';
+import {
+  crmGuidance,
+  settingsGuidance,
+} from '../../server/providers/crm/guidance.js';
+import { fakeModel } from '../setup/model-fake.js';
 import { JobInterruptedError } from '@nocobase/jobs';
 import { readEntry } from '../../server/providers/crm/ai-entries.js';
 import type { FollowUpPayload } from '../../server/providers/crm/follow-up-jobs.js';
@@ -390,7 +381,7 @@ beforeAll(async () => {
                 },
                 agent: {
                   id: 'agent-1',
-                  name: 'Noco',
+                  name: 'AI',
                   actions: runActions.split(',').filter(Boolean),
                 },
               },
@@ -2147,167 +2138,6 @@ describe('CRM API security and domain rules', () => {
       ).total,
     ).toBe(0);
   });
-  it('offers the AI employee read tools bound to the signed-in user', async () => {
-    const tools = crmRecordTools(service, authorization);
-    const byName = Object.fromEntries(
-      tools.map((tool) => [tool.definition.name, tool]),
-    );
-    expect(Object.keys(byName).sort()).toEqual([
-      'get_record',
-      'list_users',
-      'search_records',
-      'summarize_records',
-    ]);
-    expect(crmEmployee.tools?.map((tool) => tool.name).sort()).toEqual([
-      'add_comment',
-      'approval_action',
-      'convert_lead',
-      'create_record',
-      'delete_record',
-      'get_record',
-      'list_users',
-      'search_records',
-      'subAgentWebSearch',
-      'summarize_records',
-      'update_record',
-    ]);
-    // Reports come from the plugin's report skill, whose tool the model
-    // activates by loading it; skills have to be on for that.
-    // It also loads the lead and deal follow-up skills when asked what to
-    // do next.
-    expect(crmEmployee.skills).toEqual([
-      'business-analysis-report',
-      'lead-follow-up',
-      'opportunity-follow-up',
-      'approval-review',
-    ]);
-    expect(crmEmployee.chatSettings?.enableSkills).toBe(true);
-    expect(crmAssistant({ avatar: 'https://crm.example/x.png' }).avatar).toBe(
-      'https://crm.example/x.png',
-    );
-    // The deployment's business guidance is part of the role itself, in the
-    // AI language: English by default, Chinese when it is set.
-    expect(crmAssistant({ avatar: 'x' }).systemPrompt).toContain(
-      'Company: NocoBase',
-    );
-    expect(
-      crmAssistant({ avatar: 'x', language: 'zh-CN' }).systemPrompt,
-    ).toContain('公司名称：NocoBase');
-    // The chat answers in the language the user writes in, whatever the AI
-    // language.
-    for (const language of ['zh-CN', 'en-US']) {
-      const prompt = crmAssistant({ avatar: 'x', language }).systemPrompt;
-      expect(prompt).toContain(
-        'Write everything in the language the user writes in',
-      );
-      expect(prompt).not.toContain('Write everything in Simplified Chinese');
-    }
-    // A wandering conversation is carried into the CRM only through
-    // proposals: offered after an answer, listed at its close and proposed
-    // once picked; a lead's message, the enquiry as it arrived, is left be.
-    const followThrough = crmAssistant({ avatar: 'x' }).systemPrompt;
-    expect(followThrough).toContain('Shall I add');
-    expect(followThrough).toContain(
-      'a numbered list of the changes you propose',
-    );
-    expect(followThrough).toContain('Showing a list is not agreement');
-    expect(followThrough).toContain("Never change a lead's message");
-    // An exchange that took place is a comment; mail is never logged.
-    expect(followThrough).toContain('is written as a comment on the record');
-    expect(followThrough).toContain('never log an email');
-    for (const tool of tools) {
-      expect(tool.defaultPermission).toBe('ALLOW');
-      expect(tool.execution).toBe('backend');
-    }
-    const runtime = { toolCallId: 'call', writer: () => undefined };
-    // A refusal ends the call with the CRM's error body as the message.
-    const invoke = (name: string, actorId: string, args: unknown) =>
-      (
-        byName[name]!.invoke(
-          { actor: { id: actorId, roles: [], isRoot: false } },
-          args,
-          runtime,
-        ) as Promise<Record<string, unknown>>
-      ).then(
-        (content) => ({ status: 'success', content }),
-        (error: Error) => ({
-          status: 'error',
-          content: JSON.parse(error.message) as Record<string, unknown>,
-        }),
-      );
-    const lead = await service.save(actor('rep'), 'leads', {
-      name: 'Tool lead',
-      company: 'Tool company',
-    });
-    const search = await invoke('search_records', 'rep', {
-      entity: 'leads',
-      search: 'Tool lead',
-    });
-    expect(search.status).toBe('success');
-    expect(search.content.total).toBe(1);
-    const users = (await invoke('list_users', 'rep', {})).content
-      .users as unknown as {
-      id: string;
-      roles: string[];
-    }[];
-    expect(users.map((user) => user.id).sort()).toEqual(
-      expect.arrayContaining(['rep', 'manager', 'admin']),
-    );
-    expect(users.find((user) => user.id === 'manager')?.roles).toEqual([
-      'sales-manager',
-    ]);
-    // A search narrows the list to the person named.
-    expect(
-      (
-        (await invoke('list_users', 'rep', { search: 'MANAGER' })).content
-          .users as unknown as { id: string }[]
-      ).map((user) => user.id),
-    ).toEqual(['manager']);
-    // The current user's access per object, for the model to respect.
-    expect(
-      (users.find((user) => user.id === 'rep') as { access?: unknown })?.access,
-    ).toEqual({
-      leads: 'view:all create edit:own',
-      companies: 'view:all create edit:own',
-      contacts: 'view:all create edit:own',
-      opportunities: 'view:all create edit:own',
-      tasks: 'view:all create edit:own',
-      approvals: 'view:all create edit:own delete:own',
-    });
-    // The caller is marked, so the model knows whether it may own records.
-    expect(
-      users.filter((user) => (user as { current?: boolean }).current),
-    ).toEqual([
-      expect.objectContaining({
-        id: 'rep',
-        can: { assign: false, approve: false, export: false },
-      }),
-    ]);
-    const asManager = (await invoke('list_users', 'manager', {})).content
-      .users as unknown as { id: string; can?: Record<string, boolean> }[];
-    expect(asManager.find((user) => user.id === 'manager')?.can).toEqual(
-      expect.objectContaining({ assign: true, approve: true }),
-    );
-    const read = await invoke('get_record', 'rep', {
-      entity: 'leads',
-      id: lead.id,
-    });
-    expect(read.status).toBe('success');
-    expect((read.content.record as Record<string, unknown>).name).toBe(
-      'Tool lead',
-    );
-    // A user outside the CRM roles cannot read through the tools either;
-    // the refusal is the call's error, with the CRM's code.
-    const refused = await invoke('get_record', 'outsider', {
-      entity: 'leads',
-      id: lead.id,
-    });
-    expect(refused.status).toBe('error');
-    expect(refused.content.error).toBe('forbidden');
-    await expect(
-      byName.get_record!.invoke({}, { entity: 'leads', id: lead.id }, runtime),
-    ).rejects.toThrow('signed-in user');
-  });
   it('records what an update changed with the values it replaced', async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: 'History lead',
@@ -2510,361 +2340,6 @@ describe('CRM API security and domain rules', () => {
     await expect(
       service.summarize(actor('outsider'), 'opportunities', {}, {}),
     ).rejects.toMatchObject({ code: 'forbidden' });
-    // The tool names the owners it groups by.
-    const tool = crmRecordTools(service, authorization).find(
-      (t) => t.definition.name === 'summarize_records',
-    )!;
-    const byOwner = (await tool.invoke(
-      { actor: { id: 'rep', roles: [], isRoot: false } },
-      {
-        entity: 'opportunities',
-        companyId: company.id,
-        groupBy: 'ownerId',
-      },
-      { toolCallId: 'call', writer: () => undefined },
-    )) as {
-      groups: { key: string; count: number }[];
-      names: Record<string, string>;
-    };
-    expect(byOwner.groups).toEqual([{ key: 'rep', count: 3, measures: [] }]);
-    // (The test users are named after their ids.)
-    expect(byOwner.names).toEqual({ rep: 'rep' });
-    const byCompany = (await tool.invoke(
-      { actor: { id: 'rep', roles: [], isRoot: false } },
-      { entity: 'opportunities', companyId: company.id, groupBy: 'companyId' },
-      { toolCallId: 'call', writer: () => undefined },
-    )) as { names: Record<string, string> };
-    // Tasks filter by when they take place.
-    await service.save(actor('rep'), 'tasks', {
-      name: 'Summary call',
-      companyId: company.id,
-      status: 'open',
-      dueAt: '2026-08-10T02:00:00.000Z',
-    });
-    await service.save(actor('rep'), 'tasks', {
-      name: 'Summary meeting',
-      companyId: company.id,
-      status: 'open',
-      dueAt: '2026-10-10T02:00:00.000Z',
-    });
-    const inQuarter = (await tool.invoke(
-      { actor: { id: 'rep', roles: [], isRoot: false } },
-      {
-        entity: 'tasks',
-        companyId: company.id,
-        dueFrom: '2026-07-01T00:00:00.000Z',
-        dueTo: '2026-09-30T23:59:59.999Z',
-        groupBy: 'status',
-      },
-      { toolCallId: 'call', writer: () => undefined },
-    )) as { total: number; groups: { key: string }[] };
-    expect(inQuarter.total).toBe(1);
-    expect(inQuarter.groups.map((g) => g.key)).toEqual(['open']);
-    expect(byCompany.names).toEqual({
-      [toText(company.id)]: 'Summary company',
-    });
-  });
-  it('screens a proposed write by the rules the tools apply, before the card offers confirmation', async () => {
-    const theirs = await service.save(actor('other'), 'leads', {
-      name: 'Screen target',
-    });
-    const mine = await service.save(actor('rep'), 'leads', {
-      name: 'Screen own',
-    });
-    const company = await service.save(actor('other'), 'companies', {
-      name: 'Screen company',
-    });
-    const deal = await service.save(actor('other'), 'opportunities', {
-      name: 'Screen deal',
-      companyId: company.id,
-    });
-    const screen = (
-      who: string,
-      tool: string,
-      input: Record<string, unknown>,
-    ) => screenProposal(service, actor(who), tool, input);
-    // Editing a record the user may not see, and handing a record to
-    // someone else without the assign right, are refused; a manager may.
-    expect(
-      await screen('rep', 'update_record', {
-        entity: 'leads',
-        id: theirs.id,
-        input: { phone: '1' },
-      }),
-    ).toEqual({ ok: false, code: 'notFound' });
-    expect(
-      await screen('rep', 'update_record', {
-        entity: 'leads',
-        id: mine.id,
-        input: { phone: '1' },
-      }),
-    ).toEqual({ ok: true });
-    expect(
-      await screen('rep', 'create_record', {
-        entity: 'leads',
-        input: { name: 'x', ownerId: 'other' },
-      }),
-    ).toEqual({ ok: false, code: 'forbidden', field: 'ownerId' });
-    expect(
-      await screen('manager', 'create_record', {
-        entity: 'leads',
-        input: { name: 'x', ownerId: 'other' },
-      }),
-    ).toEqual({ ok: true });
-    // A salesperson deletes no leads; an approval is raised on a deal the
-    // user may edit; decisions belong to the approver while pending.
-    expect(
-      await screen('rep', 'delete_record', { entity: 'leads', id: mine.id }),
-    ).toEqual({ ok: false, code: 'forbidden' });
-    expect(
-      await screen('rep', 'create_record', {
-        entity: 'approvals',
-        input: { opportunityId: deal.id, topic: 'discount', name: 'x' },
-      }),
-    ).toEqual({
-      ok: false,
-      code: 'approvalOpportunity',
-      field: 'opportunityId',
-    });
-    const approval = await service.save(actor('other'), 'approvals', {
-      name: 'Screen approval',
-      opportunityId: deal.id,
-      topic: 'discount',
-      approverId: 'manager',
-    });
-    expect(
-      await screen('manager', 'approval_action', {
-        id: approval.id,
-        action: 'approve',
-      }),
-    ).toEqual({ ok: false, code: 'approvalLocked' });
-    await service.approvalAction(actor('other'), approval.id, 'submit');
-    expect(
-      await screen('manager', 'approval_action', {
-        id: approval.id,
-        action: 'approve',
-      }),
-    ).toEqual({ ok: true });
-    expect(
-      await screen('rep', 'approval_action', {
-        id: approval.id,
-        action: 'approve',
-      }),
-    ).toEqual({ ok: false, code: 'forbidden' });
-    expect(
-      await screen('other', 'approval_action', {
-        id: approval.id,
-        action: 'withdraw',
-      }),
-    ).toEqual({ ok: true });
-    // A step on an existing record that names none cannot be checked.
-    expect(
-      await screen('rep', 'update_record', {
-        entity: 'leads',
-        input: { phone: '1' },
-      }),
-    ).toEqual({ ok: false, code: 'invalidInput', field: 'id' });
-    // The card asks through the API, as the signed-in user.
-    const response = await request('/screenProposal', 'rep', 'POST', {
-      tool: 'delete_record',
-      input: { entity: 'leads', id: mine.id },
-    });
-    expect(response.status).toBe(200);
-    expect(((await response.json()) as { data: unknown }).data).toEqual({
-      ok: false,
-      code: 'forbidden',
-    });
-  });
-  it('proposes CRM writes through tools the user confirms, under their own permissions', async () => {
-    const tools = crmWriteTools(service, authorization);
-    const byName = Object.fromEntries(
-      tools.map((tool) => [tool.definition.name, tool]),
-    );
-    expect(Object.keys(byName).sort()).toEqual([
-      'add_comment',
-      'approval_action',
-      'convert_lead',
-      'create_record',
-      'delete_record',
-      'update_record',
-    ]);
-    // Every write waits for the user's confirmation in the conversation.
-    for (const tool of tools) {
-      expect(tool.defaultPermission).toBe('ASK');
-      expect(tool.execution).toBe('backend');
-    }
-    const runtime = { toolCallId: 'call', writer: () => undefined };
-    // A refusal ends the call with the CRM's error body as the message.
-    const invoke = (name: string, actorId: string, args: unknown) =>
-      (
-        byName[name]!.invoke(
-          { actor: { id: actorId, roles: [], isRoot: false } },
-          args,
-          runtime,
-        ) as Promise<Record<string, unknown>>
-      ).then(
-        (content) => ({ status: 'success', content }),
-        (error: Error) => ({
-          status: 'error',
-          content: JSON.parse(error.message) as Record<string, unknown>,
-        }),
-      );
-    const theirs = await service.save(actor('other'), 'leads', {
-      name: 'Write target',
-      company: 'Write company',
-    });
-    // Editing a record you may not see (reported as absent, as the pages
-    // do), and handing a record to someone else without the assign right,
-    // are refused as data; a manager may do both.
-    const refused = await invoke('update_record', 'rep', {
-      entity: 'leads',
-      id: theirs.id,
-      title: 'x',
-      input: { phone: '1' },
-    });
-    expect(refused.status).toBe('error');
-    expect(refused.content.error).toBe('notFound');
-    expect(
-      (
-        await invoke('create_record', 'rep', {
-          entity: 'leads',
-          title: 'x',
-          input: { name: 'x', ownerId: 'other' },
-        })
-      ).content.error,
-    ).toBe('forbidden');
-    const created = await invoke('create_record', 'manager', {
-      entity: 'leads',
-      title: 'x',
-      input: { name: 'Tool created', company: 'Tool Co', ownerId: 'other' },
-    });
-    expect(created.status).toBe('success');
-    expect(created.content.entity).toBe('leads');
-    const createdId = toText(created.content.id);
-    expect(
-      (await service.get(actor('other'), 'leads', createdId)).ownerId,
-    ).toBe('other');
-    const moved = await invoke('update_record', 'manager', {
-      entity: 'leads',
-      id: theirs.id,
-      title: 'x',
-      input: { ownerId: 'rep' },
-    });
-    expect(moved.status).toBe('success');
-    // A refusal by rule reports its code: an unknown field, a converted
-    // lead, a decision that is not this user's to make.
-    expect(
-      (
-        await invoke('update_record', 'rep', {
-          entity: 'leads',
-          id: theirs.id,
-          title: 'x',
-          input: { nonsense: 1 },
-        })
-      ).content.error,
-    ).toBe('invalidInput');
-    const converted = await invoke('convert_lead', 'rep', {
-      id: theirs.id,
-      title: 'x',
-      createOpportunity: true,
-      opportunityName: 'Tool deal',
-      amount: 100,
-    });
-    expect(converted.status).toBe('success');
-    expect(converted.content.recordStatus).toBe('converted');
-    expect(
-      (await invoke('convert_lead', 'rep', { id: theirs.id, title: 'x' }))
-        .content.error,
-    ).toBe('convertedReadOnly');
-    const deal = (
-      await service.list(actor('rep'), 'opportunities', { search: 'Tool deal' })
-    ).data[0]!;
-    const approval = await invoke('create_record', 'rep', {
-      entity: 'approvals',
-      title: 'x',
-      input: {
-        name: 'Tool approval',
-        opportunityId: deal.id,
-        topic: 'discount',
-        approverId: 'manager',
-      },
-    });
-    expect(approval.status).toBe('success');
-    const approvalId = toText(approval.content.id);
-    expect(
-      (
-        await invoke('approval_action', 'manager', {
-          id: approvalId,
-          action: 'approve',
-          title: 'x',
-        })
-      ).content.error,
-    ).toBe('forbidden');
-    expect(
-      (
-        await invoke('approval_action', 'rep', {
-          id: approvalId,
-          action: 'submit',
-          title: 'x',
-        })
-      ).status,
-    ).toBe('success');
-    expect(
-      (
-        await invoke('approval_action', 'rep', {
-          id: approvalId,
-          action: 'approve',
-          title: 'x',
-        })
-      ).content.error,
-    ).toBe('forbidden');
-    expect(
-      (
-        await invoke('approval_action', 'manager', {
-          id: approvalId,
-          action: 'approve',
-          title: 'x',
-          comment: 'Fine',
-        })
-      ).content.recordStatus,
-    ).toBe('approved');
-    // A converted lead is history; its owner cannot delete it either.
-    expect(
-      (
-        await invoke('delete_record', 'rep', {
-          entity: 'leads',
-          id: theirs.id,
-          title: 'x',
-        })
-      ).status,
-    ).toBe('error');
-    // A salesperson deletes nothing but their own approval drafts; the
-    // manager who created the lead may remove it.
-    expect(
-      (
-        await invoke('delete_record', 'other', {
-          entity: 'leads',
-          id: createdId,
-          title: 'x',
-        })
-      ).status,
-    ).toBe('error');
-    const removed = await invoke('delete_record', 'manager', {
-      entity: 'leads',
-      id: createdId,
-      title: 'x',
-    });
-    expect(removed.status).toBe('success');
-    await expect(
-      service.get(actor('other'), 'leads', createdId),
-    ).rejects.toMatchObject({ code: 'notFound' });
-    await expect(
-      byName.create_record!.invoke(
-        {},
-        { entity: 'leads', title: 'x', input: {} },
-        runtime,
-      ),
-    ).rejects.toThrow('signed-in user');
   });
   it('exposes the CRM roles per user to the Users page and keeps the last administrator', async () => {
     const scope = createCrmUserRoleScope(authorization);
@@ -3030,35 +2505,10 @@ describe('CRM skills', () => {
 
 describe("a task's outcome, written up by the AI", () => {
   it('turns the notes into feedback as the person who may record it', async () => {
-    const prompts: string[] = [];
     const container = new ServiceContainer();
-    container.instance(aiConversationsManagerToken, {
-      create: async () => ({ sessionId: 'feedback-session' }),
-    } as unknown as ReturnType<
-      typeof container.resolve<typeof aiConversationsManagerToken>
-    >);
-    container.instance(agentServiceFactoryToken, {
-      createAIEmployee: async () => ({
-        invoke: async (input: {
-          userMessages: { content: { content: string } }[];
-        }) => {
-          prompts.push(input.userMessages[0].content.content);
-          return {
-            message: {
-              content: {
-                type: 'text',
-                content: '**对方反馈**\n- 下周看演示\n',
-              },
-            },
-          };
-        },
-      }),
-    } as unknown as ReturnType<
-      typeof container.resolve<typeof agentServiceFactoryToken>
-    >);
-    container.instance(loggingToken, {
-      getLogger: () => ({ warn: () => undefined }),
-    } as unknown as ReturnType<typeof container.resolve<typeof loggingToken>>);
+    const { prompts } = fakeModel(container, {
+      asText: '**对方反馈**\n- 下周看演示\n',
+    });
     const enabled = vi
       .spyOn(service, 'assistantEnabled')
       .mockResolvedValue(true);
@@ -3112,46 +2562,11 @@ describe("a task's outcome, written up by the AI", () => {
 });
 
 describe('CRM lead capture', () => {
-  // The AI employee plugin's services as captureLeads uses them: a
-  // conversation to run in, and an employee whose run returns `result`.
-  // `result` is the structured response, or `{ asText }` for a run that
-  // wrote its answer as text instead.
+  // The model gateway as captureLeads asks it (tests/setup/model-fake.ts):
+  // each turn answers `result` as JSON, or `{ asText }` as that text.
   const capturing = (result: unknown) => {
-    const runs: { username: string; prompt: string; from: unknown }[] = [];
-    const warnings: unknown[] = [];
     const container = new ServiceContainer();
-    container.instance(aiConversationsManagerToken, {
-      create: async () => ({ sessionId: 'capture-session' }),
-    } as unknown as ReturnType<
-      typeof container.resolve<typeof aiConversationsManagerToken>
-    >);
-    container.instance(agentServiceFactoryToken, {
-      createAIEmployee: async (options: {
-        username: string;
-        from: unknown;
-      }) => ({
-        invoke: async (input: {
-          userMessages: { content: { content: string } }[];
-        }) => {
-          runs.push({
-            username: options.username,
-            from: options.from,
-            prompt: input.userMessages[0].content.content,
-          });
-          return result && typeof result === 'object' && 'asText' in result
-            ? {
-                structuredResponse: undefined,
-                message: { content: { type: 'text', content: result.asText } },
-              }
-            : { structuredResponse: result };
-        },
-      }),
-    } as unknown as ReturnType<
-      typeof container.resolve<typeof agentServiceFactoryToken>
-    >);
-    container.instance(loggingToken, {
-      getLogger: () => ({ warn: (entry: unknown) => warnings.push(entry) }),
-    } as unknown as ReturnType<typeof container.resolve<typeof loggingToken>>);
+    const { prompts: runs, warnings } = fakeModel(container, result);
     return { container, runs, warnings };
   };
   const blank = {
@@ -3221,11 +2636,7 @@ describe('CRM lead capture', () => {
         'Asia/Shanghai',
       );
       expect(runs).toHaveLength(1);
-      expect(runs[0]).toMatchObject({
-        username: 'crm-assistant',
-        from: 'sub-agent',
-      });
-      expect(runs[0].prompt).toContain(pasted);
+      expect(runs[0]).toContain(pasted);
       expect(leads).toHaveLength(2);
       expect(leads[0].input).toEqual({
         name: '周立',
@@ -3303,9 +2714,9 @@ describe('CRM lead capture', () => {
         },
         'UTC',
       );
-      expect(runs[0].prompt).toContain('周立的职位是 IT 总监');
-      expect(runs[0].prompt).toContain('"ref": "r1"');
-      expect(runs[0].prompt).not.toContain("ownerId is the lead's owner");
+      expect(runs[0]).toContain('周立的职位是 IT 总监');
+      expect(runs[0]).toContain('"ref": "r1"');
+      expect(runs[0]).not.toContain("ownerId is the lead's owner");
       expect(result.reply).toContain('IT 总监');
       const [revised, added, third] = result.leads;
       // A revision carries every field the AI writes, null where empty, so
@@ -3334,7 +2745,7 @@ describe('CRM lead capture', () => {
         { text: pasted },
         'UTC',
       );
-      expect(assigning.runs[0].prompt).toContain("ownerId is the lead's owner");
+      expect(assigning.runs[0]).toContain("ownerId is the lead's owner");
       expect(assigned.leads[0].input.ownerId).toBe('rep');
       expect(assigned.leads[1].input).not.toHaveProperty('ownerId');
 
@@ -3376,11 +2787,11 @@ describe('CRM lead capture', () => {
     await expect(
       captureLeads(service, container, actor('rep'), { text: '  ' }, 'UTC'),
     ).rejects.toMatchObject({ code: 'required', status: 400 });
-    // The employee is switched off (no aiEmployees row in these tests).
+    // No model to ask (the AI is off in these tests).
     await expect(
       captureLeads(service, container, actor('rep'), { text: pasted }, 'UTC'),
     ).rejects.toMatchObject({ code: 'assistantUnavailable', status: 409 });
-    // No AI employee plugin at all.
+    // The AI on, but no Agents plugin to ask.
     const enabled = vi
       .spyOn(service, 'assistantEnabled')
       .mockResolvedValue(true);
@@ -3421,50 +2832,16 @@ describe('CRM lead capture', () => {
 });
 
 describe('CRM lead evaluation', () => {
-  // The AI Employee plugin as the evaluator uses it: a conversation, the
-  // lead-evaluation skill, and an employee whose run returns `verdict`.
-  // `abortable`: the run gives up on a signal already aborted, as a model
-  // call does when the application stops.
+  // The model gateway as the evaluator asks it (tests/setup/model-fake.ts):
+  // each turn answers `verdict`. `abortable`: kept for the tests that stop
+  // the application mid-run; every fake call gives up on a signal already
+  // aborted, as a model call does.
   const evaluating = (
     verdict: unknown,
-    options: { abortable?: boolean } = {},
+    _options: { abortable?: boolean } = {},
   ) => {
-    const prompts: string[] = [];
     const container = new ServiceContainer();
-    container.instance(aiConversationsManagerToken, {
-      create: async () => ({ sessionId: 'evaluation-session' }),
-    } as unknown as ReturnType<
-      typeof container.resolve<typeof aiConversationsManagerToken>
-    >);
-    container.instance(aiManagerToken, {
-      skillsManager: {
-        // Only by its name: the run must load the follow-up skill.
-        getSkills: async (name: string) =>
-          name === 'lead-follow-up'
-            ? { content: '# 跟进线索\n\n技能正文。' }
-            : undefined,
-      },
-    } as unknown as ReturnType<
-      typeof container.resolve<typeof aiManagerToken>
-    >);
-    container.instance(agentServiceFactoryToken, {
-      createAIEmployee: async () => ({
-        invoke: async (input: {
-          userMessages: { content: { content: string } }[];
-          signal?: AbortSignal;
-        }) => {
-          if (options.abortable && input.signal?.aborted)
-            throw new Error('aborted');
-          prompts.push(input.userMessages[0].content.content);
-          return { structuredResponse: verdict };
-        },
-      }),
-    } as unknown as ReturnType<
-      typeof container.resolve<typeof agentServiceFactoryToken>
-    >);
-    container.instance(loggingToken, {
-      getLogger: () => ({ warn: () => undefined }),
-    } as unknown as ReturnType<typeof container.resolve<typeof loggingToken>>);
+    const { prompts } = fakeModel(container, verdict);
     return { evaluator: new LeadEvaluator(service, container), prompts };
   };
   const follow = {
@@ -3558,13 +2935,11 @@ describe('CRM lead evaluation', () => {
       const entry = await evaluator.request(actor('rep'), lead.id);
       expect(entry).toMatchObject({ status: 'running' });
       await evaluator.idle();
-      // The skill and the lead are in what the AI was given.
-      // First the web research on the company, then the verdict from the
-      // skill, the lead and what was found.
-      expect(prompts[0]).toContain('First research the company in this lead');
+      // The skill and the lead are in what the AI was given, in one turn.
+      expect(prompts).toHaveLength(1);
+      expect(prompts[0]).toContain('# Lead follow-up');
+      expect(prompts[0]).not.toContain('name: lead-follow-up');
       expect(prompts[0]).toContain('评估精工');
-      expect(prompts[1]).toContain('技能正文');
-      expect(prompts[1]).toContain('评估精工');
       const pending = await latestEvaluation(service, actor('rep'), lead.id);
       expect(pending).toMatchObject({
         status: 'pending',
@@ -3740,7 +3115,7 @@ describe('CRM lead evaluation', () => {
     }
   });
 
-  it('looks the company up again only when due, and converts or reviews as accepted', async () => {
+  it('tells a follow-up the previous one, and converts or reviews as accepted', async () => {
     const enabled = vi
       .spyOn(service, 'assistantEnabled')
       .mockResolvedValue(true);
@@ -3754,30 +3129,13 @@ describe('CRM lead evaluation', () => {
       const first = evaluating(follow);
       await first.evaluator.request(actor('rep'), lead.id);
       await first.evaluator.idle();
-      // The first follow-up searches the web, then gives its verdict.
-      expect(first.prompts).toHaveLength(2);
+      // A follow-up is one turn: the verdict, with no web research.
+      expect(first.prompts).toHaveLength(1);
       expect(
         (await latestEvaluation(service, actor('rep'), lead.id))?.ai
           .researchedAt,
-      ).toBeTruthy();
-      const lead2 = await service.get(actor('rep'), 'leads', lead.id);
-      const recent = await researchDue(
-        service,
-        lead2,
-        'none',
-        new Date(Date.now() + 89 * 86_400_000),
-      );
-      expect(recent).toBe(false);
-      expect(
-        await researchDue(
-          service,
-          lead2,
-          'none',
-          new Date(Date.now() + 91 * 86_400_000),
-        ),
-      ).toBe(true);
-      // The next one, with the company known and recently looked up, does
-      // not search, and is told the previous recommendation.
+      ).toBeFalsy();
+      // The next one is told the previous recommendation.
       const again = evaluating({ ...follow, changes: ['没有变化'] });
       await again.evaluator.request(actor('rep'), lead.id);
       await again.evaluator.idle();
@@ -4244,8 +3602,8 @@ describe('CRM lead evaluation', () => {
       await evaluator.request(actor('rep'), lead.id);
       await evaluator.idle();
       // Asked once more for the structure before giving up.
-      expect(prompts).toHaveLength(3);
-      expect(prompts[2]).toContain('return only the required JSON object');
+      expect(prompts).toHaveLength(2);
+      expect(prompts[1]).toContain('return only the required JSON object');
       expect(
         await latestEvaluation(service, actor('rep'), lead.id),
       ).toMatchObject({ status: 'failed', ai: { error: 'unreadable' } });
@@ -4273,8 +3631,7 @@ describe('CRM lead evaluation', () => {
         [lead.id]: 'running',
       });
       await evaluator.idle();
-      expect(prompts[0]).toContain('Then write, in Chinese');
-      expect(prompts[1]).toContain('email in Chinese.');
+      expect(prompts[0]).toContain('email in Chinese.');
       expect(await aiStates(service, [lead.id])).toEqual({
         [lead.id]: 'pending',
       });
@@ -4289,7 +3646,7 @@ describe('CRM lead evaluation', () => {
     }
   });
 
-  it('offers what the web says about the company and writes the picked findings', async () => {
+  it("offers the lead's fields its material states and writes the picked ones", async () => {
     const enabled = vi
       .spyOn(service, 'assistantEnabled')
       .mockResolvedValue(true);
@@ -4306,6 +3663,13 @@ describe('CRM lead evaluation', () => {
           {
             field: 'website',
             value: 'https://www.wgtech.example',
+            source: '首次电话',
+          },
+          // A web address is no material of the CRM's: there is no web
+          // research, so the finding is not kept.
+          {
+            field: 'jobTitle',
+            value: 'CTO',
             source: 'https://www.wgtech.example/about',
           },
           { field: 'industry', value: 'manufacturing', source: null },
@@ -4340,19 +3704,20 @@ describe('CRM lead evaluation', () => {
       });
       await evaluator.request(actor('rep'), lead.id);
       await evaluator.idle();
-      // The search is allowed; the CRM tools are not needed.
-      expect(prompts[0]).toContain('Use subAgentWebSearch to look up');
-      expect(prompts[1]).toContain('# Web research results');
-      expect(prompts[1]).toContain("# The team's comments");
-      expect(prompts[1]).toContain('已在用 SAP，只做对接');
-      expect(prompts[1]).toContain("# The lead's tasks");
-      expect(prompts[1]).toContain('30 万预算只含软件，实施另算');
+      // No web research; the comments and tasks go with the lead.
+      expect(prompts).toHaveLength(1);
+      expect(prompts[0]).toContain('There is no web research');
+      expect(prompts[0]).toContain("# The team's comments");
+      expect(prompts[0]).toContain('已在用 SAP，只做对接');
+      expect(prompts[0]).toContain("# The lead's tasks");
+      expect(prompts[0]).toContain('30 万预算只含软件，实施另算');
       const entry = await latestEvaluation(service, actor('rep'), lead.id);
       expect(entry!.ai.result!.enrich).toEqual([
         {
           field: 'website',
           value: 'https://www.wgtech.example',
-          source: 'https://www.wgtech.example/about',
+          source: null,
+          basis: '首次电话',
           current: null,
         },
         {
@@ -4463,7 +3828,7 @@ describe('CRM lead evaluation', () => {
       ).data.map((entry) => entry.action),
     ).toContain('created');
   });
-  it('keeps what started a follow-up and looks a changed company up again', async () => {
+  it('keeps what started a follow-up', async () => {
     const enabled = vi
       .spyOn(service, 'assistantEnabled')
       .mockResolvedValue(true);
@@ -4472,40 +3837,17 @@ describe('CRM lead evaluation', () => {
         name: '触发',
         company: '触发精工',
         source: 'website',
-        // Particulars it already holds: an ordinary follow-up does not
-        // look the company up again soon after.
-        website: 'https://chufa.test',
-        industry: 'manufacturing',
       });
-      // The first follow-up looks the company up.
-      const first = evaluating(follow);
-      await first.evaluator.request(actor('rep'), lead.id);
-      await first.evaluator.idle();
-      expect(first.prompts).toHaveLength(2);
-      // A task done: followed up, the company looked up recently.
-      const done = evaluating(follow);
-      await done.evaluator.request(
-        actor('rep'),
-        lead.id,
-        undefined,
-        'taskDone',
-      );
-      await done.evaluator.idle();
-      expect(done.prompts).toHaveLength(1);
-      expect(
-        (await latestEvaluation(service, actor('rep'), lead.id))?.ai,
-      ).toMatchObject({ trigger: 'taskDone', result: { grade: 'A' } });
-      // Its company changed: looked up again, however recent the last look.
-      const changed = evaluating(follow);
-      await changed.evaluator.request(
-        actor('rep'),
-        lead.id,
-        undefined,
-        'companyChanged',
-      );
-      await changed.evaluator.idle();
-      expect(changed.prompts).toHaveLength(2);
-      expect(changed.prompts[0]).toContain('First research');
+      for (const trigger of ['taskDone', 'companyChanged'] as const) {
+        const run = evaluating(follow);
+        await run.evaluator.request(actor('rep'), lead.id, undefined, trigger);
+        await run.evaluator.idle();
+        // One turn, with no web research, whatever started it.
+        expect(run.prompts).toHaveLength(1);
+        expect(
+          (await latestEvaluation(service, actor('rep'), lead.id))?.ai,
+        ).toMatchObject({ trigger, result: { grade: 'A' } });
+      }
     } finally {
       enabled.mockRestore();
     }
@@ -4665,41 +4007,11 @@ describe('CRM lead evaluation', () => {
 });
 
 describe('CRM opportunity follow-up', () => {
-  // The AI Employee plugin as the follow-up uses it: a conversation, the
-  // opportunity-follow-up skill, and an employee whose run returns `verdict`.
+  // The model gateway as the follow-up asks it (tests/setup/model-fake.ts):
+  // each turn answers `verdict`.
   const following = (verdict: unknown) => {
-    const prompts: string[] = [];
     const container = new ServiceContainer();
-    container.instance(aiConversationsManagerToken, {
-      create: async () => ({ sessionId: 'deal-session' }),
-    } as unknown as ReturnType<
-      typeof container.resolve<typeof aiConversationsManagerToken>
-    >);
-    container.instance(aiManagerToken, {
-      skillsManager: {
-        getSkills: async (name: string) =>
-          name === 'opportunity-follow-up'
-            ? { content: '# 跟进商机\n\n技能正文。' }
-            : undefined,
-      },
-    } as unknown as ReturnType<
-      typeof container.resolve<typeof aiManagerToken>
-    >);
-    container.instance(agentServiceFactoryToken, {
-      createAIEmployee: async () => ({
-        invoke: async (input: {
-          userMessages: { content: { content: string } }[];
-        }) => {
-          prompts.push(input.userMessages[0].content.content);
-          return { structuredResponse: verdict };
-        },
-      }),
-    } as unknown as ReturnType<
-      typeof container.resolve<typeof agentServiceFactoryToken>
-    >);
-    container.instance(loggingToken, {
-      getLogger: () => ({ warn: () => undefined }),
-    } as unknown as ReturnType<typeof container.resolve<typeof loggingToken>>);
+    const { prompts } = fakeModel(container, verdict);
     return { evaluator: new OpportunityEvaluator(service, container), prompts };
   };
   const deal = async (name: string) => {
@@ -4759,12 +4071,11 @@ describe('CRM opportunity follow-up', () => {
       const entry = await evaluator.request(actor('rep'), opportunity.id);
       expect(entry).toMatchObject({ status: 'running' });
       await evaluator.idle();
-      // The skill, the deal, its people and what came of its tasks.
-      // The company's particulars are empty: it is looked up
-      // first, then the follow-up reads that research.
-      expect(prompts[0]).toContain("First look up this opportunity's company");
-      expect(prompts.at(-1)).toContain('Web research on the company');
-      expect(prompts.at(-1)).toContain('技能正文');
+      // The skill, the deal, its people and what came of its tasks, in one
+      // turn: there is no web research.
+      expect(prompts).toHaveLength(1);
+      expect(prompts.at(-1)).toContain('there is no web research');
+      expect(prompts.at(-1)).toContain('# Opportunity follow-up');
       expect(prompts.at(-1)).toContain('跟进报工系统');
       expect(prompts.at(-1)).toContain('决策');
       expect(prompts.at(-1)).toContain('客户在社区版上试了两个场景');
@@ -5037,85 +4348,12 @@ describe('CRM opportunity follow-up', () => {
       enrich: [{ field: 'website', value: 'https://a.test' }],
     });
   });
-  it('looks the company up only when it holds nothing, was renamed since, or long ago', async () => {
-    const { company } = await deal('调研时机');
-    // Nothing about the company yet.
-    expect(await companyResearchDue(service, company, 'none')).toBe(true);
-    const filled = await service.save(
-      actor('rep'),
-      'companies',
-      { industry: 'manufacturing', employees: '51-200' },
-      company.id,
-    );
-    // Filled by hand, its name and website untouched, never looked up: no
-    // search. (A website filled or changed by hand would search.)
-    expect(await companyResearchDue(service, filled, 'none')).toBe(false);
-    // A follow-up that looked it up, then a person renaming the company.
-    const opportunity = await service.save(actor('rep'), 'opportunities', {
-      name: '调研时机二',
-      companyId: company.id,
-      stage: 'qualification',
-    });
-    await service.database
-      .query()
-      .insertInto('crmHistory')
-      .values({
-        id: 'research-entry',
-        entity: 'opportunities',
-        recordId: opportunity.id,
-        actorId: 'rep',
-        action: 'ai',
-        changes: '{}',
-        source: 'ai',
-        aiStatus: 'dismissed',
-        ai: JSON.stringify({
-          kind: 'evaluation',
-          researchedAt: new Date(Date.now() - 86_400_000).toISOString(),
-        }),
-        createdAt: new Date(Date.now() - 86_400_000).toISOString(),
-      })
-      .execute();
-    expect(await companyResearchDue(service, filled, 'none')).toBe(false);
-    const renamed = await service.save(
-      actor('rep'),
-      'companies',
-      { name: '调研时机 新名称' },
-      company.id,
-    );
-    expect(await companyResearchDue(service, renamed, 'none')).toBe(true);
-    // The same change written from a card's findings is no reason to look
-    // again.
-    const { company: found } = await deal('调研时机三');
-    await service.save(
-      { ...actor('rep'), via: 'assistant' },
-      'companies',
-      { website: 'https://found.test', industry: 'manufacturing' },
-      found.id,
-    );
-    expect(
-      await companyResearchDue(
-        service,
-        await service.get(actor('rep'), 'companies', found.id),
-        'none',
-      ),
-    ).toBe(false);
-    // Looked up more than 90 days before.
-    expect(
-      await companyResearchDue(
-        service,
-        renamed,
-        'none',
-        new Date(Date.now() + 120 * 86_400_000),
-      ),
-    ).toBe(true);
-  });
-
-  it('offers what the web says about the company and writes the picked findings with the accept', async () => {
+  it("offers no company findings: the company's particulars come from the web, which is not searched", async () => {
     const enabled = vi
       .spyOn(service, 'assistantEnabled')
       .mockResolvedValue(true);
     try {
-      const { company, opportunity } = await deal('联网补全');
+      const { opportunity } = await deal('联网补全');
       const { evaluator } = following({
         ...advance,
         updates: [],
@@ -5125,9 +4363,6 @@ describe('CRM opportunity follow-up', () => {
             value: 'https://lianwang.test',
             source: 'https://lianwang.test/about',
           },
-          { field: 'employees', value: '51-200', source: null },
-          // Not an option: dropped.
-          { field: 'industry', value: '光学', source: null },
         ],
       });
       await evaluator.request(actor('rep'), opportunity.id);
@@ -5137,27 +4372,8 @@ describe('CRM opportunity follow-up', () => {
         actor('rep'),
         opportunity.id,
       );
-      expect(pending?.ai.researchedAt).toBeTruthy();
-      expect(pending?.ai.result?.enrich).toEqual([
-        {
-          field: 'website',
-          value: 'https://lianwang.test',
-          source: 'https://lianwang.test/about',
-          current: null,
-        },
-        { field: 'employees', value: '51-200', source: null, current: null },
-      ]);
-      const accepted = await evaluator.decide(
-        actor('rep'),
-        opportunity.id,
-        pending!.id,
-        'accept',
-        ['website'],
-      );
-      expect(accepted.ai.enrichedFields).toEqual(['website']);
-      expect(
-        await service.get(actor('rep'), 'companies', company.id),
-      ).toMatchObject({ website: 'https://lianwang.test', employees: null });
+      expect(pending?.ai.researchedAt).toBeUndefined();
+      expect(pending?.ai.result?.enrich).toEqual([]);
     } finally {
       enabled.mockRestore();
     }
@@ -5864,7 +5080,6 @@ describe('CRM opportunity follow-up', () => {
       .spyOn(service, 'assistantEnabled')
       .mockResolvedValue(true);
     try {
-      const prompts: string[] = [];
       const review = {
         recommendation: 'conditional',
         summary: '值得争取，但 8 折太宽。',
@@ -5878,38 +5093,7 @@ describe('CRM opportunity follow-up', () => {
         comment: '同意 85 折，请按此和客户谈。',
       };
       const container = new ServiceContainer();
-      container.instance(aiConversationsManagerToken, {
-        create: async () => ({ sessionId: 'review-session' }),
-      } as unknown as ReturnType<
-        typeof container.resolve<typeof aiConversationsManagerToken>
-      >);
-      container.instance(aiManagerToken, {
-        skillsManager: {
-          getSkills: async (name: string) =>
-            name === 'approval-review'
-              ? { content: '# 审批辅助\n\n技能正文。' }
-              : undefined,
-        },
-      } as unknown as ReturnType<
-        typeof container.resolve<typeof aiManagerToken>
-      >);
-      container.instance(agentServiceFactoryToken, {
-        createAIEmployee: async () => ({
-          invoke: async (input: {
-            userMessages: { content: { content: string } }[];
-          }) => {
-            prompts.push(input.userMessages[0].content.content);
-            return { structuredResponse: review };
-          },
-        }),
-      } as unknown as ReturnType<
-        typeof container.resolve<typeof agentServiceFactoryToken>
-      >);
-      container.instance(loggingToken, {
-        getLogger: () => ({ warn: () => undefined }),
-      } as unknown as ReturnType<
-        typeof container.resolve<typeof loggingToken>
-      >);
+      const { prompts } = fakeModel(container, review);
       const reviewer = new ApprovalReviewer(service, container);
       const { opportunity } = await deal('审批辅助评审');
       const submit = async (name: string) => {
@@ -5932,7 +5116,7 @@ describe('CRM opportunity follow-up', () => {
           result: { recommendation: 'conditional', conditions: '最多 85 折' },
         },
       });
-      expect(prompts.at(-1)).toContain('技能正文');
+      expect(prompts.at(-1)).toContain('# Approval review');
       expect(prompts.at(-1)).toContain('一期 8 折');
       // The approver's alone: the applicant reads no review, neither as the
       // latest nor in the approval's history, and may not ask for one.
@@ -8167,42 +7351,6 @@ describe('comments in the activity feed', () => {
       }),
     );
   });
-  it('lets the AI propose a comment, screened like the others and recorded as its proposal', async () => {
-    const lead = await service.save(actor('rep'), 'leads', {
-      name: 'AI noted',
-      source: 'website',
-    });
-    const id = toText(lead.id);
-    const input = { entity: 'leads', id, title: 'Comment', text: 'Runs SAP' };
-    // Anyone who may read the lead may comment on it; nobody else, and not
-    // with an empty comment.
-    expect(
-      await screenProposal(service, actor('other'), 'add_comment', input),
-    ).toEqual({ ok: true });
-    expect(
-      (await screenProposal(service, actor('outsider'), 'add_comment', input))
-        .ok,
-    ).toBe(false);
-    expect(
-      await screenProposal(service, actor('rep'), 'add_comment', {
-        ...input,
-        text: ' ',
-      }),
-    ).toMatchObject({ ok: false, code: 'invalidInput', field: 'text' });
-    const tool = crmWriteTools(service, authorization).find(
-      (candidate) => candidate.definition.name === 'add_comment',
-    );
-    const result = (await tool!.invoke(
-      { actor: { id: 'other', roles: [], isRoot: false } },
-      input,
-      { toolCallId: 'call', writer: () => undefined },
-    )) as Record<string, unknown>;
-    expect(object(result.values).text).toBe('Runs SAP');
-    const [comment] = (
-      await service.historyOf(actor('rep'), 'leads', id)
-    ).data.filter((entry) => entry.action === 'comment');
-    expect(comment).toMatchObject({ actorId: 'other', source: 'assistant' });
-  });
 });
 
 describe('duplicate leads and their merge', () => {
@@ -8552,62 +7700,38 @@ describe('CRM opportunity capture', () => {
         stage: 'proposal',
         source: 'website',
       });
-      const prompts: string[] = [];
       const container = new ServiceContainer();
-      container.instance(aiConversationsManagerToken, {
-        create: async () => ({ sessionId: 'deal-capture' }),
-      } as unknown as ReturnType<
-        typeof container.resolve<typeof aiConversationsManagerToken>
-      >);
-      container.instance(agentServiceFactoryToken, {
-        createAIEmployee: async () => ({
-          invoke: async (input: {
-            userMessages: { content: { content: string } }[];
-          }) => {
-            prompts.push(input.userMessages[0].content.content);
-            return {
-              structuredResponse: {
-                deal: {
-                  name: '仓库系统（专业版）',
-                  company: '商机整理精工',
-                  businessType: 'expansion',
-                  amount: '300000',
-                  currency: 'CNY',
-                  expectedCloseAt: '2026-11-30',
-                  stage: 'qualification',
-                  source: null,
-                  description: '想把仓库搬上来',
-                  people: [
-                    {
-                      name: '陈整理',
-                      jobTitle: null,
-                      phone: '138 0111 9999',
-                      email: null,
-                      role: 'champion',
-                    },
-                    {
-                      name: '孙新人',
-                      jobTitle: 'IT 负责人',
-                      phone: '139 2222 3456',
-                      email: null,
-                      role: 'evaluator',
-                    },
-                  ],
-                  uncertain: ['expectedCloseAt'],
-                },
-                reply: null,
-              },
-            };
-          },
-        }),
-      } as unknown as ReturnType<
-        typeof container.resolve<typeof agentServiceFactoryToken>
-      >);
-      container.instance(loggingToken, {
-        getLogger: () => ({ warn: () => undefined }),
-      } as unknown as ReturnType<
-        typeof container.resolve<typeof loggingToken>
-      >);
+      const { prompts } = fakeModel(container, {
+        deal: {
+          name: '仓库系统（专业版）',
+          company: '商机整理精工',
+          businessType: 'expansion',
+          amount: '300000',
+          currency: 'CNY',
+          expectedCloseAt: '2026-11-30',
+          stage: 'qualification',
+          source: null,
+          description: '想把仓库搬上来',
+          people: [
+            {
+              name: '陈整理',
+              jobTitle: null,
+              phone: '138 0111 9999',
+              email: null,
+              role: 'champion',
+            },
+            {
+              name: '孙新人',
+              jobTitle: 'IT 负责人',
+              phone: '139 2222 3456',
+              email: null,
+              role: 'evaluator',
+            },
+          ],
+          uncertain: ['expectedCloseAt'],
+        },
+        reply: null,
+      });
       const { deal } = await captureOpportunity(
         service,
         container,
@@ -9694,7 +8818,7 @@ describe('agents and plans', () => {
       gate.allowed({
         kind: 'run',
         userId,
-        displayName: 'Noco',
+        displayName: 'AI',
         agent: { actions } as never,
       });
     expect([...(await run(['crm.leads/view', 'crm.sales/approve']))]).toEqual([
@@ -9768,7 +8892,7 @@ describe('agents and plans', () => {
     const plan = (await proposed.json()).data as PlanOutcome['plan'];
     expect(plan).toMatchObject({
       status: 'pending',
-      agentName: 'Noco',
+      agentName: 'AI',
       runId: 'run-1',
       conversationId: 'conversation-1',
       proposerUserId: 'rep',
@@ -9818,7 +8942,7 @@ describe('agents and plans', () => {
     expect(JSON.parse(toText(created?.origin))).toMatchObject({
       kind: 'plan',
       planId: plan.id,
-      agentName: 'Noco',
+      agentName: 'AI',
       runId: 'run-1',
     });
     expect(planOutcomes.at(-1)).toMatchObject({
@@ -9896,7 +9020,6 @@ describe('task preparation', () => {
       .spyOn(service, 'assistantEnabled')
       .mockResolvedValue(true);
     try {
-      const prompts: string[] = [];
       const preparation = {
         summary: 'Agree the date of the pilot.',
         brief: 'They asked for a quote last week and liked it.',
@@ -9908,46 +9031,7 @@ describe('task preparation', () => {
         agenda: ['Recap the quote', 'Agree the pilot date'],
       };
       const container = new ServiceContainer();
-      container.instance(aiConversationsManagerToken, {
-        create: async () => ({ sessionId: 'prep-session' }),
-      } as unknown as ReturnType<
-        typeof container.resolve<typeof aiConversationsManagerToken>
-      >);
-      container.instance(aiManagerToken, {
-        skillsManager: {
-          getSkills: async (name: string) =>
-            name === 'task-preparation'
-              ? { content: '# Task preparation\n\nThe skill.' }
-              : undefined,
-        },
-      } as unknown as ReturnType<
-        typeof container.resolve<typeof aiManagerToken>
-      >);
-      // Whom each run reads as.
-      const runAs: string[] = [];
-      container.instance(agentServiceFactoryToken, {
-        createAIEmployee: async (options: { actor: { id: string } }) => ({
-          invoke: async (input: {
-            userMessages: { content: { content: string } }[];
-          }) => {
-            runAs.push(options.actor.id);
-            const content = input.userMessages[0].content.content;
-            prompts.push(content);
-            // The web research turn answers in text; the preparation in
-            // its structure.
-            return content.startsWith('First look')
-              ? { message: { content: 'News: a new plant.' } }
-              : { structuredResponse: preparation };
-          },
-        }),
-      } as unknown as ReturnType<
-        typeof container.resolve<typeof agentServiceFactoryToken>
-      >);
-      container.instance(loggingToken, {
-        getLogger: () => ({ warn: () => undefined }),
-      } as unknown as ReturnType<
-        typeof container.resolve<typeof loggingToken>
-      >);
+      const { prompts } = fakeModel(container, preparation);
       const preparer = new TaskPreparer(service, container);
       const company = await service.save(actor('rep'), 'companies', {
         name: 'Prep Works',
@@ -9971,11 +9055,12 @@ describe('task preparation', () => {
         status: 'pending',
         ai: { result: { summary: 'Agree the date of the pilot.' } },
       });
-      // It searched the company, then prepared from the skill and the task.
-      expect(prompts.some((p) => p.includes('"Prep Works"'))).toBe(true);
-      expect(prompts.at(-1)).toContain('The skill.');
-      expect(prompts.at(-1)).toContain('Pilot call');
-      expect(prompts.at(-1)).toContain('News: a new plant.');
+      // Prepared in one turn from the skill and the task; no web research,
+      // so no news of the company.
+      expect(prompts).toHaveLength(1);
+      expect(prompts[0]).toContain('# Task preparation');
+      expect(prompts[0]).toContain('Pilot call');
+      expect(latest?.ai.result?.company).toBeNull();
       // The owner's alone: no one else reads it, as the latest or in the
       // task's history.
       expect(
@@ -9998,13 +9083,9 @@ describe('task preparation', () => {
         await latestPreparation(service, actor('manager'), task.id),
       ).not.toBeNull();
       expect(await told('manager')).toBe(true);
-      // Asked by a participant, it still runs as the owner, as a lead's
-      // follow-up does.
-      runAs.length = 0;
+      // A participant may ask for it again.
       const asked = await preparer.request(actor('manager'), task.id);
       await preparer.idle();
-      expect(runAs.length).toBeGreaterThan(0);
-      expect(new Set(runAs)).toEqual(new Set(['rep']));
       const redone = await latestPreparation(service, actor('rep'), task.id);
       expect(redone!.id).toBe(asked!.id);
       // Written in: the points under To prepare, the questions under To
@@ -10091,7 +9172,7 @@ describe('task preparation', () => {
   });
 });
 
-describe("Noco's conversations on the Agents plugin", () => {
+describe("The assistant's conversations on the Agents plugin", () => {
   // What the CRM registers on the plugin's context kinds, by kind.
   const resolvers = (): Map<
     string,
@@ -10217,7 +9298,50 @@ describe("Noco's conversations on the Agents plugin", () => {
     ).toBe(true);
   });
 
-  it('creates Noco once, with the enabled chat models, as the default chat agent only when none is set', async () => {
+  it('works from the guidance an administrator wrote, and from the shipped one once it is cleared', async () => {
+    try {
+      const saved = await service.saveSettings(actor('admin'), {
+        businessGuidance: '# Our rules\n- Quote list prices only',
+      });
+      expect(saved.businessGuidance).toBe(
+        '# Our rules\n- Quote list prices only',
+      );
+      expect(settingsGuidance(saved)).toBe(
+        '# Our rules\n- Quote list prices only',
+      );
+      const lines = await crmConversationRules(() => saved)(
+        {} as never,
+        {} as never,
+      );
+      expect(lines.sections).toEqual([
+        ['# Our rules', '- Quote list prices only'],
+      ]);
+      // Only an administrator writes it, within a long text's length.
+      await expect(
+        service.saveSettings(actor('rep'), { businessGuidance: 'x' }),
+      ).rejects.toBeInstanceOf(Error);
+      await expect(
+        service.saveSettings(actor('admin'), {
+          businessGuidance: 'x'.repeat(30_001),
+        }),
+      ).rejects.toMatchObject({
+        code: 'invalidInput',
+        field: 'businessGuidance',
+      });
+      // Blank is the shipped guidance again.
+      const cleared = await service.saveSettings(actor('admin'), {
+        businessGuidance: '  ',
+      });
+      expect(cleared.businessGuidance).toBe('');
+      // (in the AI language these tests run with)
+      expect(settingsGuidance(cleared)).toContain('NocoBase');
+      expect(settingsGuidance(cleared)).not.toContain('# Our rules');
+    } finally {
+      await service.saveSettings(actor('admin'), { businessGuidance: '' });
+    }
+  });
+
+  it('creates the assistant once, with the enabled chat models, as the default chat agent only when none is set', async () => {
     const created: Record<string, unknown>[] = [];
     let settings = { defaultAgentId: null as string | null };
     const fakeAgents = {
@@ -10260,12 +9384,12 @@ describe("Noco's conversations on the Agents plugin", () => {
       .deleteFrom('crmSettings')
       .where('id', '=', 'agents-noco-v1')
       .execute();
-    await provisionNoco(fakeAgents, database, ['crm.leads/view']);
-    await provisionNoco(fakeAgents, database, ['crm.leads/view']);
+    await provisionAssistant(fakeAgents, database, ['crm.leads/view']);
+    await provisionAssistant(fakeAgents, database, ['crm.leads/view']);
     // Once, whatever happens to it afterwards.
     expect(created).toHaveLength(1);
     expect(created[0]).toMatchObject({
-      name: 'Noco',
+      name: 'Sales Expert',
       type: 'online',
       access: 'everyone',
       actions: ['crm.leads/view'],
@@ -10283,6 +9407,47 @@ describe("Noco's conversations on the Agents plugin", () => {
       version: 1,
       agentId: 'agent-1',
     });
+  });
+
+  it('puts the method skills into the library once, attached to the assistant, keeping one a person added', async () => {
+    const created: string[] = [];
+    let attached: string[] = ['their-own'];
+    const fakeAgents = {
+      skills: {
+        // A person added a lead follow-up skill of their own already.
+        list: () => Promise.resolve([{ id: 'mine', slug: 'lead-follow-up' }]),
+        create: (_by: null, input: { content: string }) => {
+          created.push(/^name:\s*(\S+)$/mu.exec(input.content)?.[1] ?? '');
+          return Promise.resolve({ id: `skill-${String(created.length)}` });
+        },
+        attached: () => Promise.resolve(attached),
+        attach: (target: { scope: string; scopeId: string }, ids: string[]) => {
+          expect(target).toEqual({ scope: 'agent', scopeId: 'agent-1' });
+          attached = ids;
+          return Promise.resolve(ids);
+        },
+      },
+    } as never;
+    await database
+      .query()
+      .deleteFrom('crmSettings')
+      .where('id', '=', 'agents-skills-v1')
+      .execute();
+    const dir = resolve(process.cwd(), 'ai/skills');
+    await provisionSkills(fakeAgents, database, dir);
+    await provisionSkills(fakeAgents, database, dir);
+    expect(created).toEqual([
+      'opportunity-follow-up',
+      'approval-review',
+      'task-preparation',
+    ]);
+    expect(attached).toEqual([
+      'their-own',
+      'mine',
+      'skill-1',
+      'skill-2',
+      'skill-3',
+    ]);
   });
 });
 

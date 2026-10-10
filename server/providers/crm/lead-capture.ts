@@ -1,14 +1,9 @@
-import {
-  AgentServiceError,
-  agentServiceFactoryToken,
-  aiConversationsManagerToken,
-} from '@nocobase/app-plugin-ai-employee/server';
 import { loggingToken } from '@nocobase/app-server/logging';
 import type { Row } from '@nocobase/db';
 import type { ServiceResolver } from '@nocobase/service-provider';
 import { z } from 'zod';
-import { CRM_ASSISTANT } from '../../ai/employees/crm-assistant.js';
-import { structuredRunModel } from './ai-model.js';
+import { jsonIn, modelFailure, openSession } from './ai-model.js';
+import { settingsGuidance } from './guidance.js';
 import { normalizePhone } from './phone.js';
 import { findDuplicates, type FoundDuplicate } from './lead-merge.js';
 import { capability, conditions, type Actor } from './authorization.js';
@@ -28,11 +23,7 @@ import {
   toText,
 } from './schema.js';
 import type { CrmService } from './service.js';
-import { lang } from '../../locales/crm-ai/index.js';
-import {
-  captureFormLabels,
-  captureTitles,
-} from '../../locales/crm-ai/lead-capture.js';
+import { captureFormLabels } from '../../locales/crm-ai/lead-capture.js';
 
 // "New lead" with the AI: a salesperson pastes what they have (an email, a
 // chat, notes from a trade fair) and the CRM assistant turns it into one
@@ -44,10 +35,8 @@ import {
 // salesperson may then tell the AI what to change: the same call with an
 // instruction and the leads as they stand returns them revised.
 //
-// The run is the assistant employee's, as the signed-in user, in a
-// conversation marked as a sub-agent's so it stays out of the user's chat
-// list while the AI conversation centre still shows it. It is given no tools:
-// nothing it could call would ask anyone anything.
+// The run is one call to the CRM's model (ai-model.ts), for the signed-in
+// user, with no tools and no conversation kept.
 
 // The fields the AI may fill, and the select options it must choose from.
 // The owner is offered only to a user who may assign, from the CRM's
@@ -304,29 +293,8 @@ async function duplicatesOf(
   return findDuplicates(service, actor, input);
 }
 
-// The leads a reply wrote as text. DeepSeek at times answers with the JSON in
-// its message (often in a ```json fence) instead of the structured response
-// it was asked for; the content is the same, so it is read from there.
-export function jsonIn(content: unknown): unknown {
-  const text =
-    typeof content === 'string'
-      ? content
-      : toText((content as { content?: unknown } | null)?.content ?? '');
-  const fenced = /```(?:json)?\s*([\s\S]*?)```/u.exec(text)?.[1];
-  const candidates = [
-    fenced,
-    text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1),
-  ];
-  for (const candidate of candidates) {
-    if (!candidate?.trim()) continue;
-    try {
-      return JSON.parse(candidate) as unknown;
-    } catch {
-      // Not JSON; try the next reading.
-    }
-  }
-  return undefined;
-}
+// Read from a reply's text (ai-model.ts).
+export { jsonIn };
 
 export async function captureLeads(
   service: CrmService,
@@ -349,10 +317,9 @@ export async function captureLeads(
   if (instruction && !current.length)
     throw new CrmError('required', 400, 'leads');
   const adjusting = Boolean(instruction);
-  // The CRM's AI language: the conversation's title and the adjust prompt's
-  // reply follow it.
-  const language = (await service.settings()).aiLanguage;
-  const zh = language === 'zh-CN';
+  // The CRM's AI language: the adjust prompt's reply follows it.
+  const settings = await service.settings();
+  const language = settings.aiLanguage;
   // Whom the AI may make the owner: the active salespeople, for a user who
   // may assign leads at all.
   const owners = (await capability(actor, 'assign'))
@@ -367,97 +334,31 @@ export async function captureLeads(
         .map((u) => ({ id: toText(u.id), name: toText(u.name) }))
     : [];
   const resultShape = shapes(owners.map((o) => o.id));
-  if (
-    !container.has(agentServiceFactoryToken) ||
-    !(await service.assistantEnabled())
-  )
+  if (!(await service.assistantEnabled()))
     throw new CrmError('assistantUnavailable', 409);
-
-  // Every tool off, so the run never pauses for a decision nobody is there
-  // to make; the conversation keeps the same settings for any later resume.
-  const skillSettings = {
-    toolsVersion: 1,
-    tools: [],
-    skillsVersion: 1,
-    skills: [],
-  };
-  const conversation = await container
-    .resolve(aiConversationsManagerToken)
-    .create({
-      userId: actor.id,
-      aiEmployee: { username: CRM_ASSISTANT },
-      title: captureTitles[adjusting ? 'adjust' : 'organise'][lang(zh)],
-      from: 'sub-agent',
-      options: { skillSettings },
-    });
+  const session = await openSession(container, {
+    timeZone,
+    guidance: settingsGuidance(settings),
+  });
+  if (!session) throw new CrmError('assistantUnavailable', 409);
   const logger = container.resolve(loggingToken).getLogger('crm-lead-capture');
-  const model = await structuredRunModel(container);
-  let result;
+  let answer: z.infer<typeof resultShape> | null;
   try {
-    const agent = await container
-      .resolve(agentServiceFactoryToken)
-      .createAIEmployee({
-        username: CRM_ASSISTANT,
-        state: {
-          sessionId: conversation.sessionId,
-          timezone: timeZone,
-          ...(model ? { model } : {}),
-        },
-        actor: {
-          id: actor.id,
-          roles: ['member'],
-          isRoot: false,
-          locale: actor.locale,
-        },
-        runtime: { logger },
-        from: 'sub-agent',
-        skillSettings,
-      });
-    result = await agent.invoke({
-      userMessages: [
-        {
-          role: 'user',
-          content: {
-            type: 'text',
-            content: adjusting
-              ? adjustPrompt(pasted, current, instruction, owners, language)
-              : prompt(pasted, owners),
-          },
-        },
-      ],
-      responseFormat: resultShape,
-      signal: AbortSignal.timeout(120_000),
-    });
-  } catch (error) {
-    if (error instanceof AgentServiceError)
-      throw new CrmError(
-        error.code === 'CONFIGURATION_ERROR'
-          ? 'assistantUnavailable'
-          : 'captureFailed',
-        error.code === 'CONFIGURATION_ERROR' ? 409 : 502,
-        undefined,
-        error.rootMessage,
-      );
-    throw error;
-  }
-  const parsed = resultShape.safeParse(
-    result.structuredResponse ?? jsonIn(result.message?.content),
-  );
-  if (!parsed.success) {
-    logger.warn(
-      {
-        sessionId: conversation.sessionId,
-        issues: parsed.error.issues.slice(0, 5),
-        structured: JSON.stringify(result.structuredResponse ?? null).slice(
-          0,
-          2000,
-        ),
-        content: JSON.stringify(result.message?.content ?? null).slice(0, 2000),
-      },
-      'lead capture returned no usable leads',
+    answer = await session.askJson(
+      adjusting
+        ? adjustPrompt(pasted, current, instruction, owners, language)
+        : prompt(pasted, owners),
+      resultShape,
+      AbortSignal.timeout(120_000),
     );
+  } catch (error) {
+    throw modelFailure(error, 'captureFailed');
+  }
+  if (!answer) {
+    logger.warn('lead capture returned no usable leads');
     throw new CrmError('captureFailed', 502);
   }
+  const parsed = { data: answer };
 
   const ownerIds = new Set(owners.map((o) => o.id));
   const refs = new Set(current.map((lead) => toText(lead.ref)));

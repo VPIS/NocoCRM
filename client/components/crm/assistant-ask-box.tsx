@@ -19,10 +19,10 @@ import { useAgentReadiness } from './agent-chat/ask.js';
 // The overview's ask box: the first thing on the page, in its flow rather
 // than floating like the dock (which the overview does not show), with the
 // overview's suggested questions always laid out under it, always expanded
-// (assistant-ask-composer.tsx). Sending starts a conversation with Noco that
+// (assistant-ask-composer.tsx). Sending starts a conversation with the assistant that
 // sends the question with its files on the model picked, and opens the
 // panel on it. While the agents are still loading it is drawn disabled, so
-// nothing below it moves once Noco is ready; while Noco cannot answer the
+// nothing below it moves once the assistant is ready; while the assistant cannot answer the
 // reason is its placeholder and tooltip.
 export function AssistantAskBox(): ReactElement | null {
   const { text } = useCrmText();

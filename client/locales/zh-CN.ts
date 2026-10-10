@@ -72,8 +72,8 @@ const zhCN: AppResource = {
   // description of each SKILL.md, keyed by that English text as the AI
   // Employee plugin requires; the Chinese is SKILL-zh.md's.
   'Lead follow-up': '跟进线索',
-  'Review everything a lead has now (the lead itself, its tasks, comments, related records in the CRM and public information) and recommend the next step — keep following up, nurture, convert or invalid — with the reasons; when following up, say clearly how to follow up and what exactly to do. Use when a new lead comes in, when the user asks to follow up a lead or follow it up again, or asks "what should I do next with this lead".':
-    '综合查看一条线索现在的全部信息（线索本身、任务、备注、CRM 里的相关记录和公开信息），给出下一步建议：继续跟进、放入培育、转化还是无效，以及理由；继续跟进时写清楚怎么跟、具体做什么。新线索进来、用户要求跟进或重新跟进、或问"这条线索下一步怎么做"时使用。',
+  'Review everything a lead has now (the lead itself, its tasks, comments and related records in the CRM) and recommend the next step — keep following up, nurture, convert or invalid — with the reasons; when following up, say clearly how to follow up and what exactly to do. Use when a new lead comes in, when the user asks to follow up a lead or follow it up again, or asks "what should I do next with this lead".':
+    '综合查看一条线索现在的全部信息（线索本身、任务、备注和 CRM 里的相关记录），给出下一步建议：继续跟进、放入培育、转化还是无效，以及理由；继续跟进时写清楚怎么跟、具体做什么。新线索进来、用户要求跟进或重新跟进、或问"这条线索下一步怎么做"时使用。',
   'Opportunity follow-up': '跟进商机',
   'Reviews everything about an opportunity as it now stands (the opportunity itself, the company, contacts and their roles, tasks, comments, approvals, the source lead) and judges whether its stage holds up and what to do next — advance to the next stage, keep at it in the current stage, pause, or mark it lost — with the reasons, risks and gaps to fill; when advancing, spells out exactly what to do. Use when a lead\'s conversion opens a new opportunity, when the outcome of an opportunity\'s task has been recorded, when the user asks for a follow-up, or when asked "what is the next step for this opportunity?".':
     '综合查看一个商机现在的全部信息（商机本身、公司、联系人和角色、任务、备注、审批、来源线索），判断它的阶段站不站得住、下一步做什么：推进到下一阶段、留在本阶段继续推进、暂停还是输单，以及理由、风险和要补的缺口；推进时写清楚具体做什么。线索转化出新商机、记录了商机任务的结果、用户要求跟进，或问"这个商机下一步怎么做"时使用。',
@@ -81,34 +81,8 @@ const zhCN: AppResource = {
   'Helps an approver judge whether an approval request (discount, payment terms, contract terms, delivery commitment) is worth approving — how far the asked terms are from the standard, the effect on the amount and on collection, the opportunity\'s situation and the evidence supporting this concession, the other approvals submitted with it on the same opportunity, how earlier requests of the same kind were decided, the risks and what the applicant left unclear — then recommends approve, approve on conditions, reject or ask for more information, and drafts the decision comment. Use it after an approval is submitted, or when the approver asks "should this approval be approved?".':
     '帮审批人看一个审批申请（折扣、账期、合同条款、交付承诺）值不值得批：申请的条件和标准差多少、对金额和回款的影响、商机的情况和支撑这次让步的证据、同一商机一起提交的其他审批、以往同类审批是怎么批的、风险和申请人没说清的地方，最后给出批准、有条件批准、驳回或需要补充信息的建议，并写好审批意见。审批提交后、审批人问"这个审批该不该批"时使用。',
   'Task preparation': '任务准备',
-  "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, recent news about the customer's company from the web, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
-    '为销售即将和客户进行的任务（电话、会议、拜访、演示）做准备：任务要达成什么、从记录的任务、评论和邮件看事情进展到哪一步、对方都有谁以及各自的角色、联网查到的客户公司近况、要问的问题、要带的材料、风险，以及按顺序要讲的要点。在任务当天早上，或任务负责人要求准备时使用。',
-  // Display text of the CRM's AI tools (server/ai/tools), keyed by their
-  // English source text as the AI Employee plugin requires.
-  'Search CRM records': '搜索 CRM 记录',
-  'Finds leads, companies, contacts, opportunities, tasks and approvals the current user may read, a page at a time.':
-    '按页查找当前用户可读的线索、公司、联系人、商机、任务和审批。',
-  'Read a CRM record': '读取一条 CRM 记录',
-  'Reads one record in full, with its change history, related records and what the current user may do to it.':
-    '完整读取一条记录，包括变更历史、关联记录和当前用户可执行的操作。',
-  'Create a CRM record': '创建 CRM 记录',
-  'Creates a lead, company, contact, opportunity, task or approval once the user confirms the values.':
-    '在用户确认字段值后创建线索、公司、联系人、商机、任务或审批。',
-  'Update a CRM record': '修改 CRM 记录',
-  'Changes the fields of an existing record once the user confirms the new values.':
-    '在用户确认新值后修改已有记录的字段。',
-  'Delete a CRM record': '删除 CRM 记录',
-  'Deletes one record once the user confirms; it cannot be undone.':
-    '在用户确认后删除一条记录，无法撤销。',
-  'Convert a lead': '转化线索',
-  'Turns a lead into a company and a contact, optionally with an opportunity, once the user confirms.':
-    '在用户确认后把线索转化为公司和联系人，可同时创建商机。',
-  'Decide on an approval': '处理审批',
-  'Submits, withdraws, approves or rejects an approval request once the user confirms.':
-    '在用户确认后提交、撤回、通过或拒绝一条审批申请。',
-  'List CRM users': '列出 CRM 用户',
-  'Lists the users who hold a CRM role, with their ids, so a record can be given an owner or an approver by name.':
-    '列出拥有 CRM 角色的用户及其 ID，以便按姓名指定负责人或审批人。',
+  "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
+    '为销售即将和客户进行的任务（电话、会议、拜访、演示）做准备：任务要达成什么、从记录的任务、评论和邮件看事情进展到哪一步、对方都有谁以及各自的角色、要问的问题、要带的材料、风险，以及按顺序要讲的要点。在任务当天早上，或任务负责人要求准备时使用。',
   'navigation.brandHome': 'NocoCRM 首页',
   'navigation.brandApps': 'NocoBase 应用',
   'routeOverlay.close': '关闭',

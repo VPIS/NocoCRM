@@ -139,7 +139,7 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
               {text(`agents.${agent}.description`)}
             </p>
             <p className='text-muted-foreground'>
-              {text(agent === 'tasks' ? 'agents.byNocoTasks' : 'agents.byNoco')}
+              {text(agent === 'tasks' ? 'agents.byAiTasks' : 'agents.byAi')}
             </p>
             <p className='text-xs text-muted-foreground'>
               {text(`agents.${agent}.skill`)}

@@ -1,10 +1,10 @@
 import type { ConversationRules } from '@nocobase/app-plugin-agents/server/tokens';
-import { crmGuidance } from '../../ai/employees/crm-guidance.js';
+import { settingsGuidance } from '../crm/guidance.js';
 import type { CrmSettings } from '../crm/schema.js';
 
 // What every conversation with an agent on the CRM holds, whatever the
 // agent's own instructions say (an administrator may change those): the
-// deployment's business guidance (server/ai/employees/crm-guidance.ts, in
+// deployment's business guidance (server/providers/crm/guidance.ts, in
 // the CRM's AI language, with the reminders' days from the settings) and the
 // CRM's rules for how work is recorded. The plugin calls this inside the
 // claim's transaction, so it reads nothing: the settings are the ones the
@@ -14,16 +14,7 @@ export function crmConversationRules(
 ): ConversationRules {
   return () => {
     const current = settings();
-    const guidance = crmGuidance(
-      current
-        ? {
-            uncontacted: current.uncontactedDays,
-            stale: current.leadStaleDays,
-            closing: current.closeReminderDays,
-          }
-        : undefined,
-      current?.aiLanguage,
-    );
+    const guidance = settingsGuidance(current);
     return Promise.resolve({
       rules: [
         'Something that took place with a customer (a call, a meeting, a visit) is recorded as a comment on the record it concerns, or as the outcome of the open task that planned it, proposed in a plan like any change.',

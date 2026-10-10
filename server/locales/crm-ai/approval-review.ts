@@ -2,9 +2,7 @@
 // and the approver (server/providers/crm/approval-review.ts): the names of
 // the values it reads, which it reuses in what it writes, picked in the
 // language it writes in.
-import type { Pair, Pairs } from './index.js';
-
-export const reviewTitle: Pair = ['审批辅助', 'Approval review'];
+import type { Pairs } from './index.js';
 
 export const stageNames = {
   contact: ['初步接触', 'Initial contact'],

@@ -5,7 +5,7 @@ import type { ReactElement } from 'react';
 import { useCrmText } from '../api.js';
 import { useAgentReadiness, useDiscuss } from './ask.js';
 
-// An AI card's Discuss: talking it over with Noco in a conversation of its
+// An AI card's Discuss: talking it over with the assistant in a conversation of its
 // own that changes nothing. The record and the card are pinned (the server
 // resolves them for the agent, which reads the card from the record's
 // history); nothing is sent, the question is the person's.
@@ -17,7 +17,7 @@ export function DiscussButton({
   const { text } = useCrmText();
   const discuss = useDiscuss();
   const readiness = useAgentReadiness();
-  // Only while Noco can answer.
+  // Only while the assistant can answer.
   if (readiness.state !== 'ready') return null;
   return (
     <Button

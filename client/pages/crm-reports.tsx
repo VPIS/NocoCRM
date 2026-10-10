@@ -7,8 +7,10 @@ import {
   RevenueReport,
 } from '../components/crm/dashboard-reports.js';
 import { SortableTable } from '../components/crm/sortable-table.js';
-import { ask, focusComposer } from '../components/crm/assistant-ask.js';
-import { useAssistantReadiness } from '../components/crm/assistant-state.js';
+import {
+  useAgentReadiness,
+  useAskAgent,
+} from '../components/crm/agent-chat/ask.js';
 import { useState, type ReactElement, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
@@ -60,7 +62,7 @@ import {
 // keeps what to do today (crm-dashboard.tsx). The figures come from the same
 // dashboard endpoint, for the reader's own records or the team's; the page
 // lists its sections in a row that sticks to the top as it scrolls, and asks
-// the assistant for a written analysis from its header.
+// The assistant for a written analysis from its header.
 
 // Framed as the list pages' cards and the task list are: a faint border, not
 // the Card primitive's ring, and the lightest shadow.
@@ -69,7 +71,8 @@ const FRAME = 'border border-border/60 shadow-xs ring-0';
 export default function ReportsPage(): ReactElement {
   const { text, language } = useCrmText();
   const navigate = useNavigate();
-  const readiness = useAssistantReadiness();
+  const readiness = useAgentReadiness();
+  const askAgent = useAskAgent();
   const assistant = useAssistantAvailable();
   const [scope, setScope] = useState<'mine' | 'team'>('team');
   const query = useCrmQuery<Data>(`dashboard?scope=${scope}`);
@@ -80,11 +83,14 @@ export default function ReportsPage(): ReactElement {
   const maxCount = Math.max(1, ...funnel.map((r) => Number(r.count)));
   const openList = (entity: Entity, metric: string): void =>
     void navigate(`/crm/${toText(entity)}?metric=${metric}`);
-  // The assistant writes the analysis as a report card in a new
-  // conversation; offered while the assistant can take it.
+  // The assistant writes the analysis in a new conversation in its panel; offered
+  // while it can take it.
   const analyze = (): void => {
-    ask(toText(text('prompts.analyzeSales')));
-    focusComposer();
+    if (!readiness.agent) return;
+    void askAgent({
+      text: toText(text('prompts.analyzeSales')),
+      agent: readiness.agent,
+    }).catch(() => undefined);
   };
 
   // A section of the page, by its title's key, which also gives the id the

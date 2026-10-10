@@ -16,7 +16,6 @@ import type { Row } from '@nocobase/db';
 import type { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { z } from 'zod';
-import { screenProposal } from '../ai/screen.js';
 import {
   agentOverview,
   agentSwitches,
@@ -85,8 +84,6 @@ import {
   Place,
   PlaceQuery,
   ScopeQuery,
-  ScreenProposalInput,
-  ScreenResultSchema,
   SearchGroup,
   SearchQuery,
   Subdivision,
@@ -110,7 +107,6 @@ export const WORKSPACE_PATHS = [
   'decisions',
   'notices',
   'aiAgents',
-  'screenProposal',
   'attachments',
   'mailTimeline',
   'colleagues',
@@ -666,35 +662,6 @@ export function registerWorkspaceRoutes(
           c.req.valid('json'),
         ),
       }),
-  );
-
-  // Whether the signed-in user could carry out a write the AI employee
-  // proposed: the confirmation card asks before offering to confirm.
-  router.post(
-    '/screenProposal',
-    describeRoute({
-      tags: ['Ai'],
-      summary: 'Screen an AI write proposal',
-      operationId: 'screenProposal',
-      description:
-        "Checks a proposed write against the tool's own rules as the reader, without writing.",
-      responses: {
-        '200': dataResponse(ScreenResultSchema),
-        ...apiErrorResponses,
-      },
-    }),
-    apiValidator('json', ScreenProposalInput),
-    async (c) => {
-      const body = c.req.valid('json');
-      return c.json({
-        data: await screenProposal(
-          service,
-          c.get('actor'),
-          body.tool,
-          body.input,
-        ),
-      });
-    },
   );
 
   // Attachments: uploading them, their names, and their content.

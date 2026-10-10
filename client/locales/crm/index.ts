@@ -68,7 +68,6 @@ const wording = {
     retry: ['Retry', '重试'],
     unread: ['Unread', '未读'],
     loading: ['Loading…', '正在加载…'],
-    missing: ['This conversation no longer exists', '这段对话已不存在'],
     actions: ['Actions for "{{title}}"', '“{{title}}”的操作'],
     archive: ['Archive', '归档'],
   },
@@ -100,7 +99,7 @@ const wording = {
         '关于此审批，问任何问题…',
       ],
     },
-    open: ['Ask Noco', '问 Noco'],
+    open: ['Ask AI', '问 AI'],
     suggestions: ['Suggested questions', '推荐问题'],
     q: {
       home: {
@@ -197,23 +196,13 @@ const wording = {
       'Search leads, opportunities, companies, contacts, tasks, approvals…',
       '搜索线索、商机、公司、联系人、任务、审批…',
     ],
-    askPlaceholder: [
-      'Describe what you are looking for, or ask a question…',
-      '用一句话描述要找的记录或问题…',
-    ],
-    searchTab: ['Search', '搜索'],
-    askTab: ['Ask AI', '问 AI'],
     hint: [
       'Type a name, company, email, phone or website; words in any order',
       '输入名称、公司、邮箱、电话或网址，几个词顺序不限',
     ],
-    askHint: [
-      'For example: new leads Wang Lei owns; opportunities created this month',
-      '例如：王磊负责的新线索；本月新建的商机',
-    ],
     hintAsk: [
-      'Or switch to Ask AI to describe what you are looking for',
-      '也可以切换到“问 AI”，用一句话描述要找的记录',
+      'Or describe what you are looking for and ask the AI from the last row',
+      '也可以用一句话描述要找的记录，从最后一行交给 AI',
     ],
     searching: ['Searching…', '正在搜索…'],
     noResults: ['No matching records', '没有找到匹配的记录'],
@@ -224,61 +213,9 @@ const wording = {
       '在{{list}}中查看全部 {{count}} 条',
     ],
     askAbout: ['Ask AI: {{text}}', '问 AI：{{text}}'],
-    answerTitle: ['AI answer', 'AI 回答'],
-    closeAnswer: ['Close the answer', '关闭回答'],
-    working: ['Thinking…', '正在思考…'],
-    steps: {
-      search_records: ['Looking up records…', '正在查找记录…'],
-      summarize_records: ['Counting…', '正在统计…'],
-      get_record: ['Reading a record…', '正在读取记录…'],
-      list_users: ['Looking up colleagues…', '正在查找同事…'],
-      frontend: ['Gathering the results…', '正在整理结果…'],
-    },
-    foundTitle: ['{{title}} · {{count}}', '{{title}} · {{count}} 条'],
-    firstOf: ['(the first 200 only)', '（仅显示前 200 条）'],
-    showAll: ['All {{count}}', '查看全部 {{count}} 条'],
-    followUp: ['Ask a follow-up', '继续追问'],
-    followUpDraft: [
-      'About my search "{{question}}": ',
-      '关于我刚才搜索的“{{question}}”：',
-    ],
-    needsDecision: [
-      'Noco proposed a change for you to confirm in the conversation.',
-      'Noco 提出了需要你确认的修改，请在对话中处理。',
-    ],
-    answerFailed: ['Could not answer this.', '没能回答这个问题。'],
-    openConversation: ['Open the conversation', '打开对话'],
     foundChip: ['Found by AI: {{title}}', 'AI 找到的：{{title}}'],
-    context: ['Global search', '全局搜索'],
   },
-  assistantEmployeeName: ['Noco', 'Noco'],
-  // The line under the chat's header naming what a conversation began from.
-  assistantStart: ['Started from', '起点'],
-  assistantConversations: ['All conversations', '所有对话'],
-  assistantHideConversations: ['Hide conversations', '收起对话列表'],
-  assistantNewConversation: ['New conversation', '新对话'],
-  assistantEmployeeRole: ['Sales assistant', '销售助手'],
-  assistantEmployeeBio: [
-    'The CRM sales assistant: it reads the records the signed-in user may see, summarizes them and suggests next steps.',
-    'CRM 销售助手：按你的权限读取记录，做总结并建议下一步。',
-  ],
-  assistantEmployeeGreeting: [
-    'Ask about CRM records, capture data, get next steps or a summary. I read and write the CRM with your account permissions, and every change waits for your confirmation.',
-    '围绕 CRM 的记录进行提问，录入数据、建议下一步、总结报告等。我按你账号权限读写 CRM，每一项修改都需要你确认。',
-  ],
   assistantLoading: ['Loading the AI configuration…', '正在加载 AI 配置…'],
-  assistantConfigError: [
-    'The AI configuration could not be loaded. Check the AI settings and reload the page.',
-    '无法加载 AI 配置。请检查 AI 设置后刷新页面。',
-  ],
-  assistantNoEmployee: [
-    'The CRM assistant is not available. An administrator can enable it under AI settings → AI employees.',
-    'CRM 助手不可用。管理员可以在「AI 设置 → AI 员工」中启用它。',
-  ],
-  assistantNoModel: [
-    'No AI model is enabled. Enable one under AI settings and reload the page.',
-    '没有启用的 AI 模型。请在 AI 设置中启用一个后刷新页面。',
-  ],
   loading: ['Loading…', '正在加载…'],
   empty: ['A fresh start', '从这里开始'],
   emptyDescription: [
@@ -511,21 +448,21 @@ const wording = {
     tasks: {
       title: ['Task preparation', '任务准备'],
       description: [
-        "Prepares a task for its owner on the morning of its day: what it should achieve, where things stand from the record's tasks, comments and mail, who is on the other side, the company's recent news from the web, the questions to ask, what to bring, the risks and the points to cover. Only the task's owner and participants see it.",
-        '在任务当天早上为负责人做准备：任务要达成什么、从记录的任务、评论和邮件看进展到哪一步、对方都有谁、联网查到的公司近况、要问的问题、要带的材料、风险和要点。只有任务负责人和参与人能看到。',
+        "Prepares a task for its owner on the morning of its day: what it should achieve, where things stand from the record's tasks, comments and mail, who is on the other side, the questions to ask, what to bring, the risks and the points to cover. Only the task's owner and participants see it.",
+        '在任务当天早上为负责人做准备：任务要达成什么、从记录的任务、评论和邮件看进展到哪一步、对方都有谁、要问的问题、要带的材料、风险和要点。只有任务负责人和参与人能看到。',
       ],
       skill: ['Skill: Prepare a task', '技能：任务准备'],
     },
     duty: ['What it does', '职责'],
     // Who runs it and who decides, on every agent's page.
-    byNoco: [
-      'Run by the AI employee Noco. It only suggests: the owner decides in the inbox whether to accept.',
-      '由 AI 员工 Noco 执行；它只提出建议，由负责人在收件箱里决定是否采纳。',
+    byAi: [
+      'Run by the AI. It only suggests: the owner decides in the inbox whether to accept.',
+      '由 AI 执行；它只提出建议，由负责人在收件箱里决定是否采纳。',
     ],
     // The task agent's: it decides nothing, its card waits on the task.
-    byNocoTasks: [
-      "Run by the AI employee Noco. It changes nothing: the task's owner and participants read it on the task and may write it into the description.",
-      '由 AI 员工 Noco 执行；它不改动任何记录，任务负责人和参与人在任务上查看，可以写入任务描述。',
+    byAiTasks: [
+      "Run by the AI. It changes nothing: the task's owner and participants read it on the task and may write it into the description.",
+      '由 AI 执行；它不改动任何记录，任务负责人和参与人在任务上查看，可以写入任务描述。',
     ],
     manualNoteTasks: [
       "A task's owner or participant can always ask for a preparation on the task, whatever is switched off.",
@@ -1518,32 +1455,7 @@ const wording = {
   sources: ['Source performance', '来源表现'],
   sellers: ['Team performance', '团队业绩'],
   noRate: ['No closed opportunities', '暂无已关闭商机'],
-  askHint: [
-    'Ask about customers, prepare a follow-up, or review your pipeline…',
-    '分析客户、准备跟进计划，或复盘商机…',
-  ],
   send: ['Send', '发送'],
-  assistantExpand: ['Expand the assistant', '放大 AI 助手'],
-  assistantCollapse: ['Back to the side panel', '收回到侧边栏'],
-  assistantClose: ['Close the assistant', '关闭 AI 助手'],
-  assumptions: ['Assumptions to verify', '待核实的推测'],
-  toolCard: {
-    awaiting: ['Waiting for you', '待你确认'],
-    done: ['Done', '已执行'],
-    confirmed: ['Confirmed', '已确认'],
-    failed: ['Not applied', '未执行'],
-    confirmHint: ['Nothing is written until you confirm.', '确认后才会写入'],
-    // Declining a proposal, worded as on the evaluation card.
-    dismiss: ['Ignore', '忽略'],
-    blocked: [
-      'You cannot make this change. Ignore it and tell the assistant what to do instead.',
-      '你没有权限执行这项修改。请忽略，并告诉助手换个做法。',
-    ],
-    delete: [
-      'Confirming deletes this record right away. This cannot be undone; records that pointed at it lose the link.',
-      '确认后将立即删除这条记录，无法撤销；关联它的记录会解除关联。',
-    ],
-  },
   // The CRM's business actions in the Agents plugin's agent editor
   // (server/providers/crm-agents/actions.ts); the action titles are the
   // Permission Sets page's own, under authz.
@@ -1611,7 +1523,7 @@ const wording = {
       decisions: ['AI suggestions in the inbox', '收件箱的 AI 建议'],
       agents: ['Agents', 'Agents'],
       reports: ['Reports', '报表'],
-      agentChat: ['Conversations with Noco', '与 Noco 的对话'],
+      agentChat: ['AI conversations', 'AI 对话'],
     },
   },
   aiLanguages: {
@@ -1727,11 +1639,26 @@ const wording = {
     create: ['Create opportunity', '创建商机'],
   },
   settingsDescription: [
-    'Business defaults, reminders, and the demo dataset.',
-    '配置业务选项、提醒和演示数据',
+    'Business defaults, reminders, the business guidance and the demo dataset.',
+    '配置业务选项、提醒、业务指导和演示数据',
   ],
   business: ['Business defaults', '业务配置'],
   reminders: ['Reminders', '提醒设置'],
+  // The settings page's business guidance tab (crm-settings.tsx).
+  guidance: ['Business guidance', '业务指导'],
+  guidanceHint: [
+    'What the AI works from in every conversation and every follow-up, review and preparation: who you are, your editions and prices, when to follow up and when to ask for approval. Markdown.',
+    'AI 在每段对话和每次跟进、审批辅助、任务准备时遵循的业务指导：公司定位、版本和价格、跟进节奏、何时需要审批。支持 Markdown。',
+  ],
+  guidanceShipped: [
+    "The default guidance: it follows the reminders' days and the AI working language.",
+    '当前是默认指导：跟进天数取自提醒设置，语言跟随 AI 工作语言。',
+  ],
+  guidanceCustom: [
+    "Your own guidance: the reminders' days and the AI working language no longer change it.",
+    '当前是自定义指导：提醒设置的天数和 AI 工作语言不再影响它。',
+  ],
+  guidanceRestore: ['Restore the default', '恢复默认'],
   // The settings' switches for the in-app messages the CRM sends.
   notifications: {
     heading: ['In-app notifications', '站内通知'],
@@ -1954,8 +1881,8 @@ const wording = {
   showLess: ['Show less', '收起'],
   prompts: {
     analyzeSales: [
-      'Analyze the sales situation and build it as a report, with charts: the funnel by stage, this month against the pipeline, where deals are stuck, and the three most useful next actions. Look the records up rather than guessing.',
-      '分析销售情况，生成一份带图表的报告：各阶段商机分布、本月进展与在手商机、卡在哪里、最有价值的三项下一步行动。需要的记录先查再说，不要猜。',
+      'Analyze the sales situation: the funnel by stage, this month against the pipeline, where deals are stuck, and the three most useful next actions. Look the records up rather than guessing.',
+      '分析销售情况：各阶段商机分布、本月进展与在手商机、卡在哪里、最有价值的三项下一步行动。需要的记录先查再说，不要猜。',
     ],
     companies: [
       'Summarize this company and suggest opportunities to deepen the relationship.',
@@ -1978,17 +1905,18 @@ const wording = {
       '审阅此审批申请，总结风险与缺失信息，不替审批人做决定。',
     ],
   },
-  // Noco's panel on the Agents plugin (client/components/crm/agent-chat/).
+  // The assistant's panel on the Agents plugin
+  // (client/components/crm/agent-chat/).
   agentPanel: {
-    title: ['Noco', 'Noco'],
+    title: ['AI', 'AI'],
     history: ['Conversations', '对话列表'],
     newConversation: ['New conversation', '新建对话'],
     openFullPage: ['Open full page', '在整页中打开'],
     close: ['Close', '关闭'],
-    placeholder: ['Ask Noco…', '问问 Noco…'],
+    placeholder: ['Ask AI…', '问问 AI…'],
     attachHint: [
-      'Attach files: Noco sees images, and only the names of other files',
-      '添加附件：Noco 能看到图片，其他文件只能看到文件名',
+      'Attach files: the AI sees images, and only the names of other files',
+      '添加附件：AI 能看到图片，其他文件只能看到文件名',
     ],
     model: ['Model', '模型'],
     removePin: ['Remove {{label}}', '移除{{label}}'],

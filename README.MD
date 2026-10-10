@@ -8,10 +8,10 @@ A CRM for B2B sales built on [NocoBase 3](https://www.nocobase.com), the open-so
 - **Workspace.** Today's and overdue work, the pipeline and the month's trends, for the reader's own records or the team's.
 - **Lead conversion and duplicates.** A lead converts into a company, a contact and an opportunity, checked against existing ones; duplicate leads are found and merged.
 - **Roles and access.** Administrator, sales manager and salesperson, enforced per record and per field by the server.
-- **The AI assistant, Noco.** A chat panel on every page that answers from the records the user may read, builds reports, searches the web where the model supports it, reads attached files, and proposes changes as cards the user confirms; it writes as that user, never beyond their permissions.
+- **The AI assistant.** A chat panel on every page, Sales Expert, that answers from the records the user may read, reads attached files, and proposes changes as a plan the user confirms; it writes as that user, never beyond their permissions.
 - **AI follow-ups.** New leads, new opportunities, completed tasks and customers' replies get an AI follow-up card with the next step, the gaps, the fields to fill and the terms that need approval, decided under **Waiting on me**. Approvers get a review of each request, and a daily check picks up work that has gone quiet. Pasted text can be organised into new leads or an opportunity.
 - **Mail.** Each user connects their own mailbox (IMAP/SMTP, Gmail or Microsoft 365) and reads, writes and sends mail in the CRM. Lead, contact, company and opportunity pages show the user's mail with that customer, and every conversation with a record's people appears on its timeline by itself, as a summary the team sees while the messages stay in their owner's mailbox. An email the AI proposes as the next step opens in the composer, drafted, for the user to send.
-- **Sales skills.** The method the AI follows is readable by everyone on **AI → Sales skills**, where a sales manager adds the company's own practice.
+- **Sales skills.** The method the AI follows is in its skills, which an administrator edits on **Settings → Agent team → Skills**, and the business guidance (who you are, editions and prices, when to follow up and to ask for approval) on **Settings → System settings → Business guidance**.
 - **Languages.** The interface is in English or Chinese. The chat answers in the language of the question; what the AI writes on its own follows the **AI working language** setting.
 
 ## Built on NocoBase 3
@@ -23,7 +23,7 @@ NocoBase 3 provides the NocoBase App Foundation, the application infrastructure 
 | Application server, database layer and CLI | The server, migrations, configuration, builds and deployment                                 |
 | Application template and UI Library        | Layouts, routing, theme, sign-in pages and the components every page is built from           |
 | Authentication, users and authorization    | Sign-in, user management, and the roles as permission sets with record and field permissions |
-| AI Employee plugin                         | The chat, LLM services, tool calling, confirmation cards, skills and reports                 |
+| Agents plugin                              | The assistant, model services and their usage, the CRM's commands for agents, and skills     |
 | Notification and scheduler plugins         | The in-app inbox and the daily checks                                                        |
 | Mail plugin                                | Users' mailboxes: sync, reading, writing and sending                                         |
 | File and i18n plugins                      | Attachments and their previews, the interface languages                                      |
@@ -63,7 +63,7 @@ The roles can be adjusted on **Settings → Authorization → Permission Sets**.
 
 `config.yml` is gitignored because it holds the secrets; `config.example.yml` documents every option. Change a value with `pnpm nocobase config set key=value`.
 
-**AI.** Declare at least one LLM service and give it a key from the environment (`DASHSCOPE_API_KEY`, `OPENAI_API_KEY` with `OPENAI_BASE_URL`, `DEEPSEEK_API_KEY` are mapped onto the services named `qwen`, `openai` and `deepseek`):
+**AI.** Declare at least one LLM service and give it a key from the environment (`DASHSCOPE_API_KEY`, `OPENAI_API_KEY` with `OPENAI_BASE_URL`, `DEEPSEEK_API_KEY` are mapped onto the services named `qwen`, `openai` and `deepseek`). At start, a service not yet on **Settings → Agent team → Models** is created there; after that it is managed on that page. The Agents plugin keeps the keys under the application's master keys, so `SECRETS_KEYS` must be set:
 
 ```yaml
 ai:
@@ -78,7 +78,7 @@ ai:
       sort: 5
 ```
 
-The assistant is switched on and off with the **Enabled** switch of Noco on **Settings → AI → AI Employees**. Web search works with OpenAI and Qwen, not with DeepSeek. The business guidance in `server/ai/employees/crm-guidance.ts` and the skills in `ai/skills/` hold the sales practice the AI follows; edit them to make it yours.
+The AI is on whenever there is a chat model to use. The assistant is the agent named Sales Expert on **Settings → Agent team → Agents**, whose first model is also the one the follow-ups, reviews and captures use. There is no web search. The business guidance (**Settings → System settings → Business guidance**, shipped in `server/providers/crm/guidance.ts`) and the skills (**Settings → Agent team → Skills**, shipped in `ai/skills/`) hold the sales practice the AI follows; edit them to make it yours.
 
 **Notifications.** In-app notifications need the channel `inbox` (`notification.channels.inbox: { provider: in-app }`, already in `config.example.yml`), and are sent by the CRM itself; each kind (approvals, record changes, task reminders) can be switched off on **Settings → System settings → Reminders**. The Workflow plugin is disabled, as in the template it was generated from: its dependency and `server/config/workflow.ts` are kept, and an application that wants it registers it with `pnpm nocobase plugin register @nocobase/app-plugin-workflow` and restores the `workflow` import, type and entry in `server/config/index.ts`.
 

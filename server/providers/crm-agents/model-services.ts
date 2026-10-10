@@ -1,6 +1,7 @@
 import type { Application } from '@nocobase/app-server/application';
 import type { Agents } from '@nocobase/app-plugin-agents/server/tokens';
 import { loggingToken } from '@nocobase/app-server/logging';
+import type { CrmModelService } from '../../config/ai.js';
 
 /**
  * The model services online agents call, created from the AI section of the
@@ -16,14 +17,10 @@ import { loggingToken } from '@nocobase/app-server/logging';
  * is skipped with a warning rather than failing the start.
  */
 
-interface ConfiguredService {
-  provider?: string;
-  enabled?: boolean;
-  options?: Record<string, unknown>;
-  enabledModels?: { value: string; label?: string }[];
-}
+type ConfiguredService = CrmModelService;
 
-// The AI Employee plugin's provider names, as the Agents plugin's.
+// The provider names config.yml uses (the AI Employee plugin's, which the
+// CRM once ran on), as the Agents plugin's.
 const PROVIDERS: Record<string, string> = {
   dashscope: 'alibaba',
   openai: 'openai',

@@ -10,7 +10,6 @@ import {
   type ServiceToken,
 } from '@nocobase/service-provider';
 import { authorizationToken } from '@nocobase/app-plugin-authorization';
-import { aiManagerToken } from '@nocobase/app-plugin-ai-employee/server';
 import { notificationServiceToken } from '@nocobase/app-plugin-notification/server';
 import { schedulerServiceToken } from '@nocobase/app-plugin-scheduler/server/tokens';
 import { scanLeadSignals } from './lead-signals.js';
@@ -39,14 +38,14 @@ import {
   approvalsSettled,
 } from './feedback.js';
 import { agentOn } from './agents.js';
-import { crmActor } from '../../ai/tools/crm-records.js';
 import {
   provisionCrm,
   registerCrmResources,
   type Actor,
+  crmActor,
 } from './authorization.js';
 import { CrmService, array } from './service.js';
-import { CrmError, type CrmSettings } from './schema.js';
+import { CrmError } from './schema.js';
 import {
   aiStates,
   LeadEvaluator,
@@ -63,12 +62,8 @@ import {
   TaskPreparer,
   taskPreparerToken,
 } from './task-preparation.js';
-import { CrmAiResources } from '../../ai/index.js';
-import {
-  LOGO_AVATAR_PATH,
-  registerCrmAssistant,
-} from '../../ai/employees/crm-assistant.js';
 import { userRoleScopeRegistryToken } from '@nocobase/app-plugin-users/server/tokens';
+import { aiAvailable } from './ai-model.js';
 
 // The Channel the CRM's notifications go through: the in-app inbox, named
 // `inbox` in the notification configuration (`notification.channels.inbox`
@@ -195,43 +190,9 @@ export default class CrmProvider extends ServiceProvider<Application> {
       );
       setDemoMailLanguage(await demoLanguageOf(service));
     }
-    // The CRM assistant employee and its tools, for the AI Employee
-    // plugin's chat (server/ai). Registered here, after every provider has
-    // registered its services and before the plugin serves conversations.
-    if (this.app.container.has(aiManagerToken)) {
-      // The employee's avatar is the application's mark: an absolute URL
-      // when the public origin is configured (APP_PUBLIC_ORIGIN), so the
-      // plugin's own settings pages show it too.
-      const identity = this.app.config.get<{ publicOrigin?: string }>('app');
-      const origin = toText(identity?.publicOrigin ?? '').replace(/\/+$/, '');
-      const avatar = origin
-        ? `${origin}${this.app.publicBasePath.replace(/\/+$/, '')}${LOGO_AVATAR_PATH}`
-        : LOGO_AVATAR_PATH;
-      const service = this.app.container.resolve(crmToken);
-      const ai = this.app.container.resolve(aiManagerToken);
-      // The prompt's language and its guidance's follow-up thresholds come
-      // from the settings.
-      const promptOf = (settings: CrmSettings) => ({
-        avatar,
-        language: settings.aiLanguage,
-        days: {
-          uncontacted: settings.uncontactedDays,
-          stale: settings.leadStaleDays,
-          closing: settings.closeReminderDays,
-        },
-      });
-      await new CrmAiResources(
-        service,
-        this.app.container.resolve(authorizationToken),
-        promptOf(await service.settings()),
-      ).registerAIResources(ai);
-      // Registered again, the plugin upserting by username, whenever the
-      // settings are saved.
-      service.settingsSaved = (settings) =>
-        void registerCrmAssistant(ai, promptOf(settings)).catch(
-          () => undefined,
-        );
-    }
+    // The CRM's AI runs while there is a model to ask on the Agents plugin.
+    this.app.container.resolve(crmToken).aiCheck = () =>
+      aiAvailable(this.app.container);
     // The daily look over the open leads for what has not happened
     // (lead-signals.ts): a scheduler task, so administrators see each pass,
     // what it started, and may switch it off on the scheduled tasks page.

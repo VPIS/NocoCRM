@@ -37,12 +37,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
     useCrmText: () => ({ text: english, language: 'en-US' }),
   };
 });
-vi.mock('../../client/components/crm/assistant-state.js', () => ({
-  CRM_ASSISTANT: 'crm-assistant',
-  CLOSE_EMPLOYEE_PANEL: 'crm-assistant-close',
-  usePanelOpen: () => state.panelOpen,
-}));
-// Noco on the Agents plugin, with two models (tests/setup/agent-chat-fake).
+// The assistant on the Agents plugin, with two models (tests/setup/agent-chat-fake).
 vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) =>
   (await import('../setup/agent-chat-fake.js')).fakeChatModule(
     await importOriginal(),
@@ -64,7 +59,7 @@ function RecordPage({ name }: { name?: string }) {
   return null;
 }
 
-// What was asked of Noco: each question as created and sent.
+// What was asked of the assistant: each question as created and sent.
 function asked(): Record<string, unknown>[] {
   return chatFake.sent.map((message, index) => {
     const context = message.context as
@@ -89,7 +84,7 @@ function renderDock(path = '/', record?: { name?: string }) {
 
 describe('the assistant dock', () => {
   beforeEach(() => {
-    state.panelOpen = false;
+    chatFake.open = false;
     state.mobile = false;
     chatFake.reset();
     localStorage.clear();
@@ -253,7 +248,7 @@ describe('the assistant dock', () => {
     expect(screen.getByRole('textbox')).toBeTruthy();
     accounts.unmount();
 
-    state.panelOpen = true;
+    chatFake.open = true;
     renderDock('/crm/leads');
     // Hidden, not unmounted, so text being typed survives.
     expect(screen.queryByRole('textbox')).toBeNull();

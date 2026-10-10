@@ -9,19 +9,21 @@ import { CRM_ASSISTANT_INSTRUCTIONS } from './preset.js';
 // (migration plan, question 7). Replace with the plugin's own mechanism when
 // it has one.
 //
-// Noco, the CRM's assistant, as an online agent of the Agents plugin: made
+// The CRM's assistant, named Sales Expert, as an online agent of the Agents plugin: made
 // once from the CRM assistant preset's instructions and actions, open to
 // everyone, listing every chat model of the enabled services in their order
 // (the first its default, the rest what a conversation may pick, as the
 // assistant's model picker offered before), and made the
 // system default chat agent when none is set. The marker keeps its id, so an
 // agent an administrator changed, archived or deleted stays as they left it:
-// it is never recreated or rewritten. Its name is Noco in every language
+// it is never recreated or rewritten. Its name is Sales Expert in every language
 // (the plugin translates only an application agent's description).
 
-export const NOCO_MARKER = 'agents-noco-v1';
+// The stored marker keeps the assistant's first name, the assistant.
+export const ASSISTANT_MARKER = 'agents-noco-v1';
+const ASSISTANT_NAME = 'Sales Expert';
 
-export async function provisionNoco(
+export async function provisionAssistant(
   agents: Agents,
   database: DatabaseManager,
   actions: readonly string[],
@@ -30,7 +32,7 @@ export async function provisionNoco(
   const done = await query
     .selectFrom('crmSettings')
     .select('id')
-    .where('id', '=', NOCO_MARKER)
+    .where('id', '=', ASSISTANT_MARKER)
     .executeTakeFirst();
   if (done) return;
   // Created as the installation's first account, its initial administrator.
@@ -43,7 +45,7 @@ export async function provisionNoco(
     await query
       .insertInto('crmSettings')
       .values({
-        id: NOCO_MARKER,
+        id: ASSISTANT_MARKER,
         value: JSON.stringify({ version: 1, agentId: null }),
         updatedAt: new Date(),
       })
@@ -60,8 +62,8 @@ export async function provisionNoco(
     )
     // The most an agent's list holds.
     .slice(0, MAX_MODEL_ENTRIES);
-  const noco = await agents.agents.create(creator.id, {
-    name: 'Noco',
+  const assistant = await agents.agents.create(creator.id, {
+    name: ASSISTANT_NAME,
     type: 'online',
     description: 'CRM assistant',
     descriptionText: { key: 'crm.agentPreset.description', ns: 'crm' },
@@ -72,13 +74,63 @@ export async function provisionNoco(
   });
   const settings = await agents.chat.settings();
   if (!settings.defaultAgentId)
-    await agents.chat.updateSettings(creator.id, { defaultAgentId: noco.id });
+    await agents.chat.updateSettings(creator.id, {
+      defaultAgentId: assistant.id,
+    });
   await query
     .updateTable('crmSettings')
     .set({
-      value: JSON.stringify({ version: 1, agentId: noco.id }),
+      value: JSON.stringify({ version: 1, agentId: assistant.id }),
       updatedAt: new Date(),
     })
-    .where('id', '=', NOCO_MARKER)
+    .where('id', '=', ASSISTANT_MARKER)
     .execute();
+}
+
+// The assistant was first created as Noco; renamed Sales Expert once,
+// unless an administrator has already named it otherwise.
+const RENAMED_MARKER = 'agents-assistant-name-v1';
+
+export async function renameAssistant(
+  agents: Agents,
+  database: DatabaseManager,
+): Promise<void> {
+  const query = database.query();
+  const [created, renamed] = await Promise.all(
+    [ASSISTANT_MARKER, RENAMED_MARKER].map((id) =>
+      query
+        .selectFrom('crmSettings')
+        .select('value')
+        .where('id', '=', id)
+        .executeTakeFirst(),
+    ),
+  );
+  if (!created || renamed) return;
+  // The marker first, as provisioning's: one instance renames.
+  try {
+    await query
+      .insertInto('crmSettings')
+      .values({
+        id: RENAMED_MARKER,
+        value: JSON.stringify({ version: 1 }),
+        updatedAt: new Date(),
+      })
+      .execute();
+  } catch {
+    return;
+  }
+  let agentId: unknown;
+  try {
+    agentId = (JSON.parse(String(created.value)) as { agentId?: unknown })
+      .agentId;
+  } catch {
+    return;
+  }
+  if (typeof agentId !== 'string' || !agentId) return;
+  const agent = await agents.agents.get(agentId).catch(() => null);
+  if (agent?.name === 'Noco')
+    await agents.agents.update(agentId, null, {
+      name: ASSISTANT_NAME,
+      expectedRevision: agent.revision,
+    });
 }

@@ -5,6 +5,7 @@ import { useRef, useState, type ReactElement } from 'react';
 import { useSearchParams } from 'react-router';
 import { Button } from '../components/ui/button.js';
 import { Input } from '../components/ui/input.js';
+import { Textarea } from '../components/ui/textarea.js';
 import { Switch } from '../components/ui/switch.js';
 import {
   Card,
@@ -15,6 +16,8 @@ import {
 import { Loading, ErrorNotice } from '../components/crm/common.js';
 import { Choice } from '../components/crm/form.js';
 import { ConfirmDialog } from './crm-detail.js';
+import { settingsGuidance } from '../../server/providers/crm/guidance.js';
+import { LONG_TEXT_LIMIT } from '../../server/providers/crm/limits.js';
 import {
   localDate,
   useCrmApi,
@@ -68,7 +71,7 @@ function SettingsForm({
   // ?section=demoData opens a tab directly (the demo banner links there).
   const [searchParams] = useSearchParams();
   const [section, setSection] = useState(
-    ['business', 'reminders', 'demoData'].includes(
+    ['business', 'reminders', 'guidance', 'demoData'].includes(
       searchParams.get('section') ?? '',
     )
       ? (searchParams.get('section') as string)
@@ -223,7 +226,7 @@ function SettingsForm({
         </p>
       )}
       <div className='flex gap-1 overflow-x-auto border-b'>
-        {['business', 'reminders', 'demoData'].map((key) => (
+        {['business', 'reminders', 'guidance', 'demoData'].map((key) => (
           <Button
             key={key}
             variant='ghost'
@@ -335,6 +338,11 @@ function SettingsForm({
                 />
               )}
             </>
+          ) : section === 'guidance' ? (
+            <GuidanceEditor
+              settings={settings}
+              onChange={(value) => set('businessGuidance', value)}
+            />
           ) : section === 'business' ? (
             fields(['currency', 'timeZone', 'aiLanguage'])
           ) : section === 'reminders' ? (
@@ -387,5 +395,57 @@ function SettingsForm({
         </CardContent>
       </Card>
     </PageContainer>
+  );
+}
+
+// The business guidance the AI works from (server/providers/crm/guidance.ts):
+// the shipped one, which follows the reminders' days and the AI language,
+// until an administrator writes over it. Saved with the other settings;
+// writing it back to the shipped text, or leaving it blank, returns to the
+// shipped one. What is typed stays in the box as typed (blank included);
+// until then it shows the guidance in force.
+function GuidanceEditor({
+  settings,
+  onChange,
+}: {
+  settings: CrmSettings;
+  onChange: (value: string) => void;
+}): ReactElement {
+  const { text } = useCrmText();
+  const shipped = settingsGuidance({ ...settings, businessGuidance: '' });
+  const custom = Boolean(settings.businessGuidance.trim());
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <div className='space-y-3'>
+      <p className='text-sm text-muted-foreground'>{text('guidanceHint')}</p>
+      <Textarea
+        aria-label={toText(text('guidance'))}
+        value={draft ?? (custom ? settings.businessGuidance : shipped)}
+        onChange={(event) => {
+          const value = event.target.value;
+          setDraft(value);
+          onChange(value === shipped || !value.trim() ? '' : value);
+        }}
+        maxLength={LONG_TEXT_LIMIT}
+        // Grows with the text up to most of the screen, then scrolls.
+        className='max-h-[60vh] min-h-80 overflow-y-auto font-mono text-xs leading-relaxed md:text-xs'
+      />
+      <div className='flex flex-wrap items-center justify-between gap-2'>
+        <p className='text-xs text-muted-foreground'>
+          {text(custom ? 'guidanceCustom' : 'guidanceShipped')}
+        </p>
+        <Button
+          variant='outline'
+          size='sm'
+          disabled={!custom && draft === null}
+          onClick={() => {
+            setDraft(null);
+            onChange('');
+          }}
+        >
+          {text('guidanceRestore')}
+        </Button>
+      </div>
+    </div>
   );
 }

@@ -30,7 +30,7 @@ import {
 // editions and prices of nocobase.com/cn/commercial) to fictional customers,
 // with companies, contacts, leads, opportunities, tasks and approvals
 // dated relative to the day it is imported. It follows the business guidance
-// in server/ai/employees/crm-guidance.ts. Imported and removed from the settings
+// in server/providers/crm/guidance.ts. Imported and removed from the settings
 // page by an administrator; a manifest row in crm_settings records exactly
 // which rows the import created, so removal touches nothing else.
 

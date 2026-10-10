@@ -98,7 +98,7 @@
 /* Application change: every modal overlay gets the same frosted backdrop.
    The CRM's own dialogs and sheets (client/components/ui) already paint
    bg-black/10 with a backdrop blur, but plugin pages ship their own overlays
-   (users, notification, api-keys, authorization, ai-employee), each a flat
+   (users, notification, api-keys, authorization, agents), each a flat
    bg-black/30 to bg-black/45 with no blur. All of them are a full-screen
    fixed element at z-50 with a bg-black opacity class, and nothing else in
    the application matches that shape (the mobile sidebar backdrop is z-40).
@@ -113,20 +113,17 @@
   }
 }
 
-/* Application change: the assistant panels (28rem: Noco's, client/
-   components/crm/agent-chat/panel.tsx, and the AI Employee's, ai-chat.tsx,
-   one at a time) sit beside the page only where both fit, from 1280px; the
-   page makes room for exactly its width. Narrower screens show the panel
-   over the page. */
+/* Application change: the assistant's panel (28rem, client/components/crm/
+   agent-chat/panel.tsx) sits beside the page only where both fit, from
+   1280px; the page makes room for exactly its width. Narrower screens show
+   the panel over the page. */
 @media (min-width: 1280px) {
-  body.crm-assistant-open .crm-page-main,
   body.crm-agent-panel-open .crm-page-main {
     margin-right: 28rem;
     transition: margin-right 200ms ease-in-out;
   }
   /* The record drawer (crm-detail.tsx's RecordDrawer), also from the right,
      moves left of the panel rather than lying under it. */
-  body.crm-assistant-open .crm-record-drawer,
   body.crm-agent-panel-open .crm-record-drawer {
     right: 28rem;
     transition: right 200ms ease-in-out;

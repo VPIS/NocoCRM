@@ -1,98 +1,220 @@
-import { aiManagerToken } from '@nocobase/app-plugin-ai-employee/server';
-import { databaseManagerToken } from '@nocobase/db';
+import { readFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { agentsToken } from '@nocobase/app-plugin-agents/server/tokens';
 import type { ServiceResolver } from '@nocobase/service-provider';
-import { CRM_ASSISTANT } from '../../ai/employees/crm-assistant.js';
+import { z, type ZodType } from 'zod';
+import { CrmError, toText } from './schema.js';
 
-// The model for an unattended run that needs a structured result (a lead
-// organised from text, a lead's evaluation): the one the plugin would pick
-// for the CRM employee anyway (its dedicated model, else the default), with
-// thinking switched off where the provider refuses the forced tool call a
-// structured result is made with while it thinks — DashScope's Qwen models
-// answer "The tool_choice parameter does not support being set to required
-// or object in thinking mode" (verified 2026-09-30 for qwen3.8-max,
-// qwen3.8-flash and qwen3.7-plus; each works with thinking off). The plugin
-// passes a run's `state.model` through as given, `reasoning` included,
-// though its type names only the service and model. Undefined leaves the
-// choice to the plugin.
-export async function structuredRunModel(
+// The CRM's own model calls (migration step 1): the follow-ups, the reviews,
+// the captures, the merge proposals and the feedback write-ups ask the
+// Agents plugin's model gateway, which keeps the keys, records the use and
+// prices it. The model is the one the people's default chat agent answers
+// with (its first entry), else the system default chat model. A run is a
+// session of turns, each one call: a reply in another shape than asked is
+// asked once more with what came before. Results are JSON in the reply,
+// checked against the shape the caller gives; the gateway's `generate` has
+// no structured output of its own.
+
+// Who the gateway records the use as.
+export const AI_SOURCE = 'crm';
+
+// The model a run answers with, or null when there is none to ask (no
+// agents plugin, no enabled chat model): the CRM's AI is then off.
+export async function crmModel(
   container: ServiceResolver,
-): Promise<{ llmService: string; model: string } | undefined> {
-  return (await runModel(container)).model;
+): Promise<{ modelService: string; model: string } | null> {
+  if (!container.has(agentsToken)) return null;
+  const agents = container.resolve(agentsToken);
+  try {
+    const { defaultAgentId } = await agents.chat.settings();
+    if (defaultAgentId) {
+      const agent = await agents.agents.get(defaultAgentId);
+      const entry = agent.archivedAt ? undefined : agent.modelEntries[0];
+      if (entry && 'modelService' in entry)
+        return { modelService: entry.modelService, model: entry.model };
+    }
+  } catch {
+    // No default agent to read: the system default below.
+  }
+  const catalog = await agents.online.gateway.catalog('chat');
+  return catalog.defaultModel ?? null;
 }
 
-// The same, with whether the structured result is better asked for as JSON
-// in the reply (`textJson`): Qwen, given the plugin's structured result
-// after an earlier turn, called two tools in one step, which the agent's
-// graph refuses ("Invalid update for channel jumpTo", 2026-09-30).
-export async function runModel(container: ServiceResolver): Promise<{
-  model?: { llmService: string; model: string };
-  textJson: boolean;
-}> {
-  if (!container.has(aiManagerToken)) return { textJson: false };
-  const manager = container.resolve(aiManagerToken).llmProviderManager;
+// Whether the CRM's AI can run: there is a model to ask.
+export async function aiAvailable(
+  container: ServiceResolver,
+): Promise<boolean> {
+  return (await crmModel(container).catch(() => null)) !== null;
+}
+
+export interface ModelSession {
+  // Asks the next turn and returns the reply's text.
+  ask(content: string, signal?: AbortSignal): Promise<string>;
+  // Asks for one JSON object in the given shape, spelled out after the
+  // content; once more when the reply does not hold it. Null when neither
+  // did.
+  askJson<T>(
+    content: string,
+    shape: ZodType<T>,
+    signal?: AbortSignal,
+  ): Promise<T | null>;
+}
+
+// How long one turn of a background run (a follow-up, a review, a
+// preparation) may take: a model that reasons at length (Qwen Max) takes
+// minutes over a follow-up's material, and the gateway's call cannot turn
+// that off. Within the ten minutes after which a running card reads as
+// failed.
+export const RUN_TURN_MS = 8 * 60_000;
+
+// A run of turns with the CRM's model, told the current time in the CRM's
+// time zone (dates such as "next Tuesday" in what it reads are reckoned
+// from it) and the deployment's business guidance (guidance.ts) as its
+// system prompt; null when there is no model to ask.
+export async function openSession(
+  container: ServiceResolver,
+  { timeZone, guidance }: { timeZone: string; guidance: string },
+): Promise<ModelSession | null> {
+  const model = await crmModel(container).catch(() => null);
+  if (!model) return null;
+  const now = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date());
+  const system = `The current time is ${now} (${timeZone}).\n\n${guidance}`;
+  const gateway = container.resolve(agentsToken).online.gateway;
+  const turns: { role: 'user' | 'assistant'; text: string }[] = [];
+  const ask = async (content: string, signal?: AbortSignal) => {
+    turns.push({ role: 'user', text: content });
+    // One prompt: the earlier turns as a transcript, then the question.
+    const prompt =
+      turns.length === 1
+        ? content
+        : `${turns
+            .slice(0, -1)
+            .map(
+              (turn) =>
+                `${turn.role === 'user' ? 'User' : 'Assistant'}:\n${turn.text}`,
+            )
+            .join('\n\n')}\n\nUser:\n${content}`;
+    const { text } = await gateway.generate({
+      model,
+      system,
+      prompt,
+      maxOutputTokens: 16_000,
+      source: AI_SOURCE,
+      ...(signal ? { signal } : {}),
+    });
+    turns.push({ role: 'assistant', text });
+    return text;
+  };
+  return {
+    ask,
+    async askJson<T>(
+      content: string,
+      shape: ZodType<T>,
+      signal?: AbortSignal,
+    ): Promise<T | null> {
+      const read = (text: string) => shape.safeParse(jsonIn(text));
+      const first = read(
+        await ask(
+          `${content}\n\nReturn only one JSON object, with no other text, matching this JSON Schema:\n${shapeOf(shape)}`,
+          signal,
+        ),
+      );
+      if (first.success) return first.data;
+      const again = read(
+        await ask(
+          `The previous reply was not in the required format. Keeping the same answer, return only one JSON object and nothing else, matching this JSON Schema:\n${shapeOf(shape)}`,
+          signal,
+        ),
+      );
+      return again.success ? again.data : null;
+    },
+  };
+}
+
+// A zod shape as the JSON Schema a prompt shows the model.
+export function shapeOf(shape: ZodType): string {
   try {
-    const enabled = await manager.listAllEnabledModels();
-    const model =
-      (await dedicatedModel(container, enabled).catch(() => undefined)) ??
-      (await manager.resolveModel());
-    const service = enabled.find(
-      (item) => item.llmService === model.llmService,
-    );
-    return service?.provider === 'dashscope'
-      ? {
-          model: { ...model, reasoning: { mode: 'off' } } as {
-            llmService: string;
-            model: string;
-          },
-          textJson: true,
-        }
-      : { textJson: false };
+    return JSON.stringify(z.toJSONSchema(shape, { unrepresentable: 'any' }));
   } catch {
-    return { textJson: false };
+    return '{}';
   }
 }
 
-// The model the plugin runs the CRM employee on when its dedicated model
-// configuration (AI employees → the employee → Models) is on: the first of
-// its models that is enabled, as the plugin's own `resolveModel(employee)`
-// picks it. The plugin does not export that manager, so the setting is read
-// here; without it, or when none of its models is enabled, the default
-// applies (the enabled LLM service with the lowest sort).
-async function dedicatedModel(
+// A method skill's text without its frontmatter: the Agents plugin's
+// library's current version, where people edit it (crm-agents/library.ts
+// puts it there), else its SKILL.md as shipped (ai/skills/<name>, beside the
+// server in development, copied into dist by the build). Empty when
+// neither has it.
+const SKILLS = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '..',
+  'ai',
+  'skills',
+);
+export async function readSkill(
   container: ServiceResolver,
-  enabled: { llmService: string; enabledModels: { value: string }[] }[],
-): Promise<{ llmService: string; model: string } | undefined> {
-  if (!container.has(databaseManagerToken)) return undefined;
-  const row = await container
-    .resolve(databaseManagerToken)
-    .query()
-    .selectFrom('aiEmployees')
-    .select('modelSettings')
-    .where('username', '=', CRM_ASSISTANT)
-    .executeTakeFirst();
-  let settings: unknown = row?.modelSettings;
-  if (typeof settings === 'string') settings = JSON.parse(settings);
-  const value = settings as
-    | {
-        enabled?: boolean;
-        models?: { llmService?: string; model?: string }[];
-        llmService?: string;
-        model?: string;
-      }
-    | null
-    | undefined;
-  if (!value?.enabled) return undefined;
-  const models = (Array.isArray(value.models) ? value.models : []).filter(
-    (item): item is { llmService: string; model: string } =>
-      Boolean(item?.llmService && item?.model),
+  name: string,
+): Promise<string> {
+  let text: string | null = null;
+  if (container.has(agentsToken))
+    try {
+      const skills = container.resolve(agentsToken).skills;
+      const skill = (await skills.list()).find((s) => s.slug === name);
+      if (skill) text = (await skills.get(skill.id)).content;
+    } catch {
+      // The library cannot be read: the shipped file below.
+    }
+  text ??= await readFile(join(SKILLS, name, 'SKILL.md'), 'utf8').catch(
+    () => '',
   );
-  if (!models.length && value.llmService && value.model)
-    models.push({ llmService: value.llmService, model: value.model });
-  return models.find((item) =>
-    enabled.some(
-      (service) =>
-        service.llmService === item.llmService &&
-        service.enabledModels.some((option) => option.value === item.model),
-    ),
-  );
+  return text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/u, '').trim();
+}
+
+// The JSON a reply wrote, alone, in a ```json fence or among other text.
+export function jsonIn(content: unknown): unknown {
+  const text =
+    typeof content === 'string'
+      ? content
+      : toText((content as { content?: unknown } | null)?.content ?? '');
+  const fenced = /```(?:json)?\s*([\s\S]*?)```/u.exec(text)?.[1];
+  const candidates = [
+    fenced,
+    text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1),
+  ];
+  for (const candidate of candidates) {
+    if (!candidate?.trim()) continue;
+    try {
+      return JSON.parse(candidate) as unknown;
+    } catch {
+      // Not JSON; try the next reading.
+    }
+  }
+  return undefined;
+}
+
+// A model call that failed, as the CRM's error: no usable model (no
+// service, a refused key) is the AI being unavailable, anything else the
+// operation failing, the provider's words kept as its detail. The gateway's
+// `ModelError` is known by its name and code; the plugin does not export it.
+export function modelFailure(error: unknown, failed: string): CrmError {
+  const code =
+    error instanceof Error && error.name === 'ModelError'
+      ? toText((error as Error & { code?: unknown }).code ?? '')
+      : '';
+  const detail = error instanceof Error ? error.message : undefined;
+  return code === 'config' || code === 'auth'
+    ? new CrmError('assistantUnavailable', 409, undefined, detail)
+    : new CrmError(failed, 502, undefined, detail);
 }

@@ -9,7 +9,7 @@ import type {
   DemoMailboxes,
 } from '../providers/crm/demo.js';
 import { crmToken } from '../providers/crm/index.js';
-import { NOCO_MARKER } from '../providers/crm-agents/noco.js';
+import { ASSISTANT_MARKER } from '../providers/crm-agents/assistant.js';
 import { jsonValue } from '../providers/crm/values.js';
 import {
   DEMO_MAIL_NAME,
@@ -163,12 +163,13 @@ export function demoServices(app: Application): {
       }
     },
   };
-  // The importer's finished conversations with Noco, the CRM's assistant
-  // (crm-agents/noco.ts): the plugin makes the conversation, the messages
+  // The importer's finished conversations with the CRM's assistant
+  // (crm-agents/assistant.ts): the plugin makes the conversation, the messages
   // are written into its table as its store writes them, since a
   // conversation can only grow by a run of its agent and the demo runs no
   // model. @temporary(nocobase-official): until the plugin can import a
-  // finished conversation. None without the plugin or before Noco exists.
+  // finished conversation. None without the plugin or before the assistant
+  // exists.
   const demoChats: DemoChats | undefined = app.container.has(agentsToken)
     ? {
         async create(userId, chat) {
@@ -177,7 +178,7 @@ export function demoServices(app: Application): {
           const marker = await query
             .selectFrom('crmSettings')
             .select('value')
-            .where('id', '=', NOCO_MARKER)
+            .where('id', '=', ASSISTANT_MARKER)
             .executeTakeFirst();
           const agentId = toText(
             (jsonValue(marker?.value) as { agentId?: unknown } | null)

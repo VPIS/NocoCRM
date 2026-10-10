@@ -1,11 +1,11 @@
 import type { Row } from '@nocobase/db';
-import { crmActor } from '../../ai/tools/crm-records.js';
 import { readEntry } from './ai-entries.js';
 import type { FollowUpTrigger, LeadEvaluator } from './lead-evaluation.js';
 import { agentOn } from './agents.js';
 import { toText } from './schema.js';
 import { lastExchanges } from './exchanges.js';
 import type { CrmService } from './service.js';
+import { crmActor } from './authorization.js';
 
 // The daily look over the open leads for what should have happened and has
 // not (the plan's signals): a new lead nobody has contacted in two days, a

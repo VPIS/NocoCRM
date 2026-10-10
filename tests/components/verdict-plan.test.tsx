@@ -7,7 +7,7 @@ import {
 } from '../../server/providers/crm/schema.js';
 import { crmZh } from '../../client/locales/crm/index.js';
 
-// Noco can answer, so the cards offer Discuss (tests/setup/agent-chat-fake).
+// The assistant can answer, so the cards offer Discuss (tests/setup/agent-chat-fake).
 vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) =>
   (await import('../setup/agent-chat-fake.js')).fakeChatModule(
     await importOriginal(),

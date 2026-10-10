@@ -270,7 +270,7 @@ export interface DemoProjects {
     // The task the manager assigns the importer.
     readonly renewal: string;
   };
-  // The importer's conversations with Noco, the CRM's assistant, oldest
+  // The importer's conversations with the CRM's assistant, oldest
   // first: what they asked and what it answered, written in as the chat
   // keeps them (demo.ts).
   readonly chats: readonly DemoChat[];

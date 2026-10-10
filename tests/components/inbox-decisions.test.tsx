@@ -294,7 +294,7 @@ const plan = (status = 'pending') => ({
   revision: 1,
   proposerUserId: 'rep',
   agentId: 'a1',
-  agentName: 'Noco',
+  agentName: 'AI',
   runId: 'r1',
   conversationId: 'c1',
   deciderUserId: status === 'pending' ? null : 'rep',

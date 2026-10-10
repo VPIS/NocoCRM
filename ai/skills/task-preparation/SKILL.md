@@ -5,7 +5,7 @@ introduction:
 scope: SPECIFIED
 i18n:
   namespace: crm
-description: Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, recent news about the customer's company from the web, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.
+description: Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.
 tools: []
 ---
 
@@ -17,7 +17,7 @@ Goal: let the owner walk into this task knowing what it is for, what happened so
 
 The task: its name, its description (what the owner already wrote for it), its time and the colleagues taking part. The record it concerns (a lead, a deal or a company) as it stands, and everything around it: its other tasks, done and open, with their outcomes; the team's comments; the mail exchanged with the customer's people; a deal's contacts and their roles, its stage, amount and approvals. The newest material wins where it disagrees with older material.
 
-The web search is for the customer's company only: recent news (funding, expansion, new products, leadership changes, layoffs), and what it does, when the record does not say. Name the source of each point. When you cannot be sure a result is about the same company, leave it out.
+There is no web search: what you know of the customer's company is what the record and its material say.
 
 ## 2. What the task should achieve
 

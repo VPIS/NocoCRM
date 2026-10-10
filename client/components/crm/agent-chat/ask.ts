@@ -20,7 +20,7 @@ import {
 import { useCallback, useMemo, useState } from 'react';
 import { toText, useCrmText, type Entity } from '../api.js';
 
-// The CRM's ways into Noco's chat from outside its panel (migration step 3):
+// The CRM's ways into the assistant's chat from outside its panel (migration step 3):
 // whether it can answer, the models a new conversation may answer with, the
 // files a question carries, asking a question at once (the dock, the
 // overview's box) and opening a conversation to discuss a record or an AI
@@ -237,7 +237,7 @@ export function contextOf(route: string, items: readonly ChatContextItem[]) {
   });
 }
 
-// Asking Noco at once from outside the panel (the dock, the overview's
+// Asking the assistant at once from outside the panel (the dock, the overview's
 // box): the conversation is created and the question sent, then the panel
 // opens on it. A conversation created whose message did not go opens with
 // the text in its composer; one not created leaves the text with the caller

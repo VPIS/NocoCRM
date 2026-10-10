@@ -24,9 +24,9 @@ export const MODELS = [
   },
 ];
 
-export const NOCO = {
+export const AI_AGENT = {
   id: 'noco',
-  name: 'Noco',
+  name: 'AI',
   description: 'CRM assistant',
   nameText: null,
   descriptionText: null,
@@ -42,7 +42,7 @@ export const NOCO = {
 
 export const chatFake = {
   loading: false,
-  agents: [NOCO] as Row[],
+  agents: [AI_AGENT] as Row[],
   open: false,
   conversationId: null as string | null,
   view: 'chat' as 'chat' | 'history',
@@ -60,7 +60,7 @@ export const chatFake = {
   archived: [] as string[],
   reset(): void {
     this.loading = false;
-    this.agents = [NOCO];
+    this.agents = [AI_AGENT];
     this.open = false;
     this.conversationId = null;
     this.view = 'chat';

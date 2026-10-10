@@ -20,14 +20,12 @@ import {
   lazy,
   Suspense,
   useEffect,
-  useRef,
   useState,
   type ReactElement,
   type ReactNode,
 } from 'react';
 import { useIsMobile } from '../../../hooks/use-mobile.js';
 import { toText, useCrmText, useLiveSessionUserId } from '../api.js';
-import { CLOSE_EMPLOYEE_PANEL, usePanelOpen } from '../assistant-state.js';
 import {
   RecordDrawerContext,
   useRecordDrawerHosted,
@@ -37,14 +35,12 @@ import { useAgentReadiness } from './ask.js';
 import { Conversation } from './conversation.js';
 import { ConversationList } from './conversation-list.js';
 
-// The CRM assistant's panel on the Agents plugin (migration step 3): Noco's
-// conversations beside every page, as the AI Employee's panel was (28rem,
-// pushing the page from 1280px, floating narrower, full screen on a phone).
-// Its state is the plugin's (`useChatPanel`: open, the conversation or a new
-// one, the history view, pins, drafts, ⌘J); the conversation and its list
-// are the ones the full page (/crm/agent-chat) shows. The AI Employee's
-// panel stays for the reports page's AI analysis and the global search: the
-// two never show together.
+// The CRM assistant's panel on the Agents plugin: the assistant's conversations
+// beside every page (28rem, pushing the page from 1280px, floating
+// narrower, full screen on a phone). Its state is the plugin's
+// (`useChatPanel`: open, the conversation or a new one, the history view,
+// pins, drafts, ⌘J); the conversation and its list are the ones the full
+// page (/crm/agent-chat) shows.
 
 // The record drawer's code loads only when a plan step's record is first
 // opened from the panel on a page that hosts no drawer of its own.
@@ -76,19 +72,8 @@ export function CrmAgentChatProvider({
 function AgentPanel(): ReactElement | null {
   const { text } = useCrmText();
   const panel = useChatPanel();
-  const employeeOpen = usePanelOpen();
   const isMobile = useIsMobile();
   const { open, closeChat } = panel;
-  // One panel at a time: the one opened last stays. After a reload both may
-  // come back open: the AI Employee's closes.
-  const previousRef = useRef({ open: false, employeeOpen: false });
-  useEffect(() => {
-    const before = previousRef.current;
-    previousRef.current = { open, employeeOpen };
-    if (!(open && employeeOpen)) return;
-    if (before.open && !before.employeeOpen) closeChat();
-    else window.dispatchEvent(new Event(CLOSE_EMPLOYEE_PANEL));
-  }, [open, employeeOpen, closeChat]);
   // The page makes room for the docked panel (client/styles.css).
   useEffect(() => {
     document.body.classList.toggle('crm-agent-panel-open', open && !isMobile);
@@ -119,7 +104,11 @@ function AgentPanel(): ReactElement | null {
       data-crm-agent-panel=''
       {...{ [CHAT_PANEL_ATTRIBUTE]: '' }}
       aria-label={toText(text('agentPanel.title'))}
-      className='fixed inset-y-0 right-0 z-30 flex w-[28rem] max-w-full flex-col border-l border-border bg-background shadow-lg'
+      // Over the layout's sticky header (z-40), which it follows in the
+      // document: below 1280px the panel floats over the page, and the
+      // header's actions would cover its own (close, new, history). Dialogs
+      // and menus (z-50) stay above it.
+      className='fixed inset-y-0 right-0 z-40 flex w-[28rem] max-w-full flex-col border-l border-border bg-background shadow-lg'
       onKeyDown={(event) => {
         // Escape closes the topmost layer: a menu or a drawer inside the
         // panel takes it first.

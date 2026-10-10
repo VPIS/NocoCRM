@@ -1,35 +1,52 @@
-import { envString, type AppConfigFactory } from '@nocobase/app-server/config';
 import {
-  defineAIConfig,
-  type AIApplicationConfig,
-} from '@nocobase/app-plugin-ai-employee/server/config';
+  defineAppConfig,
+  envString,
+  type AppConfigFactory,
+} from '@nocobase/app-server/config';
 
-const ai: AppConfigFactory<AIApplicationConfig> = defineAIConfig({
-  // Map a secret onto the field of one service it sets, keyed by that
-  // service's name, such as
-  // `OPENAI_API_KEY: envString('llmServices.openai.options.apiKey')` or
-  // `GITHUB_MCP_TOKEN: envString('mcpServers.github.headers.Authorization')`.
-  // Application change: the CRM's services in config.yml (qwen, openai,
-  // deepseek) take their keys from the environment (.env.local in
-  // development), since the plugin no longer expands `${NAME}` there.
+// A model service as config.yml declares it under `ai.llmServices`, keyed by
+// its name.
+export interface CrmModelService {
+  title?: string;
+  provider?: string;
+  enabled?: boolean;
+  sort?: number;
+  options?: Record<string, unknown>;
+  enabledModels?: { value: string; label?: string }[];
+}
+
+export interface CrmAiConfig {
+  llmServices: Record<string, CrmModelService>;
+}
+
+/**
+ * The model services a deployment configures for the CRM's AI, which
+ * server/providers/crm-agents/model-services.ts creates on the Agents
+ * plugin's Models page at start when they are not there yet. Application
+ * section: the AI Employee plugin that once owned `ai` is gone, and the
+ * Agents plugin reads its services only from that page.
+ */
+const ai: AppConfigFactory<CrmAiConfig> = defineAppConfig({
+  defaults: { llmServices: {} },
+  // The CRM's services in config.yml (qwen, openai, deepseek) take their
+  // keys from the environment (.env.local in development).
   env: {
-    DASHSCOPE_API_KEY: envString('llmServices.qwen.options.apiKey'),
-    OPENAI_API_KEY: envString('llmServices.openai.options.apiKey'),
-    OPENAI_BASE_URL: envString('llmServices.openai.options.baseURL'),
-    DEEPSEEK_API_KEY: envString('llmServices.deepseek.options.apiKey'),
+    DASHSCOPE_API_KEY: envString('llmServices.qwen.options.apiKey', {
+      description: "The Qwen (DashScope) model service's API key.",
+      secret: true,
+    }),
+    OPENAI_API_KEY: envString('llmServices.openai.options.apiKey', {
+      description: "The OpenAI model service's API key.",
+      secret: true,
+    }),
+    OPENAI_BASE_URL: envString('llmServices.openai.options.baseURL', {
+      description: "The OpenAI model service's base URL.",
+    }),
+    DEEPSEEK_API_KEY: envString('llmServices.deepseek.options.apiKey', {
+      description: "The DeepSeek model service's API key.",
+      secret: true,
+    }),
   },
-  defaults: () => ({
-    storage: {},
-    aiEmployee: { storage: {} },
-    aiKnowledgeBase: {
-      enabled: false,
-      vectorDatabases: [],
-      manifests: [],
-    },
-    llmServices: {},
-    skills: { paths: [] },
-    mcpServers: {},
-  }),
 });
 
 export default ai;

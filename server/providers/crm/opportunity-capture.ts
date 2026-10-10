@@ -1,21 +1,11 @@
-import {
-  AgentServiceError,
-  agentServiceFactoryToken,
-  aiConversationsManagerToken,
-} from '@nocobase/app-plugin-ai-employee/server';
 import { loggingToken } from '@nocobase/app-server/logging';
 import type { Row } from '@nocobase/db';
 import type { ServiceResolver } from '@nocobase/service-provider';
 import { z } from 'zod';
-import { CRM_ASSISTANT } from '../../ai/employees/crm-assistant.js';
-import { lang } from '../../locales/crm-ai/index.js';
-import {
-  dealCaptureFormLabels,
-  dealCaptureTitles,
-} from '../../locales/crm-ai/deal-capture.js';
-import { structuredRunModel } from './ai-model.js';
+import { dealCaptureFormLabels } from '../../locales/crm-ai/deal-capture.js';
+import { modelFailure, openSession } from './ai-model.js';
+import { settingsGuidance } from './guidance.js';
 import { conditions, type Actor } from './authorization.js';
-import { jsonIn } from './lead-capture.js';
 import { findDuplicates, matchReasons } from './lead-merge.js';
 import { LONG_TEXT_LIMIT, TEXT_LIMIT } from './limits.js';
 import { normalizePhone } from './phone.js';
@@ -360,115 +350,54 @@ export async function captureOpportunity(
   const known = onDeal.some((p) => p.contactId && !p.name)
     ? (await matchCompany(service, actor, companyOf, onDeal)).people
     : onDeal;
-  const language = (await service.settings()).aiLanguage;
-  const zh = language === 'zh-CN';
-  if (
-    !container.has(agentServiceFactoryToken) ||
-    !(await service.assistantEnabled())
-  )
+  const settings = await service.settings();
+  const language = settings.aiLanguage;
+  if (!(await service.assistantEnabled()))
     throw new CrmError('assistantUnavailable', 409);
   const today = new Intl.DateTimeFormat('sv-SE', {
     timeZone,
     dateStyle: 'short',
   }).format(new Date());
-
-  const skillSettings = {
-    toolsVersion: 1,
-    tools: [],
-    skillsVersion: 1,
-    skills: [],
-  };
-  const conversation = await container
-    .resolve(aiConversationsManagerToken)
-    .create({
-      userId: actor.id,
-      aiEmployee: { username: CRM_ASSISTANT },
-      title: dealCaptureTitles[adjusting ? 'adjust' : 'organise'][lang(zh)],
-      from: 'sub-agent',
-      options: { skillSettings },
-    });
+  const session = await openSession(container, {
+    timeZone,
+    guidance: settingsGuidance(settings),
+  });
+  if (!session) throw new CrmError('assistantUnavailable', 409);
   const logger = container
     .resolve(loggingToken)
     .getLogger('crm-opportunity-capture');
-  const model = await structuredRunModel(container);
-  let result;
+  let answer: z.infer<typeof dealShape> | null;
   try {
-    const agent = await container
-      .resolve(agentServiceFactoryToken)
-      .createAIEmployee({
-        username: CRM_ASSISTANT,
-        state: {
-          sessionId: conversation.sessionId,
-          timezone: timeZone,
-          ...(model ? { model } : {}),
-        },
-        actor: {
-          id: actor.id,
-          roles: ['member'],
-          isRoot: false,
-          locale: actor.locale,
-        },
-        runtime: { logger },
-        from: 'sub-agent',
-        skillSettings,
-      });
-    result = await agent.invoke({
-      userMessages: [
-        {
-          role: 'user',
-          content: {
-            type: 'text',
-            content: adjusting
-              ? adjustPrompt(
-                  pasted,
-                  {
-                    ...current,
-                    people: known.map(
-                      ({ name, jobTitle, phone, email, role }) => ({
-                        name,
-                        jobTitle,
-                        phone,
-                        email,
-                        role,
-                      }),
-                    ),
-                  },
-                  instruction,
-                  today,
-                  language,
-                )
-              : prompt(pasted, today),
-          },
-        },
-      ],
-      responseFormat: dealShape,
-      signal: AbortSignal.timeout(120_000),
-    });
-  } catch (error) {
-    if (error instanceof AgentServiceError)
-      throw new CrmError(
-        error.code === 'CONFIGURATION_ERROR'
-          ? 'assistantUnavailable'
-          : 'captureFailed',
-        error.code === 'CONFIGURATION_ERROR' ? 409 : 502,
-        undefined,
-        error.rootMessage,
-      );
-    throw error;
-  }
-  const parsed = dealShape.safeParse(
-    result.structuredResponse ?? jsonIn(result.message?.content),
-  );
-  if (!parsed.success) {
-    logger.warn(
-      {
-        sessionId: conversation.sessionId,
-        issues: parsed.error.issues.slice(0, 5),
-      },
-      'opportunity capture returned no usable opportunity',
+    answer = await session.askJson(
+      adjusting
+        ? adjustPrompt(
+            pasted,
+            {
+              ...current,
+              people: known.map(({ name, jobTitle, phone, email, role }) => ({
+                name,
+                jobTitle,
+                phone,
+                email,
+                role,
+              })),
+            },
+            instruction,
+            today,
+            language,
+          )
+        : prompt(pasted, today),
+      dealShape,
+      AbortSignal.timeout(120_000),
     );
+  } catch (error) {
+    throw modelFailure(error, 'captureFailed');
+  }
+  if (!answer) {
+    logger.warn('opportunity capture returned no usable opportunity');
     throw new CrmError('captureFailed', 502);
   }
+  const parsed = { data: answer };
   const d = parsed.data.deal;
   const line = (value: unknown, limit = TEXT_LIMIT) =>
     toText(value ?? '')

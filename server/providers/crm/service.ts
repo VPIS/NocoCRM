@@ -19,7 +19,6 @@ import {
   type SummaryRequest,
 } from './summary.js';
 import { asEntity, toText } from './schema.js';
-import { CRM_ASSISTANT } from '../../ai/employees/crm-assistant.js';
 import { isCountry, isSubdivision, subdivisionCode } from './geography.js';
 import { randomUUID } from 'node:crypto';
 import { readEntry } from './ai-entries.js';
@@ -234,24 +233,13 @@ export class CrmService {
       options: defaultSettings.options,
     };
   }
-  // Whether the CRM's AI employee is switched on: its Enabled switch on the
-  // AI Employee plugin's settings page is the assistant's only on/off, so
-  // the pages show the assistant's entries only when the plugin would
-  // answer. Without the plugin's table (an application without it, the
-  // tests) there is no assistant.
-  async assistantEnabled(
-    query: QueryAdapter = this.database.query(),
-  ): Promise<boolean> {
-    try {
-      const row = await query
-        .selectFrom('aiEmployees')
-        .select('enabled')
-        .where('username', '=', CRM_ASSISTANT)
-        .executeTakeFirst();
-      return Boolean(row?.enabled);
-    } catch {
-      return false;
-    }
+  // Whether the CRM's AI can run: there is a model to ask on the Agents
+  // plugin (ai-model.ts `aiAvailable`), set by CrmProvider. The pages show
+  // the AI's entries, and the follow-ups, reviews and captures run, only
+  // then. Without it (the tests) there is no AI.
+  aiCheck: () => Promise<boolean> = () => Promise.resolve(false);
+  async assistantEnabled(): Promise<boolean> {
+    return this.aiCheck().catch(() => false);
   }
   // What each person may read, as their last workspace load found it
   // (server/routes/workspace.ts): the Agents plugin resolves the records a
@@ -338,13 +326,13 @@ export class CrmService {
             'options',
             'approvalEnabled',
             'firstContactDays',
-            // The assistant is the AI Employee plugin's: its business
-            // guidance is in the employee's role (server/ai) and its model
-            // is chosen on the plugin's own settings page.
+            // Settings of the CRM's former assistant: its business guidance
+            // is in server/providers/crm/guidance.ts and its model is the
+            // Agents plugin's.
             'aiInstructions',
             'aiService',
             'aiModel',
-            // Switched on and off as the employee itself (assistantEnabled).
+            // The AI is on whenever there is a model (assistantEnabled).
             'aiEnabled',
           ].includes(key)
         )
@@ -374,6 +362,13 @@ export class CrmService {
     for (const key of Object.values(notificationSwitches))
       if (typeof value[key] !== 'boolean')
         throw new CrmError('invalidInput', 400, key);
+    // Written over the shipped guidance; blank goes back to it.
+    if (
+      typeof value.businessGuidance !== 'string' ||
+      value.businessGuidance.length > LONG_TEXT_LIMIT
+    )
+      throw new CrmError('invalidInput', 400, 'businessGuidance');
+    if (!value.businessGuidance.trim()) value.businessGuidance = '';
     // A nurture review is planned in whole days, within a year, as the AI
     // gives it.
     if (

@@ -1,16 +1,16 @@
 import { z } from 'zod';
-import type { ScreenResult } from '../../ai/screen.js';
 import type { AgentSwitches } from '../../providers/crm/agents.js';
 import { AGENDA_PAGE } from '../../providers/crm/dashboard.js';
 import type { DemoStatus } from '../../providers/crm/demo.js';
 import type { PlaceMatch } from '../../providers/crm/geography.js';
+import { LONG_TEXT_LIMIT } from '../../providers/crm/limits.js';
 import type { CrmSettings } from '../../providers/crm/schema.js';
 import { JsonObject, PageQuery, TitlesShape } from './common.js';
 import { AiEntry } from './operations.js';
 
 // The workspace's own routes: what the pages start from, the settings, the
 // demo data, the overview and reports, the inbox's AI suggestions, the AI
-// agents, attachments, the mail timeline, search and screening.
+// agents, attachments, the mail timeline and search.
 
 const SettingsShape = {
   currency: z.string().meta({ description: 'A three-letter ISO code.' }),
@@ -25,6 +25,10 @@ const SettingsShape = {
   notifyApprovals: z.boolean(),
   notifyRecordChanges: z.boolean(),
   notifyTaskReminders: z.boolean(),
+  businessGuidance: z.string().max(LONG_TEXT_LIMIT).meta({
+    description:
+      'The business guidance the AI works from, in Markdown; empty for the shipped one.',
+  }),
 };
 
 export const SystemSettings: z.ZodType<CrmSettings> = z
@@ -310,21 +314,6 @@ export const AgentSwitchInput = z.strictObject({
     .optional()
     .meta({ description: 'The triggers to change; the others keep theirs.' }),
 });
-
-export const ScreenProposalInput = z.strictObject({
-  tool: z.string().meta({ description: 'The write tool the AI proposed.' }),
-  // The proposal's input as the model wrote it, which the tool's own rules
-  // check: its shape is the tool's.
-  input: z.unknown(),
-});
-export const ScreenResultSchema: z.ZodType<ScreenResult> = z.union([
-  z.object({ ok: z.literal(true) }),
-  z.object({
-    ok: z.literal(false),
-    code: z.string(),
-    field: z.string().optional(),
-  }),
-]);
 
 export const UploadQuery = z.object({
   entity: z

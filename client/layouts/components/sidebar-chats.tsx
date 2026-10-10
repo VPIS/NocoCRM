@@ -41,7 +41,7 @@ import { toText, useCrmText } from '../../components/crm/api.js';
 import { useAgentReadiness } from '../../components/crm/agent-chat/ask.js';
 
 // Application change to the template's sidebar: the user's conversations
-// with Noco (the Agents plugin's conversations, migration step 3), at the
+// with the assistant (the Agents plugin's conversations, migration step 3), at the
 // bottom of the menu, newest first. A row opens its conversation in the
 // assistant panel, "New conversation" a blank one. The plugin's list pages
 // as the list's end scrolls into view. A row's menu archives it (the plugin

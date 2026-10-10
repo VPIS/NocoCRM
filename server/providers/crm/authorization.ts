@@ -737,3 +737,21 @@ export function outputFields(
 ): string[] {
   return fieldsFor(entity).filter((f) => access.fields.includes(f));
 }
+
+// The person a background run acts as (a follow-up as the record's owner,
+// a review as the approver): their own grants, as a signed-in session
+// would have them.
+export function crmActor(
+  authz: Pick<AppAuthorization, 'for'>,
+  person: { id: unknown; locale?: string | null },
+): Actor {
+  const id = toText(person.id);
+  return {
+    id,
+    locale: person.locale?.startsWith('zh') ? 'zh-CN' : 'en-US',
+    scope: authz.for({
+      principal: { type: 'user', id },
+      subjects: [{ type: 'authenticated', id: '*' }],
+    }),
+  };
+}

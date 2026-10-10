@@ -144,8 +144,8 @@ export default function CrmListPage(): ReactElement {
   const params = new URLSearchParams(location.search);
   const initialMetric = params.get('metric') ?? undefined;
   const initialStatus = params.get('status') ?? undefined;
-  // From the global search: "?search=" fills the search box, and the
-  // records its AI answer found ("?ids=a,b&found=title") narrow the list.
+  // From the global search: "?search=" fills the search box; a link naming
+  // records ("?ids=a,b&found=title") narrows the list to them.
   const initialSearch = params.get('search') ?? undefined;
   const foundIds = params.get('ids');
   const initialFound = foundIds

@@ -1,10 +1,7 @@
 // The words of the AI's proposal for merging two leads
-// (server/providers/crm/lead-merge.ts): its conversation's title and the
-// names it gives the two leads, which the model reuses in what it writes,
+// (server/providers/crm/lead-merge.ts): the names it gives the two leads, which the model reuses in what it writes,
 // picked in the language it writes in.
 import type { Pair, Pairs } from './index.js';
-
-export const mergeTitle: Pair = ['合并重复线索', 'Merge duplicate leads'];
 
 export const mergeLabels = {
   // What the line that names a lead is headed (see nameLine).

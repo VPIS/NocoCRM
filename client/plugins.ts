@@ -5,7 +5,6 @@ import {
   defineClientPlugins,
   type AppClientPlugins,
 } from '@nocobase/app-client/plugins';
-import aiEmployee from '@nocobase/app-plugin-ai-employee/client';
 import apiKeys from '@nocobase/app-plugin-api-keys/client';
 import authentication from '@nocobase/app-plugin-authentication/client';
 import authorization from '@nocobase/app-plugin-authorization/client';
@@ -23,7 +22,6 @@ import agents from '@nocobase/app-plugin-agents/client';
 // list; removing its entry and its import disables it.
 const clientPlugins: AppClientPlugins = defineClientPlugins([
   authentication(),
-  aiEmployee(),
   authorization(),
   defaultAccess(),
   sharingRules(),

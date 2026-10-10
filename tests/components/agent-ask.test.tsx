@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { crmEn } from '../../client/locales/crm/index.js';
 
-// Asking Noco from outside its panel: a card's Discuss pins the record and
+// Asking the assistant from outside its panel: a card's Discuss pins the record and
 // the card in a new conversation without sending; a question whose
 // conversation was created but whose message did not go opens it with the
 // text in the composer.
@@ -34,7 +34,7 @@ vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) =>
     await importOriginal(),
   ),
 );
-const { chatFake, NOCO } = await import('../setup/agent-chat-fake.js');
+const { chatFake, AI_AGENT } = await import('../setup/agent-chat-fake.js');
 const { DiscussButton } =
   await import('../../client/components/crm/agent-chat/discuss-button.js');
 const { cardPin, recordPin, useAskAgent } =
@@ -50,7 +50,7 @@ function Ask({ text }: { text: string }) {
       onClick={() =>
         void ask({
           text,
-          agent: NOCO as never,
+          agent: AI_AGENT as never,
           items: [recordPin('leads', 'l1', 'Tang Rui')],
         })
       }
@@ -60,7 +60,7 @@ function Ask({ text }: { text: string }) {
   );
 }
 
-describe('asking Noco from outside its panel', () => {
+describe('asking the assistant from outside its panel', () => {
   beforeEach(() => {
     chatFake.reset();
     toasts.length = 0;

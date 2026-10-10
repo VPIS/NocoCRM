@@ -10,11 +10,7 @@ import {
   TooltipTrigger,
 } from '../ui/tooltip.js';
 import { toText, useCrmText, type Entity } from './api.js';
-import {
-  useAnyPanelOpen,
-  useAskDraft,
-  useFocusReturn,
-} from './assistant-ask.js';
+import { usePanelOpen, useAskDraft, useFocusReturn } from './assistant-ask.js';
 import { recordPin, useAgentReadiness, useDiscuss } from './agent-chat/ask.js';
 import { AskComposer } from './assistant-ask-composer.js';
 import { useCurrentRecord, type CurrentRecord } from './current-record.js';
@@ -86,7 +82,7 @@ function questionsFor(
 export function AssistantDock(): ReactElement | null {
   const { text } = useCrmText();
   const readiness = useAgentReadiness();
-  const panelOpen = useAnyPanelOpen();
+  const panelOpen = usePanelOpen();
   const discuss = useDiscuss();
   const record = useCurrentRecord();
   const { pathname } = useLocation();

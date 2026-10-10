@@ -1,5 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
@@ -8,16 +15,11 @@ import { SidebarProvider } from '../../client/components/ui/sidebar.js';
 import { crmEn } from '../../client/locales/crm/index.js';
 
 // The global search: ⌘K, keyword results grouped by kind, going to a record
-// or its list, and asking the AI in a conversation of its own.
+// or its list, and asking the AI, which opens its panel on the question.
 
 const state = vi.hoisted(() => ({
   assistant: true,
-  readiness: { state: 'ready' } as
-    | { state: 'ready' }
-    | { state: 'loading' }
-    | { state: 'unavailable'; reason: string },
   requests: [] as string[],
-  asked: [] as { prompt: string; model?: unknown }[],
 }));
 
 function english(key: string, options: Record<string, unknown> = {}): string {
@@ -82,46 +84,18 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
       },
   };
 });
-vi.mock(
-  '../../client/components/crm/assistant-state.js',
-  async (importOriginal) => {
-    const actual =
-      await importOriginal<
-        typeof import('../../client/components/crm/assistant-state.js')
-      >();
-    return {
-      ...actual,
-      useAssistantReadiness: () => state.readiness,
-    };
-  },
+// The assistant on the Agents plugin (tests/setup/agent-chat-fake).
+vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) =>
+  (await import('../setup/agent-chat-fake.js')).fakeChatModule(
+    await importOriginal(),
+  ),
 );
-vi.mock(
-  '../../client/extensions/nocobase-ai/index.js',
-  async (importOriginal) => {
-    const actual =
-      await importOriginal<
-        typeof import('../../client/extensions/nocobase-ai/index.js')
-      >();
-    return {
-      ...actual,
-      useAI: () => ({
-        employees: [{ username: 'crm-assistant' }],
-        models: [{ llmService: 'qwen', value: 'qwen-max', label: 'Qwen Max' }],
-      }),
-      useAIPageElementHandle: () => ({
-        ref: () => undefined,
-        context: { type: 'page-element', id: 'crm-global-search' },
-      }),
-    };
-  },
-);
+const { chatFake } = await import('../setup/agent-chat-fake.js');
 
 const { GlobalSearchProvider } =
   await import('../../client/components/crm/global-search.js');
 const { GlobalSearchDialog, SearchHeaderButton, SearchNavButton } =
   await import('../../client/components/crm/search-dialog.js');
-const { searchChat } =
-  await import('../../client/components/crm/search-chat.js');
 
 function Where() {
   const location = useLocation();
@@ -161,12 +135,10 @@ const pressShortcut = () =>
   });
 
 describe('the global search', () => {
-  const ask = vi.spyOn(searchChat, 'ask');
   beforeEach(() => {
     state.assistant = true;
-    state.readiness = { state: 'ready' };
     state.requests = [];
-    ask.mockReset();
+    chatFake.reset();
     // cmdk measures its list and scrolls the selection into view.
     vi.stubGlobal(
       'ResizeObserver',
@@ -253,76 +225,21 @@ describe('the global search', () => {
         english('globalSearch.askAbout', { text: 'orbit' }),
       ),
     );
-    expect(ask).toHaveBeenCalledTimes(1);
-    expect(ask.mock.calls[0]?.[0]).toBe('[CRM search] orbit');
-    expect(ask.mock.calls[0]?.[2]).toEqual({
-      llmService: 'qwen',
-      model: 'qwen-max',
-    });
-    // The answer card shows the question while Noco works.
-    expect(
-      within(again).getByRole('region', {
-        name: english('globalSearch.answerTitle'),
-      }),
-    ).toBeTruthy();
-  });
-
-  it('keeps the answer when complete and lets its conversation go', async () => {
-    const user = userEvent.setup();
-    const removed: string[] = [];
-    renderSearch();
-    pressShortcut();
-    const dialog = await screen.findByRole('dialog');
-    await user.click(
-      within(dialog).getByRole('tab', { name: english('globalSearch.askTab') }),
-    );
-    const input = within(dialog).getByRole('textbox', {
-      name: english('globalSearch.askPlaceholder'),
-    });
-    await user.type(input, 'big deals{Enter}');
-    expect(ask.mock.calls[0]?.[0]).toBe('[CRM search] big deals');
-    act(() =>
-      searchChat.setState({
-        status: 'ready',
-        conversationId: 'c-9',
-        removeConversation: (id: string) => {
-          removed.push(id);
-          return Promise.resolve();
-        },
-        messages: [
-          {
-            id: 'u',
-            role: 'user',
-            parts: [{ type: 'text', text: '[CRM search] big deals' }],
-          },
-          {
-            id: 'a',
-            role: 'assistant',
-            parts: [{ type: 'text', text: 'Two deals over a million.' }],
-          },
-        ] as never,
-      }),
-    );
-    expect(
-      await within(dialog).findByText('Two deals over a million.'),
-    ).toBeTruthy();
-    expect(removed).toEqual(['c-9']);
-    expect(
-      within(dialog).getByRole('button', {
-        name: english('globalSearch.followUp'),
-      }),
-    ).toBeTruthy();
+    // The dialog closes, and the question goes to the assistant in a
+    // conversation of its own, which its panel opens on.
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => expect(chatFake.sent).toHaveLength(1));
+    expect(chatFake.created[0]).toMatchObject({ agentId: 'noco' });
+    expect(chatFake.sent[0]).toMatchObject({ content: 'orbit' });
+    expect(chatFake.opened).toEqual([{ conversationId: 'c1', view: 'chat' }]);
   });
 
   it('offers the AI disabled with the reason while the chat cannot start, and not at all with the assistant off', async () => {
     const user = userEvent.setup();
-    state.readiness = { state: 'unavailable', reason: 'No model is enabled.' };
+    chatFake.agents = [];
     const first = renderSearch();
     pressShortcut();
     let dialog = await screen.findByRole('dialog');
-    expect(
-      within(dialog).getByRole('tab', { name: english('globalSearch.askTab') }),
-    ).toHaveAttribute('aria-disabled', 'true');
     await user.type(within(dialog).getByRole('combobox'), 'orbit');
     const askRow = await within(dialog).findByText(
       english('globalSearch.askAbout', { text: 'orbit' }),
@@ -332,14 +249,23 @@ describe('the global search', () => {
       'true',
     );
     // The reason in the open, since a disabled row takes no pointer.
-    expect(within(dialog).getByText('No model is enabled.')).toBeTruthy();
+    expect(
+      within(dialog).getByText(english('agentPanel.notSetUp')),
+    ).toBeTruthy();
     first.unmount();
 
     state.assistant = false;
+    chatFake.reset();
     renderSearch();
     pressShortcut();
     dialog = await screen.findByRole('dialog');
-    expect(within(dialog).queryByRole('tab')).toBeNull();
+    await user.type(within(dialog).getByRole('combobox'), 'orbit');
+    await within(dialog).findByText(`${english('entities.leads')} · 7`);
+    expect(
+      within(dialog).queryByText(
+        english('globalSearch.askAbout', { text: 'orbit' }),
+      ),
+    ).toBeNull();
   });
 
   it('does not open over another dialog', () => {
