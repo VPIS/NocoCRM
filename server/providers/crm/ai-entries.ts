@@ -21,6 +21,8 @@ export interface Verdict {
   recommendation: 'follow' | 'nurture' | 'convert' | 'invalid';
   grade: 'A' | 'B' | 'C' | null;
   summary: string;
+  // What it found, as a short paragraph; absent from entries before it.
+  brief?: string | null;
   reasons: string[];
   edition: string | null;
   invalidReason: string | null;
@@ -64,6 +66,8 @@ export interface OpportunityVerdict {
   // Advancing (or going back): the stage the evidence supports.
   stage: string | null;
   summary: string;
+  // What it found, as a short paragraph; absent from entries before it.
+  brief?: string | null;
   reasons: string[];
   risks: string[];
   nextStep: Verdict['nextStep'];

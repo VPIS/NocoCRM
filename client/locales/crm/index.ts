@@ -621,7 +621,7 @@ const wording = {
       running: ['Working', '运行中'],
       pending: ['Waiting', '待处理'],
       accepted: ['Accepted', '已采纳'],
-      dismissed: ['Dismissed', '已忽略'],
+      dismissed: ['Ignored', '已忽略'],
       failed: ['Failed', '失败'],
       retired: ['Settled elsewhere', '已在别处处理'],
     },
@@ -659,6 +659,13 @@ const wording = {
       '邮件已发送，建议已采纳。',
     ],
     openComposer: ['Edit in the mail composer', '在邮件窗口中编辑'],
+    // Beside the recipients: the copy line, drawn once asked for.
+    addCc: ['Cc', '抄送'],
+    // "Accept all" with the draft not ready to go.
+    notReady: [
+      'Fill in a recipient, the subject and the message first.',
+      '请先填写收件人、主题和正文。',
+    ],
     noMailbox: [
       'Connect a mailbox to send it from here; for now, copy the draft.',
       '连接邮箱后可直接在这里发送；现在可以先复制草稿。',
@@ -737,7 +744,7 @@ const wording = {
     aiCaptured: ['AI organised', 'AI 整理'],
     addedFiles: ['added', '添加了附件'],
     removedFiles: ['removed', '删除了附件'],
-    evaluated: ['recommended a follow-up', '给出跟进建议'],
+    evaluated: ['suggested', '建议'],
     // An approval's review for its approver.
     reviewed: ['reviewed the request', '给出审批建议'],
     reviewing: ['is reviewing the request…', '正在分析这个申请…'],
@@ -833,7 +840,7 @@ const wording = {
     basis: ['from {{basis}}', '出自 {{basis}}'],
     findingsDone: ['written by {{name}}, {{time}}', '{{name}} {{time}} 已写入'],
     source: ['Source', '来源'],
-    writePicked: ['Write {{count}} into the lead', '写入所选 {{count}} 项'],
+    writePicked: ['Write {{count}} into the lead', '写入勾选的 {{count}} 项'],
     // A deal's: about its company, written into the company.
     findingsCompany: [
       'Found on the web about the company',
@@ -847,6 +854,8 @@ const wording = {
     nextStep: ['Next step', '下一步'],
     stepTask: ['Task', '任务'],
     stepEmail: ['Email', '邮件'],
+    // The email box's heading on a card.
+    emailToSend: ['Email to send', '要发送的邮件'],
     today: ['today', '今天'],
     inDays: ['in {{count}} days', '{{count}} 天后'],
     questions: ['To ask', '要问的问题'],
@@ -988,7 +997,47 @@ const wording = {
     acceptReschedule: ['Accept and move it', '采纳并改期'],
     acceptReport: ['Record the outcome', '记录结果'],
     acceptInvalid: ['Accept and mark invalid', '采纳并标记无效'],
-    dismiss: ['Dismiss', '忽略'],
+    dismiss: ['Ignore', '忽略'],
+    // The card's one decision at its foot, and, on hover, what it does.
+    acceptAll: ['Accept all', '全部采纳'],
+    will: {
+      title: ['Accepting all will:', '全部采纳将：'],
+      write: [
+        'Write the ticked fields into the lead ({{count}})',
+        '把勾选的 {{count}} 项写入线索',
+      ],
+      writeCompany: [
+        'Write the ticked fields into the company ({{count}})',
+        '把勾选的 {{count}} 项写入公司',
+      ],
+      send: ['Send the email “{{subject}}”', '发送邮件「{{subject}}」'],
+      sendYourself: [
+        'Leave the email to you to send (copy the draft)',
+        '邮件由你自己发送（可复制草稿）',
+      ],
+      plan: ['Create the task “{{name}}”', '创建任务「{{name}}」'],
+      update: ['Update the task “{{name}}”', '更新任务「{{name}}」'],
+      report: [
+        'Record the outcome of “{{name}}”',
+        '记录任务「{{name}}」的结果',
+      ],
+      reschedule: ['Move the task “{{name}}”', '改期任务「{{name}}」'],
+      nurture: ['Set the lead to nurturing', '把线索设为培育中'],
+      invalid: ['Mark the lead invalid', '把线索标记为无效'],
+      convert: [
+        'Open the conversion with the proposed opportunity',
+        '打开转化，带上建议的商机',
+      ],
+      stage: ['Move the opportunity to {{stage}}', '把商机推进到「{{stage}}」'],
+      pause: ['Pause the opportunity', '暂停商机'],
+      lose: ['Mark the opportunity lost', '把商机标记为输单'],
+      contacts: [
+        'Set contacts on the opportunity ({{count}})',
+        '更新商机的 {{count}} 位联系人',
+      ],
+      approvals: ['Submit approvals ({{count}})', '提交 {{count}} 个审批'],
+      mark: ['Mark the suggestion accepted', '把建议标记为已采纳'],
+    },
     // Talking a card over with the AI in a conversation of its own.
     ask: ['Discuss', '讨论'],
     revise: ['Adjust', '调整'],
@@ -1036,10 +1085,10 @@ const wording = {
     copied: ['Copied', '已复制'],
     statuses: {
       superseded: ['Replaced', '已被新建议替代'],
-      running: ['Working', '跟进中'],
+      running: ['AI working', 'AI 跟进中'],
       pending: ['Pending', '待处理'],
       accepted: ['Accepted', '已采纳'],
-      dismissed: ['Dismissed', '已忽略'],
+      dismissed: ['Ignored', '已忽略'],
       failed: ['Not finished', '未完成'],
     },
     decidedBy: [
@@ -1387,9 +1436,9 @@ const wording = {
     failed: ['Not applied', '未执行'],
     confirmHint: ['Nothing is written until you confirm.', '确认后才会写入'],
     // Declining a proposal, worded as on the evaluation card.
-    dismiss: ['Dismiss', '忽略'],
+    dismiss: ['Ignore', '忽略'],
     blocked: [
-      'You cannot make this change. Dismiss it and tell the assistant what to do instead.',
+      'You cannot make this change. Ignore it and tell the assistant what to do instead.',
       '你没有权限执行这项修改。请忽略，并告诉助手换个做法。',
     ],
     delete: [
@@ -2016,7 +2065,7 @@ const wording = {
     rejected: ['Rejected', '已拒绝'],
     withdrawn: ['Withdrawn', '已撤回'],
     executed: ['Executed', '已执行'],
-    dismissed: ['Dismissed', '已忽略'],
+    dismissed: ['Ignored', '已忽略'],
     superseded: ['Replaced', '已替换'],
     executing: ['Executing', '执行中'],
     'sales-representative': ['Salesperson', '销售人员'],

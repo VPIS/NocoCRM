@@ -265,6 +265,13 @@ function verdictShape(options: { pause: string[]; lost: string[] }) {
     summary: z
       .string()
       .describe('The reason in one sentence, written for the salesperson'),
+    brief: z
+      .string()
+      .nullable()
+      .default(null)
+      .describe(
+        'A short paragraph of two to four sentences for the salesperson, in plain prose with no list: what changed since last time, the grounds and risks that matter, and what to prepare for and find out next; not repeating the one-sentence reason',
+      ),
     reasons: z
       .array(z.string())
       .describe(
@@ -965,6 +972,7 @@ The output format in section six of the skill does not apply here. Return only t
   "confidence": "high" | "medium" | "low" | null,
   "stage": ${list(MOVABLE)} | null,
   "summary": "the reason in one sentence",
+  "brief": "two to four sentences of plain prose, no list: what changed, the grounds and risks that matter, what to prepare and find out",
   "reasons": ["a ground (its source)"],
   "risks": ["a risk or gap"],
   "nextStep": { "type": ${list([...STEP_TYPES])}, "subject": "the task subject", "inDays": an integer from 0 to 30, "task": "the ref of the existing task carried on" | null, "owner": "a name from the available owners" | null } | null,
@@ -1157,6 +1165,13 @@ function clip(
     confidence: verdict.recommendation === 'lose' ? null : verdict.confidence,
     stage: moving ? stage : null,
     summary: line(verdict.summary),
+    // A paragraph: one run of text, a little longer than a line.
+    brief: verdict.brief
+      ? unref(
+          verdict.brief.replace(/\s+/g, ' ').trim(),
+          people.names ?? {},
+        ).slice(0, TEXT_LIMIT * 4)
+      : null,
     reasons: verdict.reasons.slice(0, 3).map(line),
     risks: (verdict.risks ?? []).slice(0, 3).map(line),
     nextStep:

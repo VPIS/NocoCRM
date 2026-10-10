@@ -128,6 +128,13 @@ const verdictShape = z.object({
     .describe(
       "One-sentence reason, written for the salesperson, quoting the key information in the customer's own words",
     ),
+  brief: z
+    .string()
+    .nullable()
+    .default(null)
+    .describe(
+      'A short paragraph of two to four sentences for the salesperson, in plain prose with no list: what changed since last time, the grounds that matter, and what to prepare for and find out next; not repeating the one-sentence reason',
+    ),
   reasons: z
     .array(z.string())
     .describe(
@@ -1048,6 +1055,7 @@ The output format in section 6 of the skill does not apply here. Return only the
   "recommendation": "follow" | "nurture" | "convert" | "invalid",
   "grade": "A" | "B" | "C" | null,
   "summary": "one-sentence reason",
+  "brief": "two to four sentences of plain prose, no list: what changed, the grounds that matter, what to prepare and find out",
   "reasons": ["ground (source)"],
   "edition": "edition name" | null,
   "invalidReason": ${invalidReasons.map((r) => `"${r}"`).join(' | ')} | null,
@@ -2066,11 +2074,18 @@ function clip(
 ): Omit<Verdict, 'enrich'> {
   const line = (value: string): string =>
     unref(value.trim(), people.names ?? {}).slice(0, TEXT_LIMIT * 2);
+  // A paragraph: one run of text, a little longer than a line.
+  const prose = (value: string): string =>
+    unref(value.replace(/\s+/g, ' ').trim(), people.names ?? {}).slice(
+      0,
+      TEXT_LIMIT * 4,
+    );
   return {
     recommendation: verdict.recommendation,
     grade: verdict.grade,
     invalidReason: verdict.invalidReason,
     summary: line(verdict.summary),
+    brief: verdict.brief ? prose(verdict.brief) : null,
     reasons: verdict.reasons.slice(0, 3).map(line),
     edition: verdict.edition ? line(verdict.edition) : null,
     nextStep: verdict.nextStep
