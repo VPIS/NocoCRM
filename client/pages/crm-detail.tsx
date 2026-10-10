@@ -2514,7 +2514,7 @@ function CommentThread({
         return (
           <Fragment key={replyId}>
             {folded && index === 1 ? (
-              <div className='relative pt-2 pl-7'>
+              <div className='relative pt-2 pl-8'>
                 <ThreadLine />
                 <button
                   type='button'
@@ -2592,11 +2592,11 @@ function CommentThread({
                     onDone={() => setEditing(undefined)}
                   />
                 ) : commentGone(reply) ? (
-                  <div className='pl-7 text-sm text-muted-foreground'>
+                  <div className='pl-8 text-sm text-muted-foreground'>
                     {text('comments.deleted')}
                   </div>
                 ) : (
-                  <div className='pl-7 text-sm'>
+                  <div className='pl-8 text-sm'>
                     {commentText(reply) ? (
                       <FoldingText
                         value={markdownMentions(
@@ -2636,7 +2636,7 @@ function CommentAvatar({
   return (
     <span
       aria-hidden
-      className={`relative grid size-5 shrink-0 place-items-center rounded-full bg-muted text-[0.625rem] font-medium text-muted-foreground ${className}`}
+      className={`relative grid size-6 shrink-0 place-items-center rounded-full bg-muted text-[0.6875rem] font-medium text-muted-foreground ${className}`}
     >
       {initials(name)}
     </span>
@@ -2655,18 +2655,18 @@ function ThreadLine({
   part?: 'below' | 'above' | 'after' | 'through' | 'box';
 }): ReactElement {
   // Clear of the avatar by 6px, as the timeline's line is of its icons:
-  // the avatar's middle is 13px down its line, its half spacing * 2.5.
+  // the avatar's middle is 13px down its line, its half spacing * 3.
   const place = {
-    below: 'top-[calc(13px+var(--spacing)*2.5+6px)] bottom-0',
-    above: 'top-0 h-[calc(13px-var(--spacing)*0.5-6px)]',
-    after: 'top-[calc(var(--spacing)*4.5+19px)] bottom-0',
+    below: 'top-[calc(13px+var(--spacing)*3+6px)] bottom-0',
+    above: 'top-0 h-[calc(13px-var(--spacing)*1-6px)]',
+    after: 'top-[calc(var(--spacing)*5+19px)] bottom-0',
     through: 'inset-y-0',
-    box: 'top-0 h-[calc(var(--spacing)*4-6px)]',
+    box: 'top-0 h-[calc(var(--spacing)*3.5-6px)]',
   }[part];
   return (
     <span
       aria-hidden
-      className={`absolute left-2.5 w-px -translate-x-1/2 bg-border/50 ${place}`}
+      className={`absolute left-3 w-px -translate-x-1/2 bg-border/50 ${place}`}
     />
   );
 }
@@ -2751,7 +2751,7 @@ function ReplyBox({
           </span>
         </div>
       </div>
-      <div className='grid gap-2 pl-7'>
+      <div className='grid gap-2 pl-8'>
         <CommentUploads uploads={uploads} />
         <div className='flex items-center justify-end gap-2'>
           <span className='mr-1 text-xs text-muted-foreground'>
@@ -3450,7 +3450,7 @@ export function HistoryFeed({
                           // in line with the replies' text.
                           <div
                             data-comment={key}
-                            className='relative pt-0.5 pl-7 text-sm'
+                            className='relative pt-0.5 pl-8 text-sm'
                           >
                             {threaded ? <ThreadLine /> : null}
                             {/* As the original message: five lines fading
@@ -3469,7 +3469,7 @@ export function HistoryFeed({
                         editingNote !== key &&
                         !commentGone(event) &&
                         commentFilesOf(event).length ? (
-                          <div data-comment={key} className='relative pl-7'>
+                          <div data-comment={key} className='relative pl-8'>
                             {threaded ? <ThreadLine /> : null}
                             <CommentFiles ids={commentFilesOf(event)} />
                           </div>
