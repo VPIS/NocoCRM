@@ -645,7 +645,7 @@ const wording = {
     lastWeek: ['Last 7 days', '近 7 天'],
     lastMonth: ['Last 30 days', '近 30 天'],
     runs: ['Runs', '运行次数'],
-    acceptance: ['Accepted', '采纳率'],
+    acceptance: ['Acceptance rate', '采纳率'],
     statuses: {
       running: ['Working', '运行中'],
       pending: ['Waiting', '待处理'],
