@@ -268,7 +268,7 @@ export function EmailStep({
   // Decided, or the reader may not act: the draft as written.
   if (!editable)
     return (
-      <div className='grid gap-1.5 rounded-lg border border-border/60 bg-background/60 p-3'>
+      <div className='grid gap-1.5 rounded-lg border border-border bg-background/60 p-3'>
         {heading}
         <p className='font-medium'>{draft.subject}</p>
         <p className='break-words whitespace-pre-wrap'>{draft.body}</p>
@@ -300,7 +300,7 @@ export function EmailStep({
     <span className='pt-1 text-xs text-muted-foreground'>{text(key)}</span>
   );
   return (
-    <div className='grid gap-2 rounded-lg border border-border/60 bg-background/60 p-3'>
+    <div className='grid gap-2 rounded-lg border border-border bg-background/60 p-3'>
       {heading}
       <div className='grid grid-cols-[4.5rem_minmax(0,1fr)] items-start gap-x-2 gap-y-1.5'>
         {senders.length > 0 && (

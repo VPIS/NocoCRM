@@ -142,7 +142,7 @@ export function PrepPanel({
   return (
     <section
       // Waiting, it carries the AI's tint; decided, a neutral ground.
-      className={`@container grid grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border/60 p-4 text-sm shadow-xs [&_:is(input,textarea):focus-visible]:border-ring/50! [&_:is(input,textarea):focus-visible]:ring-2! [&_:is(input,textarea):focus-visible]:ring-ring/10! ${
+      className={`@container grid grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border p-4 text-sm shadow-xs [&_:is(input,textarea):focus-visible]:border-ring/50! [&_:is(input,textarea):focus-visible]:ring-2! [&_:is(input,textarea):focus-visible]:ring-ring/10! ${
         entry.status === 'pending' ? 'bg-ai/5' : 'bg-card'
       }`}
     >
@@ -261,7 +261,7 @@ export function PrepPanel({
           and, at the right, setting it aside or writing it into the task,
           whose hover says what that does. */}
       {entry.status === 'pending' && prep && (
-        <div className='grid gap-3 border-t border-border/60 pt-3'>
+        <div className='grid gap-3 border-t border-border pt-3'>
           {deciding && (
             <form
               className='flex min-w-0 items-end gap-2'

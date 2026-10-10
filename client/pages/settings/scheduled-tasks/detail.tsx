@@ -210,7 +210,7 @@ function RunHistory({
   } else {
     body = (
       <>
-        <ul className='divide-y rounded-lg border border-border/60'>
+        <ul className='divide-y rounded-lg border border-border'>
           {runs.map((run) => (
             <li key={run.id} className='flex flex-col gap-1 px-3 py-2 text-sm'>
               <div className='flex flex-wrap items-center gap-x-3 gap-y-1'>

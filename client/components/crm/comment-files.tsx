@@ -175,7 +175,7 @@ export function CommentFiles({
     onRemove ? (
       <button
         type='button'
-        className='absolute -top-1.5 -right-1.5 hidden size-5 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground shadow-xs group-hover/file:flex group-focus-within/file:flex hover:text-foreground [@media(hover:none)]:flex'
+        className='absolute -top-1.5 -right-1.5 hidden size-5 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-xs group-hover/file:flex group-focus-within/file:flex hover:text-foreground [@media(hover:none)]:flex'
         aria-label={`${toText(text('remove'))} ${fileOf(id)?.filename ?? ''}`}
         onClick={() => onRemove(id)}
       >
@@ -204,7 +204,7 @@ export function CommentFiles({
             // The row opens the preview; its end downloads and removes.
             <div
               key={id}
-              className='flex min-w-0 items-center rounded-lg border border-border/60 bg-card pr-1.5 shadow-xs transition-colors hover:bg-muted/60'
+              className='flex min-w-0 items-center rounded-lg border border-border bg-card pr-1.5 shadow-xs transition-colors hover:bg-muted/60'
             >
               <button
                 type='button'
@@ -218,7 +218,7 @@ export function CommentFiles({
                     src={`${file.url}?inline=1`}
                     alt=''
                     loading='lazy'
-                    className='size-7 shrink-0 rounded border border-border/60 object-cover'
+                    className='size-7 shrink-0 rounded border border-border object-cover'
                   />
                 ) : (
                   <span
@@ -298,7 +298,7 @@ export function CommentFiles({
                   type='button'
                   title={titleOf(id)}
                   aria-label={label(id)}
-                  className='block size-14 overflow-hidden rounded-md border border-border/60 bg-muted shadow-xs transition-opacity hover:opacity-90'
+                  className='block size-14 overflow-hidden rounded-md border border-border bg-muted shadow-xs transition-opacity hover:opacity-90'
                   onClick={() => setPreviewing(id)}
                 >
                   <img
@@ -329,7 +329,7 @@ export function CommentFiles({
                   disabled={!file}
                   title={titleOf(id)}
                   aria-label={label(id)}
-                  className='flex h-8 max-w-72 min-w-0 items-center gap-2 rounded-md border border-border/60 bg-card pr-2.5 pl-1 text-left shadow-xs transition-colors hover:bg-muted/60'
+                  className='flex h-8 max-w-72 min-w-0 items-center gap-2 rounded-md border border-border bg-card pr-2.5 pl-1 text-left shadow-xs transition-colors hover:bg-muted/60'
                   onClick={() => file && setPreviewing(id)}
                 >
                   <span

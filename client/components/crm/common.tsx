@@ -11,12 +11,7 @@ import {
 import { Link } from 'react-router';
 import { useRecordDrawer, useRecordLink } from './record-drawer.js';
 import { Markdown } from './markdown.js';
-import {
-  ArrowUpRight,
-  Inbox,
-  LoaderCircle,
-  type LucideIcon,
-} from 'lucide-react';
+import { Inbox, LoaderCircle, type LucideIcon } from 'lucide-react';
 import { Card, CardContent } from '../ui/card.js';
 import { Badge } from '../ui/badge.js';
 import { Alert, AlertDescription } from '../ui/alert.js';
@@ -282,7 +277,7 @@ export function Metric({
   );
   // Framed as the list pages' cards are: a faint border, not the Card
   // primitive's ring, and the lightest shadow; chosen, the primary's.
-  const frame = `gap-0 border border-border/60 py-4 shadow-xs ring-0 ${toText(
+  const frame = `gap-0 border border-border py-4 shadow-xs ring-0 ${toText(
     active ? 'border-primary ring-1 ring-primary' : '',
   )}`;
   return onClick ? (
@@ -307,8 +302,7 @@ export function Metric({
 }
 // A link to a record by its name. Long names never wrap into the layout
 // around them: they are cut with an ellipsis after one line (two where a card
-// has the room, the board), and the full name shows on hover. The arrow
-// follows the name's last character.
+// has the room, the board), and the full name shows on hover.
 export function RecordLink({
   entity,
   record,
@@ -321,78 +315,31 @@ export function RecordLink({
   lines?: 1 | 2 | 'all';
 }): ReactElement {
   const link = useRecordLink(entity, toText(record.id));
-  const arrow = (
-    <ArrowUpRight className='inline size-3 shrink-0 text-muted-foreground' />
-  );
   if (lines === 'all')
     return (
       <Link
         className='font-medium break-words hover:text-primary hover:underline'
         {...link}
       >
-        {record.name}{' '}
-        <ArrowUpRight className='inline size-3 align-baseline text-muted-foreground' />
+        {record.name}
       </Link>
     );
   return lines === 1 ? (
     <Link
-      className='inline-flex max-w-full min-w-0 items-center gap-1 font-medium hover:text-primary hover:underline'
+      className='inline-block max-w-full min-w-0 truncate align-bottom font-medium hover:text-primary hover:underline'
       title={record.name}
       {...link}
     >
-      <span className='truncate'>{record.name}</span>
-      {arrow}
+      {record.name}
     </Link>
   ) : (
     <Link
-      className='block max-w-full font-medium hover:text-primary hover:underline'
+      className='line-clamp-2 block max-w-full font-medium break-words hover:text-primary hover:underline'
       title={record.name}
       {...link}
     >
-      <TwoLineName name={record.name} arrow={arrow} />
+      {record.name}
     </Link>
-  );
-}
-
-// A name in at most two lines with the arrow after its last character: in
-// the text while it fits, and when the name is cut, after the ellipsis at the
-// end of the second line, which leaves the arrow's room on each line.
-function TwoLineName({
-  name,
-  arrow,
-}: {
-  name: string;
-  arrow: ReactElement;
-}): ReactElement {
-  const ref = useRef<HTMLSpanElement>(null);
-  const [cut, setCut] = useState(false);
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    // The observer reports once when it starts, then on every resize.
-    const observer = new ResizeObserver(() => {
-      setCut(element.scrollHeight > element.clientHeight + 1);
-    });
-    observer.observe(element);
-    return () => {
-      observer.disconnect();
-    };
-  }, [name]);
-  return (
-    <span className='relative block'>
-      <span
-        ref={ref}
-        className={`line-clamp-2 break-words ${cut ? 'pr-4' : ''}`}
-      >
-        {name}
-        {!cut && <> {arrow}</>}
-      </span>
-      {cut && (
-        <span className='absolute right-0 bottom-0 flex h-[1lh] items-center'>
-          {arrow}
-        </span>
-      )}
-    </span>
   );
 }
 export function Value({

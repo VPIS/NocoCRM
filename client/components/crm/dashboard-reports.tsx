@@ -18,7 +18,7 @@ import {
 // member of the team did over the last four weeks.
 
 // Framed as the overview's other cards are.
-const FRAME = 'border border-border/60 shadow-xs ring-0';
+const FRAME = 'border border-border shadow-xs ring-0';
 
 const rowsOf = (value: unknown): Data[] =>
   Array.isArray(value) ? (value as Data[]) : [];
@@ -333,7 +333,7 @@ export function CycleReport({
               {text('reports.waitingHint')}
             </p>
             {waiting.length ? (
-              <ul className='divide-y divide-border/60 text-sm'>
+              <ul className='divide-y divide-border text-sm'>
                 {waiting.map((deal) => (
                   <li key={toText(deal.id)} className='py-2'>
                     <RecordLink

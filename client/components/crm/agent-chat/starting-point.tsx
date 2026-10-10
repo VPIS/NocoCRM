@@ -91,7 +91,7 @@ function StartingItem({
     </>
   );
   const className =
-    'inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-full border border-border/60 bg-card px-2.5 py-1 shadow-xs transition-colors hover:bg-muted/60';
+    'inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 shadow-xs transition-colors hover:bg-muted/60';
   if (evaluation)
     return url ? (
       <a href={url} className={className} title={title}>

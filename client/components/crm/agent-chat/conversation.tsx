@@ -298,7 +298,7 @@ export function Conversation({
           over the agent's name and description, and its actions behind the
           "…" menu. */}
       {inPanel && (conversationId || agents.length <= 1) ? null : (
-        <div className='flex min-h-14 items-center gap-3 border-b border-border/60 pb-3'>
+        <div className='flex min-h-14 items-center gap-3 border-b border-border pb-3'>
           {conversationId ? (
             loading ? (
               <Skeleton className='h-9 w-64' />

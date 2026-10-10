@@ -398,7 +398,7 @@ function GrantsEditor({
         ),
       )}
       {dirty && !readOnly ? (
-        <div className='sticky bottom-0 z-10 -mx-1 flex flex-col gap-2 border-t border-border/60 bg-background/95 px-1 py-3 backdrop-blur'>
+        <div className='sticky bottom-0 z-10 -mx-1 flex flex-col gap-2 border-t border-border bg-background/95 px-1 py-3 backdrop-blur'>
           {failureText ? (
             <Alert variant='destructive'>
               <AlertCircleIcon />

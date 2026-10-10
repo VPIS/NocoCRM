@@ -252,7 +252,7 @@ export default function ApiKeysPage(): ReactElement {
     );
   } else {
     content = (
-      <div className='overflow-x-auto rounded-lg border border-border/60 bg-card shadow-xs'>
+      <div className='overflow-x-auto rounded-lg border border-border bg-card shadow-xs'>
         <Table>
           <TableHeader>
             <TableRow>

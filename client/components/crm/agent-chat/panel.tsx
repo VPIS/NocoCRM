@@ -233,7 +233,7 @@ function PanelBody({ modal = false }: { modal?: boolean }): ReactElement {
     <RecordDrawerContext.Provider
       value={{ open: drawer.open, close: drawer.close, inDrawer: false }}
     >
-      <header className='flex items-center gap-1 border-b border-border/60 px-3 py-2'>
+      <header className='flex items-center gap-1 border-b border-border px-3 py-2'>
         {iconButton(
           toText(text('agentPanel.history')),
           <History />,

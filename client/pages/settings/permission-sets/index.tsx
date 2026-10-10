@@ -102,7 +102,7 @@ export default function PermissionSetsPage(): ReactElement {
     content = <TableSkeleton columns={3} />;
   } else {
     content = (
-      <div className='overflow-x-auto rounded-lg border border-border/60 bg-card shadow-xs'>
+      <div className='overflow-x-auto rounded-lg border border-border bg-card shadow-xs'>
         <Table>
           <TableHeader>
             <TableRow>

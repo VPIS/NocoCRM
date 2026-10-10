@@ -736,7 +736,7 @@ export function VerdictPanel({
       // Waiting, it carries the AI's tint; decided, the same card on a
       // neutral ground. Its fields show focus as lightly as the inline
       // editor does.
-      className={`@container grid grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border/60 p-4 text-sm shadow-xs [&_:is(input,textarea,[role=combobox]):focus-visible]:border-ring/50! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-2! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-ring/10! ${
+      className={`@container grid grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border p-4 text-sm shadow-xs [&_:is(input,textarea,[role=combobox]):focus-visible]:border-ring/50! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-2! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-ring/10! ${
         entry.status === 'pending' ? 'bg-ai/5' : 'bg-card'
       }`}
     >
@@ -944,7 +944,7 @@ export function VerdictPanel({
           have their own actions where they are drawn: the email its send,
           the fields their writing. */}
       {entry.status === 'pending' && verdict && (
-        <div className='grid gap-3 border-t border-border/60 pt-3'>
+        <div className='grid gap-3 border-t border-border pt-3'>
           {/* First, redoing it in a sentence. */}
           {editable && (
             <div className='flex'>
@@ -1428,7 +1428,7 @@ function PlannedTask({
     );
   };
   return (
-    <div className='grid gap-2 rounded-lg border border-border/60 bg-background/60 p-3'>
+    <div className='grid gap-2 rounded-lg border border-border bg-background/60 p-3'>
       <p className='flex items-center gap-1.5 font-medium'>
         <CalendarPlus className='size-4 text-muted-foreground' />
         {text(
@@ -1757,7 +1757,7 @@ function Findings({
     );
   };
   return (
-    <div className='grid gap-1.5 rounded-lg border border-border/60 bg-background/60 p-3'>
+    <div className='grid gap-1.5 rounded-lg border border-border bg-background/60 p-3'>
       <div className='flex items-center gap-1.5 font-medium'>
         {/* Found on the web, or read from the CRM's own material too: a
             lead's suggestions may be both. */}
@@ -1901,7 +1901,7 @@ function EmailDraft({
   const { text } = useCrmText();
   const [copied, setCopied] = useState(false);
   return (
-    <div className='grid gap-1.5 rounded-lg border border-border/60 bg-background/60 p-3'>
+    <div className='grid gap-1.5 rounded-lg border border-border bg-background/60 p-3'>
       <div className='flex items-start justify-between gap-2'>
         {heading ?? <span />}
         <Button
@@ -2302,7 +2302,7 @@ function DealContacts({
   const role = (value: string): string =>
     text(`options.${value}`, { defaultValue: value });
   return (
-    <div className='grid gap-1.5 rounded-lg border border-border/60 bg-background/60 p-3'>
+    <div className='grid gap-1.5 rounded-lg border border-border bg-background/60 p-3'>
       <p className='font-medium'>{text('evaluation.deal.contacts')}</p>
       {contacts.map((person, index) => (
         <label
@@ -2385,7 +2385,7 @@ function DealTerms({
     needed: 'warning',
   } as const;
   return (
-    <div className='grid gap-1.5 rounded-lg border border-border/60 bg-background/60 p-3'>
+    <div className='grid gap-1.5 rounded-lg border border-border bg-background/60 p-3'>
       <p className='font-medium'>{text('evaluation.deal.terms')}</p>
       {terms.map((term) => (
         <div
@@ -2435,7 +2435,7 @@ function ProposedApprovals({
     approverId: picks[index]?.approverId || (approvers[0]?.id ?? ''),
   });
   return (
-    <div className='grid gap-2 rounded-lg border border-border/60 bg-background/60 p-3'>
+    <div className='grid gap-2 rounded-lg border border-border bg-background/60 p-3'>
       <p className='font-medium'>
         {text('evaluation.deal.approvals')}
         {editable && (
@@ -2565,7 +2565,7 @@ function DealUpdates({
               : value;
   const written = new Set(entry.ai.updatedFields ?? []);
   return (
-    <div className='grid gap-1.5 rounded-lg border border-border/60 bg-background/60 p-3'>
+    <div className='grid gap-1.5 rounded-lg border border-border bg-background/60 p-3'>
       <p className='font-medium'>{text('evaluation.deal.updates')}</p>
       {updates.map((update) => (
         <label key={update.field} className='flex items-start gap-2'>

@@ -287,7 +287,7 @@ export default function UsersPage(): ReactElement {
     const to = from + rows.length - 1;
     content = (
       <div className='flex flex-col gap-3'>
-        <div className='overflow-x-auto rounded-lg border border-border/60 bg-card shadow-xs'>
+        <div className='overflow-x-auto rounded-lg border border-border bg-card shadow-xs'>
           <Table>
             <TableHeader>
               <TableRow>

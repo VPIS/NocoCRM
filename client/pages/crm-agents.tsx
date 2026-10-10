@@ -52,7 +52,7 @@ const AGENTS: readonly AgentName[] = [
   'approvals',
   'tasks',
 ];
-const FRAME = 'border border-border/60 shadow-xs ring-0';
+const FRAME = 'border border-border shadow-xs ring-0';
 const STATUSES = ['pending', 'accepted', 'dismissed', 'running', 'failed'];
 
 interface Overview {
@@ -163,7 +163,7 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
             </label>
           </CardHeader>
           <CardContent className='space-y-3'>
-            <ul className='divide-y divide-border/60'>
+            <ul className='divide-y divide-border'>
               {data.triggers.map((trigger) => (
                 <li
                   key={trigger}
@@ -301,7 +301,7 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
           </div>
         </div>
         {data.runs.length ? (
-          <ul className='divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60 bg-card shadow-xs'>
+          <ul className='divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-xs'>
             {data.runs.map((run) => (
               <li
                 key={toText(run.id)}

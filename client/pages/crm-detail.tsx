@@ -52,7 +52,6 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowRightLeft,
-  ArrowUpRight,
   Check,
   ChevronDown,
   ChevronRight,
@@ -1207,7 +1206,7 @@ export function DetailTabBar({
     // one. The first tab's text lines up with the heading and the content.
     <div
       role='tablist'
-      className='flex w-full flex-wrap gap-x-5 border-b border-border/60'
+      className='flex w-full flex-wrap gap-x-5 border-b border-border'
     >
       {tabs.map(({ name, label, icon: Icon, count }) => {
         const selected = name === active;
@@ -1425,10 +1424,6 @@ export function WebsiteField({
         onDoubleClick={(e) => e.stopPropagation()}
       >
         <span className='min-w-0 truncate'>{host}</span>
-        <ArrowUpRight
-          aria-hidden
-          className='size-3.5 shrink-0 text-muted-foreground'
-        />
       </a>
       {/* A long address leaves no row to double-click beside it: the pencil,
           shown on hover over the end of the row (taking no room from the
@@ -1980,7 +1975,7 @@ export function HistoryChanges({
   });
   if (part === 'rows')
     return folds && open ? (
-      <div className='mt-1 grid gap-1 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-sm'>
+      <div className='mt-1 grid gap-1 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm'>
         {rows}
       </div>
     ) : null;
@@ -2693,7 +2688,7 @@ function ReplyBox({
             value={draft}
             maxLength={LONG_TEXT_LIMIT}
             rows={1}
-            className='max-h-[50vh] min-h-9 resize-none pr-10 text-sm py-[calc((--spacing(9)-1lh-2px)/2)] bg-card shadow-xs border-border/60 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 data-dropping:border-ring data-dropping:ring-2 data-dropping:ring-ring/20 dark:bg-card'
+            className='max-h-[50vh] min-h-9 resize-none pr-10 text-sm py-[calc((--spacing(9)-1lh-2px)/2)] bg-card shadow-xs border-border focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 data-dropping:border-ring data-dropping:ring-2 data-dropping:ring-ring/20 dark:bg-card'
             onChange={setDraft}
             mentions={mentions}
             onMentionsChange={setMentions}
@@ -3121,7 +3116,7 @@ export function HistoryFeed({
                           comment
                             ? // A comment, with its replies, on a card of its
                               // own: people talking, set apart from activity.
-                              'mb-3 rounded-xl border border-border/60 bg-card px-3 py-2 shadow-xs'
+                              'mb-3 rounded-xl border border-border bg-card px-3 py-2 shadow-xs'
                             : // An entry the page was sent to is scrolled
                               // to, not marked.
                               'pb-3'
@@ -3667,7 +3662,7 @@ function CommentComposer({
             // height. White with the card's faint border and shadow, and a
             // soft ring when focused rather than the primitive's grey one.
             rows={1}
-            className='max-h-[50vh] min-h-10 resize-none pr-10 text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border/60 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 data-dropping:border-ring data-dropping:ring-2 data-dropping:ring-ring/20 dark:bg-card'
+            className='max-h-[50vh] min-h-10 resize-none pr-10 text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 data-dropping:border-ring data-dropping:ring-2 data-dropping:ring-ring/20 dark:bg-card'
             onChange={setDraft}
             onKeyDown={(event) => {
               if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
@@ -3873,7 +3868,7 @@ function CommentEditor({
         aria-label={text('comments.label')}
         value={draft}
         maxLength={LONG_TEXT_LIMIT}
-        className='max-h-[50vh] min-h-10 resize-none text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border/60 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 data-dropping:border-ring data-dropping:ring-2 data-dropping:ring-ring/20 dark:bg-card'
+        className='max-h-[50vh] min-h-10 resize-none text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 data-dropping:border-ring data-dropping:ring-2 data-dropping:ring-ring/20 dark:bg-card'
         onChange={setDraft}
         mentions={mentions}
         onMentionsChange={setMentions}
@@ -3965,7 +3960,7 @@ export function InfoGroup({
   // the lightest shadow, set 0.75rem from the group above it.
   return (
     <section
-      className={`rounded-xl border border-border/60 bg-card px-2 shadow-xs ${
+      className={`rounded-xl border border-border bg-card px-2 shadow-xs ${
         folded ? 'py-1.5' : 'py-3'
       }`}
     >
@@ -3997,7 +3992,7 @@ export function InfoGroup({
 // centred on the row's first line (the value's 1.5 of padding and half a
 // line, less half its own 6).
 const ROW_ACTION =
-  'top-[calc(var(--spacing)*1.5+0.5lh-var(--spacing)*3)] size-6 place-items-center rounded-md bg-card text-muted-foreground shadow-xs ring-1 ring-border/60 transition-colors hover:text-foreground';
+  'top-[calc(var(--spacing)*1.5+0.5lh-var(--spacing)*3)] size-6 place-items-center rounded-md bg-card text-muted-foreground shadow-xs ring-1 ring-border transition-colors hover:text-foreground';
 
 // A value a button on hover copies as it reads (a particular, a lead's
 // original message): not while it is empty (a placeholder or a dash,

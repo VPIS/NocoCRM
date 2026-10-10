@@ -169,7 +169,7 @@ export function ConversationList({
         />
       </div>
       {onArchived ? (
-        <div className='shrink-0 border-t border-border/60 px-3 py-2'>
+        <div className='shrink-0 border-t border-border px-3 py-2'>
           {toggle}
         </div>
       ) : null}

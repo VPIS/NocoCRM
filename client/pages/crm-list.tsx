@@ -518,7 +518,7 @@ function EntityList({
       key={r.id}
       className={`rounded-lg ${toText(
         large
-          ? 'border border-border/60 bg-card p-3 text-sm shadow-xs'
+          ? 'border border-border bg-card p-3 text-sm shadow-xs'
           : 'bg-muted p-2 text-xs',
       )} ${
         // Done or cancelled: struck through and faded, marked by its kind,
@@ -958,11 +958,11 @@ function EntityList({
         ) : (
           <>
             {/* Framed as the task list's card is. */}
-            <div className='overflow-hidden rounded-xl border border-border/60 bg-card shadow-xs'>
+            <div className='overflow-hidden rounded-xl border border-border bg-card shadow-xs'>
               <Table>
                 {/* A quiet header: small muted words on the menu's ground. */}
                 <TableHeader className='bg-sidebar'>
-                  <TableRow className='border-border/60 hover:bg-transparent'>
+                  <TableRow className='border-border hover:bg-transparent'>
                     {columns.map((key) => {
                       const title =
                         key === 'name' && entity === 'leads'
@@ -988,7 +988,7 @@ function EntityList({
                   {query.data.data.map((record) => (
                     <Fragment key={record.id}>
                       {/* Ruled as the card is framed. */}
-                      <TableRow className='border-border/60'>
+                      <TableRow className='border-border'>
                         {columns.map((key) => (
                           <TableCell
                             // Every value, the name included, is cut with an
@@ -1133,7 +1133,7 @@ function EntityList({
                   key={record.id}
                   // Framed as the task list's card: a faint border, not the
                   // primitive's ring, and the lightest shadow.
-                  className={`gap-0 border border-border/60 py-4 shadow-xs ring-0 transition-[opacity,box-shadow,background-color] duration-700 ${toText(
+                  className={`gap-0 border border-border py-4 shadow-xs ring-0 transition-[opacity,box-shadow,background-color] duration-700 ${toText(
                     dragging === record.id ? 'opacity-40' : '',
                   )} ${toText(
                     landed === record.id
@@ -1245,7 +1245,7 @@ function EntityList({
               it. */}
           <div className='space-y-4 lg:hidden'>
             <div
-              className='rounded-xl border border-border/60 bg-card p-3 shadow-xs'
+              className='rounded-xl border border-border bg-card p-3 shadow-xs'
               // A sideways swipe turns the month, the way a phone's own
               // calendar does.
               onTouchStart={(event) => {
@@ -1391,7 +1391,7 @@ function EntityList({
               )}
             </div>
           </div>
-          <div className='hidden gap-px overflow-hidden rounded-xl border border-border/60 bg-border/60 shadow-xs lg:grid lg:grid-cols-7'>
+          <div className='hidden gap-px overflow-hidden rounded-xl border border-border bg-border/60 shadow-xs lg:grid lg:grid-cols-7'>
             {Array.from({ length: 7 }, (_, i) => (
               // The weekdays as a list's header reads: small muted words on
               // the menu's ground.
@@ -1647,7 +1647,7 @@ function BoardColumn({
       className={`flex max-w-sm min-w-72 flex-1 basis-0 flex-col rounded-xl border p-3 transition-colors ${toText(
         over
           ? 'border-dashed border-primary bg-primary/5'
-          : 'border-border/60 bg-muted/40',
+          : 'border-border bg-muted/40',
       )}`}
       // A non-droppable column (converted, reached only through the
       // conversion flow) never calls preventDefault, so the cursor says no

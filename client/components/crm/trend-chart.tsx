@@ -59,7 +59,7 @@ export function TrendChart({
     height - pad - (v / max) * (height - 2 * pad);
   return (
     // Framed as the list pages' cards are.
-    <Card className='border border-border/60 shadow-xs ring-0'>
+    <Card className='border border-border shadow-xs ring-0'>
       <CardHeader className='flex flex-row items-center justify-between'>
         <CardTitle className='text-base'>{title}</CardTitle>
         <ul className='flex gap-3 text-xs text-muted-foreground'>

@@ -354,7 +354,7 @@ export function InboxList({
       {views.length > 1 ? (
         <div
           role='tablist'
-          className='flex shrink-0 gap-x-5 border-b border-border/60 px-4'
+          className='flex shrink-0 gap-x-5 border-b border-border px-4'
         >
           {views.map((value) => {
             const count = value === 'todo' ? pending : unread;
@@ -411,7 +411,7 @@ export function InboxList({
       ) : null}
       {/* Application change: the type filter only where a view offers more than one kind to choose between. */}
       {kinds.length > 2 || footer ? (
-        <div className='shrink-0 border-b border-border/60 px-3 py-2.5'>
+        <div className='shrink-0 border-b border-border px-3 py-2.5'>
           <div className='flex flex-wrap items-center justify-between gap-2'>
             {kinds.length > 2 ? (
               <Select

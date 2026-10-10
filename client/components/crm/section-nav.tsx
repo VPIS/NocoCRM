@@ -48,7 +48,7 @@ export function SectionNav({
       aria-label={label}
       // The page scrolls in the layout's column under the header, so the
       // row sticks to that column's top.
-      className='sticky top-0 z-30 -mx-4 flex gap-1 overflow-x-auto border-b border-border/60 bg-background/85 px-4 py-2 backdrop-blur-xl scroll-quiet md:-mx-8 md:px-8'
+      className='sticky top-0 z-30 -mx-4 flex gap-1 overflow-x-auto border-b border-border bg-background/85 px-4 py-2 backdrop-blur-xl scroll-quiet md:-mx-8 md:px-8'
     >
       {sections.map((section) => (
         <a

@@ -36,7 +36,7 @@ export function ThemeSettings(): ReactElement {
             aria-label={title}
             size='icon'
             variant='outline'
-            className='size-10 rounded-xl border-border/70 bg-background/60 hover:bg-accent/50'
+            className='size-10 rounded-xl border-border bg-background/60 hover:bg-accent/50'
           />
         }
       >
@@ -112,7 +112,7 @@ export function ThemeSettings(): ReactElement {
                     'group relative flex cursor-pointer flex-col rounded-xl border p-2 text-left transition-all select-none has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring',
                     isSelected
                       ? 'border-primary ring-2 ring-primary/20 bg-primary/5 shadow-xs'
-                      : 'border-border/70 hover:border-border hover:bg-muted/30',
+                      : 'border-border hover:border-border hover:bg-muted/30',
                   )}
                 >
                   <RadioGroupItem value={item.id} className='sr-only' />
@@ -120,7 +120,7 @@ export function ThemeSettings(): ReactElement {
                     <div
                       aria-hidden='true'
                       data-theme={item.id}
-                      className='theme-preview relative flex h-full overflow-hidden rounded-lg border border-border/80 bg-background shadow-2xs'
+                      className='theme-preview relative flex h-full overflow-hidden rounded-lg border border-border bg-background shadow-2xs'
                     >
                       {/* Mini Sidebar */}
                       <div className='flex w-6 flex-col gap-1 border-r border-sidebar-border/50 bg-sidebar p-1'>
@@ -130,7 +130,7 @@ export function ThemeSettings(): ReactElement {
                       </div>
                       {/* Mini Main Content Area */}
                       <div className='flex flex-1 flex-col p-1.5'>
-                        <div className='mb-1 flex items-center justify-between border-b border-border/40 pb-1'>
+                        <div className='mb-1 flex items-center justify-between border-b border-border/70 pb-1'>
                           <div className='h-1 w-7 rounded-xs bg-foreground/70' />
                           <div className='size-1.5 rounded-full bg-primary' />
                         </div>

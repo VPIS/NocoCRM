@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, ArrowUpRightIcon, InboxIcon } from 'lucide-react';
+import { ArrowLeftIcon, InboxIcon } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 import { Link } from 'react-router';
 
@@ -310,10 +310,6 @@ export function InboxDetailHeader({
         }}
       >
         {content}
-        <ArrowUpRightIcon
-          aria-hidden='true'
-          className='ml-1 inline size-4 align-baseline text-muted-foreground'
-        />
       </Link>
     ) : (
       content

@@ -185,7 +185,7 @@ export function DecisionList({
           {handled.length ? (
             <div className='space-y-1 pt-4'>
               {/* A rule under the heading, apart from those waiting. */}
-              <div className='border-b border-border/60 pb-1.5'>
+              <div className='border-b border-border pb-1.5'>
                 {heading(text('decisions.handled'))}
               </div>
               <ul className='space-y-0.5'>{handled.map(row)}</ul>

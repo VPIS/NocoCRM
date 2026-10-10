@@ -12,7 +12,6 @@ import {
   useRecordLink,
 } from '../components/crm/record-drawer.js';
 import {
-  ArrowUpRight,
   UserRound,
   History,
   Mail,
@@ -1362,7 +1361,7 @@ export default function EntityDetail({
 // A record's related people and records drawn as its Tasks tab draws its
 // tasks: rows in one card, a faint rule between them.
 const CARD_LIST =
-  'divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60 bg-card shadow-xs';
+  'divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-xs';
 const CARD_EMPTY =
   'rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground';
 
@@ -1550,7 +1549,6 @@ function RelatedItem({
           <span className='truncate text-sm font-medium' title={title}>
             {title}
           </span>
-          <ArrowUpRight className='size-3 shrink-0 text-muted-foreground' />
           {tag}
         </span>
         {details.length ? (
@@ -1800,7 +1798,6 @@ function ContactItem({
               >
                 {toText(contact.name)}
               </span>
-              <ArrowUpRight className='size-3 shrink-0 self-center text-muted-foreground' />
             </span>
             {summary.length ? (
               <span
@@ -2203,7 +2200,6 @@ function ApprovalItem({ approval }: { approval: Data }): ReactElement {
           <span className='truncate text-sm font-medium' title={name}>
             {name}
           </span>
-          <ArrowUpRight className='size-3 shrink-0 text-muted-foreground' />
           <Status value={approval.status} />
           {/* Which side of the request the reader is on: it is theirs to
               decide, or theirs to wait for. */}

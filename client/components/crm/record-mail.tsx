@@ -255,7 +255,7 @@ export function RecordMailPanel({
   else
     // A white card, as the Tasks tab's list is.
     body = (
-      <ul className='divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60 bg-card shadow-xs'>
+      <ul className='divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-xs'>
         {threads.map(({ key, latest: message, unread }) => {
           const open = key === selected;
           return (

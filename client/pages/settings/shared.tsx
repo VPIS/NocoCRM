@@ -126,7 +126,7 @@ export function TableSkeleton({
     <div
       role='status'
       aria-label={text('common.loading')}
-      className='overflow-hidden rounded-lg border border-border/60 bg-card'
+      className='overflow-hidden rounded-lg border border-border bg-card'
     >
       {Array.from({ length: rows }, (_, row) => (
         <div
@@ -556,7 +556,7 @@ export function RouteTabs({
   return (
     <nav
       aria-label={label}
-      className='flex w-full flex-wrap gap-x-5 border-b border-border/60'
+      className='flex w-full flex-wrap gap-x-5 border-b border-border'
     >
       {tabs.map((tab) => (
         <Link

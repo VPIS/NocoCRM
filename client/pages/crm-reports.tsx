@@ -66,7 +66,7 @@ import {
 
 // Framed as the list pages' cards and the task list are: a faint border, not
 // the Card primitive's ring, and the lightest shadow.
-const FRAME = 'border border-border/60 shadow-xs ring-0';
+const FRAME = 'border border-border shadow-xs ring-0';
 
 export default function ReportsPage(): ReactElement {
   const { text, language } = useCrmText();

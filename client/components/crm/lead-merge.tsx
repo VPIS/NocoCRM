@@ -110,7 +110,7 @@ export function LeadDuplicates({
     // theirs; its fill a faint wash of the warning colour over the card's.
     // Each duplicate reads as one sentence: what it shares with this lead,
     // the lead, and the way to merge it.
-    <div className='rounded-xl border border-border/60 bg-[color-mix(in_oklab,var(--warning)_7%,var(--card))] px-2 py-3 shadow-xs'>
+    <div className='rounded-xl border border-border bg-[color-mix(in_oklab,var(--warning)_7%,var(--card))] px-2 py-3 shadow-xs'>
       <h3 className='flex items-center gap-1.5 px-2 pb-1.5 text-sm font-medium'>
         <TriangleAlert className='size-4 text-warning' aria-hidden />
         {text('merge.notice')}

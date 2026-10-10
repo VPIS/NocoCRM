@@ -103,9 +103,7 @@ export function PlanCard({
     <section
       aria-label={plan.title}
       className={`rounded-lg border p-4 ${
-        waiting
-          ? 'border-border/60 bg-ai/5'
-          : 'border-border/60 bg-card shadow-xs'
+        waiting ? 'border-border bg-ai/5' : 'border-border bg-card shadow-xs'
       }`}
     >
       <div className='flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground'>
@@ -289,7 +287,7 @@ function PlanStep({
     !removed && (step.op === 'record.create' || step.op === 'record.update');
   return (
     <li
-      className={`flex gap-2.5 rounded-md border border-border/60 bg-card p-3 ${removed ? 'opacity-55' : ''}`}
+      className={`flex gap-2.5 rounded-md border border-border bg-card p-3 ${removed ? 'opacity-55' : ''}`}
     >
       {/* A box to leave the step out where there is a choice; nothing,
           not even its number, where there is none. */}

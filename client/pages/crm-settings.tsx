@@ -361,7 +361,7 @@ function SettingsForm({
                 <p className='text-sm font-medium'>
                   {text('notifications.heading')}
                 </p>
-                <ul className='divide-y divide-border/60 rounded-lg border border-border/60 px-3'>
+                <ul className='divide-y divide-border rounded-lg border border-border px-3'>
                   {(
                     [
                       'notifyApprovals',

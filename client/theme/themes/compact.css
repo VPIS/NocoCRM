@@ -72,7 +72,10 @@
   --accent: oklch(0.94 0 0);
   --accent-foreground: oklch(0.22 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.9 0 0);
+  /* The CRM's faint line, the one its cards were drawn with as
+     border-border/60, now every border's: cards, tables, dividers, the menu's
+     and the header's rules. Form fields keep --input. */
+  --border: oklch(0.9 0 0 / 60%);
   --input: oklch(0.9 0 0);
   --ring: oklch(0.55 0 0);
   --chart-1: oklch(0.646 0.222 41.116);

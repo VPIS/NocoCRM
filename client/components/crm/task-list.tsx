@@ -217,7 +217,7 @@ export function TaskCards({
         new Date(toText(a.updatedAt ?? a.dueAt ?? '')).getTime(),
     );
   const card = (list: CrmRecord[]): ReactElement => (
-    <div className='divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60 bg-card shadow-xs'>
+    <div className='divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-xs'>
       {list.map((task) => (
         <TaskRow
           key={task.id}
