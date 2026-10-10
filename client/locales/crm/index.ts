@@ -522,11 +522,28 @@ const wording = {
       ],
       skill: ['Skill: Review an approval', '技能：审批辅助'],
     },
+    tasks: {
+      title: ['Task preparation', '任务准备'],
+      description: [
+        "Prepares a task for its owner on the morning of its day: what it should achieve, where things stand from the record's tasks, comments and mail, who is on the other side, the company's recent news from the web, the questions to ask, what to bring, the risks and the points to cover. Only the task's owner and participants see it.",
+        '在任务当天早上为负责人做准备：任务要达成什么、从记录的任务、评论和邮件看进展到哪一步、对方都有谁、联网查到的公司近况、要问的问题、要带的材料、风险和要点。只有任务负责人和参与人能看到。',
+      ],
+      skill: ['Skill: Prepare a task', '技能：任务准备'],
+    },
     duty: ['What it does', '职责'],
     // Who runs it and who decides, on every agent's page.
     byNoco: [
       'Run by the AI employee Noco. It only suggests: the owner decides in the inbox whether to accept.',
       '由 AI 员工 Noco 执行；它只提出建议，由负责人在收件箱里决定是否采纳。',
+    ],
+    // The task agent's: it decides nothing, its card waits on the task.
+    byNocoTasks: [
+      "Run by the AI employee Noco. It changes nothing: the task's owner and participants read it on the task and may write it into the description.",
+      '由 AI 员工 Noco 执行；它不改动任何记录，任务负责人和参与人在任务上查看，可以写入任务描述。',
+    ],
+    manualNoteTasks: [
+      "A task's owner or participant can always ask for a preparation on the task, whatever is switched off.",
+      '任务负责人和参与人在任务上点「AI 准备」随时可以手动发起，不受这些开关影响。',
     ],
     runsOnItsOwn: ['Runs on its own', '自动运行'],
     // The menu's badge: runs under way.
@@ -568,6 +585,12 @@ const wording = {
         hint: [
           'A new lead not contacted in time, a lead gone quiet, a nurtured lead due for review.',
           '新线索超时未联系、跟进中的线索停滞、培育中的线索复查到期。',
+        ],
+      },
+      dailyTasks: {
+        hint: [
+          "Today's open tasks with a time of day that concern a lead, an opportunity or a company, each once.",
+          '当天还没开始、有具体时间、关联了线索、商机或公司的任务，每个准备一次。',
         ],
       },
       dailyOpportunities: {
@@ -650,6 +673,10 @@ const wording = {
     runsScopeApprovals: [
       'Reviews of the approvals submitted to you, over the last 90 days',
       '近 90 天提交给你的审批的分析',
+    ],
+    runsScopeTasks: [
+      'Preparations of the tasks you own or take part in, over the last 90 days',
+      '近 90 天你负责或参与的任务的准备',
     ],
   },
   // An email follow-up step, changed and sent on its card (email-step.tsx).
@@ -780,6 +807,9 @@ const wording = {
     reviewed: ['reviewed the request', '给出审批建议'],
     reviewing: ['is reviewing the request…', '正在分析这个申请…'],
     reviewFailed: ['could not review the request', '没能给出审批建议'],
+    prepared: ['prepared the task', '完成了任务准备'],
+    preparing: ['is preparing the task…', '正在准备这个任务…'],
+    prepareFailed: ['could not prepare the task', '没能完成任务准备'],
     evaluating: ['is preparing a follow-up…', '正在准备跟进建议…'],
     evaluationFailed: ['could not finish a follow-up', '没能给出跟进建议'],
     fieldCount: ['{{count}} fields', '{{count}} 个字段'],
@@ -842,6 +872,8 @@ const wording = {
       pending: ['AI suggestion', 'AI 建议待处理'],
     },
     again: ['Follow up', '跟进'],
+    // The chips' rerun, in a word (its full name on hover).
+    rerun: ['Re-run', '重新运行'],
     // Before the first suggestion: asking for one, as a chip.
     start: ['AI follow-up', 'AI 跟进'],
     // Under the chip's hover.
@@ -1312,6 +1344,46 @@ const wording = {
   },
   // The AI's review of an approval request for its approver
   // (approval-review.tsx).
+  // The AI's preparation of a task for its owner (task-preparation.tsx).
+  taskPrep: {
+    // The chip's and the first button's name.
+    ask: ['AI prep', 'AI 准备'],
+    again: ['Rerun the AI prep', '重新运行 AI 准备'],
+    working: ['Preparing', '准备中'],
+    running: ['The AI is preparing this task…', 'AI 正在为这个任务做准备…'],
+    failed: ['The AI could not prepare it', '没能完成准备'],
+    written: ['written into the task', '已写入任务'],
+    // The AI's state tag on a task's row and its chip while it works.
+    onRow: {
+      running: ['AI preparing', 'AI 准备中'],
+    },
+    trigger: {
+      daily: ['Prepared on the morning of the task', '任务当天早上自动准备'],
+    },
+    agenda: ['Points to cover', '要点'],
+    questions: ['To ask', '要问的问题'],
+    people: ['People', '对方人员'],
+    bring: ['To bring', '要带的材料'],
+    risks: ['Risks', '风险'],
+    company: ['Recent news', '公司近况'],
+    revisePlaceholder: ['Tell AI what to change', '告诉 AI 怎么改'],
+    accept: ['Write into the task', '写入任务描述'],
+    will: {
+      title: ['Writing it in will:', '写入将：'],
+      prep: [
+        'Put the points to cover and what to bring under “To prepare” in the description',
+        '把要点和要带的材料写进描述的「准备要点」',
+      ],
+      questions: [
+        'Put the questions under “To ask”',
+        '把要问的问题写进「要问的问题」',
+      ],
+      keep: [
+        'Keep what you wrote in the description yourself',
+        '保留你自己在描述里写的内容',
+      ],
+    },
+  },
   approvalReview: {
     title: ['AI review', 'AI 审批建议'],
     running: ['The AI is reviewing the request…', 'AI 正在分析这个申请…'],
@@ -2334,6 +2406,10 @@ const wording = {
     planStepRefused: [
       'A step of the plan would be refused.',
       '计划中有一步无法执行。',
+    ],
+    taskNotOpen: [
+      'Only an open task can be prepared.',
+      '只有未完成的任务可以准备。',
     ],
     taskChanged: [
       'The task has changed since this suggestion. Follow up again.',

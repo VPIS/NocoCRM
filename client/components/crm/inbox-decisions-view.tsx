@@ -11,12 +11,15 @@ import {
   type EvaluationEntry,
 } from './lead-evaluation.js';
 import { ReviewPanel, type ReviewEntry } from './approval-review.js';
+import { PrepPanel, type PrepEntry } from './task-preparation.js';
+import { isEndOfDay } from '../../../server/providers/crm/zone-time.js';
 import {
   relativeTime,
   toText,
   useCrmText,
   useMetadata,
   useRefresh,
+  type CrmRecord,
 } from './api.js';
 import {
   DECISION_PARAM,
@@ -73,6 +76,13 @@ export function DecisionList({
   // rejected on the card, dismissed, or the approval withdrawn or decided on
   // itself; a follow-up: accepted or dismissed.
   const outcomeOf = (entry: DecisionItem): string => {
+    // A task's preparation: written into the task, or set aside.
+    if (entry.entity === 'tasks')
+      return text(
+        entry.status === 'accepted'
+          ? 'taskPrep.written'
+          : 'evaluation.statuses.dismissed',
+      );
     if (entry.entity !== 'approvals')
       return text(`evaluation.statuses.${entry.status}`);
     const ai = entry.ai as { decision?: string; approvalOutcome?: string };
@@ -155,7 +165,8 @@ export function DecisionList({
                     </Badge>{' '}
                   </>
                 ) : null}
-                {entry.entity === 'approvals' ? (
+                {entry.entity === 'tasks' ? null : entry.entity ===
+                  'approvals' ? (
                   <Badge variant={decided ? 'muted' : 'ai'}>
                     {text(
                       `approvalReview.recommendations.${toText(result.recommendation)}`,
@@ -358,7 +369,8 @@ function DetailHeading({
   );
 }
 
-// A lead's or a deal's follow-up, or an approval's review, decided here as on
+// A lead's or a deal's follow-up, an approval's review or a task's
+// preparation, decided here as on
 // its record's page, or opened in its timeline, where it is brought into view
 // and marked.
 function DecisionEntry({
@@ -377,6 +389,8 @@ function DecisionEntry({
   when: (at: string) => string;
 }): ReactElement {
   const { text } = useCrmText();
+  const { data: meta } = useMetadata();
+  const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
   const refresh = useRefresh();
   const open = (path: string) => (
     <Button
@@ -389,6 +403,37 @@ function DecisionEntry({
       {text('decisions.openRecord')}
     </Button>
   );
+  // A task's preparation: written into the task here by its owner.
+  if (entry.entity === 'tasks' && entry.task)
+    return (
+      <>
+        <DetailHeading
+          name={name}
+          kind={kind}
+          facts={[
+            [
+              'fields.dueAt',
+              // A date alone reads as the date, not its day's last minute.
+              entry.task.dueAt
+                ? isEndOfDay(new Date(entry.task.dueAt), timeZone)
+                  ? when(entry.task.dueAt).slice(0, 10)
+                  : when(entry.task.dueAt)
+                : '',
+            ],
+            ['decisions.evaluatedAt', when(entry.createdAt)],
+          ]}
+          action={open(`/crm/tasks/${entry.task.id}/history?focus=${entry.id}`)}
+        />
+        <PrepPanel
+          key={entry.id}
+          entry={entry as unknown as PrepEntry}
+          task={entry.task as unknown as CrmRecord}
+          onChanged={async () => {
+            await refresh();
+          }}
+        />
+      </>
+    );
   // An approval's review: decided here by its approver.
   if (entry.entity === 'approvals' && entry.approval)
     return (

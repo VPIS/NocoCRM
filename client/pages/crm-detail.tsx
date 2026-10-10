@@ -1,4 +1,9 @@
 import { MoneyField } from '../components/crm/money-field.js';
+import {
+  PrepFeedEntry,
+  PrepPanel,
+  type PrepEntry,
+} from '../components/crm/task-preparation.js';
 import { fieldLabelKey, linkOf, toText } from '../components/crm/api.js';
 import { TaskCards } from '../components/crm/task-list.js';
 import { AutoLoadMore } from '../components/crm/auto-load.js';
@@ -2992,6 +2997,9 @@ export function HistoryFeed({
                   // An approval's AI review for its approver
                   // (approval-review.tsx).
                   const review = ai && entity === 'approvals';
+                  // A task's AI preparation for its owner
+                  // (task-preparation.tsx).
+                  const prep = ai && entity === 'tasks';
                   // Every AI card starts closed, a waiting one too, its
                   // line saying it waits; the entry the page was sent to
                   // opens on arrival.
@@ -3133,14 +3141,20 @@ export function HistoryFeed({
                                       event.aiStatus === 'running'
                                         ? review
                                           ? 'feed.reviewing'
-                                          : 'feed.evaluating'
+                                          : prep
+                                            ? 'feed.preparing'
+                                            : 'feed.evaluating'
                                         : event.aiStatus === 'failed'
                                           ? review
                                             ? 'feed.reviewFailed'
-                                            : 'feed.evaluationFailed'
+                                            : prep
+                                              ? 'feed.prepareFailed'
+                                              : 'feed.evaluationFailed'
                                           : review
                                             ? 'feed.reviewed'
-                                            : 'feed.evaluated',
+                                            : prep
+                                              ? 'feed.prepared'
+                                              : 'feed.evaluated',
                                     )
                                   : // A comment is its text, right after who
                                     // wrote it, with no word before it.
@@ -3187,6 +3201,8 @@ export function HistoryFeed({
                               <Spinner className='size-3.5 shrink-0 text-ai' />
                             ) : review && event.aiStatus !== 'failed' ? (
                               <ReviewFeedEntry entry={event} />
+                            ) : prep && event.aiStatus !== 'failed' ? (
+                              <PrepFeedEntry entry={event} />
                             ) : ai && event.aiStatus !== 'failed' ? (
                               <EvaluationFeedEntry entry={event} />
                             ) : null}
@@ -3380,7 +3396,24 @@ export function HistoryFeed({
                         ) : null}
                         {/* A waiting verdict is handled here once opened; any
                             other evaluation is its record. */}
-                        {review && open && event.aiStatus !== 'running' ? (
+                        {prep && open && event.aiStatus !== 'running' ? (
+                          <div className='mt-1'>
+                            <PrepPanel
+                              entry={
+                                {
+                                  id: key,
+                                  recordId: id,
+                                  status: toText(event.aiStatus),
+                                  createdAt: toText(event.createdAt),
+                                  ai: event.ai,
+                                } as PrepEntry
+                              }
+                              task={record}
+                              onChanged={refresh}
+                              inFeed
+                            />
+                          </div>
+                        ) : review && open && event.aiStatus !== 'running' ? (
                           <div className='mt-1'>
                             <ReviewPanel
                               entry={

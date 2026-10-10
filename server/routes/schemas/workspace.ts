@@ -62,6 +62,7 @@ export const AgentSwitchesSchema: z.ZodType<AgentSwitches> = z
     leads: AgentSwitch,
     opportunities: AgentSwitch,
     approvals: AgentSwitch,
+    tasks: AgentSwitch,
   })
   .meta({ ref: 'CrmAgentSwitches' });
 
@@ -219,10 +220,11 @@ export const DecisionsQuery = z.object({
 });
 // An AI suggestion with the record it concerns.
 export const Decision = AiEntry.extend({
-  entity: z.enum(['leads', 'opportunities', 'approvals']),
+  entity: z.enum(['leads', 'opportunities', 'approvals', 'tasks']),
   lead: JsonObject.optional(),
   opportunity: JsonObject.optional(),
   approval: JsonObject.optional(),
+  task: JsonObject.optional(),
 }).meta({ ref: 'CrmDecision' });
 export const DecisionsMeta = z.object({
   page: z.number().int(),
@@ -232,7 +234,7 @@ export const DecisionsMeta = z.object({
 });
 
 export const AgentParams = z.object({
-  agent: z.enum(['leads', 'opportunities', 'approvals']),
+  agent: z.enum(['leads', 'opportunities', 'approvals', 'tasks']),
 });
 export const AgentQuery = z.object({
   ...PageQuery.shape,

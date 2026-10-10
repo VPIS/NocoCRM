@@ -1,3 +1,4 @@
+import { AiStateTag } from '../components/crm/ai-state-tag.js';
 import { isEndOfDay } from '../../server/providers/crm/zone-time.js';
 import { OpportunityCaptureDialog } from '../components/crm/opportunity-capture.js';
 import {
@@ -32,7 +33,6 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  Sparkles,
   User,
   Megaphone,
   Factory,
@@ -46,7 +46,6 @@ import { Button } from '../components/ui/button.js';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs.js';
 import { KindTag } from '../components/crm/kind-tag.js';
 import { Badge } from '../components/ui/badge.js';
-import { Spinner } from '../components/ui/spinner.js';
 import { Input } from '../components/ui/input.js';
 import { Card, CardContent } from '../components/ui/card.js';
 import {
@@ -197,15 +196,9 @@ function EntityList({
   // The task list's tab: what is to do, or what is done or cancelled.
   const [taskTab, setTaskTab] = useState<TaskTab>('open');
   // Leads and opportunities are worked as funnels, so they open on the
-  // board; tasks on the calendar, the list beside it, unless a card or a
-  // link opens them on a metric or a status (today's, the overdue), which
-  // the list shows; the rest on the list.
+  // board; the rest, tasks too (the calendar beside the list), on the list.
   const [view, setView] = useState(
-    ['leads', 'opportunities'].includes(entity)
-      ? 'board'
-      : entity === 'tasks' && !initialMetric && !initialStatus && !initialFound
-        ? 'calendar'
-        : 'list',
+    ['leads', 'opportunities'].includes(entity) ? 'board' : 'list',
   );
   const [page, setPage] = useState(1);
   // The column the list is sorted by, from a header click; unset, the server
@@ -1181,20 +1174,7 @@ function EntityList({
                     />
                     {/* The AI at work on the lead, or its verdict waiting
                         on a decision (on the lead's page and Waiting on me). */}
-                    {ai && (
-                      <Badge variant='ai' className='gap-1'>
-                        {ai === 'running' ? (
-                          <Spinner className='size-3' />
-                        ) : (
-                          <Sparkles className='size-3' />
-                        )}
-                        {text(
-                          ai === 'running'
-                            ? 'evaluation.onCard.running'
-                            : 'evaluation.onCard.pending',
-                        )}
-                      </Badge>
-                    )}
+                    <AiStateTag state={ai} work='followUp' />
                     <div className='space-y-0.5 text-xs text-muted-foreground'>
                       {/* Same icons as the detail pages' field labels, so
                           the card reads without headings. */}
@@ -1719,24 +1699,11 @@ function AiRowMark({
   state: 'running' | 'pending' | undefined;
   review: boolean;
 }): ReactElement | null {
-  const { text } = useCrmText();
-  if (!state) return null;
   return (
-    <Badge variant='ai' className='shrink-0 gap-1'>
-      {state === 'running' ? (
-        <Spinner className='size-3' />
-      ) : (
-        <Sparkles className='size-3' />
-      )}
-      {text(
-        review
-          ? state === 'running'
-            ? 'approvalReview.onRow.running'
-            : 'approvalReview.onRow.pending'
-          : state === 'running'
-            ? 'evaluation.onCard.running'
-            : 'evaluation.onCard.pending',
-      )}
-    </Badge>
+    <AiStateTag
+      state={state}
+      work={review ? 'review' : 'followUp'}
+      className='shrink-0'
+    />
   );
 }

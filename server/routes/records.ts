@@ -19,6 +19,7 @@ import {
 import { capability } from '../providers/crm/authorization.js';
 import { crmToken } from '../providers/crm/index.js';
 import { aiStates } from '../providers/crm/lead-evaluation.js';
+import { doesTask } from '../providers/crm/task-participants.js';
 import {
   CrmError,
   definitions,
@@ -255,7 +256,8 @@ export function registerRecordRoutes(
       const ids = (rows: readonly Row[]) => rows.map((r) => toText(r.id));
       // Leads and opportunities the AI is following up or has a suggestion
       // waiting on; approvals whose review is being written or waits, for
-      // their approver alone, whose review it is.
+      // their approver alone, whose review it is; tasks whose preparation is
+      // being written or waits, for the people doing them alone.
       const states =
         entity === 'leads' || entity === 'opportunities'
           ? await aiStates(service, ids(result.data), entity)
@@ -265,7 +267,13 @@ export function registerRecordRoutes(
                 ids(result.data.filter((r) => r.approverId === actor.id)),
                 'approvals',
               )
-            : undefined;
+            : entity === 'tasks'
+              ? await aiStates(
+                  service,
+                  ids(result.data.filter((r) => doesTask(r, actor.id))),
+                  'tasks',
+                )
+              : undefined;
       return c.json({
         data: result.data,
         meta: {

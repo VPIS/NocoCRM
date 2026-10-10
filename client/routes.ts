@@ -13,6 +13,7 @@ import {
   Bot,
   Building2,
   ChartLine,
+  ClipboardList,
   UserRound,
   Handshake,
   LayoutDashboard,
@@ -100,7 +101,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
   },
   // The agents: the AI's work the system starts on its own, one page per
   // agent (pages/crm-agents.tsx, which reads the agent from the path). The
-  // three share the page grant crm-agents, an exception to "the page id is
+  // four share the page grant crm-agents, an exception to "the page id is
   // the route name": they are one feature, granted together.
   {
     name: 'crm-agent-group',
@@ -109,6 +110,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       ['leads', ScanSearch],
       ['opportunities', TrendingUp],
       ['approvals', ShieldCheck],
+      ['tasks', ClipboardList],
     ].map(([agent, icon]) => ({
       name: `crm-agents-${String(agent)}`,
       path: `/crm/agents/${String(agent)}`,

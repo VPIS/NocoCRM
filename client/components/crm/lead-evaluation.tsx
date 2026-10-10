@@ -15,7 +15,6 @@ import {
   Globe,
   Mail,
   PencilLine,
-  RotateCw,
   Sparkles,
   TriangleAlert,
   X,
@@ -43,6 +42,7 @@ import { OutcomeBox } from './outcome.js';
 import { useMailSetup } from './mail.js';
 import { EmailStep } from './email-step.js';
 import { statusDot } from './status-dot.js';
+import { aiStateWords } from './ai-state-words.js';
 import type { FollowUpRequest } from './follow-up-request.js';
 import { Choice } from './form.js';
 import { Input } from '../ui/input.js';
@@ -294,6 +294,9 @@ export function EvaluationStatus({
   if (!meta?.assistant || !entry) return null;
   const verdict = entry.ai.result;
   const pending = entry.status === 'pending';
+  // At work: the AI's state tag, as on a list's row and a board's card
+  // (ai-state-tag.tsx), in the chip's size; waiting, the chip as it was.
+  const live = entry?.status === 'running';
   const decided = entry.status === 'accepted' || entry.status === 'dismissed';
   // One chip, not a row of its own: what the AI concluded and where that
   // stands. It opens the evaluation in the timeline, where it is handled;
@@ -317,10 +320,10 @@ export function EvaluationStatus({
   return (
     <div
       className={`${wide ? 'flex w-full' : 'inline-flex max-w-full'} h-7 items-center rounded-lg border font-sans text-sm font-normal tracking-normal ${
-        entry.status === 'running'
-          ? 'crm-ai-working'
+        live
+          ? 'border-transparent bg-ai/10 text-ai dark:bg-ai/20'
           : pending
-            ? 'border-ai/30 bg-ai/5'
+            ? 'border-transparent bg-ai/10 dark:bg-ai/20'
             : 'bg-card'
       }`}
     >
@@ -342,7 +345,7 @@ export function EvaluationStatus({
               // Small, as the filter beside it.
               className={`flex h-full min-w-0 items-center gap-1.5 rounded-l-lg px-2 transition-colors ${
                 again ? '' : 'rounded-r-lg'
-              } ${pending ? 'hover:bg-ai/10' : 'hover:bg-muted'} ${wide ? 'flex-1' : ''}`}
+              } ${live ? 'hover:bg-ai/15' : pending ? 'hover:bg-ai/15' : 'hover:bg-muted'} ${wide ? 'flex-1' : ''}`}
             />
           }
         >
@@ -352,12 +355,14 @@ export function EvaluationStatus({
             <Sparkles className='size-3.5 text-ai' />
           )}
           <span className='min-w-0 truncate font-medium'>
-            {text('evaluation.start')}
+            {text(live ? aiStateWords.followUp.running : 'evaluation.start')}
           </span>
-          <span
-            aria-hidden
-            className={`size-1.5 shrink-0 rounded-full ${statusDot(entry.status)}`}
-          />
+          {live ? null : (
+            <span
+              aria-hidden
+              className={`size-1.5 shrink-0 rounded-full ${statusDot(entry.status)}`}
+            />
+          )}
         </TooltipTrigger>
         <TooltipContent
           side='bottom'
@@ -380,7 +385,7 @@ export function EvaluationStatus({
       {again ? (
         <>
           <span aria-hidden className='h-3.5 w-px shrink-0 bg-border' />
-          {/* Following it up again, as an icon, its words on hover. */}
+          {/* Following it up again, in a word, its full name on hover. */}
           <Tooltip>
             <TooltipTrigger
               render={
@@ -389,15 +394,12 @@ export function EvaluationStatus({
                   disabled={request.busy}
                   onClick={request.ask}
                   aria-label={toText(text('evaluation.askAgain'))}
-                  className='flex h-full shrink-0 items-center rounded-r-lg px-1.5 text-ai transition-colors hover:bg-ai/10 disabled:opacity-50'
+                  className='flex h-full shrink-0 items-center gap-1 rounded-r-lg px-2 font-medium text-ai transition-colors hover:bg-ai/10 disabled:opacity-50'
                 />
               }
             >
-              {request.busy ? (
-                <Spinner className='size-3.5' />
-              ) : (
-                <RotateCw className='size-3.5' />
-              )}
+              {request.busy ? <Spinner className='size-3.5' /> : null}
+              {text('evaluation.rerun')}
             </TooltipTrigger>
             <TooltipContent side='bottom'>
               {text('evaluation.askAgain')}
@@ -425,7 +427,7 @@ export function EvaluateButton({
   return (
     <button
       type='button'
-      className='inline-flex h-7 items-center gap-1.5 rounded-lg border border-ai/30 bg-ai/5 px-2.5 font-sans text-sm font-medium tracking-normal text-ai transition-colors hover:bg-ai/10 disabled:opacity-60'
+      className='inline-flex h-7 items-center gap-1.5 rounded-lg bg-ai/10 px-2.5 font-sans text-sm font-medium tracking-normal text-ai transition-colors hover:bg-ai/15 disabled:opacity-60 dark:bg-ai/20'
       disabled={request.busy}
       onClick={request.ask}
     >

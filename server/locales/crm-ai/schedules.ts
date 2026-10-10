@@ -24,4 +24,14 @@ export const scheduleTexts = {
     '每天检查进行中的商机：太久没有联系、预计成交日期临近或已过、暂停到了预计恢复日期（天数见 CRM 设置的提醒）。AI 对每个跟进一次，结果进商机负责人的「待我处理」。',
     "Every day, the open opportunities are checked: one gone quiet, one whose expected close date is near or past, a paused one due to resume (the days are the CRM settings' reminders). The AI follows each up once, and the result waits on its owner.",
   ],
+  taskTarget: ['任务准备', 'Task preparation'],
+  taskTargetDescription: [
+    'AI 为当天有具体时间的任务做准备',
+    "The AI prepares the day's timed tasks",
+  ],
+  taskTitle: ['任务每日准备', 'Daily task preparation'],
+  taskDescription: [
+    '每天早上为当天还没开始、有具体时间、关联了线索、商机或公司的任务做一次准备：目标、进展、对方的人、近况、要问的问题、要带的材料、风险和要点。结果只有任务负责人和参与人能看到。',
+    "Every morning, each task still ahead today that has a time of day and concerns a lead, an opportunity or a company is prepared once: its aim, where things stand, the people on the other side, recent news, the questions to ask, what to bring, the risks and the points to cover. Only the task's owner and participants see it.",
+  ],
 } as const satisfies Record<string, Pair>;

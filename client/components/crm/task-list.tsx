@@ -1,3 +1,4 @@
+import { AiStateTag } from './ai-state-tag.js';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import {
   Ban,
@@ -45,6 +46,9 @@ function useTaskPages(
 ): {
   rows: CrmRecord[];
   titles: Record<string, string>;
+  // Each task whose AI preparation is being written or waits, for the
+  // people doing it.
+  ai: Record<string, 'running' | 'pending'>;
   total: number;
   loading: boolean;
   more: (() => void) | undefined;
@@ -75,6 +79,10 @@ function useTaskPages(
     rows: pages.flatMap((p) => p.data),
     titles: pages.reduce<Record<string, string>>(
       (all, p) => ({ ...all, ...p.meta.titles }),
+      {},
+    ),
+    ai: pages.reduce<Record<string, 'running' | 'pending'>>(
+      (all, p) => ({ ...all, ...p.meta.ai }),
       {},
     ),
     total: pages[0]?.meta.total ?? 0,
@@ -164,6 +172,7 @@ function TaskRows({
     <TaskCards
       rows={pages.rows}
       titles={pages.titles}
+      ai={pages.ai}
       hasMore={Boolean(pages.more)}
       loading={pages.fetchingMore}
       onLoad={() => pages.more?.()}
@@ -183,6 +192,7 @@ export function TaskCards({
   onLoad,
   emptyText,
   recordId,
+  ai = {},
 }: {
   rows: CrmRecord[];
   titles: Record<string, string>;
@@ -192,6 +202,8 @@ export function TaskCards({
   emptyText?: ReactNode;
   // The record whose tab this is.
   recordId?: string;
+  // The AI's preparation of each task, at work or waiting (the task list's).
+  ai?: Record<string, 'running' | 'pending'>;
 }): ReactElement {
   const { text } = useCrmText();
   // The open ones first, as they came (soonest first); then, under their
@@ -212,6 +224,7 @@ export function TaskCards({
           task={task}
           titles={titles}
           recordId={recordId}
+          aiState={ai[toText(task.id)]}
         />
       ))}
     </div>
@@ -244,10 +257,12 @@ function TaskRow({
   task,
   titles,
   recordId,
+  aiState,
 }: {
   task: CrmRecord;
   titles: Record<string, string>;
   recordId?: string;
+  aiState?: 'running' | 'pending';
 }): ReactElement {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
@@ -338,12 +353,17 @@ function TaskRow({
             narrower, the particulars go under the title. */}
         <div className='flex min-w-0 flex-1 flex-col gap-1 @lg:flex-row @lg:items-center @lg:gap-4'>
           <span
-            className={`min-w-0 flex-1 text-sm ${finished ? 'text-muted-foreground line-through' : ''}`}
+            className={`flex min-w-0 flex-1 items-center gap-2 text-sm ${finished ? 'text-muted-foreground line-through' : ''}`}
           >
-            <RecordLink
-              entity='tasks'
-              record={{ id: toText(task.id), name: toText(task.name) }}
-            />
+            <span className='min-w-0'>
+              <RecordLink
+                entity='tasks'
+                record={{ id: toText(task.id), name: toText(task.name) }}
+              />
+            </span>
+            {/* The AI preparing it, or its preparation waiting, as a
+                lead's row shows its follow-up. */}
+            <AiStateTag state={aiState} work='prep' className='shrink-0' />
           </span>
           <span className='flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground'>
             {linkedId && linkedId !== recordId && titles[linkedId] && (

@@ -58,6 +58,11 @@ import {
 } from './opportunity-evaluation.js';
 import { createCrmUserRoleScope } from './user-roles.js';
 import { ApprovalReviewer, approvalReviewerToken } from './approval-review.js';
+import {
+  scanTaskPreparation,
+  TaskPreparer,
+  taskPreparerToken,
+} from './task-preparation.js';
 import { CrmAiResources } from '../../ai/index.js';
 import {
   LOGO_AVATAR_PATH,
@@ -138,6 +143,15 @@ export default class CrmProvider extends ServiceProvider<Application> {
       approvalReviewerToken,
       () =>
         new ApprovalReviewer(
+          this.app.container.resolve(crmToken),
+          this.app.container,
+        ),
+    );
+    // Tasks prepared by the AI for their owners (task-preparation.ts).
+    this.app.container.singleton(
+      taskPreparerToken,
+      () =>
+        new TaskPreparer(
           this.app.container.resolve(crmToken),
           this.app.container,
         ),
@@ -293,6 +307,36 @@ export default class CrmProvider extends ServiceProvider<Application> {
         schedule: { cron: '0 9 * * *', timezone },
         target: { type: 'app.crm-deal-signals', config: {} },
       });
+      // The day's timed tasks prepared for their owners
+      // (task-preparation.ts), at the same hour.
+      scheduler.registerTarget({
+        type: 'app.crm-task-preparation',
+        title: words.taskTarget,
+        validate: isObject,
+        describe: async () => ({
+          targetLabel: words.taskTarget,
+          description: words.taskTargetDescription,
+          state: 'ready',
+        }),
+        start: async () => {
+          const pass = await scanTaskPreparation(
+            service,
+            this.app.container.resolve(taskPreparerToken),
+          );
+          return {
+            state: 'completed',
+            outcome: 'succeeded',
+            result: { checked: pass.checked, started: pass.started },
+          };
+        },
+      });
+      scheduler.defineSchedule({
+        key: 'crm.task-preparation',
+        title: words.taskTitle,
+        description: words.taskDescription,
+        schedule: { cron: '0 9 * * *', timezone },
+        target: { type: 'app.crm-task-preparation', config: {} },
+      });
     }
     // The Users page shows and assigns the CRM's roles through this scope.
     if (this.app.container.has(userRoleScopeRegistryToken))
@@ -316,6 +360,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
       })().catch(() => undefined);
     const deals = this.app.container.resolve(opportunityEvaluatorToken);
     const reviewer = this.app.container.resolve(approvalReviewerToken);
+    const preparer = this.app.container.resolve(taskPreparerToken);
     const service = this.app.container.resolve(crmToken);
     // The follow-ups run as tasks of the jobs service (follow-up-jobs.ts):
     // kept across a restart, as many at once as `crmFollowUps` allows.
@@ -328,7 +373,9 @@ export default class CrmProvider extends ServiceProvider<Application> {
           ? deals.runEntry(payload.entryId, payload.language, signal)
           : payload.entity === 'approvals'
             ? reviewer.runEntry(payload.entryId, payload.language, signal)
-            : evaluator.runEntry(payload.entryId, payload.language, signal),
+            : payload.entity === 'tasks'
+              ? preparer.runEntry(payload.entryId, payload.language, signal)
+              : evaluator.runEntry(payload.entryId, payload.language, signal),
       );
       executor.registerJob(FollowUpJob);
       await executor.setup();
@@ -341,6 +388,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
       evaluator.useJobs(dispatch);
       deals.useJobs(dispatch);
       reviewer.useJobs(dispatch);
+      preparer.useJobs(dispatch);
     }
     service.opportunityOpened = (by, id) =>
       void (async () => {

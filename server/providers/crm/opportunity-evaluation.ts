@@ -656,7 +656,7 @@ function dayIn(at: Date, timeZone: string): string {
 // and the lead it was converted from.
 // Where a deal's mail is looked for, as its Mail tab looks: its contacts'
 // addresses, or, while it names none, its company's people.
-async function dealMailTarget(
+export async function dealMailTarget(
   service: CrmService,
   actor: Actor,
   opportunity: CrmRecord,

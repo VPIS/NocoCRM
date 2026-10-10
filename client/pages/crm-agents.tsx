@@ -45,8 +45,13 @@ import {
 // each opening its record. The agent comes from the path, one route each in
 // the menu's Agents section.
 
-type AgentName = 'leads' | 'opportunities' | 'approvals';
-const AGENTS: readonly AgentName[] = ['leads', 'opportunities', 'approvals'];
+type AgentName = 'leads' | 'opportunities' | 'approvals' | 'tasks';
+const AGENTS: readonly AgentName[] = [
+  'leads',
+  'opportunities',
+  'approvals',
+  'tasks',
+];
 const FRAME = 'border border-border/60 shadow-xs ring-0';
 const STATUSES = ['pending', 'accepted', 'dismissed', 'running', 'failed'];
 
@@ -133,7 +138,9 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
             <p className='leading-relaxed'>
               {text(`agents.${agent}.description`)}
             </p>
-            <p className='text-muted-foreground'>{text('agents.byNoco')}</p>
+            <p className='text-muted-foreground'>
+              {text(agent === 'tasks' ? 'agents.byNocoTasks' : 'agents.byNoco')}
+            </p>
             <p className='text-xs text-muted-foreground'>
               {text(`agents.${agent}.skill`)}
             </p>
@@ -170,12 +177,13 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
                     </p>
                     <p className='text-xs text-muted-foreground'>
                       {text(`agents.triggers.${trigger}.hint`, { zone })}
-                      {trigger === 'daily' &&
-                      (agent === 'leads' || agent === 'opportunities')
+                      {trigger === 'daily'
                         ? ` ${text(
                             agent === 'leads'
                               ? 'agents.triggers.dailyLeads.hint'
-                              : 'agents.triggers.dailyOpportunities.hint',
+                              : agent === 'opportunities'
+                                ? 'agents.triggers.dailyOpportunities.hint'
+                                : 'agents.triggers.dailyTasks.hint',
                           )}`
                         : ''}
                     </p>
@@ -192,7 +200,11 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
               ))}
             </ul>
             <p className='text-xs text-muted-foreground'>
-              {text('agents.manualNote')}
+              {text(
+                agent === 'tasks'
+                  ? 'agents.manualNoteTasks'
+                  : 'agents.manualNote',
+              )}
               {admin ? '' : ` ${text('agents.adminOnly')}`}
             </p>
           </CardContent>
@@ -267,7 +279,9 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
               {text(
                 agent === 'approvals'
                   ? 'agents.runsScopeApprovals'
-                  : 'agents.runsScope',
+                  : agent === 'tasks'
+                    ? 'agents.runsScopeTasks'
+                    : 'agents.runsScope',
               )}
             </p>
           </div>

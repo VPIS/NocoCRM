@@ -69,7 +69,8 @@ export interface ListMeta extends Titled {
   page: number;
   pageSize: number;
   // Leads and deals the AI is following up or has a verdict waiting on;
-  // approvals whose review is being written or waits, for their approver.
+  // approvals whose review is being written or waits, for their approver;
+  // tasks whose preparation is, for the people doing them.
   ai?: Record<string, 'running' | 'pending'>;
 }
 // A page of a list: the records, and in `meta` the paging and the names of

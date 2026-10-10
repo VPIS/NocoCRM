@@ -297,7 +297,7 @@ export async function pendingDecisions(
       .query()
       .selectFrom('crmHistory')
       .selectAll()
-      .where('entity', 'in', ['leads', 'opportunities', 'approvals'])
+      .where('entity', 'in', ['leads', 'opportunities', 'approvals', 'tasks'])
       .where('action', '=', 'ai')
       .where(
         'aiStatus',
@@ -409,6 +409,32 @@ export async function pendingDecisions(
       if (record.status === 'pending')
         editable.add(`approvals:${toText(record.id)}`);
     }
+  // A task's preparation is its owner's, as a lead's follow-up is: waiting
+  // while the task is open and its time still ahead (a preparation for a
+  // task already done, called off or past helps no one), decided once they
+  // decided it. Its participants read it on the task, not here.
+  const taskIds = [
+    ...new Set(
+      entries
+        .filter((entry) => entry.entity === 'tasks')
+        .map((entry) => entry.recordId),
+    ),
+  ];
+  if (taskIds.length) {
+    const now = Date.now();
+    for (const record of (
+      await service.list(actor, 'tasks', {
+        ids: taskIds.join(','),
+        ownerId: actor.id,
+        pageSize: 1000,
+      })
+    ).data) {
+      readable.set(`tasks:${toText(record.id)}`, record);
+      const due = record.dueAt ? Date.parse(toText(record.dueAt)) : NaN;
+      if (record.status === 'open' && (Number.isNaN(due) || due >= now))
+        editable.add(`tasks:${toText(record.id)}`);
+    }
+  }
   const dealNames =
     approvals.size > 0
       ? (
@@ -431,6 +457,21 @@ export async function pendingDecisions(
     })
     .map((entry) => {
       const record = readable.get(`${entry.entity}:${entry.recordId}`)!;
+      if (entry.entity === 'tasks')
+        return {
+          ...entry,
+          task: {
+            id: record.id,
+            name: record.name,
+            ownerId: record.ownerId ?? null,
+            status: record.status,
+            dueAt: record.dueAt ?? null,
+            internalParticipants: record.internalParticipants ?? [],
+            leadId: record.leadId ?? null,
+            companyId: record.companyId ?? null,
+            opportunityId: record.opportunityId ?? null,
+          },
+        };
       if (entry.entity === 'approvals')
         return {
           ...entry,
@@ -481,7 +522,7 @@ export async function pendingDecisions(
 export async function aiStates(
   service: CrmService,
   ids: readonly string[],
-  entity: 'leads' | 'opportunities' | 'approvals' = 'leads',
+  entity: 'leads' | 'opportunities' | 'approvals' | 'tasks' = 'leads',
 ): Promise<Record<string, 'running' | 'pending'>> {
   if (!ids.length) return {};
   const rows = await service.database
@@ -575,7 +616,7 @@ async function related(
 export async function commentsOf(
   service: CrmService,
   actor: Actor,
-  entity: 'leads' | 'opportunities',
+  entity: 'leads' | 'opportunities' | 'companies' | 'tasks',
   recordId: string,
 ): Promise<Row[]> {
   try {
@@ -793,7 +834,7 @@ async function previousOf(
 export async function tasksOf(
   service: CrmService,
   actor: Actor,
-  link: { leadId: string } | { opportunityId: string },
+  link: { leadId: string } | { opportunityId: string } | { companyId: string },
   timeZone: string,
   now = new Date(),
 ): Promise<{

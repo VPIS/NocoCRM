@@ -9,6 +9,7 @@ import {
   orderRecords,
 } from './list-order.js';
 import { resolveTitles } from './titles.js';
+import { doesTask } from './task-participants.js';
 import {
   hasCurrency,
   summarizeRows,
@@ -792,8 +793,11 @@ export class CrmService {
     // An approval's AI review is its approver's working draft: it reads
     // with the approver's access (precedents on companies the applicant may
     // not see) and leans on a decision not yet made, so no one else reads it.
+    // A task's preparation likewise the people doing it: it reads their
+    // mail.
     const hideReviews =
-      entity === 'approvals' && subject.approverId !== actor.id;
+      (entity === 'approvals' && subject.approverId !== actor.id) ||
+      (entity === 'tasks' && !doesTask(subject, actor.id));
     const readable = outputFields(
       entity,
       await conditions(actor, entity, 'read'),

@@ -29,6 +29,7 @@ import {
 } from '../providers/crm/opportunity-capture.js';
 import { latestOpportunityEvaluation } from '../providers/crm/opportunity-evaluation.js';
 import { CrmError, toText } from '../providers/crm/schema.js';
+import { latestPreparation } from '../providers/crm/task-preparation.js';
 import { resolveTitles } from '../providers/crm/titles.js';
 import { aiWorkers, runCommand, type CrmEnv } from './context.js';
 import { recordAction } from '../providers/crm-agents/actions.js';
@@ -44,6 +45,7 @@ import {
   ConvertLeadInput,
   DecideLeadEvaluationInput,
   DecideOpportunityEvaluationInput,
+  DecidePreparationInput,
   DecideReviewInput,
   EnrichInput,
   EntryParams,
@@ -630,6 +632,102 @@ export function registerOperationRoutes(
 
   // Tasks ---------------------------------------------------------------
   const taskTags = ['Tasks'];
+
+  // A task's AI preparation for its owner (task-preparation.ts): the
+  // newest, asking for one (or another, or a waiting one redone), and
+  // deciding on it.
+  router.get(
+    '/tasks/:taskId/preparations/latest',
+    describeRoute({
+      tags: taskTags,
+      summary: "Get a task's latest AI preparation",
+      operationId: 'getLatestTaskPreparation',
+      description: 'For its owner only; null for anyone else.',
+      responses: {
+        '200': dataResponse(AiEntry.nullable(), 'Null when there is none.'),
+        ...apiErrorResponses,
+        '404': notFound('task'),
+      },
+    }),
+    apiValidator('param', RecordParams.tasks),
+    async (c) =>
+      c.json({
+        data: await latestPreparation(
+          service,
+          c.get('actor'),
+          toText(c.req.valid('param').taskId),
+        ),
+      }),
+  );
+  router.post(
+    '/tasks/:taskId/prepare',
+    describeRoute({
+      tags: taskTags,
+      summary: 'Have the AI prepare a task',
+      operationId: 'prepareTask',
+      description:
+        'Its owner only, while it is open; with `revise`, redoes a waiting preparation as asked.',
+      responses: {
+        '201': dataResponse(AiEntry, 'The preparation, running.'),
+        ...apiErrorResponses,
+        '400': apiErrorResponse(
+          400,
+          'The task is no longer open (`TASK_NOT_OPEN`), or the preparation was already decided.',
+        ),
+        '404': notFound('task'),
+        '503': unavailable,
+      },
+    }),
+    apiValidator('param', RecordParams.tasks),
+    apiValidator('json', EvaluateInput),
+    async (c) => {
+      const body = c.req.valid('json');
+      const entry = await ai
+        .tasks()
+        ?.request(
+          c.get('actor'),
+          toText(c.req.valid('param').taskId),
+          undefined,
+          body.revise
+            ? { entryId: body.revise, instruction: body.instruction }
+            : undefined,
+        );
+      if (!entry) throw new CrmError('assistantUnavailable', 409);
+      return c.json({ data: entry }, 201);
+    },
+  );
+  router.post(
+    '/tasks/:taskId/preparations/:entryId/decide',
+    describeRoute({
+      tags: taskTags,
+      summary: "Decide on a task's AI preparation",
+      operationId: 'decideTaskPreparation',
+      description:
+        "Accepting writes its points into the task's description; dismissing sets it aside.",
+      responses: {
+        '200': dataResponse(AiEntry),
+        ...apiErrorResponses,
+        '400': decided,
+        '404': notFound('preparation'),
+        '503': unavailable,
+      },
+    }),
+    apiValidator('param', EntryParams.tasks),
+    apiValidator('json', DecidePreparationInput),
+    async (c) => {
+      const run = ai.tasks();
+      if (!run) throw new CrmError('assistantUnavailable', 409);
+      const { taskId, entryId } = c.req.valid('param');
+      return c.json({
+        data: await run.decide(
+          c.get('actor'),
+          taskId,
+          entryId,
+          c.req.valid('json').decision,
+        ),
+      });
+    },
+  );
 
   // What came of a task, jotted down, written up by the AI as its feedback
   // for the person to read and record (feedback.ts).

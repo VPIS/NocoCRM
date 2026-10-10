@@ -574,6 +574,7 @@ export function registerWorkspaceRoutes(
             leads: z.number().int(),
             opportunities: z.number().int(),
             approvals: z.number().int(),
+            tasks: z.number().int(),
           }),
         ),
         ...apiErrorResponses,

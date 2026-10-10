@@ -17,8 +17,9 @@ export const FOLLOW_UP_JOBS = 'crmFollowUps';
 
 export interface FollowUpPayload {
   [key: string]: string | null;
-  // An approval's: its review for the approver (approval-review.ts).
-  entity: 'leads' | 'opportunities' | 'approvals';
+  // An approval's: its review for the approver (approval-review.ts); a
+  // task's: its preparation for the owner (task-preparation.ts).
+  entity: 'leads' | 'opportunities' | 'approvals' | 'tasks';
   // The card (crmHistory, action `ai`) the run fills.
   entryId: string;
   // The language the follow-up is written in, when the person asking was

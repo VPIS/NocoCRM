@@ -34,10 +34,22 @@ export const isDecided = (entry: EvaluationEntry): boolean =>
   (entry.status === 'superseded' &&
     Boolean((entry.ai as { approvalOutcome?: string }).approvalOutcome));
 
-// A lead's or a deal's follow-up waiting on its decision, or an approval's
-// review waiting on its approver, with the record it concerns.
+// A lead's or a deal's follow-up waiting on its decision, an approval's
+// review waiting on its approver, or a task's preparation waiting on its
+// owner, with the record it concerns.
 export interface DecisionItem extends EvaluationEntry {
-  entity: 'leads' | 'opportunities' | 'approvals';
+  entity: 'leads' | 'opportunities' | 'approvals' | 'tasks';
+  task?: {
+    id: string;
+    name: string;
+    ownerId: string | null;
+    status: string;
+    dueAt: string | null;
+    internalParticipants: string[];
+    leadId: string | null;
+    companyId: string | null;
+    opportunityId: string | null;
+  };
   approval?: {
     id: string;
     name: string;
@@ -68,7 +80,7 @@ export interface DecisionItem extends EvaluationEntry {
 export const recordOf = (
   entry: DecisionItem,
 ): { id: string; name: string; ownerId: string | null } =>
-  (entry.lead ?? entry.opportunity ?? entry.approval)!;
+  (entry.lead ?? entry.opportunity ?? entry.approval ?? entry.task)!;
 
 export const scopeOf = (params: URLSearchParams): 'mine' | 'team' =>
   params.get(SCOPE_PARAM) === 'team' ? 'team' : 'mine';
@@ -103,7 +115,7 @@ export function useWording() {
     nameOf: (entry: DecisionItem): string =>
       entry.lead
         ? recordTitle('leads', entry.lead as unknown as CrmRecord)
-        : toText((entry.opportunity ?? entry.approval)?.name),
+        : toText((entry.opportunity ?? entry.approval ?? entry.task)?.name),
     kindOf: (entry: DecisionItem): string =>
       sentence(text(`entity.${entry.entity}`)),
     ownerOf: (entry: DecisionItem): string =>

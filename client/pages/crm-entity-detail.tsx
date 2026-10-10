@@ -81,6 +81,7 @@ import { useFollowUpRequest } from '../components/crm/follow-up-request.js';
 import { LocationField } from '../components/crm/location-field.js';
 import { MoneyField } from '../components/crm/money-field.js';
 import { ReviewStatus } from '../components/crm/approval-review.js';
+import { PrepStatus } from '../components/crm/task-preparation.js';
 import { Choice, RecordForm } from '../components/crm/form.js';
 import { StageField } from '../components/crm/reasons.js';
 import { ApprovalActions } from '../components/crm/approval-actions.js';
@@ -465,6 +466,15 @@ export default function EntityDetail({
     ) : entity === 'approvals' ? (
       <ReviewStatus
         approvalId={id}
+        onOpen={(entryId) => {
+          setFocus({ id: entryId, at: Date.now() });
+          setTab('historyTab');
+        }}
+      />
+    ) : entity === 'tasks' ? (
+      // A task's preparation for its owner (task-preparation.tsx).
+      <PrepStatus
+        task={record}
         onOpen={(entryId) => {
           setFocus({ id: entryId, at: Date.now() });
           setTab('historyTab');

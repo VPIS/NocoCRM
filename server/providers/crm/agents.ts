@@ -4,6 +4,7 @@ import { requireCapability, type Actor } from './authorization.js';
 import { CrmError, toText, type Entity } from './schema.js';
 import type { CrmService } from './service.js';
 import { resolveTitles } from './titles.js';
+import { doesTask } from './task-participants.js';
 
 // The CRM's agents as the Agents section of the menu shows them: the AI's
 // work the system starts on its own, one agent per kind of record it works
@@ -13,7 +14,7 @@ import { resolveTitles } from './titles.js';
 // never switched off. Their runs are the `ai` entries of the records'
 // history (ai-entries.ts), read with the reader's access.
 
-export const AGENTS = ['leads', 'opportunities', 'approvals'] as const;
+export const AGENTS = ['leads', 'opportunities', 'approvals', 'tasks'] as const;
 export type AgentName = (typeof AGENTS)[number];
 
 // The triggers each agent runs on, in the order its page lists them.
@@ -34,6 +35,8 @@ export const AGENT_TRIGGERS: Record<AgentName, readonly string[]> = {
     'customerReplied',
   ],
   approvals: ['submitted'],
+  // Today's timed tasks, prepared on the morning of their day.
+  tasks: ['daily'],
 };
 
 // The daily checks' signals (lead-signals.ts, deal-signals.ts) all fall
@@ -146,12 +149,23 @@ export async function saveAgentSwitch(
 }
 
 const DAY = 86_400_000;
+// Whose runs on a record the reader sees: an approval's review its
+// approver's alone, a task's preparation its owner's and participants'
+// (they read with those people's access and mail); every other agent's
+// anyone's who reads the record.
+const readsRuns = (agent: AgentName, record: Row, actor: Actor): boolean =>
+  agent === 'approvals'
+    ? record.approverId === actor.id
+    : agent === 'tasks'
+      ? doesTask(record, actor.id)
+      : true;
 const STATUSES = ['running', 'pending', 'accepted', 'dismissed', 'failed'];
 
 // An agent's page: its switches, how its runs fared over the last 7 and 30
 // days, and its runs newest first, a page at a time. Only the runs on
 // records the reader may read; an approval's review only for its approver,
-// who alone reads it (approval-review.ts).
+// who alone reads it (approval-review.ts), and a task's preparation only for
+// its owner and participants (task-preparation.ts).
 export async function agentOverview(
   service: CrmService,
   actor: Actor,
@@ -191,7 +205,7 @@ export async function agentOverview(
     .filter((entry) => {
       const record = readable.get(entry.recordId);
       if (!record) return false;
-      return name !== 'approvals' || record.approverId === actor.id;
+      return readsRuns(name, record, actor);
     })
     // A card superseded unseen by a newer one was not a run of its own to
     // judge; one retired with what became of its approval was.
@@ -309,9 +323,7 @@ export async function runningAgents(
     const readable = new Map(data.map((r) => [toText(r.id), r]));
     result[agent] = entries.filter((e) => {
       const record = readable.get(e.recordId);
-      return (
-        record && (agent !== 'approvals' || record.approverId === actor.id)
-      );
+      return Boolean(record) && readsRuns(agent, record!, actor);
     }).length;
   }
   return result;

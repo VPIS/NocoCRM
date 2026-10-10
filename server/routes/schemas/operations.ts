@@ -15,6 +15,7 @@ export const EntryParams = {
   leads: z.object({ leadId: id, entryId: id }),
   opportunities: z.object({ opportunityId: id, entryId: id }),
   approvals: z.object({ approvalId: id, entryId: id }),
+  tasks: z.object({ taskId: id, entryId: id }),
 };
 
 // A suggestion of the AI on a record: a lead's or an opportunity's
@@ -73,11 +74,9 @@ export const PlannedTask = z
   })
   .meta({ ref: 'CrmPlannedTask' });
 
-const findings = z
-  .array(z.string())
-  .meta({
-    description: 'The fields of its findings to write into the record.',
-  });
+const findings = z.array(z.string()).meta({
+  description: 'The fields of its findings to write into the record.',
+});
 
 export const DecideLeadEvaluationInput = z.strictObject({
   decision: z.enum(['accept', 'dismiss']),
@@ -108,6 +107,12 @@ export const DecideOpportunityEvaluationInput = z.strictObject({
 
 export const EnrichInput = z.strictObject({
   fields: findings.min(1),
+});
+
+// The owner's decision on a task's preparation: its points written into the
+// task's description, or the card set aside.
+export const DecidePreparationInput = z.strictObject({
+  decision: z.enum(['accept', 'dismiss']),
 });
 
 export const DecideReviewInput = z.strictObject({

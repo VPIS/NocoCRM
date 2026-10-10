@@ -6,7 +6,12 @@ import { describe, expect, it } from 'vitest';
 import enUS from '../../client/locales/en-US.js';
 import zhCN from '../../client/locales/zh-CN.js';
 
-const SKILLS = ['lead-follow-up', 'opportunity-follow-up', 'approval-review'];
+const SKILLS = [
+  'lead-follow-up',
+  'opportunity-follow-up',
+  'approval-review',
+  'task-preparation',
+];
 
 const skill = (name: string): string =>
   readFileSync(

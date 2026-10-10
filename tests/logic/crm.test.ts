@@ -179,6 +179,11 @@ import {
   demoStatus,
 } from '../../server/providers/crm/demo.js';
 import type { Application } from '@nocobase/app-server/application';
+import {
+  latestPreparation,
+  scanTaskPreparation,
+  TaskPreparer,
+} from '../../server/providers/crm/task-preparation.js';
 
 let database: DatabaseManager;
 let authorization: AppAuthorization;
@@ -9832,5 +9837,206 @@ describe('agents and plans', () => {
     expect(planOutcomes.at(-1)).toMatchObject({ decision: 'voided' });
     const listed = await (await request('/plans?status=voided', 'rep')).json();
     expect(listed.data.map((p: { id: string }) => p.id)).toContain(second.id);
+  });
+});
+
+describe('task preparation', () => {
+  it("prepares a task for the people doing it alone, who write it into the task's description", async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const prompts: string[] = [];
+      const preparation = {
+        summary: 'Agree the date of the pilot.',
+        brief: 'They asked for a quote last week and liked it.',
+        people: [{ name: 'Lin Yue', note: 'Decision maker, cares about cost' }],
+        company: 'Opened a plant in Suzhou (https://example.com/news)',
+        questions: ['Who signs the order?'],
+        bring: ['The quote'],
+        risks: ['A competitor is cheaper'],
+        agenda: ['Recap the quote', 'Agree the pilot date'],
+      };
+      const container = new ServiceContainer();
+      container.instance(aiConversationsManagerToken, {
+        create: async () => ({ sessionId: 'prep-session' }),
+      } as unknown as ReturnType<
+        typeof container.resolve<typeof aiConversationsManagerToken>
+      >);
+      container.instance(aiManagerToken, {
+        skillsManager: {
+          getSkills: async (name: string) =>
+            name === 'task-preparation'
+              ? { content: '# Task preparation\n\nThe skill.' }
+              : undefined,
+        },
+      } as unknown as ReturnType<
+        typeof container.resolve<typeof aiManagerToken>
+      >);
+      // Whom each run reads as.
+      const runAs: string[] = [];
+      container.instance(agentServiceFactoryToken, {
+        createAIEmployee: async (options: { actor: { id: string } }) => ({
+          invoke: async (input: {
+            userMessages: { content: { content: string } }[];
+          }) => {
+            runAs.push(options.actor.id);
+            const content = input.userMessages[0].content.content;
+            prompts.push(content);
+            // The web research turn answers in text; the preparation in
+            // its structure.
+            return content.startsWith('First look')
+              ? { message: { content: 'News: a new plant.' } }
+              : { structuredResponse: preparation };
+          },
+        }),
+      } as unknown as ReturnType<
+        typeof container.resolve<typeof agentServiceFactoryToken>
+      >);
+      container.instance(loggingToken, {
+        getLogger: () => ({ warn: () => undefined }),
+      } as unknown as ReturnType<
+        typeof container.resolve<typeof loggingToken>
+      >);
+      const preparer = new TaskPreparer(service, container);
+      const company = await service.save(actor('rep'), 'companies', {
+        name: 'Prep Works',
+        ownerId: 'rep',
+      });
+      const task = await service.save(actor('rep'), 'tasks', {
+        name: 'Pilot call',
+        description: 'My own notes.',
+        companyId: company.id,
+        ownerId: 'rep',
+        dueAt: new Date(Date.now() + 3_600_000).toISOString(),
+      });
+      // Only the people doing it may ask.
+      await expect(
+        preparer.request(actor('manager'), task.id),
+      ).rejects.toMatchObject({ code: 'forbidden' });
+      await preparer.request(actor('rep'), task.id);
+      await preparer.idle();
+      const latest = await latestPreparation(service, actor('rep'), task.id);
+      expect(latest).toMatchObject({
+        status: 'pending',
+        ai: { result: { summary: 'Agree the date of the pilot.' } },
+      });
+      // It searched the company, then prepared from the skill and the task.
+      expect(prompts.some((p) => p.includes('"Prep Works"'))).toBe(true);
+      expect(prompts.at(-1)).toContain('The skill.');
+      expect(prompts.at(-1)).toContain('Pilot call');
+      expect(prompts.at(-1)).toContain('News: a new plant.');
+      // The owner's alone: no one else reads it, as the latest or in the
+      // task's history.
+      expect(
+        await latestPreparation(service, actor('manager'), task.id),
+      ).toBeNull();
+      const told = async (who: string) =>
+        (await service.historyOf(actor(who), 'tasks', task.id)).data.some(
+          (event) => event.action === 'ai',
+        );
+      expect(await told('rep')).toBe(true);
+      expect(await told('manager')).toBe(false);
+      // A participant reads it too, and may ask for one.
+      await service.save(
+        actor('rep'),
+        'tasks',
+        { internalParticipants: ['manager'] },
+        task.id,
+      );
+      expect(
+        await latestPreparation(service, actor('manager'), task.id),
+      ).not.toBeNull();
+      expect(await told('manager')).toBe(true);
+      // Asked by a participant, it still runs as the owner, as a lead's
+      // follow-up does.
+      runAs.length = 0;
+      const asked = await preparer.request(actor('manager'), task.id);
+      await preparer.idle();
+      expect(runAs.length).toBeGreaterThan(0);
+      expect(new Set(runAs)).toEqual(new Set(['rep']));
+      const redone = await latestPreparation(service, actor('rep'), task.id);
+      expect(redone!.id).toBe(asked!.id);
+      // Written in: the points under To prepare, the questions under To
+      // ask, the owner's own notes kept.
+      expect(
+        await preparer.decide(actor('rep'), task.id, redone!.id, 'accept'),
+      ).toMatchObject({ status: 'accepted' });
+      const description = toText(
+        (await service.get(actor('rep'), 'tasks', task.id)).description,
+      );
+      expect(description).toContain('My own notes.');
+      expect(description).toContain('- Agree the pilot date');
+      expect(description).toContain('- The quote');
+      expect(description).toContain('- Who signs the order?');
+    } finally {
+      enabled.mockRestore();
+    }
+  });
+
+  it("prepares on the morning only today's timed tasks with a record, once", async () => {
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Morning Works',
+      ownerId: 'rep',
+    });
+    const { timeZone } = await service.settings();
+    const now = new Date();
+    const later = new Date(
+      Math.min(
+        now.getTime() + 60_000,
+        endOfDay(now, timeZone).getTime() - 60_000,
+      ),
+    );
+    const timed = await service.save(actor('rep'), 'tasks', {
+      name: 'Timed call',
+      companyId: company.id,
+      ownerId: 'rep',
+      dueAt: later.toISOString(),
+    });
+    const unlinked = await service.save(actor('rep'), 'tasks', {
+      name: 'Unlinked call',
+      ownerId: 'rep',
+      dueAt: later.toISOString(),
+    });
+    const dateOnly = await service.save(actor('rep'), 'tasks', {
+      name: 'Date-only call',
+      companyId: company.id,
+      ownerId: 'rep',
+      dueAt: endOfDay(now, timeZone).toISOString(),
+    });
+    const asked: string[] = [];
+    const preparer = {
+      available: async () => true,
+      request: async (by: Actor, taskId: string, trigger: unknown) => {
+        expect(by.id).toBe('rep');
+        expect(trigger).toBe('daily');
+        asked.push(taskId);
+        await database
+          .query()
+          .insertInto('crmHistory')
+          .values({
+            id: `prep-${taskId}`,
+            entity: 'tasks',
+            recordId: taskId,
+            actorId: by.id,
+            action: 'ai',
+            source: 'ai',
+            aiStatus: 'pending',
+            ai: JSON.stringify({ kind: 'evaluation', trigger }),
+            changes: JSON.stringify({}),
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+        return { id: `prep-${taskId}` };
+      },
+    } as unknown as TaskPreparer;
+    await scanTaskPreparation(service, preparer, now, 1000);
+    expect(asked).toContain(timed.id);
+    expect(asked).not.toContain(unlinked.id);
+    expect(asked).not.toContain(dateOnly.id);
+    // Once: the next pass leaves a prepared task alone.
+    asked.length = 0;
+    await scanTaskPreparation(service, preparer, now, 1000);
+    expect(asked).not.toContain(timed.id);
   });
 });

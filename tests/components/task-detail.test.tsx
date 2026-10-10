@@ -83,27 +83,30 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
       loadMore: () => Promise.resolve(),
     }),
     useCrmQuery: (path: string) =>
-      path.startsWith('tasks/')
-        ? {
-            isLoading: false,
-            data: {
-              record: state.record,
-              titles: { 'lead-1': '罗雨萱 / 新域零售' },
-              names: {},
-              related: {},
-              relatedTotals: {},
-              history: state.history,
-              historyTotal: state.history.length,
-              permissions: {
-                edit: true,
-                delete: state.canDelete,
-                approve: false,
+      // The task's AI preparation: none yet.
+      path.endsWith('/preparations/latest')
+        ? { isLoading: false, data: null }
+        : path.startsWith('tasks/')
+          ? {
+              isLoading: false,
+              data: {
+                record: state.record,
+                titles: { 'lead-1': '罗雨萱 / 新域零售' },
+                names: {},
+                related: {},
+                relatedTotals: {},
+                history: state.history,
+                historyTotal: state.history.length,
+                permissions: {
+                  edit: true,
+                  delete: state.canDelete,
+                  approve: false,
+                },
               },
-            },
-          }
-        : path === 'metadata'
-          ? { isLoading: false, data: metadata }
-          : { isLoading: false, data: undefined },
+            }
+          : path === 'metadata'
+            ? { isLoading: false, data: metadata }
+            : { isLoading: false, data: undefined },
     useCrmText: () => ({
       text: (key: string, values?: Record<string, unknown>): string => {
         const value = key
@@ -202,6 +205,13 @@ describe('the task page', () => {
     ).toBeTruthy();
     // A planned task has no completion time yet.
     expect(screen.queryByText('完成时间')).toBeNull();
+  });
+
+  // Its owner may have the AI prepare it, before the first preparation by
+  // the button the chip later replaces (task-preparation.tsx).
+  it('offers the AI prep to the owner of an open task with a record', () => {
+    renderPage();
+    expect(screen.getByRole('button', { name: 'AI 准备' })).toBeTruthy();
   });
 
   it('offers completing it only while the task is open', () => {

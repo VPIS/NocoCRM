@@ -80,6 +80,9 @@ const zhCN: AppResource = {
   'Approval review': '审批辅助',
   'Helps an approver judge whether an approval request (discount, payment terms, contract terms, delivery commitment) is worth approving — how far the asked terms are from the standard, the effect on the amount and on collection, the opportunity\'s situation and the evidence supporting this concession, the other approvals submitted with it on the same opportunity, how earlier requests of the same kind were decided, the risks and what the applicant left unclear — then recommends approve, approve on conditions, reject or ask for more information, and drafts the decision comment. Use it after an approval is submitted, or when the approver asks "should this approval be approved?".':
     '帮审批人看一个审批申请（折扣、账期、合同条款、交付承诺）值不值得批：申请的条件和标准差多少、对金额和回款的影响、商机的情况和支撑这次让步的证据、同一商机一起提交的其他审批、以往同类审批是怎么批的、风险和申请人没说清的地方，最后给出批准、有条件批准、驳回或需要补充信息的建议，并写好审批意见。审批提交后、审批人问"这个审批该不该批"时使用。',
+  'Task preparation': '任务准备',
+  "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, recent news about the customer's company from the web, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
+    '为销售即将和客户进行的任务（电话、会议、拜访、演示）做准备：任务要达成什么、从记录的任务、评论和邮件看事情进展到哪一步、对方都有谁以及各自的角色、联网查到的客户公司近况、要问的问题、要带的材料、风险，以及按顺序要讲的要点。在任务当天早上，或任务负责人要求准备时使用。',
   // Display text of the CRM's AI tools (server/ai/tools), keyed by their
   // English source text as the AI Employee plugin requires.
   'Search CRM records': '搜索 CRM 记录',

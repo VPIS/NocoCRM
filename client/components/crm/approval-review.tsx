@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { Check, RotateCw, Sparkles, X } from 'lucide-react';
+import { Check, Sparkles, X } from 'lucide-react';
 import { Badge } from '../ui/badge.js';
 import { Button } from '../ui/button.js';
 import { Spinner } from '../ui/spinner.js';
@@ -7,6 +7,7 @@ import { Textarea } from '../ui/textarea.js';
 import { ErrorNotice } from './common.js';
 import { Row } from './lead-evaluation.js';
 import { statusDot } from './status-dot.js';
+import { aiStateWords } from './ai-state-words.js';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip.js';
 import {
   localDate,
@@ -424,19 +425,46 @@ export function ReviewPanel({
   );
 }
 
-// A review on the approval's timeline, in its line: what it recommends,
-// tagged as a follow-up's verdict is.
+// A review on the approval's timeline, in its line: where it stands, as a
+// follow-up's line shows its status (what it recommends is on the card):
+// waiting, approved or rejected on it, dismissed, or voided by the approval
+// leaving the queue; who decided it and when on hover.
 export function ReviewFeedEntry({
   entry,
 }: {
   entry: { aiStatus?: unknown; ai?: unknown };
 }): ReactElement | null {
-  const { text } = useCrmText();
-  const review = (entry.ai as ReviewEntry['ai'] | null)?.result;
-  if (!review) return null;
+  const { data: meta } = useMetadata();
+  const { text, language } = useCrmText();
+  const ai = (entry.ai ?? {}) as ReviewEntry['ai'];
+  const status = toText(entry.aiStatus);
+  if (!ai.result) return null;
+  const words =
+    status === 'accepted'
+      ? text(`approvalReview.statuses.${ai.decision ?? 'approve'}`)
+      : status === 'superseded' && ai.approvalOutcome
+        ? ai.approvalOutcome === 'withdrawn'
+          ? text('options.withdrawn')
+          : text(
+              `approvalReview.statuses.${ai.approvalOutcome === 'rejected' ? 'reject' : 'approve'}`,
+            )
+        : text(`evaluation.statuses.${status}`);
   return (
-    <Badge variant={entry.aiStatus === 'pending' ? 'ai' : 'muted'}>
-      {text(`approvalReview.recommendations.${review.recommendation}`)}
+    <Badge
+      variant={
+        status === 'pending'
+          ? 'ai'
+          : status === 'accepted'
+            ? 'success'
+            : 'muted'
+      }
+      title={
+        (status === 'accepted' || status === 'dismissed') && ai.decidedAt
+          ? `${meta?.users.find((u) => u.id === ai.decidedById)?.name ?? ''} · ${localDate(ai.decidedAt, language, meta?.settings.timeZone ?? 'Asia/Shanghai')}`
+          : undefined
+      }
+    >
+      {words}
     </Badge>
   );
 }
@@ -490,6 +518,9 @@ export function ReviewStatus({
       .finally(() => setBusy(false));
   };
   const pending = entry?.status === 'pending';
+  // At work: the AI's state tag, as on a list's row (ai-state-tag.tsx), in
+  // the chip's size; waiting, the chip as it was.
+  const live = entry?.status === 'running';
   const again = mayAsk && entry?.status !== 'running';
   // Nothing to show (no review, and not the approver's to ask for one):
   // no empty box to push the row's buttons aside.
@@ -509,10 +540,10 @@ export function ReviewStatus({
       {entry ? (
         <div
           className={`${wide ? 'flex min-w-0 flex-1' : 'inline-flex max-w-full'} h-7 items-center rounded-lg border text-sm ${
-            entry.status === 'running'
-              ? 'crm-ai-working'
+            live
+              ? 'border-transparent bg-ai/10 text-ai dark:bg-ai/20'
               : pending
-                ? 'border-ai/30 bg-ai/5'
+                ? 'border-transparent bg-ai/10 dark:bg-ai/20'
                 : 'bg-card'
           }`}
         >
@@ -537,7 +568,7 @@ export function ReviewStatus({
                     .join(' · ')}
                   className={`flex h-full min-w-0 items-center gap-1.5 rounded-l-lg px-2 transition-colors ${
                     again ? '' : 'rounded-r-lg'
-                  } ${pending ? 'hover:bg-ai/10' : 'hover:bg-muted'} ${wide ? 'flex-1' : ''}`}
+                  } ${live ? 'hover:bg-ai/15' : pending ? 'hover:bg-ai/15' : 'hover:bg-muted'} ${wide ? 'flex-1' : ''}`}
                 />
               }
             >
@@ -547,12 +578,16 @@ export function ReviewStatus({
                 <Sparkles className='size-3.5 text-ai' />
               )}
               <span className='min-w-0 truncate font-medium'>
-                {text('approvalReview.ask')}
+                {text(
+                  live ? aiStateWords.review.running : 'approvalReview.ask',
+                )}
               </span>
-              <span
-                aria-hidden
-                className={`size-1.5 shrink-0 rounded-full ${statusDot(toText(entry.status))}`}
-              />
+              {live ? null : (
+                <span
+                  aria-hidden
+                  className={`size-1.5 shrink-0 rounded-full ${statusDot(toText(entry.status))}`}
+                />
+              )}
             </TooltipTrigger>
             <TooltipContent
               side='bottom'
@@ -588,15 +623,12 @@ export function ReviewStatus({
                       disabled={busy}
                       onClick={ask}
                       aria-label={toText(text('approvalReview.again'))}
-                      className='flex h-full shrink-0 items-center rounded-r-lg px-1.5 text-ai transition-colors hover:bg-ai/10 disabled:opacity-50'
+                      className='flex h-full shrink-0 items-center gap-1 rounded-r-lg px-2 font-medium text-ai transition-colors hover:bg-ai/10 disabled:opacity-50'
                     />
                   }
                 >
-                  {busy ? (
-                    <Spinner className='size-3.5' />
-                  ) : (
-                    <RotateCw className='size-3.5' />
-                  )}
+                  {busy ? <Spinner className='size-3.5' /> : null}
+                  {text('evaluation.rerun')}
                 </TooltipTrigger>
                 <TooltipContent side='bottom'>
                   {text('approvalReview.again')}
@@ -610,7 +642,7 @@ export function ReviewStatus({
         // as the chip it gives way to: on the AI's tint, led by its mark.
         <button
           type='button'
-          className='inline-flex h-7 items-center gap-1.5 rounded-lg border border-ai/30 bg-ai/5 px-2.5 font-sans text-sm font-medium tracking-normal text-ai transition-colors hover:bg-ai/10 disabled:opacity-60'
+          className='inline-flex h-7 items-center gap-1.5 rounded-lg bg-ai/10 px-2.5 font-sans text-sm font-medium tracking-normal text-ai transition-colors hover:bg-ai/15 disabled:opacity-60 dark:bg-ai/20'
           disabled={busy}
           onClick={ask}
         >

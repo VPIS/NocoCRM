@@ -25,6 +25,7 @@ import type { Actor } from '../providers/crm/authorization.js';
 import { leadEvaluatorToken } from '../providers/crm/lead-evaluation.js';
 import { opportunityEvaluatorToken } from '../providers/crm/opportunity-evaluation.js';
 import { approvalReviewerToken } from '../providers/crm/approval-review.js';
+import { taskPreparerToken } from '../providers/crm/task-preparation.js';
 import { CrmError } from '../providers/crm/schema.js';
 import { CRM_ERROR_DOMAIN, toApiError } from './errors.js';
 import { PLAN_ACTION } from '../providers/crm-agents/actions.js';
@@ -139,6 +140,10 @@ export function aiWorkers(app: Application) {
     approvals: () =>
       container.has(approvalReviewerToken)
         ? container.resolve(approvalReviewerToken)
+        : undefined,
+    tasks: () =>
+      container.has(taskPreparerToken)
+        ? container.resolve(taskPreparerToken)
         : undefined,
   };
 }
