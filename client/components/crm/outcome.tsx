@@ -1,6 +1,12 @@
-import { useId, useState, type ReactElement } from 'react';
-import { Check, Sparkles } from 'lucide-react';
-import { Button } from '../ui/button.js';
+import {
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactElement,
+} from 'react';
+import { Check, CircleCheck, Sparkles } from 'lucide-react';
+import { Button, buttonVariants } from '../ui/button.js';
 import { Checkbox } from '../ui/checkbox.js';
 import {
   Dialog,
@@ -36,6 +42,7 @@ export function OutcomeBox({
   disabled,
   followUp,
   onFollowUp,
+  bare = false,
 }: {
   taskId: string;
   value: string;
@@ -43,6 +50,9 @@ export function OutcomeBox({
   disabled: boolean;
   followUp?: boolean;
   onFollowUp?: (followUp: boolean) => void;
+  // In a dialog laid out as the new task's: the text with no box, growing
+  // with what is written, and its options as chips under it.
+  bare?: boolean;
 }): ReactElement {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
@@ -50,6 +60,82 @@ export function OutcomeBox({
   const id = useId();
   const [organising, setOrganising] = useState(false);
   const [error, setError] = useState<unknown>();
+  // The bare text grows with what is written, up to half the screen.
+  const boxRef = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    if (!box || !bare) return;
+    const limit = Math.round(window.innerHeight / 2);
+    box.style.height = 'auto';
+    box.style.height = `${String(Math.min(box.scrollHeight, limit))}px`;
+    box.style.overflowY = box.scrollHeight > limit ? 'auto' : 'hidden';
+  }, [value, bare]);
+  const organise = (): void => {
+    setOrganising(true);
+    setError(undefined);
+    api<{ data: { text: string } }>(
+      `tasks/${taskId}/organiseFeedback`,
+      'POST',
+      {
+        text: value,
+      },
+    )
+      .then((result) => onChange(result.data.text))
+      .catch(setError)
+      .finally(() => setOrganising(false));
+  };
+  if (bare)
+    return (
+      <div className='space-y-4'>
+        <textarea
+          ref={boxRef}
+          autoFocus
+          rows={3}
+          value={value}
+          maxLength={LONG_TEXT_LIMIT}
+          disabled={disabled || organising}
+          placeholder={toText(text('evaluation.outcomePlaceholder'))}
+          aria-label={toText(text('fields.result'))}
+          onChange={(event) => onChange(event.target.value)}
+          className='w-full resize-none bg-transparent text-sm outline-none placeholder:text-muted-foreground'
+        />
+        <ErrorNotice error={error} />
+        {/* The options as the new task's chips. */}
+        <div className='flex flex-wrap items-center gap-1.5'>
+          {onFollowUp && meta?.assistant ? (
+            <label
+              htmlFor={id}
+              className={`${buttonVariants({ variant: 'outline', size: 'sm' })} cursor-pointer font-normal`}
+            >
+              <Checkbox
+                id={id}
+                checked={followUp ?? true}
+                disabled={disabled}
+                onCheckedChange={(checked) => onFollowUp(checked === true)}
+              />
+              {text('evaluation.followUpAfter')}
+            </label>
+          ) : null}
+          {meta?.assistant ? (
+            <Button
+              type='button'
+              size='sm'
+              variant='outline'
+              className='font-normal text-ai hover:text-ai'
+              disabled={disabled || organising || !value.trim()}
+              onClick={organise}
+            >
+              {organising ? <Spinner /> : <Sparkles />}
+              {text(
+                organising
+                  ? 'evaluation.organising'
+                  : 'evaluation.organiseOutcome',
+              )}
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    );
   return (
     <div className='grid gap-2'>
       <Textarea
@@ -86,18 +172,7 @@ export function OutcomeBox({
             variant='outline'
             className='ml-auto text-ai hover:text-ai'
             disabled={disabled || organising || !value.trim()}
-            onClick={() => {
-              setOrganising(true);
-              setError(undefined);
-              api<{ data: { text: string } }>(
-                `tasks/${taskId}/organiseFeedback`,
-                'POST',
-                { text: value },
-              )
-                .then((result) => onChange(result.data.text))
-                .catch(setError)
-                .finally(() => setOrganising(false));
-            }}
+            onClick={organise}
           >
             {organising ? <Spinner /> : <Sparkles />}
             {text(
@@ -142,14 +217,25 @@ export function RecordOutcomeDialog({
         if (!open && !busy) onClose();
       }}
     >
-      <DialogContent className='sm:max-w-xl'>
-        <DialogHeader>
+      {/* Laid out as the new task's dialog: no heading of its own (named
+          for screen readers), the task's name leading, what came of it
+          under it with no box, its options as chips, then the buttons. */}
+      <DialogContent
+        showCloseButton={false}
+        className='max-h-[90svh] overflow-y-auto sm:max-w-xl'
+      >
+        <DialogHeader className='sr-only'>
           <DialogTitle>
             {text('completeTaskOf', { name: toText(task.name) })}
           </DialogTitle>
         </DialogHeader>
+        <p className='flex items-center gap-2 text-base font-medium'>
+          <CircleCheck className='size-4 shrink-0 text-muted-foreground' />
+          <span className='min-w-0 break-words'>{toText(task.name)}</span>
+        </p>
         <ErrorNotice error={error} />
         <OutcomeBox
+          bare
           taskId={toText(task.id)}
           value={outcome}
           onChange={setOutcome}

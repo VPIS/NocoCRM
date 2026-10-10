@@ -1183,8 +1183,14 @@ export function MailCount({
   target: MailTarget;
 }): ReactElement | null {
   const setup = useMailSetup();
-  const { data } = useRecordMessages(target, setup.accounts.length > 0);
-  return data ? <TabCount value={data.length} /> : null;
+  const { data, fetchStatus } = useRecordMessages(
+    target,
+    setup.accounts.length > 0,
+  );
+  // Nothing to look for (no address, no mailbox) is none: 0, as the other
+  // tabs say; while it is being looked up, no number yet.
+  if (data) return <TabCount value={data.length} />;
+  return fetchStatus === 'idle' ? <TabCount value={0} /> : null;
 }
 
 // Status and its invalid reason are one decision: the server refuses an invalid
