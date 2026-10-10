@@ -145,6 +145,19 @@
   animation: crm-arrive 2.4s ease-out;
 }
 
+/* A message in a comment's thread, pointed out from a reply that answers
+   it: its background alone takes the grey of a hovered particular, so a
+   comment's line and its text below read as one. */
+@keyframes crm-flash {
+  0%,
+  40% {
+    background-color: color-mix(in oklab, var(--muted) 60%, transparent);
+  }
+}
+.crm-flash {
+  animation: crm-flash 1.6s ease-out;
+}
+
 /* A scroller whose bar shows only while it scrolls (revealScrollbar in
    client/components/crm/common.tsx marks it so): a thin bar, transparent
    while still, so showing it moves nothing. */

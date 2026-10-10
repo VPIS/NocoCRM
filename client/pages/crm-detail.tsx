@@ -2231,6 +2231,29 @@ function CommentThread({
   if (!replies.length && !answering) return null;
   const name = (id: unknown): string =>
     meta?.users.find((user) => user.id === id)?.name ?? '';
+  // Brings the message a reply answers into view and lights it up a
+  // moment, unfolding the replies when it is among the folded ones.
+  const point = (id: string): void => {
+    const at = replies.findIndex((reply) => toText(reply.id) === id);
+    if (folded && at > 0 && at < replies.length - 1) setUnfolded(true);
+    requestAnimationFrame(() => {
+      const nodes = document.querySelectorAll<HTMLElement>(
+        `[data-comment="${CSS.escape(id)}"]`,
+      );
+      nodes[0]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      for (const node of nodes) {
+        node.classList.remove('crm-flash');
+        // Restarts the animation when it is pointed out again.
+        void node.offsetWidth;
+        node.classList.add('crm-flash');
+        node.addEventListener(
+          'animationend',
+          () => node.classList.remove('crm-flash'),
+          { once: true },
+        );
+      }
+    });
+  };
   const box = (replyTo: string): ReactElement | null =>
     answering ? (
       <ReplyBox
@@ -2247,34 +2270,46 @@ function CommentThread({
       />
     ) : null;
   return (
-    <div className='mt-2 grid gap-2 border-l border-border/50 pl-3'>
+    // No gaps: each reply's top padding carries the line from the avatar
+    // above to its own.
+    <div className='grid'>
       {shown.map((reply, index) => {
         const replyId = toText(reply.id);
         return (
           <Fragment key={replyId}>
             {folded && index === 1 ? (
-              <button
-                type='button'
-                className='justify-self-start rounded-md py-0.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:underline'
-                onClick={() => setUnfolded(true)}
-              >
-                {text('comments.moreReplies', { count: folded })}
-              </button>
+              <div className='relative pt-2 pl-7'>
+                <ThreadLine />
+                <button
+                  type='button'
+                  className='rounded-md py-0.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:underline'
+                  onClick={() => setUnfolded(true)}
+                >
+                  {text('comments.moreReplies', { count: folded })}
+                </button>
+              </div>
             ) : null}
-            <div className='min-w-0'>
-              <div className='group/reply'>
+            <div className='relative min-w-0 pt-2'>
+              <ThreadLine part='above' />
+              {index < shown.length - 1 ? <ThreadLine part='after' /> : null}
+              <div
+                data-comment={replyId}
+                className='group/reply -mx-1 rounded-md px-1'
+              >
                 <div className='flex min-h-[26px] items-center gap-2 text-sm'>
-                  <span
-                    aria-hidden
-                    className='grid size-5 shrink-0 place-items-center rounded-full bg-muted text-[0.625rem] font-medium text-muted-foreground'
-                  >
-                    {initials(name(reply.actorId))}
-                  </span>
+                  <CommentAvatar name={name(reply.actorId)} />
                   {/* Who wrote it, and whom it answers: the comment's
                       author, or the reply's above it. */}
                   <span className='min-w-0 flex-1 truncate'>
                     <span className='font-semibold'>{name(reply.actorId)}</span>{' '}
-                    <span className='text-muted-foreground'>
+                    {/* Points out the message it answers. */}
+                    <button
+                      type='button'
+                      className='text-muted-foreground hover:text-foreground hover:underline'
+                      onClick={() =>
+                        point(toText(reply.replyToId) || commentId)
+                      }
+                    >
                       {text('comments.replyTo', {
                         name: name(
                           (
@@ -2285,7 +2320,7 @@ function CommentThread({
                           ).actorId,
                         ),
                       })}
-                    </span>
+                    </button>
                   </span>
                   <CommentActions
                     id={replyId}
@@ -2338,8 +2373,55 @@ function CommentThread({
           </Fragment>
         );
       })}
-      {box(replyingTo ?? commentId)}
+      {answering ? (
+        <div className='pt-2'>{box(replyingTo ?? commentId)}</div>
+      ) : null}
     </div>
+  );
+}
+
+// A comment's or a reply's author by their initials, above the thread's
+// line.
+function CommentAvatar({
+  name,
+  className = '',
+}: {
+  name: string;
+  className?: string;
+}): ReactElement {
+  return (
+    <span
+      aria-hidden
+      className={`relative grid size-5 shrink-0 place-items-center rounded-full bg-muted text-[0.625rem] font-medium text-muted-foreground ${className}`}
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
+// The line through a thread's avatars, at their centre, the timeline's
+// colour, drawn a piece per block so it follows whatever each one holds.
+function ThreadLine({
+  part = 'through',
+}: {
+  // `below` an avatar on the block's first line (the comment's), `above`
+  // and `after` a reply's avatar under its top padding, `through` a block
+  // with none (the comment's text, the folded replies' button).
+  part?: 'below' | 'above' | 'after' | 'through';
+}): ReactElement {
+  // Clear of the avatar by 3px, as the timeline's line is of its icons:
+  // the avatar's middle is 13px down its line, its half spacing * 2.5.
+  const place = {
+    below: 'top-[calc(13px+var(--spacing)*2.5+3px)] bottom-0',
+    above: 'top-0 h-[calc(13px-var(--spacing)*0.5-3px)]',
+    after: 'top-[calc(var(--spacing)*4.5+16px)] bottom-0',
+    through: 'inset-y-0',
+  }[part];
+  return (
+    <span
+      aria-hidden
+      className={`absolute left-2.5 w-px -translate-x-1/2 bg-border/50 ${place}`}
+    />
   );
 }
 
@@ -2733,6 +2815,22 @@ export function HistoryFeed({
                   // withdrawn.
                   const approvalEvent =
                     event.entity === 'approvals' && entity !== 'approvals';
+                  // Plain activity (a field changed, a status moved, the
+                  // record created) reads as fine print, so what people
+                  // wrote stands out; comments are cards, and the AI's work,
+                  // tasks, approvals and mail sit between the two.
+                  // A comment with replies joins its author's avatar to
+                  // theirs by one line.
+                  const threaded =
+                    comment &&
+                    Array.isArray(event.replies) &&
+                    event.replies.length > 0;
+                  const quiet =
+                    !comment &&
+                    !ai &&
+                    !taskEvent &&
+                    !approvalEvent &&
+                    event.action !== 'mail';
                   // Every task entry carries the Tasks tab's icon,
                   // every approval entry the Approvals tab's.
                   const Icon = taskEvent
@@ -2772,13 +2870,25 @@ export function HistoryFeed({
                         )}
                       </div>
                       <div
-                        className={`min-w-0 flex-1 pb-3 ${
-                          focus === key
-                            ? 'crm-arrive -mx-2 rounded-lg bg-ai/5 px-2'
-                            : ''
+                        className={`min-w-0 flex-1 ${
+                          comment
+                            ? // A comment, with its replies, on a card of its
+                              // own: people talking, set apart from activity.
+                              `mb-3 rounded-xl border border-border/60 px-3 py-2 shadow-xs ${
+                                focus === key ? 'crm-arrive bg-ai/5' : 'bg-card'
+                              }`
+                            : focus === key
+                              ? 'crm-arrive -mx-2 rounded-lg bg-ai/5 px-2 pb-3'
+                              : 'pb-3'
                         }`}
                       >
-                        <div className='group/comment flex min-h-[26px] items-center gap-3 text-sm'>
+                        <div
+                          data-comment={comment ? key : undefined}
+                          className={`group/comment relative flex min-h-[26px] items-center gap-3 ${
+                            quiet ? 'text-xs' : 'text-sm'
+                          }`}
+                        >
+                          {threaded ? <ThreadLine part='below' /> : null}
                           {/* An entry is one line, never wrapped: what is
                               long (a change's values, a comment's excerpt, a
                               verdict) gives way instead, cut where the line
@@ -2786,9 +2896,27 @@ export function HistoryFeed({
                           {/* Clipped at its end: on a narrow column (a
                               drawer's) nothing runs into the time. */}
                           <span className='flex min-w-0 flex-1 items-center gap-x-1.5 overflow-hidden whitespace-nowrap'>
+                            {/* A comment's author by their initials, as
+                                each reply's under it. */}
+                            {comment ? (
+                              <CommentAvatar
+                                name={
+                                  meta?.users.find(
+                                    (u) => u.id === event.actorId,
+                                  )?.name ?? ''
+                                }
+                                className='mr-0.5'
+                              />
+                            ) : null}
                             {/* Who: a person, or "AI" for its own work,
                                 in bold. */}
-                            <span className='shrink-0 font-semibold text-foreground'>
+                            <span
+                              className={`shrink-0 ${
+                                quiet
+                                  ? 'font-medium text-muted-foreground'
+                                  : 'font-semibold text-foreground'
+                              }`}
+                            >
                               {ai
                                 ? text('feed.ai')
                                 : meta?.users.find(
@@ -3039,7 +3167,13 @@ export function HistoryFeed({
                         ) : comment &&
                           longNotes.has(key) &&
                           !commentGone(event) ? (
-                          <div className='mt-0.5 text-sm'>
+                          // Too long for its line, whole under who wrote it,
+                          // in line with the replies' text.
+                          <div
+                            data-comment={key}
+                            className='relative pt-0.5 pl-7 text-sm'
+                          >
+                            {threaded ? <ThreadLine /> : null}
                             {/* As the original message: five lines fading
                                 out, a click unfolding them. */}
                             <FoldingText
