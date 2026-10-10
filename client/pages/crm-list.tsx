@@ -961,7 +961,7 @@ function EntityList({
             <div className='overflow-hidden rounded-xl border border-border bg-card shadow-xs'>
               <Table>
                 {/* A quiet header: small muted words on the menu's ground. */}
-                <TableHeader className='bg-sidebar'>
+                <TableHeader className='bg-sidebar/60'>
                   <TableRow className='border-border hover:bg-transparent'>
                     {columns.map((key) => {
                       const title =
@@ -1391,13 +1391,13 @@ function EntityList({
               )}
             </div>
           </div>
-          <div className='hidden gap-px overflow-hidden rounded-xl border border-border bg-border/60 shadow-xs lg:grid lg:grid-cols-7'>
+          <div className='hidden gap-px overflow-hidden rounded-xl border border-border bg-border shadow-xs lg:grid lg:grid-cols-7'>
             {Array.from({ length: 7 }, (_, i) => (
               // The weekdays as a list's header reads: small muted words on
               // the menu's ground.
               <div
                 key={i + 1}
-                className='hidden bg-sidebar px-3 py-2 text-sm font-medium text-muted-foreground lg:block'
+                className='hidden bg-[color-mix(in_oklab,var(--sidebar)_60%,var(--card))] px-3 py-2 text-sm font-medium text-muted-foreground lg:block'
               >
                 {new Intl.DateTimeFormat(language, {
                   weekday: 'short',
