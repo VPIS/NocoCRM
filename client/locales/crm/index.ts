@@ -1495,6 +1495,14 @@ const wording = {
       '在 CRM 里查询记录，把改动整理成计划交本人确认。',
     ],
   },
+  // The agent whose model and instructions the CRM's background work
+  // follows (server/providers/crm-agents/background.ts).
+  agentBackground: {
+    description: [
+      "The CRM's background work: follow-ups, approval reviews, task preparation and organising text. Its first model and its instructions are what that work uses.",
+      'CRM 的后台工作：跟进、审批辅助、任务准备和 AI 整理。这些工作使用它的第一个模型和它的指令。',
+    ],
+  },
   agentConversationSource: ['CRM', 'CRM'],
   // The CRM's permission model as the Permission Sets page shows it.
   authz: {

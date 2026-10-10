@@ -2,15 +2,20 @@ import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { agentsToken } from '@nocobase/app-plugin-agents/server/tokens';
+import { databaseManagerToken } from '@nocobase/db';
 import type { ServiceResolver } from '@nocobase/service-provider';
+import { BACKGROUND_MARKER } from '../crm-agents/background.js';
 import { z, type ZodType } from 'zod';
 import { CrmError, toText } from './schema.js';
 
 // The CRM's own model calls (migration step 1): the follow-ups, the reviews,
 // the captures, the merge proposals and the feedback write-ups ask the
 // Agents plugin's model gateway, which keeps the keys, records the use and
-// prices it. The model is the one the people's default chat agent answers
-// with (its first entry), else the system default chat model. A run is a
+// prices it. The Background AI agent (crm-agents/background.ts) is how an
+// administrator configures the work: its first model is the one asked and
+// its instructions open the system prompt; without it (archived, deleted,
+// or listing no model) the people's default chat agent's first model, else
+// the system default chat model. A run is a
 // session of turns, each one call: a reply in another shape than asked is
 // asked once more with what came before. Results are JSON in the reply,
 // checked against the shape the caller gives; the gateway's `generate` has
@@ -19,26 +24,79 @@ import { CrmError, toText } from './schema.js';
 // Who the gateway records the use as.
 export const AI_SOURCE = 'crm';
 
-// The model a run answers with, or null when there is none to ask (no
-// agents plugin, no enabled chat model): the CRM's AI is then off.
-export async function crmModel(
+type ModelRef = { modelService: string; model: string };
+
+// The Background AI agent as the work follows it: its first model, when it
+// lists one, and its instructions; null when there is none to follow.
+async function backgroundAgent(
   container: ServiceResolver,
-): Promise<{ modelService: string; model: string } | null> {
+): Promise<{ model: ModelRef | null; instructions: string } | null> {
+  if (!container.has(agentsToken) || !container.has(databaseManagerToken))
+    return null;
+  try {
+    const row = await container
+      .resolve(databaseManagerToken)
+      .query()
+      .selectFrom('crmSettings')
+      .select('value')
+      .where('id', '=', BACKGROUND_MARKER)
+      .executeTakeFirst();
+    const value: unknown =
+      typeof row?.value === 'string' ? JSON.parse(row.value) : row?.value;
+    const id = (value as { agentId?: unknown } | null)?.agentId;
+    if (typeof id !== 'string' || !id) return null;
+    const agent = await container.resolve(agentsToken).agents.get(id);
+    if (agent.archivedAt) return null;
+    const entry = agent.modelEntries[0];
+    return {
+      model:
+        entry && 'modelService' in entry
+          ? { modelService: entry.modelService, model: entry.model }
+          : null,
+      instructions: (agent.instructions ?? '').trim(),
+    };
+  } catch {
+    // Not made, deleted, or unreadable: the work follows the assistant.
+    return null;
+  }
+}
+
+// The model a run answers with and the instructions it opens with, or null
+// when there is no model to ask (no agents plugin, no enabled chat model):
+// the CRM's AI is then off.
+async function crmRun(
+  container: ServiceResolver,
+): Promise<{ model: ModelRef; instructions: string } | null> {
   if (!container.has(agentsToken)) return null;
   const agents = container.resolve(agentsToken);
+  const background = await backgroundAgent(container);
+  const instructions = background?.instructions ?? '';
+  if (background?.model) return { model: background.model, instructions };
   try {
     const { defaultAgentId } = await agents.chat.settings();
     if (defaultAgentId) {
       const agent = await agents.agents.get(defaultAgentId);
       const entry = agent.archivedAt ? undefined : agent.modelEntries[0];
       if (entry && 'modelService' in entry)
-        return { modelService: entry.modelService, model: entry.model };
+        return {
+          model: { modelService: entry.modelService, model: entry.model },
+          instructions,
+        };
     }
   } catch {
     // No default agent to read: the system default below.
   }
   const catalog = await agents.online.gateway.catalog('chat');
-  return catalog.defaultModel ?? null;
+  return catalog.defaultModel
+    ? { model: catalog.defaultModel, instructions }
+    : null;
+}
+
+// The model a run answers with, or null when there is none to ask.
+export async function crmModel(
+  container: ServiceResolver,
+): Promise<ModelRef | null> {
+  return (await crmRun(container))?.model ?? null;
 }
 
 // Whether the CRM's AI can run: there is a model to ask.
@@ -68,16 +126,18 @@ export interface ModelSession {
 // failed.
 export const RUN_TURN_MS = 8 * 60_000;
 
-// A run of turns with the CRM's model, told the current time in the CRM's
-// time zone (dates such as "next Tuesday" in what it reads are reckoned
-// from it) and the deployment's business guidance (guidance.ts) as its
-// system prompt; null when there is no model to ask.
+// A run of turns with the CRM's model, its system prompt the current time
+// in the CRM's time zone (dates such as "next Tuesday" in what it reads are
+// reckoned from it), the Background AI agent's instructions and the
+// deployment's business guidance (guidance.ts); null when there is no
+// model to ask.
 export async function openSession(
   container: ServiceResolver,
   { timeZone, guidance }: { timeZone: string; guidance: string },
 ): Promise<ModelSession | null> {
-  const model = await crmModel(container).catch(() => null);
-  if (!model) return null;
+  const run = await crmRun(container).catch(() => null);
+  if (!run) return null;
+  const { model, instructions } = run;
   const now = new Intl.DateTimeFormat('en-CA', {
     timeZone,
     year: 'numeric',
@@ -88,7 +148,13 @@ export async function openSession(
     minute: '2-digit',
     hour12: false,
   }).format(new Date());
-  const system = `The current time is ${now} (${timeZone}).\n\n${guidance}`;
+  const system = [
+    `The current time is ${now} (${timeZone}).`,
+    instructions,
+    guidance,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
   const gateway = container.resolve(agentsToken).online.gateway;
   const turns: { role: 'user' | 'assistant'; text: string }[] = [];
   const ask = async (content: string, signal?: AbortSignal) => {

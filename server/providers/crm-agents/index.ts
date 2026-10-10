@@ -9,6 +9,7 @@ import { crmPlansToken } from '../crm/plans/engine.js';
 import { deliverPlanOutcome } from './plan-news.js';
 import { registerCrmSkill } from './skill.js';
 import { provisionSkills } from './library.js';
+import { provisionBackgroundAgent } from './background.js';
 import { registerContextKinds } from './context.js';
 import { provisionAssistant, renameAssistant } from './assistant.js';
 import { crmConversationRules } from './rules.js';
@@ -125,6 +126,10 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
       agents,
       this.app.container.resolve(databaseManagerToken),
       this.app.paths.root('ai/skills'),
+    );
+    await provisionBackgroundAgent(
+      agents,
+      this.app.container.resolve(databaseManagerToken),
     );
   }
 }

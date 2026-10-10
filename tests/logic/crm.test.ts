@@ -108,6 +108,7 @@ import { defaultSettings } from '../../server/providers/crm/schema.js';
 import { crmConversationRules } from '../../server/providers/crm-agents/rules.js';
 import { provisionAssistant } from '../../server/providers/crm-agents/assistant.js';
 import { provisionSkills } from '../../server/providers/crm-agents/library.js';
+import { provisionBackgroundAgent } from '../../server/providers/crm-agents/background.js';
 import {
   findApiDocumentSchemaProblems,
   findUndeclaredApiRoutes,
@@ -9341,7 +9342,7 @@ describe("The assistant's conversations on the Agents plugin", () => {
     }
   });
 
-  it('creates the assistant once, with the enabled chat models, as the default chat agent only when none is set', async () => {
+  it('creates the assistant once, with the enabled chat models (DeepSeek first), as the default chat agent only when none is set', async () => {
     const created: Record<string, unknown>[] = [];
     let settings = { defaultAgentId: null as string | null };
     const fakeAgents = {
@@ -9351,6 +9352,7 @@ describe("The assistant's conversations on the Agents plugin", () => {
             Promise.resolve([
               {
                 name: 'qwen',
+                provider: 'alibaba',
                 enabled: true,
                 models: [
                   { value: 'max', kind: 'chat' },
@@ -9359,8 +9361,15 @@ describe("The assistant's conversations on the Agents plugin", () => {
               },
               {
                 name: 'off',
+                provider: 'openai',
                 enabled: false,
                 models: [{ value: 'x', kind: 'chat' }],
+              },
+              {
+                name: 'deepseek',
+                provider: 'deepseek',
+                enabled: true,
+                models: [{ value: 'chat', kind: 'chat' }],
               },
             ]),
         },
@@ -9393,8 +9402,11 @@ describe("The assistant's conversations on the Agents plugin", () => {
       type: 'online',
       access: 'everyone',
       actions: ['crm.leads/view'],
-      // The enabled services' chat models only.
-      modelEntries: [{ modelService: 'qwen', model: 'max' }],
+      // The enabled services' chat models only, DeepSeek's first.
+      modelEntries: [
+        { modelService: 'deepseek', model: 'chat' },
+        { modelService: 'qwen', model: 'max' },
+      ],
     });
     expect(settings.defaultAgentId).toBe('agent-1');
     const marker = await database
@@ -9406,6 +9418,67 @@ describe("The assistant's conversations on the Agents plugin", () => {
     expect(JSON.parse(toText(marker?.value))).toEqual({
       version: 1,
       agentId: 'agent-1',
+    });
+  });
+
+  it('creates the Background AI once, for its creator alone, with the enabled chat models (Qwen first) and no actions', async () => {
+    const created: Record<string, unknown>[] = [];
+    const fakeAgents = {
+      online: {
+        services: {
+          list: () =>
+            Promise.resolve([
+              {
+                name: 'deepseek',
+                provider: 'deepseek',
+                enabled: true,
+                models: [{ value: 'chat', kind: 'chat' }],
+              },
+              {
+                name: 'qwen',
+                provider: 'alibaba',
+                enabled: true,
+                models: [{ value: 'flash', kind: 'chat' }],
+              },
+            ]),
+        },
+      },
+      agents: {
+        create: (_by: string, input: Record<string, unknown>) => {
+          created.push(input);
+          return Promise.resolve({ id: 'background-1' });
+        },
+      },
+    } as never;
+    await database
+      .query()
+      .deleteFrom('crmSettings')
+      .where('id', '=', 'agents-background-v1')
+      .execute();
+    await provisionBackgroundAgent(fakeAgents, database);
+    await provisionBackgroundAgent(fakeAgents, database);
+    expect(created).toHaveLength(1);
+    expect(created[0]).toMatchObject({
+      name: 'Background AI',
+      type: 'online',
+      access: 'ownerOnly',
+      actions: [],
+      // Qwen's first.
+      modelEntries: [
+        { modelService: 'qwen', model: 'flash' },
+        { modelService: 'deepseek', model: 'chat' },
+      ],
+    });
+    expect(created[0].instructions).toContain("the CRM's background work");
+    const marker = await database
+      .query()
+      .selectFrom('crmSettings')
+      .select('value')
+      .where('id', '=', 'agents-background-v1')
+      .executeTakeFirst();
+    expect(JSON.parse(toText(marker?.value))).toEqual({
+      version: 1,
+      agentId: 'background-1',
     });
   });
 

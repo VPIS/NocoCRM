@@ -1,4 +1,5 @@
 import { agentsToken } from '@nocobase/app-plugin-agents/server/tokens';
+import { databaseManagerToken } from '@nocobase/db';
 import { ServiceContainer } from '@nocobase/service-provider';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
@@ -128,6 +129,67 @@ describe("the CRM's model", () => {
     expect(
       await again!.askJson('Grade.', z.object({ grade: z.string() })),
     ).toBeNull();
+  });
+
+  it('follows the Background AI agent: its first model, its instructions first in the system prompt', async () => {
+    const { container, calls } = gatewayWith({
+      defaultAgentId: 'chat',
+      replies: ['ok'],
+    });
+    const agents = container.resolve(agentsToken) as unknown as {
+      agents: Record<string, unknown>;
+    };
+    const background = {
+      archivedAt: null as string | null,
+      instructions: 'Work for the CRM.',
+      modelEntries: [{ modelService: 'openai', model: 'mini' }],
+    };
+    agents.agents = {
+      get: async (id: string) =>
+        id === 'bg'
+          ? background
+          : {
+              archivedAt: null,
+              instructions: 'Chat instructions.',
+              modelEntries: [{ modelService: 'qwen', model: 'max' }],
+            },
+    };
+    const chain = {
+      selectFrom: () => chain,
+      select: () => chain,
+      where: () => chain,
+      executeTakeFirst: async () => ({
+        value: JSON.stringify({ version: 1, agentId: 'bg' }),
+      }),
+    };
+    container.instance(databaseManagerToken, {
+      query: () => chain,
+    } as unknown as ReturnType<
+      typeof container.resolve<typeof databaseManagerToken>
+    >);
+    const session = await openSession(container, {
+      timeZone: 'UTC',
+      guidance: '# Company',
+    });
+    await session!.ask('Hello');
+    expect(calls[0].model).toEqual({ modelService: 'openai', model: 'mini' });
+    expect(calls[0].system).toMatch(
+      /UTC\)\.\n\nWork for the CRM\.\n\n# Company$/u,
+    );
+    expect(calls[0].system).not.toContain('Chat instructions.');
+    // Archived: the work follows the assistant's model, without those
+    // instructions.
+    background.archivedAt = '2026-10-10T00:00:00Z';
+    expect(await crmModel(container)).toEqual({
+      modelService: 'qwen',
+      model: 'max',
+    });
+    const again = await openSession(container, {
+      timeZone: 'UTC',
+      guidance: '# Company',
+    });
+    await again!.ask('Hello');
+    expect(calls[1].system).not.toContain('Work for the CRM.');
   });
 
   it('has no session without a model, and reads a refused key as the AI unavailable', async () => {
