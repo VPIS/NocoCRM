@@ -16,7 +16,6 @@ import {
   CHAT_PANEL_ATTRIBUTE,
   ChatProvider,
   useAgentText,
-  useChatAgents,
   useChatPanel,
   useConversation,
   useConversationActions,
@@ -39,7 +38,7 @@ import {
   useRecordDrawerHosted,
   useRecordDrawerState,
 } from '../record-drawer.js';
-import { useAgentReadiness } from './ask.js';
+import { useAgentReadiness, useCrmChatAgents } from './ask.js';
 import { Conversation } from './conversation.js';
 import { ConversationList } from './conversation-list.js';
 
@@ -132,7 +131,7 @@ function PanelBody({ modal = false }: { modal?: boolean }): ReactElement {
   const { text } = useCrmText();
   const agentText = useAgentText();
   const panel = useChatPanel();
-  const agents = useChatAgents();
+  const agents = useCrmChatAgents();
   const readiness = useAgentReadiness();
   const list = useConversationList({});
   // The page's drawer when it draws one, else the panel's own (one

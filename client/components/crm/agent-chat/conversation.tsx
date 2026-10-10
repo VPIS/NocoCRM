@@ -368,7 +368,9 @@ export function Conversation({
           // Positioned, so what is placed absolutely inside it (a message's
           // screen-reader label) scrolls with it rather than hanging below
           // it and scrolling the whole page.
-          className='relative h-full overflow-y-auto py-4 scroll-quiet'
+          // Up and down only: a fraction of a pixel of rounding in the
+          // content must not bring a sideways scrollbar under the pointer.
+          className='relative h-full overflow-x-hidden overflow-y-auto py-4 scroll-quiet'
         >
           {loading || (conversationId && !messages.loaded) ? (
             <div className='flex flex-col gap-4' role='status'>

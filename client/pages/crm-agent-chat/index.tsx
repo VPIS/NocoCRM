@@ -8,10 +8,7 @@ import {
   EmptyTitle,
 } from '#components/ui/empty';
 import { Skeleton } from '#components/ui/skeleton';
-import {
-  useChatAgents,
-  useConversationList,
-} from '@nocobase/app-plugin-agents/client/chat';
+import { useConversationList } from '@nocobase/app-plugin-agents/client/chat';
 import type { ConversationDetail } from '@nocobase/app-plugin-agents/shared/conversations';
 import { Bot, MessagesSquare, Plus } from 'lucide-react';
 import { lazy, Suspense, useRef, useState, type ReactElement } from 'react';
@@ -26,6 +23,7 @@ import {
 } from '../../components/crm/record-drawer.js';
 import { Conversation } from '../../components/crm/agent-chat/conversation.js';
 import { ConversationList } from '../../components/crm/agent-chat/conversation-list.js';
+import { useCrmChatAgents } from '../../components/crm/agent-chat/ask.js';
 
 // The conversations with the CRM's agents on a page of their own, the
 // assistant panel's full-page view (agent-chat/panel.tsx): the reader's
@@ -56,7 +54,7 @@ export default function AgentChatPage(): ReactElement {
   const [drawerLoaded, setDrawerLoaded] = useState(false);
   if (drawer.opened && !drawerLoaded) setDrawerLoaded(true);
 
-  const agents = useChatAgents();
+  const agents = useCrmChatAgents();
   const open = useConversationList({});
   const archivedList = useConversationList({ archived: true });
   const list = archived ? archivedList : open;

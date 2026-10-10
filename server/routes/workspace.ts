@@ -36,6 +36,8 @@ import {
 } from '../providers/crm/demo.js';
 import { searchPlaces, subdivisions } from '../providers/crm/geography.js';
 import { crmToken } from '../providers/crm/index.js';
+import { jsonValue } from '../providers/crm/values.js';
+import { BACKGROUND_MARKER } from '../providers/crm-agents/background.js';
 import { pendingDecisions } from '../providers/crm/lead-evaluation.js';
 import { mailTimelineToken } from '../providers/crm/mail-timeline.js';
 import { noticesOf } from '../providers/crm/notices.js';
@@ -211,6 +213,23 @@ export function registerWorkspaceRoutes(
           // Which of the agents' triggers are on, so a form offers "AI
           // follows up at once" only while that would happen (agents.ts).
           agents: await agentSwitches(service),
+          // The agent the CRM's background work runs on (background.ts),
+          // which nobody chats with: the chat leaves it out of its agents.
+          backgroundAgent:
+            toText(
+              (
+                jsonValue(
+                  (
+                    await service.database
+                      .query()
+                      .selectFrom('crmSettings')
+                      .select('value')
+                      .where('id', '=', BACKGROUND_MARKER)
+                      .executeTakeFirst()
+                  )?.value,
+                ) as { agentId?: unknown } | null
+              )?.agentId ?? '',
+            ) || null,
         },
       });
     },

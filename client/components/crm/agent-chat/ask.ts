@@ -18,7 +18,7 @@ import {
   CHAT_ATTACHMENTS_PER_MESSAGE_MAX,
 } from '@nocobase/app-plugin-agents/shared/conversations';
 import { useCallback, useMemo, useState } from 'react';
-import { toText, useCrmText, type Entity } from '../api.js';
+import { toText, useCrmText, useMetadata, type Entity } from '../api.js';
 
 // The CRM's ways into the assistant's chat from outside its panel (migration step 3):
 // whether it can answer, the models a new conversation may answer with, the
@@ -39,12 +39,29 @@ export type AgentReadiness =
   | { state: 'ready'; agent: ChatAgent; reason?: undefined }
   | { state: 'unavailable'; agent: ChatAgent | null; reason: string };
 
+// The agents a person may chat with: the plugin's, without the agent the
+// CRM's background work runs on (crm-agents/background.ts), which nobody
+// talks to though its creator may see it.
+export function useCrmChatAgents(): ReturnType<typeof useChatAgents> {
+  const agents = useChatAgents();
+  const { data: meta } = useMetadata();
+  const background = meta?.backgroundAgent;
+  const data = useMemo(
+    () =>
+      background
+        ? agents.data?.filter((agent) => agent.id !== background)
+        : agents.data,
+    [agents.data, background],
+  );
+  return { ...agents, data } as ReturnType<typeof useChatAgents>;
+}
+
 // The agent a new conversation goes to, as the plugin picks it (the person's
 // default, else the system default, else the first), and whether it can
 // answer now.
 export function useAgentReadiness(): AgentReadiness {
   const { text } = useCrmText();
-  const agents = useChatAgents();
+  const agents = useCrmChatAgents();
   if (agents.isLoading) return { state: 'loading', agent: null };
   // With no default set, the first the person may talk to: the CRM always
   // names the agent it creates a conversation with.

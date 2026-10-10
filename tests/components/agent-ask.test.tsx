@@ -28,6 +28,8 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => ({
     typeof import('../../client/components/crm/api.js')
   >()),
   useCrmText: () => ({ text: english, language: 'en-US' }),
+  // No workspace here: no background agent to leave out of the chat.
+  useMetadata: () => ({ data: undefined }),
 }));
 vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) =>
   (await import('../setup/agent-chat-fake.js')).fakeChatModule(

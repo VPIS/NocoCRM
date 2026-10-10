@@ -35,6 +35,8 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
   return {
     ...actual,
     useCrmText: () => ({ text: english, language: 'en-US' }),
+    // No workspace here: no background agent to leave out of the chat.
+    useMetadata: () => ({ data: undefined }),
   };
 });
 // The assistant on the Agents plugin, with two models (tests/setup/agent-chat-fake).
