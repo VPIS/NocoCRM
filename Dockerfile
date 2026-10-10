@@ -5,8 +5,7 @@ ARG PNPM_VERSION=11.7.0
 FROM node:${NODE_VERSION}-bookworm AS build
 ARG PNPM_VERSION
 RUN npm install --global pnpm@${PNPM_VERSION} \
-    && pnpm config set store-dir /pnpm/store \
-    && pnpm config set @nocobase:registry https://npm.nocobase.ai/
+    && pnpm config set store-dir /pnpm/store
 
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./

@@ -9,7 +9,6 @@ import {
   ServiceProvider,
   type ServiceToken,
 } from '@nocobase/service-provider';
-import { createCronJobManager, type CronJobManager } from '@nocobase/cron';
 import { authorizationToken } from '@nocobase/app-plugin-authorization';
 import { aiManagerToken } from '@nocobase/app-plugin-ai-employee/server';
 import { notificationServiceToken } from '@nocobase/app-plugin-notification/server';
@@ -74,7 +73,8 @@ export const crmToken: ServiceToken<CrmService> =
   createServiceToken<CrmService>('crm/service');
 export default class CrmProvider extends ServiceProvider<Application> {
   public readonly name: string = 'crm/provider';
-  private cron?: CronJobManager;
+  // The in-process passes' timers, cleared at shutdown.
+  private timers: ReturnType<typeof setInterval>[] = [];
   private followUps?: JobExecutor;
   private unregisterRoleScope?: () => void;
   private reminding = false;
@@ -419,22 +419,25 @@ export default class CrmProvider extends ServiceProvider<Application> {
             'customerReplied',
           );
       })().catch(() => undefined);
-    this.cron = createCronJobManager();
-    this.cron.addJob({ cronTime: '*/30 * * * * *', onTick: () => this.scan() });
+    // Plain timers: @nocobase/cron, which ran these passes, was never
+    // published to the public npm registry. Each pass skips a tick while
+    // the previous one still runs.
+    const every = (ms: number, tick: () => Promise<unknown>): void => {
+      this.timers.push(
+        setInterval(() => void tick().catch(() => undefined), ms),
+      );
+    };
+    every(30_000, () => this.scan());
     // @temporary(nocobase-official): every mailbox read once a minute until
     // the Mail plugin publishes a server-side change event (mail-timeline.ts).
-    this.cron.addJob({
-      cronTime: '15 * * * * *',
-      onTick: () => void timeline.syncAll().catch(() => undefined),
-    });
-    this.cron.start();
+    every(60_000, () => timeline.syncAll());
   }
   public override async shutdown(): Promise<void> {
     // A follow-up running is handed back, to run again at the next start.
     await this.followUps?.shutdown();
     this.unregisterRoleScope?.();
     this.unregisterRoleScope = undefined;
-    this.cron?.close();
+    for (const timer of this.timers.splice(0)) clearInterval(timer);
   }
   // Both recurring passes, every half minute.
   private async scan(): Promise<void> {

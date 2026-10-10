@@ -99,8 +99,8 @@ pnpm build --target linux-x64 --tar   # writes storage/exports/dist.tar.gz
 - **On your own server, with the NocoBase app-installer (recommended).** The server needs Node.js 24 and a global pm2. The installer unpacks the archive into its own directory, writes `config.yml`, applies the migrations and runs the application under pm2; an upgrade backs up the SQLite databases first and rolls back when the new release fails to start.
 
   ```bash
-  npx --registry=https://npm.nocobase.ai @nocobase/app-installer install /srv/nocobase/crm --archive dist.tar.gz --origin https://crm.example.com --base-path /crm
-  npx --registry=https://npm.nocobase.ai @nocobase/app-installer upgrade --dir /srv/nocobase/crm --archive dist.tar.gz
+  npx @nocobase/app-installer install /srv/nocobase/crm --archive dist.tar.gz --origin https://crm.example.com --base-path /crm
+  npx @nocobase/app-installer upgrade --dir /srv/nocobase/crm --archive dist.tar.gz
   ```
 
 - **By hand.** Unpack the archive, run `pnpm nocobase config init` and `pnpm nocobase config check` inside `dist/`, and run `node ./dist/server/standalone.js` under a service manager, with `config.yml` and `storage/` kept beside `dist/` across updates.
