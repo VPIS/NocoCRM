@@ -3573,8 +3573,7 @@ describe('CRM lead evaluation', () => {
         source: 'user',
       });
       expect(people.data.map((e) => e.action)).toEqual(['created']);
-      // Waiting on the owner; a manager sees it in the team's, and someone
-      // who may not edit the lead does not see it at all.
+      // Waiting on the owner alone: a manager handles it from the lead.
       const mine = await pendingDecisions(service, actor('rep'));
       expect(mine.data).toContainEqual(
         expect.objectContaining({
@@ -3586,16 +3585,6 @@ describe('CRM lead evaluation', () => {
         (await pendingDecisions(service, actor('manager'))).data.map(
           (e) => e.id,
         ),
-      ).not.toContain(pending!.id);
-      expect(
-        (
-          await pendingDecisions(service, actor('manager'), { scope: 'team' })
-        ).data.map((e) => e.id),
-      ).toContain(pending!.id);
-      expect(
-        (
-          await pendingDecisions(service, actor('other'), { scope: 'team' })
-        ).data.map((e) => e.id),
       ).not.toContain(pending!.id);
 
       // Someone who may not edit the lead may not decide.

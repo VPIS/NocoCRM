@@ -25,7 +25,6 @@ import {
   DECISION_PARAM,
   isDecided,
   recordOf,
-  scopeOf,
   useDecisions,
   useWording,
   type DecisionItem,
@@ -35,35 +34,23 @@ import {
 // and the chosen one in its detail pane (inbox-decisions.tsx registers them).
 
 // The suggestions in the inbox's left column, under its AI suggestions tab
-// (no heading of their own): those waiting, and, on request, the handled
-// ones after them.
+// (no heading of their own): those waiting, and the handled ones after
+// them, under their heading.
 export function DecisionList({
   items,
   selectedId,
   onSelect,
-  scope,
-  onScope,
   error,
   loading,
-  handledShown,
-  onHandled,
 }: {
   items: DecisionItem[];
   selectedId: string | null;
   onSelect: (id: string) => void;
-  scope: 'mine' | 'team';
-  onScope: (scope: 'mine' | 'team') => void;
   error: unknown;
   loading: boolean;
-  handledShown: boolean;
-  onHandled: (show: boolean) => void;
 }): ReactElement {
   const { text, language } = useCrmText();
-  const { data: meta } = useMetadata();
-  const { nameOf, kindOf, ownerOf } = useWording();
-  // Deciding for leads one does not own is for whoever may edit them all.
-  const update = meta?.permissions.leads.update;
-  const team = update ? update.all === true : false;
+  const { nameOf, kindOf } = useWording();
   const waiting = items.filter((entry) => !isDecided(entry));
   const handled = items.filter(isDecided);
   const [now] = useState(() => Date.now());
@@ -123,10 +110,6 @@ export function DecisionList({
           <span className='grid min-w-0 flex-1 gap-1'>
             <span className='flex items-center gap-1.5 text-xs text-muted-foreground'>
               <span className='shrink-0'>{kindOf(entry)}</span>
-              {/* The team's view names whose record it is. */}
-              {scope === 'team' && ownerOf(entry) ? (
-                <span className='truncate'>· {ownerOf(entry)}</span>
-              ) : null}
               <time
                 className='ml-auto shrink-0 tabular-nums'
                 dateTime={entry.createdAt}
@@ -185,24 +168,6 @@ export function DecisionList({
   };
   return (
     <section className='space-y-1'>
-      {/* Whose: the reader's own or the team's, for whoever may edit every
-          lead. */}
-      {team ? (
-        <div className='flex justify-end px-1 pb-1'>
-          <div className='flex rounded-lg border p-0.5'>
-            {(['mine', 'team'] as const).map((value) => (
-              <Button
-                key={value}
-                size='xs'
-                variant={scope === value ? 'secondary' : 'ghost'}
-                onClick={() => onScope(value)}
-              >
-                {text(value === 'mine' ? 'scopeMine' : 'scopeTeam')}
-              </Button>
-            ))}
-          </div>
-        </div>
-      ) : null}
       {loading ? (
         <Loading />
       ) : error ? (
@@ -216,35 +181,16 @@ export function DecisionList({
               {text('decisions.empty')}
             </p>
           )}
-          {handledShown ? (
+          {/* The handled ones always after them, under their heading. */}
+          {handled.length ? (
             <div className='space-y-1 pt-4'>
-              <div className='flex items-center justify-between gap-2 pr-1'>
+              {/* A rule under the heading, apart from those waiting. */}
+              <div className='border-b border-border/60 pb-1.5'>
                 {heading(text('decisions.handled'))}
-                <button
-                  type='button'
-                  onClick={() => onHandled(false)}
-                  className='text-xs text-muted-foreground transition-colors hover:text-foreground'
-                >
-                  {text('inbox.hideHandled')}
-                </button>
               </div>
-              {handled.length ? (
-                <ul className='space-y-0.5'>{handled.map(row)}</ul>
-              ) : (
-                <p className='px-3 py-2 text-sm text-muted-foreground'>
-                  {text('inbox.noHandled')}
-                </p>
-              )}
+              <ul className='space-y-0.5'>{handled.map(row)}</ul>
             </div>
-          ) : (
-            <button
-              type='button'
-              onClick={() => onHandled(true)}
-              className='px-3 pt-1 text-xs text-muted-foreground transition-colors hover:text-foreground'
-            >
-              {text('inbox.showHandled')}
-            </button>
-          )}
+          ) : null}
         </>
       )}
     </section>
@@ -263,7 +209,7 @@ export function DecisionDetail({
   const { text } = useCrmText();
   const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
-  const query = useDecisions(scopeOf(params));
+  const query = useDecisions();
   const wording = useWording();
   const items = query.data?.data ?? [];
   const current =
@@ -300,7 +246,6 @@ export function DecisionDetail({
           setParams(updated, { replace: true });
         }}
         name={wording.nameOf(current)}
-        kind={wording.kindOf(current)}
         owner={wording.ownerOf(current)}
         when={wording.when}
       />
@@ -308,23 +253,21 @@ export function DecisionDetail({
   );
 }
 
-// The heading of the detail: the name, then a line of labelled facts led by
-// the record's type, set apart from what follows by a rule.
+// The heading of the detail: the name, then a line of labelled facts, each
+// set apart from the one before by a rule.
 function DetailHeading({
   name,
-  kind,
   facts,
   action,
 }: {
   name: string;
-  kind: string;
   facts: [label: string, value: string][];
   action: ReactElement;
 }): ReactElement {
   const { text, language } = useCrmText();
   const colon = language.startsWith('zh') ? '：' : ':';
   return (
-    <div className='mb-5 flex items-start justify-between gap-4 border-b pb-4'>
+    <div className='mb-4 flex items-start justify-between gap-4'>
       {/* Takes the width the action leaves, so the facts wrap only when
           that is full, not at the name's width. */}
       <div className='grid min-w-0 flex-1 gap-1'>
@@ -334,23 +277,21 @@ function DetailHeading({
         {/* Wide, one line of facts; narrow, a row each, labels and values
             in two columns. */}
         <dl className='mt-1 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm @3xl:flex @3xl:flex-wrap @3xl:items-center'>
-          {/* The record's type leads the line, unlabelled. */}
-          <dd className='col-span-2 text-muted-foreground @3xl:col-span-1'>
-            {kind}
-          </dd>
           {facts
             .filter(([, value]) => value)
-            .map(([label, value]) => (
+            .map(([label, value], index) => (
               <div
                 key={label}
                 className='contents @3xl:flex @3xl:min-w-0 @3xl:items-center @3xl:gap-3'
               >
                 {/* Narrow, the facts wrap and a rule would start a line;
                     their labels set them apart. */}
-                <span
-                  aria-hidden
-                  className='hidden h-3 w-px bg-border @3xl:block'
-                />
+                {index ? (
+                  <span
+                    aria-hidden
+                    className='hidden h-3 w-px bg-border @3xl:block'
+                  />
+                ) : null}
                 <div className='contents @3xl:flex @3xl:min-w-0 @3xl:gap-1'>
                   <dt className='shrink-0 text-muted-foreground'>
                     {text(label)}
@@ -376,7 +317,6 @@ function DetailHeading({
 function DecisionEntry({
   entry,
   name,
-  kind,
   owner,
   when,
   onRevised,
@@ -384,7 +324,6 @@ function DecisionEntry({
   entry: DecisionItem;
   onRevised: (entry: EvaluationEntry) => void;
   name: string;
-  kind: string;
   owner: string;
   when: (at: string) => string;
 }): ReactElement {
@@ -400,7 +339,8 @@ function DecisionEntry({
       render={<Link to={path} />}
     >
       <ArrowUpRight />
-      {text('decisions.openRecord')}
+      {/* What it opens, by name: 打开任务, Open lead. */}
+      {text('decisions.openKind', { kind: text(`entity.${entry.entity}`) })}
     </Button>
   );
   // A task's preparation: written into the task here by its owner.
@@ -409,7 +349,6 @@ function DecisionEntry({
       <>
         <DetailHeading
           name={name}
-          kind={kind}
           facts={[
             [
               'fields.dueAt',
@@ -440,7 +379,6 @@ function DecisionEntry({
       <>
         <DetailHeading
           name={name}
-          kind={kind}
           facts={[
             ['fields.opportunityId', toText(entry.approval.opportunity)],
             ['fields.topic', toText(text(`options.${entry.approval.topic}`))],
@@ -467,7 +405,6 @@ function DecisionEntry({
     <>
       <DetailHeading
         name={name}
-        kind={kind}
         facts={[
           ...(entry.opportunity
             ? ([

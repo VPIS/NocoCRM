@@ -2879,13 +2879,33 @@ export function HistoryFeed({
     (files ?? []).map((file) => [file.id, file.filename]),
   );
   // Bring the entry asked for into view once it has loaded: the pages
-  // before it loaded first, and again on each ask.
+  // before it loaded first, and again on each ask. The entries above it
+  // settle after it first lands (a comment measured whole or to its line,
+  // files named, a card opened), which moves it; it is brought back twice
+  // more as they do.
   const loaded = more.records.some((event) => toText(event.id) === focus);
   useEffect(() => {
-    if (focus && loaded)
-      document
-        .getElementById(`feed-${focus}`)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!focus || !loaded) return;
+    // Moved only when it is not already in sight: its first line showing,
+    // not under the comment box, in the upper part of the screen. A page
+    // already showing it stays still rather than shift by a little.
+    const bring = (): void => {
+      const node = document.getElementById(`feed-${focus}`);
+      if (!node) return;
+      const { left, top } = node.getBoundingClientRect();
+      const seen =
+        top >= 0 &&
+        top < window.innerHeight * 0.6 &&
+        node.contains(document.elementFromPoint(left + 12, top + 12));
+      if (!seen) node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    bring();
+    const settled = window.setTimeout(bring, 400);
+    const later = window.setTimeout(bring, 1200);
+    return () => {
+      window.clearTimeout(settled);
+      window.clearTimeout(later);
+    };
   }, [focus, loaded, focusAt]);
   useEffect(() => {
     if (focus && !loaded && more.hasMore && !more.loading) void more.loadMore();
@@ -3524,6 +3544,9 @@ export function HistoryFeed({
         loading={more.loading}
         onLoad={() => void more.loadMore()}
       />
+      {/* Sent to an entry, room under the timeline for it to come to the
+          top however few entries follow it; there is none otherwise. */}
+      {focus && loaded ? <div aria-hidden className='h-[70vh]' /> : null}
     </>
   );
 }

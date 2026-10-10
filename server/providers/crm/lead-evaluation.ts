@@ -266,8 +266,9 @@ export async function latestEvaluation(
 }
 
 // The AI's suggestions waiting on a decision, newest first: those on the
-// leads and deals the reader owns ('mine'), or on every one they may edit
-// ('team'), each with its waiting verdict — the "Waiting on me" page.
+// leads, deals and tasks the reader owns and the approvals they decide,
+// each with its waiting card — the inbox's AI suggestions. A colleague's
+// is handled from the record's page.
 // A card not yet decided: waiting, or still being worked on.
 const open = (entry: { status: string }): boolean =>
   entry.status === 'pending' || entry.status === 'running';
@@ -276,7 +277,6 @@ export async function pendingDecisions(
   service: CrmService,
   actor: Actor,
   options: {
-    scope?: string;
     page?: number;
     pageSize?: number;
     // "all" lists the decided ones as well, after those still waiting; the
@@ -331,7 +331,7 @@ export async function pendingDecisions(
         : Date.parse(toText(b.ai.decidedAt ?? b.ai.retiredAt ?? b.createdAt)) -
           Date.parse(toText(a.ai.decidedAt ?? a.ai.retiredAt ?? a.createdAt)),
     );
-  // What the reader may read and edit, in the scope asked: each list's own
+  // What the reader may read and edit, of their own: each list's own
   // filters. Deciding takes leave to edit the record; a decided one only to
   // read it, so it stays after a lead is converted (read-only for everyone)
   // or a deal is closed.
@@ -350,7 +350,9 @@ export async function pendingDecisions(
     const records = (
       await service.list(actor, entity, {
         ids: ids.join(','),
-        ownerId: options.scope === 'team' ? undefined : actor.id,
+        // The owner's alone: a manager handles a colleague's from the
+        // record's page.
+        ownerId: actor.id,
         pageSize: 1000,
       })
     ).data;

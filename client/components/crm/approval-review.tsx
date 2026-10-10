@@ -517,9 +517,8 @@ export function ReviewStatus({
       .catch(setError)
       .finally(() => setBusy(false));
   };
-  const pending = entry?.status === 'pending';
-  // At work: the AI's state tag, as on a list's row (ai-state-tag.tsx), in
-  // the chip's size; waiting, the chip as it was.
+  // On the AI's tint whatever it stands at, its dot saying where; at work,
+  // the AI's state tag's words, as on a list's row (ai-state-tag.tsx).
   const live = entry?.status === 'running';
   const again = mayAsk && entry?.status !== 'running';
   // Nothing to show (no review, and not the approver's to ask for one):
@@ -539,13 +538,7 @@ export function ReviewStatus({
           then asking again; before the first review, a button asks. */}
       {entry ? (
         <div
-          className={`${wide ? 'flex min-w-0 flex-1' : 'inline-flex max-w-full'} h-7 items-center rounded-lg border text-sm ${
-            live
-              ? 'border-transparent bg-ai/10 text-ai dark:bg-ai/20'
-              : pending
-                ? 'border-transparent bg-ai/10 dark:bg-ai/20'
-                : 'bg-card'
-          }`}
+          className={`${wide ? 'flex min-w-0 flex-1' : 'inline-flex max-w-full'} h-7 items-center rounded-lg border text-sm border-transparent bg-ai/10 dark:bg-ai/20 ${live ? 'text-ai' : ''}`}
         >
           {/* Only whose it is and where it stands; its hover says what it
               recommends, why, and where it stands in words. */}
@@ -568,7 +561,7 @@ export function ReviewStatus({
                     .join(' · ')}
                   className={`flex h-full min-w-0 items-center gap-1.5 rounded-l-lg px-2 transition-colors ${
                     again ? '' : 'rounded-r-lg'
-                  } ${live ? 'hover:bg-ai/15' : pending ? 'hover:bg-ai/15' : 'hover:bg-muted'} ${wide ? 'flex-1' : ''}`}
+                  } hover:bg-ai/15 ${wide ? 'flex-1' : ''}`}
                 />
               }
             >

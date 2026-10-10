@@ -542,7 +542,7 @@ export function registerWorkspaceRoutes(
       summary: 'List the AI suggestions',
       operationId: 'listDecisions',
       description:
-        "The suggestions waiting on the reader, on their own records or, for whoever may edit every lead, the team's.",
+        'The suggestions waiting on the reader: on the records they own, the approvals they decide and the tasks they own.',
       responses: {
         '200': listResponse(Decision, DecisionsMeta),
         ...apiErrorResponses,
