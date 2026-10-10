@@ -209,7 +209,24 @@ export function demoServices(app: Application): {
                 searchText: message.text,
                 toolCalls: null,
                 attachments: null,
-                workContext: null,
+                // The first question carries the record it was asked
+                // from, resolved as the plugin stores a page context.
+                workContext:
+                  index === 0 && chat.context
+                    ? JSON.stringify({
+                        route: chat.context.path,
+                        items: [
+                          {
+                            kind: chat.context.kind,
+                            id: chat.context.id,
+                            title: chat.context.title,
+                            key: null,
+                            url: `${toText(app.publicBasePath)}${chat.context.path}`,
+                          },
+                        ],
+                        dropped: 0,
+                      })
+                    : null,
                 metadata: JSON.stringify({}),
                 runId: null,
                 runEventSeq: null,

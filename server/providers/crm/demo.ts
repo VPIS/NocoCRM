@@ -139,6 +139,9 @@ export interface DemoChats {
         text: string;
         at: string;
       }[];
+      // The record the first question was asked from, as a question from
+      // the dock on its page carries it: its kind, id, title and page.
+      context?: { kind: string; id: string; title: string; path: string };
     },
   ): Promise<string | undefined>;
   remove(ids: readonly string[]): Promise<void>;
@@ -2100,9 +2103,23 @@ async function populate(
     ];
     for (const [index, chat] of project.chats.entries()) {
       const [day, hour] = when[index] ?? [-1, 9];
+      const about = [projects.hworldDeal, null, projects.gacDeal, projects.sf][
+        index
+      ];
+      const kind = about === projects.sf ? 'leads' : 'opportunities';
       const id = await chats
         .create(actor.id, {
           title: chat.title,
+          ...(about
+            ? {
+                context: {
+                  kind,
+                  id: toText(about.id),
+                  title: toText(about.name),
+                  path: `/crm/${kind}/${toText(about.id)}`,
+                },
+              }
+            : {}),
           messages: chat.messages.map((message, place) => ({
             ...message,
             at: at(day, hour, place * 2),

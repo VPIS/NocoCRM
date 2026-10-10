@@ -353,7 +353,7 @@ describe('the agent conversations', () => {
   it('sends on Enter, never on Shift+Enter or while composing', async () => {
     state.open = [conversation('c1', '展会线索')];
     renderAt('/crm/agent-chat/c1');
-    const box = screen.getByRole('textbox', { name: '问问 AI…' });
+    const box = screen.getByRole('textbox', { name: '问任何问题…' });
     await userEvent.type(box, '本周新线索有几条');
     fireEvent.keyDown(box, { key: 'Enter', isComposing: true, keyCode: 229 });
     fireEvent.keyDown(box, { key: 'Enter', shiftKey: true });
@@ -375,7 +375,11 @@ describe('the agent conversations', () => {
         options?.onSuccess?.(),
     );
     renderAt('/crm/agent-chat/c1');
-    await userEvent.click(screen.getByRole('button', { name: '归档' }));
+    // Behind the conversation's "…" menu.
+    await userEvent.click(screen.getByRole('button', { name: '对话操作' }));
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: '归档' }),
+    );
     expect(state.archive).toHaveBeenCalledWith(
       { id: 'c1', archived: true },
       expect.anything(),
@@ -388,7 +392,7 @@ describe('the agent conversations', () => {
     expect(screen.queryByRole('navigation')).toBeNull();
     expect(screen.queryByText('没有已归档的对话')).toBeNull();
     expect(screen.queryByRole('button', { name: '新建对话' })).toBeNull();
-    expect(screen.getByRole('textbox', { name: '问问 AI…' })).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: '问任何问题…' })).toBeTruthy();
   });
 
   it("shows none of the reader's plans in a conversation not yet started", async () => {
@@ -432,7 +436,7 @@ describe('the agent conversations', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    expect(screen.getByRole('textbox', { name: '问问 AI…' })).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: '问任何问题…' })).toBeTruthy();
     expect(screen.queryByText('别处的计划')).toBeNull();
   });
 
@@ -460,7 +464,7 @@ describe('the agent conversations', () => {
     ];
     renderAt('/crm/agent-chat/new');
     await userEvent.type(
-      screen.getByRole('textbox', { name: '问问 AI…' }),
+      screen.getByRole('textbox', { name: '问任何问题…' }),
       '你好',
     );
     expect(screen.getByRole('button', { name: '发送' })).toBeDisabled();

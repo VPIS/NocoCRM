@@ -57,20 +57,6 @@ const wording = {
   keyFigures: ['Key figures', '关键数字'],
   // The Mailbox page's way to the Mail accounts page (pages/crm-mail).
   mailManageAccounts: ['Manage mail accounts', '管理邮箱账户'],
-  // The user's conversations with the assistant, under the menu
-  // (sidebar-chats.tsx); "conversation" as the panel's own list says it.
-  chats: {
-    title: ['Conversations', '对话'],
-    new: ['New conversation', '新建对话'],
-    untitled: ['Untitled conversation', '未命名对话'],
-    empty: ['No conversations yet', '还没有对话'],
-    failed: ['Conversations could not be loaded.', '对话加载失败。'],
-    retry: ['Retry', '重试'],
-    unread: ['Unread', '未读'],
-    loading: ['Loading…', '正在加载…'],
-    actions: ['Actions for "{{title}}"', '“{{title}}”的操作'],
-    archive: ['Archive', '归档'],
-  },
   // The assistant's dock at the bottom of the page (assistant-dock.tsx), the
   // overview's ask box (assistant-ask-box.tsx), and the questions they
   // suggest, by page.
@@ -1913,7 +1899,6 @@ const wording = {
     newConversation: ['New conversation', '新建对话'],
     openFullPage: ['Open full page', '在整页中打开'],
     close: ['Close', '关闭'],
-    placeholder: ['Ask AI…', '问问 AI…'],
     attachHint: [
       'Attach files: the AI sees images, and only the names of other files',
       '添加附件：AI 能看到图片，其他文件只能看到文件名',
@@ -1940,12 +1925,17 @@ const wording = {
   },
   // The conversations with the Agents plugin's agents.
   agentChat: {
-    description: [
-      'Talk to the CRM’s agents; the changes they propose wait for your decision.',
-      '与 CRM 的 Agent 对话；它提出的改动等你决定。',
-    ],
     new: ['New conversation', '新建对话'],
+    actions: ['Conversation actions', '对话操作'],
+    // A conversation's last message in its list row, when it is the person's.
+    lastYours: ['You: ', '你：'],
+    lastFrom: ['{{name}}: ', '{{name}}：'],
+    copy: ['Copy', '复制'],
+    copied: ['Copied', '已复制'],
     list: ['Conversations', '对话'],
+    // What a conversation started from, under its header.
+    startedFrom: ['Started from', '对话起点'],
+    aiCard: ['AI suggestion', 'AI 建议'],
     archivedList: ['Archived conversations', '已归档的对话'],
     empty: ['No conversations yet', '还没有对话'],
     emptyDescription: [
@@ -1979,6 +1969,26 @@ const wording = {
     untitled: ['Untitled conversation', '未命名对话'],
     you: ['You', '你'],
     working: ['{{agent}}: {{step}}', '{{agent}}：{{step}}'],
+    // What the run is doing, in plain words rather than the CRM command it
+    // runs (agent-chat/step-text.ts); {{object}} is the kind of record.
+    step: {
+      thinking: ['thinking…', '正在思考…'],
+      skill: ['reading up on how to do it…', '正在查阅工作方法…'],
+      help: ['checking what it can do…', '正在了解可用的操作…'],
+      search: ['searching for “{{q}}”…', '正在搜索「{{q}}」…'],
+      find: ['looking for {{object}} “{{q}}”…', '正在查找{{object}}「{{q}}」…'],
+      list: ['looking through the {{object}}…', '正在查看{{object}}…'],
+      get: ['reading the {{object}}…', '正在读取{{object}}详情…'],
+      history: [
+        'reading the {{object}}’s timeline…',
+        '正在查看{{object}}的动态…',
+      ],
+      read: ['looking at the {{object}}…', '正在查看{{object}}…'],
+      plan: [
+        'putting the changes into a plan for you…',
+        '正在整理改动计划，等你确认…',
+      ],
+    },
     notFound: ['This conversation does not exist.', '这个对话不存在。'],
     backToList: ['Back to the conversations', '返回对话列表'],
     retry: ['Retry', '重试'],
@@ -2082,6 +2092,7 @@ const wording = {
     reports: ['Reports', '报表'],
     inbox: ['Inbox', '收件箱'],
     agents: ['Agents', 'Agents'],
+    conversations: ['Conversations', '对话'],
     action: ['Action', '行动'],
     records: ['Records', '记录'],
     // Where the user's connected services sit: mail now, other channels
@@ -2094,7 +2105,6 @@ const wording = {
     models: ['Models', '模型'],
     skills: ['Skills', '技能'],
     usage: ['Usage', '用量'],
-    agentChat: ['Agent conversations', 'Agent 对话'],
   },
   entities: {
     leads: ['Leads', '线索'],

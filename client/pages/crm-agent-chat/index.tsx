@@ -18,7 +18,8 @@ import { lazy, Suspense, useRef, useState, type ReactElement } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { BackButton } from '../../components/back-button.js';
 import { useCrmText } from '../../components/crm/api.js';
-import { CrmFrame, ErrorNotice } from '../../components/crm/common.js';
+import { ErrorNotice } from '../../components/crm/common.js';
+import { PageHeader } from '#components/page-header';
 import {
   RecordDrawerContext,
   useRecordDrawerState,
@@ -120,42 +121,93 @@ export default function AgentChatPage(): ReactElement {
   // and a first conversation being started needs none.
   const headerAction = open.isLoading || first ? undefined : newButton;
 
+  // The conversation, or why none can be held, beside the list.
+  const detail =
+    isNew && agents.isLoading ? (
+      <div className='flex flex-col gap-3 py-4' role='status'>
+        <span className='sr-only'>{text('loading')}</span>
+        <Skeleton className='h-8 w-48' />
+        <Skeleton className='h-24 w-full' />
+      </div>
+    ) : isNew && agents.error ? (
+      <div className='flex flex-col items-start gap-2 py-4'>
+        <ErrorNotice error={agents.error} />
+        <Button
+          variant='outline'
+          size='sm'
+          onClick={() => void agents.refetch()}
+        >
+          {text('agentChat.retry')}
+        </Button>
+      </div>
+    ) : isNew && !agents.data?.length ? (
+      <div className='flex flex-1 items-center justify-center py-6'>
+        <EmptyBlock
+          icon={<Bot />}
+          title={text('agentChat.noAgent')}
+          description={text('agentChat.noAgentDescription')}
+          action={
+            <Button
+              variant='outline'
+              render={<Link to='/settings/agents' />}
+              nativeButton={false}
+            >
+              {text('agentChat.manageAgents')}
+            </Button>
+          }
+        />
+      </div>
+    ) : (
+      <Conversation
+        key={viewKey}
+        conversationId={openId}
+        agents={agents.data ?? []}
+        onCreated={created}
+        onArchived={archivedOne}
+        // Restored, it is listed with the open ones again.
+        onRestored={() => showArchived(false)}
+      />
+    );
+
+  // Laid out as the inbox is (inbox-page.tsx): the heading over a rule, the
+  // conversations in a column on the menu's ground at the left, the one open
+  // beside them; narrow, the list and the conversation take turns.
   let body: ReactElement;
   if (open.isLoading && !detailOpen)
     body = (
-      <div className='grid gap-2 @3xl:w-80' role='status'>
+      <div className='flex flex-col gap-2 p-4 lg:w-80' role='status'>
         <span className='sr-only'>{text('loading')}</span>
         {[0, 1, 2].map((row) => (
-          <Skeleton key={row} className='h-14 w-full rounded-lg' />
+          <Skeleton key={row} className='h-16 w-full rounded-lg' />
         ))}
       </div>
     );
   else if (none && !archived && !isNew)
     body = (
-      <EmptyBlock
-        icon={<MessagesSquare />}
-        title={text('agentChat.empty')}
-        description={text('agentChat.emptyDescription')}
-        action={
-          <div className='flex flex-wrap justify-center gap-2'>
-            {newButton}
-            {hasArchived ? (
-              <Button variant='ghost' onClick={() => showArchived(true)}>
-                {text('agentChat.showArchived')}
-              </Button>
-            ) : null}
-          </div>
-        }
-      />
+      <div className='flex flex-1 items-center justify-center p-6'>
+        <EmptyBlock
+          icon={<MessagesSquare />}
+          title={text('agentChat.empty')}
+          description={text('agentChat.emptyDescription')}
+          action={
+            <div className='flex flex-wrap justify-center gap-2'>
+              {newButton}
+              {hasArchived ? (
+                <Button variant='ghost' onClick={() => showArchived(true)}>
+                  {text('agentChat.showArchived')}
+                </Button>
+              ) : null}
+            </div>
+          }
+        />
+      </div>
     );
   else
     body = (
-      <div
-        className={`grid min-h-0 flex-1 gap-6 ${first ? '' : '@3xl:grid-cols-[20rem_minmax(0,1fr)]'}`}
-      >
+      <div className='flex min-h-0 flex-1'>
         {first ? null : (
           <div
-            className={`min-h-0 flex-col ${detailOpen ? 'hidden @3xl:flex' : 'flex'}`}
+            className={`flex min-h-0 w-full flex-col border-r bg-sidebar/60 lg:w-80 lg:shrink-0 ${detailOpen ? 'max-lg:hidden' : ''}`}
           >
             <ConversationList
               ref={listRef}
@@ -167,59 +219,17 @@ export default function AgentChatPage(): ReactElement {
           </div>
         )}
         <div
-          className={`min-h-0 min-w-0 flex-col ${detailOpen ? 'flex' : 'hidden @3xl:flex'}`}
+          className={`flex min-h-0 min-w-0 flex-1 flex-col px-4 pt-3 pb-4 md:px-6 ${detailOpen ? '' : 'max-lg:hidden'}`}
         >
           {detailOpen ? (
             <>
               {/* Narrow, the list and the conversation take turns. */}
-              <div className='mb-2 @3xl:hidden'>
+              <div className='mb-2 lg:hidden'>
                 <BackButton
                   to={`/crm/agent-chat${archived ? '?archived=1' : ''}`}
                 />
               </div>
-              {isNew && agents.isLoading ? (
-                <div className='flex flex-col gap-3' role='status'>
-                  <span className='sr-only'>{text('loading')}</span>
-                  <Skeleton className='h-8 w-48' />
-                  <Skeleton className='h-24 w-full' />
-                </div>
-              ) : isNew && agents.error ? (
-                <div className='flex flex-col items-start gap-2'>
-                  <ErrorNotice error={agents.error} />
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    onClick={() => void agents.refetch()}
-                  >
-                    {text('agentChat.retry')}
-                  </Button>
-                </div>
-              ) : isNew && !agents.data?.length ? (
-                <EmptyBlock
-                  icon={<Bot />}
-                  title={text('agentChat.noAgent')}
-                  description={text('agentChat.noAgentDescription')}
-                  action={
-                    <Button
-                      variant='outline'
-                      render={<Link to='/settings/agents' />}
-                      nativeButton={false}
-                    >
-                      {text('agentChat.manageAgents')}
-                    </Button>
-                  }
-                />
-              ) : (
-                <Conversation
-                  key={viewKey}
-                  conversationId={openId}
-                  agents={agents.data ?? []}
-                  onCreated={created}
-                  onArchived={archivedOne}
-                  // Restored, it is listed with the open ones again.
-                  onRestored={() => showArchived(false)}
-                />
-              )}
+              {detail}
             </>
           ) : (
             <p className='m-auto text-sm text-muted-foreground'>
@@ -234,14 +244,15 @@ export default function AgentChatPage(): ReactElement {
     <RecordDrawerContext.Provider
       value={{ open: drawer.open, close: drawer.close, inDrawer: false }}
     >
-      <CrmFrame
-        fill
-        title={text('navigation.agentChat')}
-        description={text('agentChat.description')}
-        actions={headerAction}
-      >
-        <div className='@container flex min-h-0 flex-1 flex-col'>{body}</div>
-      </CrmFrame>
+      <div className='flex h-full min-h-0 flex-col'>
+        <div className='shrink-0 border-b px-6 py-5 md:px-8'>
+          <PageHeader
+            title={text('navigation.conversations')}
+            actions={headerAction}
+          />
+        </div>
+        {body}
+      </div>
       {drawerLoaded && (
         <Suspense fallback={null}>
           <RecordDrawer
