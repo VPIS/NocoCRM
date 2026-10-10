@@ -67,7 +67,7 @@ export function LocationField({
   const searchRef = useRef<HTMLInputElement>(null);
   const searched = useDebounced(query.trim());
   const { data: matches } = useCrmQuery<PlaceMatch[]>(
-    `geography/search?q=${encodeURIComponent(searched)}`,
+    `geography/places?q=${encodeURIComponent(searched)}`,
     open && Boolean(searched),
   );
   const blank = !country && !state && !city && !address;

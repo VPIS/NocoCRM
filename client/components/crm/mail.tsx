@@ -288,7 +288,7 @@ export function useMailSent() {
   return useCallback(
     async (sent: MailSubmissionLogView | undefined): Promise<void> => {
       if (!sent) return;
-      await api('mail/sync', 'POST', {});
+      await api('mailTimeline/sync', 'POST', {});
       await refresh();
     },
     [api, refresh],

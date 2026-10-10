@@ -72,7 +72,7 @@ export function useRunningAgents(): Record<string, number> {
   });
   const shown = meta?.assistant === true && can;
   const { data } = useCrmQuery<Record<string, number>>(
-    'agents/running',
+    'aiAgents/running',
     shown,
     {
       refetchInterval: (latest) =>

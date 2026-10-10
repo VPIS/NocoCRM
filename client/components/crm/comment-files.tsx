@@ -117,7 +117,7 @@ export function CommentFiles({
   const { text } = useCrmText();
   const [previewing, setPreviewing] = useState<string | null>(null);
   const { data } = useCrmQuery<CrmFile[]>(
-    `files?ids=${encodeURIComponent(ids.join(','))}`,
+    `attachments?ids=${encodeURIComponent(ids.join(','))}`,
     ids.length > 0,
   );
   if (!ids.length) return null;

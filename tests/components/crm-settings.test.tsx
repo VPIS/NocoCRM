@@ -28,12 +28,12 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
     await importOriginal<typeof import('../../client/components/crm/api.js')>();
   return {
     ...actual,
-    useCrmQuery: () => ({
+    useCrmQuery: (path: string) => ({
       isLoading: false,
-      data: {
-        settings: defaultSettings,
-        demo: { present: false, createdAt: null, records: 0, accounts: [] },
-      },
+      data:
+        path === 'systemSettings'
+          ? defaultSettings
+          : { present: false, createdAt: null, records: 0, accounts: [] },
     }),
     useCrmApi: () => state.api,
     useRefresh: () => async () => undefined,
@@ -74,7 +74,7 @@ describe('the settings page', () => {
     expect(approvals.getAttribute('aria-checked')).toBe('false');
     await user.click(screen.getByRole('button', { name: crmEn.save }));
     expect(state.api).toHaveBeenCalledWith(
-      'settings',
+      'systemSettings',
       'PUT',
       expect.objectContaining({
         notifyApprovals: false,

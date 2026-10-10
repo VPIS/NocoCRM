@@ -425,7 +425,7 @@ export function RecordForm({
       picked.forEach((file) => body.append('file', file));
       try {
         const result = await api<{ data: { id: string }[] }>(
-          `files?entity=${toText(entity)}`,
+          `attachments/upload?entity=${toText(entity)}`,
           'POST',
           body,
         );

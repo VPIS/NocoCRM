@@ -95,13 +95,11 @@ import {
   crmToken,
 } from '../../server/providers/crm/index.js';
 import { crmRoutes } from '../../server/routes/crm.js';
-import { objectRoutes } from '../../server/routes/objects.js';
 import {
   findApiDocumentSchemaProblems,
   findUndeclaredApiRoutes,
   generateApiDocument,
 } from '@nocobase/app-server/router';
-import { apiPath } from '../../client/components/crm/api.js';
 import { captureLeads } from '../../server/providers/crm/lead-capture.js';
 import {
   captureOpportunity,
@@ -191,8 +189,6 @@ let service: CrmService;
 const passwordResets: string[] = [];
 let folder: string;
 let router: Hono;
-// The records' routes alone, as the API document reads them.
-let objectRouter: Hono;
 // The Mail plugin as the mail timeline sees it: each user's connected
 // mailboxes and the messages they hold, set by a test.
 type FakeMessage = {
@@ -445,17 +441,11 @@ beforeAll(async () => {
   } as unknown as ReturnType<
     typeof container.resolve<typeof mailServiceToken>
   >);
-  // The application's routes as /api serves them: the records at the
-  // root, the workspace's still under /crm.
-  const host = {
+  router = await crmRoutes.createRouter({
     container,
     publicBasePath: '/test',
     paths: createAppPaths({ rootDir: folder }),
-  } as Application;
-  router = new Hono();
-  objectRouter = await objectRoutes.createRouter(host);
-  router.route('/', objectRouter);
-  router.route('/', await crmRoutes.createRouter(host));
+  } as Application);
 }, 30000);
 afterAll(async () => {
   await database?.destroy();
@@ -467,8 +457,7 @@ const request = (
   method = 'GET',
   body?: unknown,
 ): Promise<Response> =>
-  // Paths as the client writes them, with a leading slash.
-  router.request(`/${apiPath(path.slice(1))}`, {
+  router.request(path, {
     method,
     headers: {
       ...(user ? { 'x-test-user': user } : {}),
@@ -487,9 +476,9 @@ async function runSalesSetsSeed(): Promise<void> {
 }
 
 describe('CRM API document', () => {
-  it('declares every record route, each with its own operation and valid schemas', async () => {
-    expect(findUndeclaredApiRoutes(objectRouter)).toEqual([]);
-    const document = await generateApiDocument(objectRouter, {
+  it('declares every route, each with its own operation and valid schemas', async () => {
+    expect(findUndeclaredApiRoutes(router)).toEqual([]);
+    const document = await generateApiDocument(router, {
       info: { title: 'CRM', version: 'test' },
     });
     expect(findApiDocumentSchemaProblems(document)).toEqual([]);
@@ -524,9 +513,9 @@ describe('CRM API security and domain rules', () => {
     expect((await request('/leads')).status).toBe(401);
     expect((await request('/leads', 'outsider')).status).toBe(403);
     expect((await request('/leads', 'rep')).status).toBe(200);
-    expect((await request('/settings', 'rep')).status).toBe(403);
-    expect((await request('/settings', 'manager')).status).toBe(403);
-    expect((await request('/metadata', 'admin')).status).toBe(200);
+    expect((await request('/systemSettings', 'rep')).status).toBe(403);
+    expect((await request('/systemSettings', 'manager')).status).toBe(403);
+    expect((await request('/workspace', 'admin')).status).toBe(200);
     expect(
       await actor('admin').scope.can({
         resource: { type: 'settings', id: 'crm' },
@@ -560,47 +549,52 @@ describe('CRM API security and domain rules', () => {
   it('offers the assistant only as the enabled AI employee and drops the retired AI switch', async () => {
     // Without the AI Employee plugin's table there is no employee to answer,
     // so the pages offer no assistant entry.
-    const meta = (await (await request('/metadata', 'admin')).json()) as {
+    const meta = (await (await request('/workspace', 'admin')).json()) as {
       data: { assistant: boolean; settings: Record<string, unknown> };
     };
     expect(meta.data.assistant).toBe(false);
     expect(meta.data.settings).not.toHaveProperty('aiEnabled');
-    // An open settings tab from before still sends the switch; it is dropped.
-    const current = (await (await request('/settings', 'admin')).json()) as {
-      data: { settings: Record<string, unknown> };
-    };
-    const saved = await request('/settings', 'admin', 'PUT', {
-      ...current.data.settings,
+    // The settings as they are, without the option lists, which are not
+    // sent back; a retired setting such as the old AI switch is refused.
+    const { data: current } = (await (
+      await request('/systemSettings', 'admin')
+    ).json()) as { data: Record<string, unknown> };
+    const { options: _options, ...settings } = current;
+    const retired = await request('/systemSettings', 'admin', 'PUT', {
+      ...settings,
       aiEnabled: false,
     });
-    expect(saved.status).toBe(200);
-    const after = (await (await request('/metadata', 'admin')).json()) as {
+    expect(retired.status).toBe(400);
+    expect(await retired.json()).toMatchObject({
+      error: { reason: 'INVALID_INPUT' },
+    });
+    expect(
+      (await request('/systemSettings', 'admin', 'PUT', settings)).status,
+    ).toBe(200);
+    const after = (await (await request('/workspace', 'admin')).json()) as {
       data: { settings: Record<string, unknown> };
     };
     expect(after.data.settings).not.toHaveProperty('aiEnabled');
-    // The AI's language is one of three, English by default, and a save
+    // The AI's language is one of two, English by default, and a save
     // tells the provider (which registers the assistant's prompt again).
     expect(after.data.settings.aiLanguage).toBe('en-US');
     expect(
       (
-        await request('/settings', 'admin', 'PUT', {
-          ...current.data.settings,
+        await request('/systemSettings', 'admin', 'PUT', {
           aiLanguage: 'fr-FR',
         })
       ).status,
     ).toBe(400);
     const announced: string[] = [];
-    service.settingsSaved = (settings) => announced.push(settings.aiLanguage);
+    service.settingsSaved = (saved) => announced.push(saved.aiLanguage);
     try {
-      await request('/settings', 'admin', 'PUT', {
-        ...current.data.settings,
+      await request('/systemSettings', 'admin', 'PUT', {
         aiLanguage: 'zh-CN',
       });
       expect(announced).toEqual(['zh-CN']);
     } finally {
       service.settingsSaved = undefined;
-      await request('/settings', 'admin', 'PUT', {
-        ...current.data.settings,
+      await request('/systemSettings', 'admin', 'PUT', {
         aiLanguage: 'zh-CN',
       });
     }
@@ -1227,7 +1221,9 @@ describe('CRM API security and domain rules', () => {
       .values({ id: 'private-file', ownerId: 'other' })
       .execute();
     expect(await service.canReadFile(actor('rep'), 'private-file')).toBe(false);
-    expect((await request('/files/private-file', 'rep')).status).toBe(404);
+    expect(
+      (await request('/attachments/private-file/content', 'rep')).status,
+    ).toBe(404);
     await expect(
       service.save(actor('rep'), 'leads', {
         name: 'Guessed attachment',
@@ -2554,7 +2550,7 @@ describe('CRM API security and domain rules', () => {
       }),
     ).toEqual({ ok: false, code: 'invalidInput', field: 'id' });
     // The card asks through the API, as the signed-in user.
-    const response = await request('/ai/screen', 'rep', 'POST', {
+    const response = await request('/screenProposal', 'rep', 'POST', {
       tool: 'delete_record',
       input: { entity: 'leads', id: mine.id },
     });
@@ -6309,7 +6305,7 @@ describe('demo dataset', () => {
       .total;
   it('imports once for an administrator, creating the demo accounts', async () => {
     expect(
-      (await request('/demo/populate', 'manager', 'POST', {})).status,
+      (await request('/demoData/import', 'manager', 'POST', {})).status,
     ).toBe(403);
     const before = Object.fromEntries(
       await Promise.all(
@@ -6330,7 +6326,7 @@ describe('demo dataset', () => {
     // The metadata tells whoever may import it that none is imported (the
     // pages offer it in a banner), and tells no one else anything.
     const meta = async (id: string) =>
-      (await (await request('/metadata', id)).json()).data as Record<
+      (await (await request('/workspace', id)).json()).data as Record<
         string,
         unknown
       >;
@@ -6343,7 +6339,7 @@ describe('demo dataset', () => {
     service.approvalDecided = decided;
     let populated: Response;
     try {
-      populated = await request('/demo/populate', 'admin', 'POST', {});
+      populated = await request('/demoData/import', 'admin', 'POST', {});
       await new Promise((resolve) => setTimeout(resolve, 0));
     } finally {
       service.approvalSubmitted = undefined;
@@ -6434,7 +6430,7 @@ describe('demo dataset', () => {
       });
       expect([entity, owned.total > 0]).toEqual([entity, true]);
     }
-    const again = await request('/demo/populate', 'admin', 'POST', {});
+    const again = await request('/demoData/import', 'admin', 'POST', {});
     expect(again.status).toBe(400);
     expect((await again.json()).error).toMatchObject({
       status: 'FAILED_PRECONDITION',
@@ -6494,8 +6490,10 @@ describe('demo dataset', () => {
       .where('recipientId', '=', 'demo-liming')
       .execute();
     expect(queued).toEqual([]);
-    expect((await request('/demo/reset', 'rep', 'POST', {})).status).toBe(403);
-    const reset = await request('/demo/reset', 'admin', 'POST', {});
+    expect((await request('/demoData/remove', 'rep', 'POST', {})).status).toBe(
+      403,
+    );
+    const reset = await request('/demoData/remove', 'admin', 'POST', {});
     expect(reset.status).toBe(200);
     expect((await reset.json()).data.present).toBe(false);
     // Its mailboxes go with it, removed as their owners; so do their messages.
@@ -6532,7 +6530,7 @@ describe('demo dataset', () => {
     ).toMatchObject({ disabled: true });
     for (const [entity, total] of Object.entries(before))
       expect([entity, await count(entity)]).toEqual([entity, total]);
-    const missing = await request('/demo/reset', 'admin', 'POST', {});
+    const missing = await request('/demoData/remove', 'admin', 'POST', {});
     expect(missing.status).toBe(404);
   }, 120000);
 
@@ -6555,7 +6553,7 @@ describe('demo dataset', () => {
       })
       .execute();
     passwordResets.length = 0;
-    const again = await request('/demo/populate', 'admin', 'POST', {});
+    const again = await request('/demoData/import', 'admin', 'POST', {});
     expect(again.status).toBe(200);
     // The disabled demo accounts are the demo's again, the real one reused.
     const users = await service.users(actor('admin'));
@@ -6563,9 +6561,9 @@ describe('demo dataset', () => {
       disabled: false,
     });
     expect(passwordResets).toContain('real-zhaomin');
-    expect((await request('/demo/reset', 'admin', 'POST', {})).status).toBe(
-      200,
-    );
+    expect(
+      (await request('/demoData/remove', 'admin', 'POST', {})).status,
+    ).toBe(200);
     // Not one the import created, so removing the demo leaves it enabled.
     const after = await service.users(actor('admin'));
     expect(after.find((u) => u.id === 'real-zhaomin')).toMatchObject({
@@ -6577,7 +6575,7 @@ describe('demo dataset', () => {
   }, 120000);
 
   it('imports the same story in English, with English demo accounts', async () => {
-    const refused = await request('/demo/populate', 'admin', 'POST', {
+    const refused = await request('/demoData/import', 'admin', 'POST', {
       language: 'fr-FR',
     });
     expect(refused.status).toBe(400);
@@ -6585,11 +6583,10 @@ describe('demo dataset', () => {
       error: {
         status: 'INVALID_ARGUMENT',
         reason: 'INVALID_INPUT',
-        domain: 'crm',
         fieldViolations: [{ field: 'language' }],
       },
     });
-    const populated = await request('/demo/populate', 'admin', 'POST', {
+    const populated = await request('/demoData/import', 'admin', 'POST', {
       language: 'en-US',
     });
     expect(populated.status).toBe(200);
@@ -6637,9 +6634,9 @@ describe('demo dataset', () => {
     expect(
       status.accounts.map((a: { username: string }) => a.username),
     ).toEqual(demoAccountsIn('en-US').map((a) => a.username));
-    expect((await request('/demo/reset', 'admin', 'POST', {})).status).toBe(
-      200,
-    );
+    expect(
+      (await request('/demoData/remove', 'admin', 'POST', {})).status,
+    ).toBe(200);
   }, 120000);
 });
 
@@ -6948,11 +6945,14 @@ describe('resolved titles and paged filters', () => {
     const second = (await request(
       '/dashboard/overdue?scope=mine&page=2&pageSize=5',
       'rep',
-    ).then((r) => r.json())) as { data: { name: string }[]; page: number };
-    expect(second.page).toBe(2);
+    ).then((r) => r.json())) as {
+      data: { name: string }[];
+      meta: { page: number };
+    };
+    expect(second.meta.page).toBe(2);
     expect(second.data.length).toBeGreaterThan(0);
     expect(second.data.length).toBeLessThanOrEqual(5);
-    expect((await request('/dashboard/nothing', 'rep')).status).toBe(404);
+    expect((await request('/dashboard/nothing', 'rep')).status).toBe(400);
     // The team scope sees everyone's.
     const team = (await request(
       '/dashboard/overdue?scope=team&pageSize=100',
@@ -8992,10 +8992,10 @@ describe('mail in the timeline', () => {
   });
 
   it('reads the signed-in user’s mailbox on request, and only when signed in', async () => {
-    expect((await request('/mail/sync', undefined, 'POST', {})).status).toBe(
-      401,
-    );
-    const response = await request('/mail/sync', 'rep', 'POST', {});
+    expect(
+      (await request('/mailTimeline/sync', undefined, 'POST', {})).status,
+    ).toBe(401);
+    const response = await request('/mailTimeline/sync', 'rep', 'POST', {});
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ data: { written: 0 } });
   });
@@ -9309,20 +9309,22 @@ describe('agents', () => {
   it('switches agents and their triggers, for administrators only', async () => {
     expect(
       (
-        await request('/agents/leads', 'rep', 'PUT', {
+        await request('/aiAgents/leads/switches', 'rep', 'PUT', {
           triggers: { daily: false },
         })
       ).status,
     ).toBe(403);
     expect(
       (
-        await request('/agents/leads', 'admin', 'PUT', {
+        await request('/aiAgents/leads/switches', 'admin', 'PUT', {
           triggers: { nonsense: false },
         })
       ).status,
     ).toBe(400);
-    expect((await request('/agents/robots', 'admin', 'GET')).status).toBe(404);
-    const saved = await request('/agents/leads', 'admin', 'PUT', {
+    expect((await request('/aiAgents/robots', 'admin', 'GET')).status).toBe(
+      400,
+    );
+    const saved = await request('/aiAgents/leads/switches', 'admin', 'PUT', {
       triggers: { taskDone: false },
     });
     expect(saved.status).toBe(200);
@@ -9333,7 +9335,7 @@ describe('agents', () => {
     await saveAgentSwitch(service, actor('admin'), 'leads', { enabled: false });
     expect(await agentOn(service, 'leads', 'created')).toBe(false);
     // The metadata tells the forms, which then offer no follow-up.
-    const meta = (await (await request('/metadata', 'rep')).json()).data as {
+    const meta = (await (await request('/workspace', 'rep')).json()).data as {
       agents: Record<string, { enabled: boolean }>;
     };
     expect(meta.agents.leads.enabled).toBe(false);

@@ -239,7 +239,7 @@ export function EmailStep({
         throw new Error(toText(text('mail.failed')));
       // The mail reaches the record's timeline now rather than at the next
       // minute's pass.
-      await api('mail/sync', 'POST', {}).catch(() => undefined);
+      await api('mailTimeline/sync', 'POST', {}).catch(() => undefined);
       await onSent(all);
       toaster.show({
         type: submission.status === 'unknown' ? 'warning' : 'success',

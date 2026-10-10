@@ -404,7 +404,7 @@ export function CrmWriteCard({
     ],
     queryFn: () =>
       api<{ data: { ok: boolean; code?: string; field?: string } }>(
-        'ai/screen',
+        'screenProposal',
         'POST',
         { tool, input },
       ).then((r) => r.data),

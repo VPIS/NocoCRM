@@ -1,0 +1,341 @@
+import { z } from 'zod';
+import type { ScreenResult } from '../../ai/screen.js';
+import type { AgentSwitches } from '../../providers/crm/agents.js';
+import { AGENDA_PAGE } from '../../providers/crm/dashboard.js';
+import type { DemoStatus } from '../../providers/crm/demo.js';
+import type { PlaceMatch } from '../../providers/crm/geography.js';
+import type { CrmSettings } from '../../providers/crm/schema.js';
+import { JsonObject, PageQuery, TitlesShape } from './common.js';
+import { AiEntry } from './operations.js';
+
+// The workspace's own routes: what the pages start from, the settings, the
+// demo data, the overview and reports, the inbox's AI suggestions, the AI
+// agents, attachments, the mail timeline, search and screening.
+
+const SettingsShape = {
+  currency: z.string().meta({ description: 'A three-letter ISO code.' }),
+  timeZone: z.string().meta({ description: 'An IANA time zone.' }),
+  taskReminderMinutes: z.number().int(),
+  closeReminderDays: z.number().int(),
+  uncontactedDays: z.number().int(),
+  leadStaleDays: z.number().int(),
+  staleDays: z.number().int(),
+  nurtureReviewDays: z.number().int(),
+  aiLanguage: z.enum(['en-US', 'zh-CN']),
+  notifyApprovals: z.boolean(),
+  notifyRecordChanges: z.boolean(),
+  notifyTaskReminders: z.boolean(),
+};
+
+export const SystemSettings: z.ZodType<CrmSettings> = z
+  .object({
+    ...SettingsShape,
+    aiLanguage: z.string(),
+    options: z
+      .record(z.string(), z.array(z.string()))
+      .meta({ description: 'The option lists of the select fields.' }),
+  })
+  .meta({ ref: 'CrmSystemSettings' });
+
+// Every setting may be sent; one left out keeps its value.
+export const UpdateSystemSettingsInput = z
+  .strictObject(
+    Object.fromEntries(
+      Object.entries(SettingsShape).map(([key, schema]) => [
+        key,
+        schema.optional(),
+      ]),
+    ) as {
+      [K in keyof typeof SettingsShape]: z.ZodOptional<
+        (typeof SettingsShape)[K]
+      >;
+    },
+  )
+  .meta({ ref: 'CrmSystemSettingsInput' });
+
+const AgentSwitch = z.object({
+  enabled: z.boolean(),
+  triggers: z.record(z.string(), z.boolean()),
+});
+export const AgentSwitchesSchema: z.ZodType<AgentSwitches> = z
+  .object({
+    leads: AgentSwitch,
+    opportunities: AgentSwitch,
+    approvals: AgentSwitch,
+  })
+  .meta({ ref: 'CrmAgentSwitches' });
+
+const Permission = z.union([
+  z.literal(false),
+  z.object({
+    fields: z.union([z.array(z.string()), z.literal('*')]),
+    all: z.boolean().optional().meta({
+      description: 'Whether the action reaches every record, not a scope.',
+    }),
+  }),
+]);
+
+export const Workspace = z
+  .object({
+    definitions: z.record(z.string(), JsonObject).meta({
+      description: "Each object's fields, statuses and list columns.",
+    }),
+    probabilities: z.record(z.string(), z.number()).meta({
+      description: "An opportunity stage's win probability.",
+    }),
+    permissions: z
+      .record(z.string(), z.record(z.string(), Permission))
+      .meta({ description: 'Per object and action, what the reader may do.' }),
+    settings: SystemSettings,
+    userId: z.string(),
+    users: z.array(JsonObject).meta({
+      description: 'The users the reader may pick, with their CRM roles.',
+    }),
+    export: z.boolean(),
+    assign: z.boolean(),
+    approve: z.boolean(),
+    settingsAccess: z.boolean(),
+    demoPresent: z.boolean().optional().meta({
+      description: 'For whoever may import one: whether a demo dataset is.',
+    }),
+    assistant: z.boolean().meta({
+      description: "Whether the CRM's AI employee is switched on.",
+    }),
+    agents: AgentSwitchesSchema,
+  })
+  .meta({ ref: 'CrmWorkspace' });
+
+const DemoAccount = z.object({
+  username: z.string(),
+  name: z.string(),
+  role: z.string(),
+});
+export const DemoDataStatus: z.ZodType<DemoStatus> = z
+  .object({
+    present: z.boolean(),
+    language: z.enum(['zh-CN', 'en-US']).nullable(),
+    createdAt: z.string().nullable(),
+    records: z.number().int(),
+    accounts: z.array(DemoAccount),
+    accountsByLanguage: z.object({
+      'zh-CN': z.array(DemoAccount),
+      'en-US': z.array(DemoAccount),
+    }),
+  })
+  .meta({ ref: 'CrmDemoData' });
+
+export const ImportDemoDataInput = z.strictObject({
+  language: z.enum(['zh-CN', 'en-US']).optional().meta({
+    description: 'The language the dataset is written in; Chinese by default.',
+  }),
+});
+
+export const PlaceQuery = z.object({
+  q: z
+    .string()
+    .max(100)
+    .meta({ description: "A province's or a country's name." }),
+});
+export const Place: z.ZodType<PlaceMatch> = z
+  .object({
+    country: z.string(),
+    state: z.string().nullable(),
+    label: z.string(),
+  })
+  .meta({ ref: 'CrmPlace' });
+
+export const SubdivisionQuery = z.object({
+  country: z.string().meta({ description: 'An ISO 3166-1 alpha-2 code.' }),
+});
+export const Subdivision = z.object({
+  value: z.string().meta({ description: 'Its ISO 3166-2 code.' }),
+  label: z.string(),
+});
+
+export const SearchQuery = z.object({
+  q: z.string().trim().min(1).max(100),
+});
+export const SearchGroup = z
+  .object({
+    entity: z.string(),
+    total: z.number().int(),
+    rows: z.array(JsonObject),
+    ...TitlesShape,
+  })
+  .meta({ ref: 'CrmSearchGroup' });
+
+export const ScopeQuery = z.object({
+  scope: z.enum(['mine', 'team']).optional().meta({
+    description:
+      "The reader's own records, or the team's; their own by default.",
+  }),
+});
+
+// One of the overview's lists, a page at a time.
+export const AgendaParams = z.object({
+  list: z.enum(['today', 'overdue', 'approvals']),
+});
+export const AgendaQuery = z.object({
+  ...ScopeQuery.shape,
+  page: PageQuery.shape.page,
+  pageSize: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .default(AGENDA_PAGE)
+    .meta({ description: 'Records per page, five by default.' }),
+});
+
+const AgendaPage = z.object({
+  data: z.array(JsonObject),
+  total: z.number().int(),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+});
+// The overview and the reports: today's work, what needs attention, this
+// month's business and the analyses. The analyses are blocks of their own
+// (reports.ts), each shaped for its chart.
+export const Dashboard = z
+  .object({
+    scope: z.enum(['mine', 'team']),
+    today: AgendaPage,
+    overdue: AgendaPage,
+    approvals: AgendaPage,
+    attention: z.record(z.string(), z.number()),
+    business: z.record(z.string(), z.number().nullable()),
+    overall: z.record(z.string(), z.number().nullable()),
+    ...TitlesShape,
+  })
+  .catchall(z.unknown())
+  .meta({ ref: 'CrmDashboard' });
+
+export const DecisionsQuery = z.object({
+  ...ScopeQuery.shape,
+  ...PageQuery.shape,
+  state: z.enum(['pending', 'all']).optional().meta({
+    description: '`all` lists the decided ones too, after those waiting.',
+  }),
+});
+// An AI suggestion with the record it concerns.
+export const Decision = AiEntry.extend({
+  entity: z.enum(['leads', 'opportunities', 'approvals']),
+  lead: JsonObject.optional(),
+  opportunity: JsonObject.optional(),
+  approval: JsonObject.optional(),
+}).meta({ ref: 'CrmDecision' });
+export const DecisionsMeta = z.object({
+  page: z.number().int(),
+  pageSize: z.number().int(),
+  total: z.number().int(),
+  pending: z.number().int().meta({ description: 'How many wait.' }),
+});
+
+export const AgentParams = z.object({
+  agent: z.enum(['leads', 'opportunities', 'approvals']),
+});
+export const AgentQuery = z.object({
+  ...PageQuery.shape,
+  trigger: z.string().optional(),
+  status: z.string().optional(),
+});
+const RunStats = z
+  .object({
+    runs: z.number().int(),
+    acceptance: z.number().nullable(),
+  })
+  .catchall(z.number());
+export const AgentOverview = z
+  .object({
+    agent: z.string(),
+    switches: AgentSwitch,
+    triggers: z.array(z.string()),
+    week: RunStats,
+    month: RunStats,
+    total: z.number().int(),
+    page: z.number().int(),
+    pageSize: z.number().int(),
+    runs: z.array(
+      z.object({
+        id: z.string(),
+        recordId: z.string(),
+        name: z.string(),
+        ownerId: z.unknown(),
+        createdAt: z.string(),
+        trigger: z.string(),
+        status: z.string(),
+        recommendation: z.unknown(),
+        grade: z.unknown(),
+        summary: z.unknown(),
+      }),
+    ),
+  })
+  .meta({ ref: 'CrmAgentOverview' });
+export const AgentSwitchInput = z.strictObject({
+  enabled: z.boolean().optional(),
+  triggers: z
+    .record(z.string(), z.boolean())
+    .optional()
+    .meta({ description: 'The triggers to change; the others keep theirs.' }),
+});
+
+export const ScreenProposalInput = z.strictObject({
+  tool: z.string().meta({ description: 'The write tool the AI proposed.' }),
+  // The proposal's input as the model wrote it, which the tool's own rules
+  // check: its shape is the tool's.
+  input: z.unknown(),
+});
+export const ScreenResultSchema: z.ZodType<ScreenResult> = z.union([
+  z.object({ ok: z.literal(true) }),
+  z.object({
+    ok: z.literal(false),
+    code: z.string(),
+    field: z.string().optional(),
+  }),
+]);
+
+export const UploadQuery = z.object({
+  entity: z
+    .enum([
+      'leads',
+      'companies',
+      'contacts',
+      'opportunities',
+      'tasks',
+      'approvals',
+    ])
+    .optional()
+    .meta({
+      description: 'The kind of record the files are for; leads by default.',
+    }),
+  recordId: z.string().optional().meta({
+    description:
+      "For a comment's files: the record commented on, which the reader need only read.",
+  }),
+});
+export const UploadedAttachment = z.object({
+  id: z.string(),
+  filename: z.string(),
+  contentUrl: z.string(),
+});
+
+export const AttachmentsQuery = z.object({
+  ids: z.string().meta({ description: 'Comma-separated, at most 100.' }),
+});
+export const Attachment = z
+  .object({
+    id: z.string(),
+    filename: z.string(),
+    createdAt: z.string(),
+    mimeType: z.string().nullable(),
+    size: z.number().nullable(),
+    url: z.string().meta({ description: 'Where its content is read.' }),
+  })
+  .meta({ ref: 'CrmAttachment' });
+export const AttachmentParams = z.object({ attachmentId: z.string() });
+export const ContentQuery = z.object({
+  inline: z.enum(['1']).optional().meta({
+    description:
+      'Shown in the browser rather than downloaded, for the types a browser renders safely itself.',
+  }),
+});

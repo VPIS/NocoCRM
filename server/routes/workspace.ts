@@ -1,0 +1,829 @@
+import { Readable } from 'node:stream';
+import { serverFileRepositoryManagerToken } from '@nocobase/app-plugin-file/server';
+import type { Application } from '@nocobase/app-server/application';
+import { driveManagerToken } from '@nocobase/app-server/drive';
+import {
+  ApiError,
+  apiErrorHandler,
+  apiErrorResponse,
+  apiErrorResponses,
+  apiValidator,
+  dataResponse,
+  describeRoute,
+  listResponse,
+} from '@nocobase/app-server/router';
+import type { Row } from '@nocobase/db';
+import type { Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
+import { z } from 'zod';
+import { screenProposal } from '../ai/screen.js';
+import {
+  agentOverview,
+  agentSwitches,
+  runningAgents,
+  saveAgentSwitch,
+} from '../providers/crm/agents.js';
+import {
+  capability,
+  conditions,
+  outputFields,
+} from '../providers/crm/authorization.js';
+import { agenda, dashboard } from '../providers/crm/dashboard.js';
+import {
+  demoPresent,
+  demoStatus,
+  populateDemo,
+  resetDemo,
+} from '../providers/crm/demo.js';
+import { searchPlaces, subdivisions } from '../providers/crm/geography.js';
+import { crmToken } from '../providers/crm/index.js';
+import { pendingDecisions } from '../providers/crm/lead-evaluation.js';
+import { mailTimelineToken } from '../providers/crm/mail-timeline.js';
+import {
+  CrmError,
+  definitions,
+  entities,
+  object,
+  probabilities,
+  toText,
+  type Entity,
+} from '../providers/crm/schema.js';
+import { searchAll } from '../providers/crm/search.js';
+import { array } from '../providers/crm/service.js';
+import { resolveTitles } from '../providers/crm/titles.js';
+import type { CrmEnv } from './context.js';
+import { demoServices } from './demo-services.js';
+import { CRM_ERROR_DOMAIN } from './errors.js';
+import { JsonObject, ListMeta } from './schemas/common.js';
+import {
+  AgendaParams,
+  AgendaQuery,
+  AgentOverview,
+  AgentParams,
+  AgentQuery,
+  AgentSwitchesSchema,
+  AgentSwitchInput,
+  Attachment,
+  AttachmentParams,
+  AttachmentsQuery,
+  ContentQuery,
+  Dashboard,
+  Decision,
+  DecisionsMeta,
+  DecisionsQuery,
+  DemoDataStatus,
+  ImportDemoDataInput,
+  Place,
+  PlaceQuery,
+  ScopeQuery,
+  ScreenProposalInput,
+  ScreenResultSchema,
+  SearchGroup,
+  SearchQuery,
+  Subdivision,
+  SubdivisionQuery,
+  SystemSettings,
+  UpdateSystemSettingsInput,
+  UploadedAttachment,
+  UploadQuery,
+  Workspace,
+} from './schemas/workspace.js';
+
+// The paths these routes own, which the guard (context.ts) is installed on.
+export const WORKSPACE_PATHS = [
+  'workspace',
+  'systemSettings',
+  'demoData',
+  'geography',
+  'search',
+  'dashboard',
+  'decisions',
+  'aiAgents',
+  'screenProposal',
+  'attachments',
+  'mailTimeline',
+];
+
+const MAX_FILE = 20 * 1024 * 1024;
+const total = z.object({ total: z.number().int() });
+const settingsOnly =
+  'Requires the CRM settings capability (`settings/crm manage`).';
+
+// The stored type of a file, when it is one the browser may render on its
+// own (images, PDF, plain text, Markdown as text). The preview dialog is
+// the file plugin's, which decides what it can show from the stored type
+// and the extension and fetches the bytes itself for Office documents, so
+// the list carries the stored type.
+function previewType(file: { mimeType?: unknown }): string | null {
+  const type = toText(file.mimeType ?? '').toLowerCase();
+  return /^image\/(png|jpeg|gif|webp|svg\+xml|bmp|avif)$/.test(type) ||
+    type === 'application/pdf' ||
+    type === 'text/plain' ||
+    type === 'text/markdown' ||
+    type === 'text/x-markdown'
+    ? type
+    : null;
+}
+
+export function registerWorkspaceRoutes(
+  app: Application,
+  router: Hono<CrmEnv>,
+): void {
+  const service = app.container.resolve(crmToken);
+  const { demoAccounts, demoMailboxes } = demoServices(app);
+  const contentUrl = (id: string) =>
+    `${toText(app.publicBasePath)}/api/attachments/${encodeURIComponent(id)}/content`;
+
+  // What every page starts from: the objects' definitions, what the reader
+  // may do with each, the settings, the users, and the switches.
+  router.get(
+    '/workspace',
+    describeRoute({
+      tags: ['Workspace'],
+      summary: 'Get the workspace',
+      operationId: 'getWorkspace',
+      description:
+        "The objects' definitions, what the reader may do with each, the settings, the users they may pick and the AI switches.",
+      responses: { '200': dataResponse(Workspace), ...apiErrorResponses },
+    }),
+    async (c) => {
+      const actor = c.get('actor');
+      await service.rememberLocale(actor);
+      const permissions: Record<string, unknown> = {};
+      for (const entity of entities) {
+        const actions: Record<string, unknown> = {};
+        for (const action of ['read', 'create', 'update', 'delete']) {
+          try {
+            const access = await conditions(actor, entity, action);
+            actions[action] = {
+              fields:
+                action === 'read'
+                  ? outputFields(entity, access)
+                  : access.fields,
+              // Whether the action reaches every record or only a scope
+              // (one's own): the pages use it to offer a change on a
+              // record the user does not own only to someone who may make
+              // it, without a parallel notion of "manager".
+              all: access.scope === true,
+            };
+          } catch {
+            actions[action] = false;
+          }
+        }
+        permissions[entity] = actions;
+      }
+      await conditions(actor, 'leads', 'read');
+      const settingsAccess = await capability(actor, 'manage', 'settings');
+      return c.json({
+        data: {
+          definitions,
+          // Stage → win probability, shown beside each stage.
+          probabilities,
+          permissions,
+          settings: await service.settings(),
+          userId: actor.id,
+          users: await service.users(actor),
+          export: await capability(actor, 'export'),
+          assign: await capability(actor, 'assign'),
+          approve: await capability(actor, 'approve'),
+          settingsAccess,
+          // For whoever may import it: whether a demo dataset is imported,
+          // so the pages can offer one until it is (DemoBanner).
+          ...(settingsAccess
+            ? { demoPresent: await demoPresent(service) }
+            : {}),
+          // Whether the pages offer the assistant at all.
+          assistant: await service.assistantEnabled(),
+          // Which of the agents' triggers are on, so a form offers "AI
+          // follows up at once" only while that would happen (agents.ts).
+          agents: await agentSwitches(service),
+        },
+      });
+    },
+  );
+
+  // The CRM's settings, for whoever may manage them.
+  router.get(
+    '/systemSettings',
+    describeRoute({
+      tags: ['Settings'],
+      summary: 'Get the CRM settings',
+      operationId: 'getSystemSettings',
+      description: settingsOnly,
+      responses: { '200': dataResponse(SystemSettings), ...apiErrorResponses },
+    }),
+    async (c) => {
+      if (!(await capability(c.get('actor'), 'manage', 'settings')))
+        throw new CrmError('forbidden', 403);
+      return c.json({ data: await service.settings() });
+    },
+  );
+  router.put(
+    '/systemSettings',
+    describeRoute({
+      tags: ['Settings'],
+      summary: 'Update the CRM settings',
+      operationId: 'updateSystemSettings',
+      description: `${settingsOnly} A setting left out keeps its value.`,
+      responses: {
+        '200': dataResponse(SystemSettings, 'The settings as saved.'),
+        ...apiErrorResponses,
+      },
+    }),
+    apiValidator('json', UpdateSystemSettingsInput),
+    async (c) =>
+      c.json({
+        data: await service.saveSettings(c.get('actor'), c.req.valid('json')),
+      }),
+  );
+
+  // The demo dataset (demo.ts): whether one is imported, importing it and
+  // removing it, for whoever may manage the settings.
+  const demoResponses = {
+    '200': dataResponse(DemoDataStatus),
+    ...apiErrorResponses,
+  };
+  router.get(
+    '/demoData',
+    describeRoute({
+      tags: ['DemoData'],
+      summary: 'Get the demo data',
+      operationId: 'getDemoData',
+      description: `Whether a demo dataset is imported, and the accounts an import makes. ${settingsOnly}`,
+      responses: demoResponses,
+    }),
+    async (c) => {
+      if (!(await capability(c.get('actor'), 'manage', 'settings')))
+        throw new CrmError('forbidden', 403);
+      return c.json({ data: await demoStatus(service, c.get('actor')) });
+    },
+  );
+  router.post(
+    '/demoData/import',
+    describeRoute({
+      tags: ['DemoData'],
+      summary: 'Import the demo data',
+      operationId: 'importDemoData',
+      description: `Creates the demo accounts, records and mailboxes. ${settingsOnly}`,
+      responses: {
+        ...demoResponses,
+        '400': apiErrorResponse(
+          400,
+          'A demo dataset is imported already (`DEMO_EXISTS`), or the users plugin refused an account (`DEMO_ACCOUNTS`, its explanation in `metadata.detail`).',
+        ),
+      },
+    }),
+    apiValidator('json', ImportDemoDataInput),
+    async (c) =>
+      c.json({
+        data: await populateDemo(
+          service,
+          service.authz,
+          c.get('actor'),
+          demoAccounts,
+          // The language the dataset is written in, Chinese unless asked.
+          c.req.valid('json').language ?? 'zh-CN',
+          demoMailboxes,
+        ),
+      }),
+  );
+  router.post(
+    '/demoData/remove',
+    describeRoute({
+      tags: ['DemoData'],
+      summary: 'Remove the demo data',
+      operationId: 'removeDemoData',
+      description: `Deletes what the import created and disables its accounts. ${settingsOnly}`,
+      responses: demoResponses,
+    }),
+    async (c) =>
+      c.json({
+        data: await resetDemo(
+          service,
+          c.get('actor'),
+          demoAccounts,
+          demoMailboxes,
+        ),
+      }),
+  );
+
+  // A record's region, searched by a province's or a country's name, and
+  // a country's provinces.
+  router.get(
+    '/geography/places',
+    describeRoute({
+      tags: ['Workspace'],
+      summary: 'Search places',
+      operationId: 'searchPlaces',
+      description:
+        'Countries and provinces whose English or Chinese name matches, at most ten.',
+      responses: { '200': listResponse(Place, total), ...apiErrorResponses },
+    }),
+    apiValidator('query', PlaceQuery),
+    (c) => {
+      const data = searchPlaces(
+        c.req.valid('query').q,
+        c.get('actor').locale.startsWith('zh'),
+      );
+      return c.json({ data, meta: { total: data.length } });
+    },
+  );
+  router.get(
+    '/geography/subdivisions',
+    describeRoute({
+      tags: ['Workspace'],
+      summary: "List a country's subdivisions",
+      operationId: 'listSubdivisions',
+      description: "Named in the reader's language.",
+      responses: {
+        '200': listResponse(Subdivision, total),
+        ...apiErrorResponses,
+      },
+    }),
+    apiValidator('query', SubdivisionQuery),
+    (c) => {
+      const chinese = c.get('actor').locale.startsWith('zh');
+      const data = subdivisions(c.req.valid('query').country).map((s) => ({
+        value: s.code,
+        label: chinese ? (s.chineseName ?? s.name) : s.name,
+      }));
+      return c.json({ data, meta: { total: data.length } });
+    },
+  );
+
+  // The global search: the typed text in every kind of record the reader
+  // may read, grouped by kind (server/providers/crm/search.ts).
+  router.get(
+    '/search',
+    describeRoute({
+      tags: ['Workspace'],
+      summary: 'Search the records',
+      operationId: 'searchRecords',
+      description:
+        'The first five matches of each kind the reader may read, with the total of each.',
+      responses: {
+        '200': listResponse(SearchGroup, total),
+        ...apiErrorResponses,
+      },
+    }),
+    apiValidator('query', SearchQuery),
+    async (c) => {
+      const data = await searchAll(
+        service,
+        c.get('actor'),
+        c.req.valid('query').q,
+      );
+      return c.json({ data, meta: { total: data.length } });
+    },
+  );
+
+  // The overview and the reports, and the next page of one of the
+  // overview's lists.
+  router.get(
+    '/dashboard',
+    describeRoute({
+      tags: ['Dashboard'],
+      summary: 'Get the dashboard',
+      operationId: 'getDashboard',
+      description:
+        "Today's work, what needs attention, this month's business and the reports, of the reader's own records or the team's.",
+      responses: { '200': dataResponse(Dashboard), ...apiErrorResponses },
+    }),
+    apiValidator('query', ScopeQuery),
+    async (c) => {
+      const data = await dashboard(
+        service,
+        c.get('actor'),
+        c.req.valid('query'),
+      );
+      const rows = (list: unknown): Row[] =>
+        array(object(list).data).map(object);
+      return c.json({
+        data: {
+          ...data,
+          ...(await resolveTitles(service, c.get('actor'), {
+            tasks: [...rows(data.today), ...rows(data.overdue)],
+            approvals: rows(data.approvals),
+          })),
+        },
+      });
+    },
+  );
+  router.get(
+    '/dashboard/:list',
+    describeRoute({
+      tags: ['Dashboard'],
+      summary: "List one of the overview's lists",
+      operationId: 'listDashboardItems',
+      description:
+        "Today's tasks, the overdue ones, or the approvals waiting, a page at a time.",
+      responses: {
+        '200': listResponse(JsonObject, ListMeta),
+        ...apiErrorResponses,
+      },
+    }),
+    apiValidator('param', AgendaParams),
+    apiValidator('query', AgendaQuery),
+    async (c) => {
+      const { list } = c.req.valid('param');
+      const result = await agenda(
+        service,
+        c.get('actor'),
+        list,
+        c.req.valid('query'),
+      );
+      const entity: Entity = list === 'approvals' ? 'approvals' : 'tasks';
+      return c.json({
+        data: result.data,
+        meta: {
+          page: result.page,
+          pageSize: result.pageSize,
+          total: result.total,
+          ...(await resolveTitles(service, c.get('actor'), {
+            [entity]: result.data,
+          })),
+        },
+      });
+    },
+  );
+
+  // The inbox's AI suggestions: how many wait on the reader (and how many
+  // are still being worked on, so the badge looks again soon), and the
+  // list.
+  router.get(
+    '/decisions/count',
+    describeRoute({
+      tags: ['Ai'],
+      summary: 'Count the AI suggestions waiting',
+      operationId: 'countDecisions',
+      responses: {
+        '200': dataResponse(
+          z.object({
+            count: z.number().int(),
+            running: z
+              .number()
+              .int()
+              .meta({ description: 'How many are still being worked on.' }),
+          }),
+        ),
+        ...apiErrorResponses,
+      },
+    }),
+    async (c) => {
+      const decisions = await pendingDecisions(service, c.get('actor'), {
+        pageSize: 100,
+      });
+      return c.json({
+        data: {
+          count: decisions.pending,
+          running: decisions.data.filter((entry) => entry.status === 'running')
+            .length,
+        },
+      });
+    },
+  );
+  router.get(
+    '/decisions',
+    describeRoute({
+      tags: ['Ai'],
+      summary: 'List the AI suggestions',
+      operationId: 'listDecisions',
+      description:
+        "The suggestions waiting on the reader, on their own records or, for whoever may edit every lead, the team's.",
+      responses: {
+        '200': listResponse(Decision, DecisionsMeta),
+        ...apiErrorResponses,
+      },
+    }),
+    apiValidator('query', DecisionsQuery),
+    async (c) => {
+      const { data, ...meta } = await pendingDecisions(
+        service,
+        c.get('actor'),
+        c.req.valid('query'),
+      );
+      return c.json({ data, meta });
+    },
+  );
+
+  // The Agents section: how many runs each agent has under way, for the
+  // menu's badges; one agent's switches, figures and runs; and an
+  // administrator's change to its switches.
+  router.get(
+    '/aiAgents/running',
+    describeRoute({
+      tags: ['Ai'],
+      summary: "Count the AI agents' runs under way",
+      operationId: 'countRunningAiAgents',
+      responses: {
+        '200': dataResponse(
+          z.object({
+            leads: z.number().int(),
+            opportunities: z.number().int(),
+            approvals: z.number().int(),
+          }),
+        ),
+        ...apiErrorResponses,
+      },
+    }),
+    async (c) => c.json({ data: await runningAgents(service, c.get('actor')) }),
+  );
+  router.get(
+    '/aiAgents/:agent',
+    describeRoute({
+      tags: ['Ai'],
+      summary: 'Get an AI agent',
+      operationId: 'getAiAgent',
+      description:
+        'Its switches, how its runs fared over the last 7 and 30 days, and its runs of the last 90 days on the records the reader may read.',
+      responses: { '200': dataResponse(AgentOverview), ...apiErrorResponses },
+    }),
+    apiValidator('param', AgentParams),
+    apiValidator('query', AgentQuery),
+    async (c) =>
+      c.json({
+        data: await agentOverview(
+          service,
+          c.get('actor'),
+          c.req.valid('param').agent,
+          c.req.valid('query'),
+        ),
+      }),
+  );
+  router.put(
+    '/aiAgents/:agent/switches',
+    describeRoute({
+      tags: ['Ai'],
+      summary: "Update an AI agent's switches",
+      operationId: 'updateAiAgentSwitches',
+      description: `${settingsOnly} What is left out keeps its value.`,
+      responses: {
+        '200': dataResponse(AgentSwitchesSchema, "Every agent's switches."),
+        ...apiErrorResponses,
+      },
+    }),
+    apiValidator('param', AgentParams),
+    apiValidator('json', AgentSwitchInput),
+    async (c) =>
+      c.json({
+        data: await saveAgentSwitch(
+          service,
+          c.get('actor'),
+          c.req.valid('param').agent,
+          c.req.valid('json'),
+        ),
+      }),
+  );
+
+  // Whether the signed-in user could carry out a write the AI employee
+  // proposed: the confirmation card asks before offering to confirm.
+  router.post(
+    '/screenProposal',
+    describeRoute({
+      tags: ['Ai'],
+      summary: 'Screen an AI write proposal',
+      operationId: 'screenProposal',
+      description:
+        "Checks a proposed write against the tool's own rules as the reader, without writing.",
+      responses: {
+        '200': dataResponse(ScreenResultSchema),
+        ...apiErrorResponses,
+      },
+    }),
+    apiValidator('json', ScreenProposalInput),
+    async (c) => {
+      const body = c.req.valid('json');
+      return c.json({
+        data: await screenProposal(
+          service,
+          c.get('actor'),
+          body.tool,
+          body.input,
+        ),
+      });
+    },
+  );
+
+  // Attachments: uploading them, their names, and their content.
+  router.post(
+    '/attachments/upload',
+    bodyLimit({
+      // A file of 20 MiB and the form around it.
+      maxSize: 21 * 1024 * 1024,
+      onError: (c) =>
+        apiErrorHandler(
+          new ApiError({
+            status: 'INVALID_ARGUMENT',
+            reason: 'FILE_TOO_LARGE',
+            domain: CRM_ERROR_DOMAIN,
+            message: 'The request body exceeds 21 MiB.',
+            httpStatus: 413,
+          }),
+          c,
+        ),
+    }),
+    describeRoute({
+      tags: ['Attachments'],
+      summary: 'Upload attachments',
+      operationId: 'uploadAttachments',
+      description:
+        "One or more files of at most 20 MiB each, as `file` parts. For a record's own attachments the reader must be able to create such records; for a comment's, read the record.",
+      requestBody: {
+        required: true,
+        content: {
+          'multipart/form-data': {
+            schema: {
+              type: 'object',
+              required: ['file'],
+              properties: {
+                file: {
+                  type: 'array',
+                  items: { type: 'string', format: 'binary' },
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        '201': dataResponse(z.array(UploadedAttachment)),
+        ...apiErrorResponses,
+        '404': apiErrorResponse(404, 'The record does not exist.'),
+        '413': apiErrorResponse(413, 'A file is too large.'),
+      },
+    }),
+    apiValidator('query', UploadQuery),
+    async (c) => {
+      const actor = c.get('actor');
+      const { entity = 'leads', recordId } = c.req.valid('query');
+      // A comment's files: whoever may read the record may comment on it,
+      // and so attach to what they write.
+      if (recordId) await service.get(actor, entity, recordId);
+      else await conditions(actor, entity, 'create');
+      const body = await c.req.parseBody({ all: true });
+      const files = Array.isArray(body.file) ? body.file : [body.file];
+      if (
+        !files.length ||
+        files.some((file) => !(file instanceof File) || file.size > MAX_FILE)
+      )
+        throw new CrmError('invalidInput', 400, 'file');
+      const repository = app.container
+        .resolve(serverFileRepositoryManagerToken)
+        .repository('crmFiles', {
+          connection: 'main',
+          disk: 'local',
+          accessPath: '/crm/files',
+          // Only the upload path binds this; access was already checked
+          // above against the CRM's own permissions, and reads go through
+          // the CRM's content route rather than the plugin's.
+          policy: { read: true, create: true, update: false, delete: false },
+        });
+      const uploaded = await repository.uploadMany({ files: files as File[] });
+      for (const file of uploaded.records)
+        await service.database
+          .query()
+          .insertInto('crmFileUploads')
+          .values({ id: file.id, ownerId: actor.id })
+          .execute();
+      return c.json(
+        {
+          data: uploaded.records.map((f) => ({
+            id: toText(f.id),
+            filename: toText(f.filename),
+            contentUrl: contentUrl(toText(f.id)),
+          })),
+        },
+        201,
+      );
+    },
+  );
+  // Attachments are kept on records as bare ids; a list needs their names
+  // in one call rather than a request per file.
+  router.get(
+    '/attachments',
+    describeRoute({
+      tags: ['Attachments'],
+      summary: 'List attachments',
+      operationId: 'listAttachments',
+      description: 'The ones named that the reader may open, at most 100.',
+      responses: {
+        '200': listResponse(Attachment, total),
+        ...apiErrorResponses,
+      },
+    }),
+    apiValidator('query', AttachmentsQuery),
+    async (c) => {
+      const actor = c.get('actor');
+      const ids = c.req
+        .valid('query')
+        .ids.split(',')
+        .map((id) => id.trim())
+        .filter(Boolean)
+        .slice(0, 100);
+      const files = ids.length
+        ? await service.database
+            .query()
+            .selectFrom('crmFiles')
+            .select(['id', 'filename', 'createdAt', 'mimeType', 'size'])
+            .where('id', 'in', ids)
+            .execute()
+        : [];
+      const data = [];
+      for (const file of files)
+        if (await service.canReadFile(actor, toText(file.id)))
+          data.push({
+            id: toText(file.id),
+            filename: toText(file.filename),
+            createdAt: toText(file.createdAt),
+            mimeType: file.mimeType == null ? null : toText(file.mimeType),
+            size: file.size == null ? null : Number(file.size),
+            url: contentUrl(toText(file.id)),
+          });
+      return c.json({ data, meta: { total: data.length } });
+    },
+  );
+  router.get(
+    '/attachments/:attachmentId/content',
+    describeRoute({
+      tags: ['Attachments'],
+      summary: "Get an attachment's content",
+      operationId: 'getAttachmentContent',
+      description:
+        'A download, or with `inline=1` shown in the browser for the types it renders safely itself (images, PDF, plain text).',
+      responses: {
+        '200': {
+          description: 'The file.',
+          content: {
+            'application/octet-stream': {
+              schema: { type: 'string', format: 'binary' },
+            },
+          },
+        },
+        ...apiErrorResponses,
+        '404': apiErrorResponse(
+          404,
+          'The attachment does not exist or the reader may not open it.',
+        ),
+      },
+    }),
+    apiValidator('param', AttachmentParams),
+    apiValidator('query', ContentQuery),
+    async (c) => {
+      const id = c.req.valid('param').attachmentId;
+      if (!(await service.canReadFile(c.get('actor'), id)))
+        throw new CrmError('notFound', 404);
+      const file = await service.database
+        .query()
+        .selectFrom('crmFiles')
+        .selectAll()
+        .where('id', '=', id)
+        .executeTakeFirst();
+      if (!file) throw new CrmError('notFound', 404);
+      const stream = await app.container
+        .resolve(driveManagerToken)
+        .use(toText(file.disk))
+        .getStream(toText(file.key));
+      // Inline only for types a browser renders safely on its own;
+      // everything else stays a download whatever the stored type says.
+      const inline = c.req.valid('query').inline ? previewType(file) : null;
+      const name = encodeURIComponent(toText(file.filename));
+      return new Response(Readable.toWeb(stream) as ReadableStream, {
+        headers: {
+          'Content-Type': inline ?? 'application/octet-stream',
+          'Content-Disposition': `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${name}`,
+          'X-Content-Type-Options': 'nosniff',
+          'Cache-Control': 'private, no-store',
+        },
+      });
+    },
+  );
+
+  // The signed-in user's mail brought into the timeline now rather than at
+  // the next minute's pass: the browser asks after sending, and on the Mail
+  // plugin's `mail.changed` for its user (mail-timeline.ts). Only the
+  // user's own mailboxes are read.
+  router.post(
+    '/mailTimeline/sync',
+    describeRoute({
+      tags: ['Workspace'],
+      summary: "Bring the reader's mail into the timeline",
+      operationId: 'syncMailTimeline',
+      responses: {
+        '200': dataResponse(
+          z.object({
+            written: z
+              .number()
+              .int()
+              .meta({ description: 'Timeline entries written or updated.' }),
+          }),
+        ),
+        ...apiErrorResponses,
+      },
+    }),
+    async (c) => {
+      const timeline = app.container.resolve(mailTimelineToken);
+      const written = await timeline.syncUser(c.get('actor').id);
+      return c.json({ data: { written } });
+    },
+  );
+}

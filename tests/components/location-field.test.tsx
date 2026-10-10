@@ -25,18 +25,16 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => ({
   useCrmQuery: (path: string, enabled = true) =>
     !enabled
       ? { data: undefined }
-      : path.startsWith('geography/search')
+      : path.startsWith('geography/places')
         ? {
             data: [{ country: 'CN', state: 'CN-32', label: 'Jiangsu, China' }],
           }
-        : path.startsWith('geography?country=CN')
+        : path.startsWith('geography/subdivisions?country=CN')
           ? {
-              data: {
-                subdivisions: [
-                  { value: 'CN-32', label: 'Jiangsu' },
-                  { value: 'CN-33', label: 'Zhejiang' },
-                ],
-              },
+              data: [
+                { value: 'CN-32', label: 'Jiangsu' },
+                { value: 'CN-33', label: 'Zhejiang' },
+              ],
             }
           : { data: undefined },
 }));

@@ -127,8 +127,7 @@ beforeEach(async () => {
   state.api.mockReset();
   state.api.mockResolvedValue({
     data: [entry('e1', '周晓'), entry('e2', '林悦', 'accepted')],
-    total: 2,
-    pending: 1,
+    meta: { page: 1, pageSize: 100, total: 2, pending: 1 },
   });
   state.request.mockReset();
   state.request.mockImplementation(
@@ -247,8 +246,7 @@ describe("The inbox's AI suggestions", () => {
           },
         },
       ],
-      total: 2,
-      pending: 1,
+      meta: { page: 1, pageSize: 100, total: 2, pending: 1 },
     });
     renderAt('/inbox?view=todo&kind=crm-decisions');
     const item = (await screen.findByText('源码交付条款')).closest('button')!;

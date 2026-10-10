@@ -82,7 +82,10 @@ export function useDecisions(scope: 'mine' | 'team') {
   return useQuery({
     queryKey: [...scopeKey, path],
     queryFn: () =>
-      api<{ data: DecisionItem[]; total: number; pending: number }>(path),
+      api<{
+        data: DecisionItem[];
+        meta: { total: number; pending: number };
+      }>(path),
     // An evaluation finishing adds one; read again as the menu's count is,
     // and every few seconds while a card is being redone.
     refetchInterval: (query) =>

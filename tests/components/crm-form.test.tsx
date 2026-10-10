@@ -56,7 +56,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
           : undefined,
     }),
     useCrmQuery: () => ({
-      data: { subdivisions: [{ value: 'CN-11', label: 'Beijing' }] },
+      data: [{ value: 'CN-11', label: 'Beijing' }],
     }),
     useCrmText: () => ({
       text: (key: string): string => {

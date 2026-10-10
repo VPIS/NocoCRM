@@ -128,7 +128,7 @@ function useDecisionsCollection({
     // handled ones stays in reach when nothing waits.
     count: items.length,
     loaded: !query.isLoading,
-    waiting: query.data?.pending ?? 0,
+    waiting: query.data?.meta.pending ?? 0,
     group: list,
     list,
   };

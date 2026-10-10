@@ -56,11 +56,12 @@ import {
   type Data,
   type CrmRecord,
   type Entity,
+  type ListData,
   type Titled,
 } from '../components/crm/api.js';
 
-// A page of a dashboard list (`dashboard/:list`), in the shape the
-// workspace's routes still answer under /api/crm.
+// The first page of one of the overview's lists, as the dashboard carries
+// it; the next pages come from `dashboard/:list` as any list does.
 type AgendaPage = Titled & {
   data: CrmRecord[];
   total: number;
@@ -448,11 +449,11 @@ function AgendaCard({
   const loadMore = async (): Promise<void> => {
     setLoading(true);
     try {
-      const next = await api<AgendaPage>(
+      const next = await api<ListData>(
         `dashboard/${name}?scope=${scope}&page=${toText(page + 1)}&pageSize=${toText(AGENDA_PAGE)}`,
       );
       setMore((all) => [...all, ...next.data]);
-      setPage(next.page);
+      setPage(next.meta.page);
     } finally {
       setLoading(false);
     }

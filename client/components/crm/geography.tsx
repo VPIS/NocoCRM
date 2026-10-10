@@ -2,23 +2,26 @@ import { useMemo, type ReactElement } from 'react';
 import { Choice } from './form.js';
 import { useCrmQuery, useCrmText } from './api.js';
 
-interface GeographyData {
-  subdivisions: { value: string; label: string }[];
+interface Subdivision {
+  value: string;
+  label: string;
 }
 
 // Country names come from the browser's own locale data, so no country name
 // list is bundled or translated by hand.
 function countryLabel(code: string, language: string): string {
   try {
-    return new Intl.DisplayNames([language], { type: 'region' }).of(code) ?? code;
+    return (
+      new Intl.DisplayNames([language], { type: 'region' }).of(code) ?? code
+    );
   } catch {
     return code;
   }
 }
 
-function useSubdivisions(country: string): GeographyData | undefined {
-  const { data } = useCrmQuery<GeographyData>(
-    `geography?country=${encodeURIComponent(country)}`,
+function useSubdivisions(country: string): Subdivision[] | undefined {
+  const { data } = useCrmQuery<Subdivision[]>(
+    `geography/subdivisions?country=${encodeURIComponent(country)}`,
     Boolean(country),
   );
   return data;
@@ -37,9 +40,7 @@ export function SubdivisionLabel({
   code: string;
 }): ReactElement {
   const data = useSubdivisions(country);
-  return (
-    <>{data?.subdivisions.find((s) => s.value === code)?.label ?? code}</>
-  );
+  return <>{data?.find((s) => s.value === code)?.label ?? code}</>;
 }
 
 export function CountryChoice({
@@ -94,7 +95,7 @@ export function SubdivisionChoice({
       label={label}
       value={value}
       onChange={onChange}
-      choices={data?.subdivisions ?? []}
+      choices={data ?? []}
       disabled={!country}
       emptyLabel={country ? undefined : text('selectCountryFirst')}
       onOpenChange={onOpenChange}

@@ -25,7 +25,7 @@ export function useCommentUploads(
       picked.forEach((file) => body.append('file', file));
       try {
         const result = await api<{ data: { id: string }[] }>(
-          `files?entity=${toText(entity)}&recordId=${encodeURIComponent(recordId)}`,
+          `attachments/upload?entity=${toText(entity)}&recordId=${encodeURIComponent(recordId)}`,
           'POST',
           body,
         );

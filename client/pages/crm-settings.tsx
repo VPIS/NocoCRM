@@ -38,17 +38,20 @@ interface SettingsResponse {
   demo: DemoStatus;
 }
 export default function SettingsPage(): ReactElement {
-  const query = useCrmQuery<SettingsResponse>('settings');
+  const settings = useCrmQuery<CrmSettings>('systemSettings');
+  const demo = useCrmQuery<DemoStatus>('demoData');
   const { text } = useCrmText();
-  if (query.isLoading) return <Loading />;
-  if (!query.data)
+  if (settings.isLoading || demo.isLoading) return <Loading />;
+  if (!settings.data || !demo.data)
     return (
       <PageContainer>
         <PageHeader title={text('settings')} />
-        <ErrorNotice error={query.error} />
+        <ErrorNotice error={settings.error ?? demo.error} />
       </PageContainer>
     );
-  return <SettingsForm initial={query.data} />;
+  return (
+    <SettingsForm initial={{ settings: settings.data, demo: demo.data }} />
+  );
 }
 function SettingsForm({
   initial,
@@ -89,7 +92,7 @@ function SettingsForm({
       setDemo(
         (
           await api<{ data: DemoStatus }>(
-            `demo/${action}`,
+            action === 'populate' ? 'demoData/import' : 'demoData/remove',
             'POST',
             action === 'populate' ? { language: demoLanguage } : {},
           )
@@ -189,7 +192,9 @@ function SettingsForm({
                   setBusy(true);
                   setError(undefined);
                   try {
-                    await api('settings', 'PUT', settings);
+                    // The option lists are not settings to send back.
+                    const { options: _options, ...changes } = settings;
+                    await api('systemSettings', 'PUT', changes);
                     await refresh();
                     setSaved(true);
                   } catch (e) {

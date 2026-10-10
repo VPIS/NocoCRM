@@ -32,7 +32,7 @@ import { readSearchTurn, type SearchTurn } from './search-turn.js';
 
 // The global search, ported from NocoITAM's: a dialog (search-dialog.tsx,
 // in the application layout) that ⌘K or the menu's Search opens, finding
-// records by keyword through GET /api/crm/search, or asking the CRM employee
+// records by keyword through GET /api/search, or asking the CRM employee
 // in a conversation of its own (search-chat.ts) that hands the records it
 // found over through the page tool presentRecords. This provider holds the
 // state above the dialog and registers the tool; it wraps the application

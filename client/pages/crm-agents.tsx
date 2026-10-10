@@ -79,7 +79,7 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
   const [error, setError] = useState<unknown>();
   const [saving, setSaving] = useState(false);
   const [now] = useState(() => Date.now());
-  const path = `agents/${agent}?pageSize=${String(size)}${status ? `&status=${status}` : ''}`;
+  const path = `aiAgents/${agent}?pageSize=${String(size)}${status ? `&status=${status}` : ''}`;
   const query = useCrmQuery<Overview>(path);
   const data = query.data;
   const admin = meta?.settingsAccess === true;
@@ -88,7 +88,7 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
     setSaving(true);
     setError(undefined);
     try {
-      await api(`agents/${agent}`, 'PUT', input);
+      await api(`aiAgents/${agent}/switches`, 'PUT', input);
       await refresh();
     } catch (cause) {
       setError(cause);

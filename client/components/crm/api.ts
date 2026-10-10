@@ -92,26 +92,6 @@ export interface Detail extends Titled {
   unlinks?: Partial<Record<Entity, number>>;
   permissions: { edit: boolean; delete: boolean; approve: boolean };
 }
-// The routes still under /api/crm: the workspace's own (metadata,
-// settings, dashboard and the rest), until they move to the root like the
-// records did. Every other path is the application's at the root.
-const UNDER_CRM = new Set([
-  'metadata',
-  'settings',
-  'demo',
-  'geography',
-  'search',
-  'mail',
-  'dashboard',
-  'decisions',
-  'agents',
-  'ai',
-  'files',
-]);
-export function apiPath(path: string): string {
-  const first = path.split(/[/?]/u, 1)[0] ?? '';
-  return UNDER_CRM.has(first) ? `crm/${path}` : path;
-}
 export function useCrmApi() {
   const api = useService(apiClientToken);
   const { i18n } = useTranslation('crm');
@@ -122,7 +102,7 @@ export function useCrmApi() {
       input?: unknown,
     ): Promise<T> =>
       api.request<T>({
-        path: apiPath(toText(path)),
+        path: toText(path),
         method,
         headers: { 'Accept-Language': i18n.language },
         ...(input instanceof FormData
@@ -283,7 +263,7 @@ export function useMore<T = CrmRecord>(
   };
 }
 export function useMetadata(enabled = true) {
-  return useCrmQuery<Metadata>('metadata', enabled);
+  return useCrmQuery<Metadata>('workspace', enabled);
 }
 // Whether the pages offer the assistant: the header button, the page
 // shortcuts and the panel all hide while the CRM's AI employee is disabled.

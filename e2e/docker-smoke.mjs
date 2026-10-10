@@ -76,7 +76,7 @@ try {
   if (!ready)
     throw new Error('Container did not become healthy', { cause: lastError });
 
-  const anonymousCrm = await fetch(`${origin}${basePath}/api/crm/metadata`, {
+  const anonymousCrm = await fetch(`${origin}${basePath}/api/workspace`, {
     signal: AbortSignal.timeout(5_000),
   });
   assert.equal(anonymousCrm.status, 401, 'CRM API must require authentication');

@@ -2826,7 +2826,7 @@ export function HistoryFeed({
     ),
   ];
   const { data: files } = useCrmQuery<{ id: string; filename: string }[]>(
-    `files?ids=${encodeURIComponent(fileIds.join(','))}`,
+    `attachments?ids=${encodeURIComponent(fileIds.join(','))}`,
     fileIds.length > 0,
   );
   const fileNames = Object.fromEntries(

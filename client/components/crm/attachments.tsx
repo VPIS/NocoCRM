@@ -43,7 +43,7 @@ export function FileLinks({
   const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
   const ids = files.map(toText).filter(Boolean);
   const { data } = useCrmQuery<CrmFile[]>(
-    `files?ids=${encodeURIComponent(ids.join(','))}`,
+    `attachments?ids=${encodeURIComponent(ids.join(','))}`,
     ids.length > 0,
   );
   // Newest upload first, so a truncated list shows the most recent files rather
@@ -190,7 +190,7 @@ export function FileDropZone({
       picked.forEach((file) => body.append('file', file));
       try {
         const result = await api<{ data: { id: string }[] }>(
-          `files?entity=${toText(entity)}`,
+          `attachments/upload?entity=${toText(entity)}`,
           'POST',
           body,
         );

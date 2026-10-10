@@ -32,7 +32,7 @@ import { decodeRow, encodeRow, jsonValue } from './values.js';
 // @temporary(nocobase-official): the Mail plugin tells only the browser that
 // a mailbox changed (`mail.changed`), so the provider reads every mailbox once
 // a minute, and the browser asks for its user's own after sending
-// (`POST /api/crm/mail/sync`). Replace the minute pass with a subscription
+// (`POST /api/mailTimeline/sync`). Replace the minute pass with a subscription
 // once the plugin publishes a server-side event.
 
 const BACKFILL_DAYS = 180;

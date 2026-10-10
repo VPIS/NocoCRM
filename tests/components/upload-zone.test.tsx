@@ -51,7 +51,9 @@ beforeEach(() => {
   state.api.mockReset();
   state.refresh.mockReset();
   state.api.mockImplementation(async (path: string) =>
-    path.startsWith('files') ? { data: [{ id: 'new-file' }] } : true,
+    path.startsWith('attachments/upload')
+      ? { data: [{ id: 'new-file' }] }
+      : true,
   );
 });
 
@@ -61,7 +63,7 @@ describe('UploadZone', () => {
     fireEvent.drop(zone, { dataTransfer: { files: [file('a.csv')] } });
     await waitFor(() => expect(state.refresh).toHaveBeenCalled());
     const [upload, patch] = state.api.mock.calls;
-    expect(upload[0]).toBe('files?entity=leads');
+    expect(upload[0]).toBe('attachments/upload?entity=leads');
     expect(upload[1]).toBe('POST');
     expect(upload[2]).toBeInstanceOf(FormData);
     expect((upload[2] as FormData).getAll('file')).toHaveLength(1);
