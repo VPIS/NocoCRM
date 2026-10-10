@@ -30,6 +30,9 @@ import {
   UserX,
   ListChecks,
   SquareCheckBig,
+  Sun,
+  Sunrise,
+  Moon,
 } from 'lucide-react';
 import { Button } from '../components/ui/button.js';
 import {
@@ -164,6 +167,7 @@ export default function DashboardPage(): ReactElement {
   // overview.
   const user = useSessionUser();
   const part = dayPart(timeZone);
+  const DayPartIcon = DAY_PART_ICONS[part];
   const greeting = user?.name
     ? text(`greeting.${part}`, { name: user.name })
     : text(`greetingAlone.${part}`);
@@ -205,7 +209,11 @@ export default function DashboardPage(): ReactElement {
         narrow
         title={
           <>
-            <GreetingFace className='mr-3 h-[0.92em] w-[0.94em] shrink-0' />
+            <DayPartIcon
+              aria-hidden
+              strokeWidth={2.25}
+              className='mr-3 size-[0.95em] shrink-0 text-foreground'
+            />
             {greeting}
           </>
         }
@@ -360,28 +368,11 @@ const AGENDA_ICONS: Record<AgendaName, LucideIcon> = {
   approvals: ListChecks,
 };
 
-// A face drawn in a few strokes that leads the greeting: two eyes, a nose
-// and a broad smile, in the band of colours the ask boxes' border carries
-// (client/styles.css), so the page's opening reads as one.
-function GreetingFace({ className }: { className?: string }): ReactElement {
-  return (
-    <svg
-      // Cropped to the strokes, so the box is the face and lines up with the
-      // glyphs beside it.
-      viewBox='1.5 1.5 21 20.5'
-      fill='none'
-      aria-hidden
-      // In the heading's own colour: black, or light in the dark theme.
-      className={`text-foreground ${className ?? ''}`}
-    >
-      <g stroke='currentColor' strokeLinecap='round' strokeLinejoin='round'>
-        <path d='M4.5 3v3.5M19.5 3v3.5' strokeWidth={3} />
-        <path d='M12.6 6.2 10.4 11.6l3.4.6' strokeWidth={2.2} />
-        <path d='M3 16.2c4.6 5.4 13.4 5.4 18 0' strokeWidth={3} />
-      </g>
-    </svg>
-  );
-}
+// The time of day the page greets in, drawn before the greeting: the sun
+// rising in the morning, the sun in the afternoon, the moon in the evening,
+// in the heading's own colour.
+const DAY_PART_ICONS: Record<'morning' | 'afternoon' | 'evening', LucideIcon> =
+  { morning: Sunrise, afternoon: Sun, evening: Moon };
 
 // The part of the day the page greets in, by the hour in the CRM's time
 // zone: morning until noon, afternoon until six, evening after.
