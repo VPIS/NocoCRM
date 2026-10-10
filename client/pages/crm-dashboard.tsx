@@ -4,7 +4,6 @@ import { dueText, toText } from '../components/crm/api.js';
 import {
   Suspense,
   lazy,
-  useId,
   useState,
   type ReactElement,
   type ReactNode,
@@ -365,7 +364,6 @@ const AGENDA_ICONS: Record<AgendaName, LucideIcon> = {
 // and a broad smile, in the band of colours the ask boxes' border carries
 // (client/styles.css), so the page's opening reads as one.
 function GreetingFace({ className }: { className?: string }): ReactElement {
-  const id = useId();
   return (
     <svg
       // Cropped to the strokes, so the box is the face and lines up with the
@@ -373,27 +371,10 @@ function GreetingFace({ className }: { className?: string }): ReactElement {
       viewBox='1.5 1.5 21 20.5'
       fill='none'
       aria-hidden
-      className={className}
+      // In the heading's own colour: black, or light in the dark theme.
+      className={`text-foreground ${className ?? ''}`}
     >
-      <defs>
-        <linearGradient id={id} x1='0' y1='0' x2='1' y2='1'>
-          <stop offset='0' style={{ stopColor: 'var(--ai)' }} />
-          <stop
-            offset='0.5'
-            style={{
-              stopColor: 'color-mix(in oklch, var(--ai) 45%, var(--info))',
-            }}
-          />
-          <stop
-            offset='1'
-            style={{
-              stopColor:
-                'color-mix(in oklch, var(--ai) 70%, var(--destructive))',
-            }}
-          />
-        </linearGradient>
-      </defs>
-      <g stroke={`url(#${id})`} strokeLinecap='round' strokeLinejoin='round'>
+      <g stroke='currentColor' strokeLinecap='round' strokeLinejoin='round'>
         <path d='M4.5 3v3.5M19.5 3v3.5' strokeWidth={3} />
         <path d='M12.6 6.2 10.4 11.6l3.4.6' strokeWidth={2.2} />
         <path d='M3 16.2c4.6 5.4 13.4 5.4 18 0' strokeWidth={3} />
