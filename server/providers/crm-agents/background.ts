@@ -20,6 +20,9 @@ import { chatModelEntries } from './assistant.js';
 // model without these instructions.
 
 export const BACKGROUND_MARKER = 'agents-background-v1';
+// The model the background work asks first when its service is configured
+// (server/config/ai.ts).
+const BACKGROUND_MODEL = 'qwen3.8-flash';
 const BACKGROUND_NAME = 'Background AI';
 
 // Prompt text, in English like the CRM's other prompts. Each run's own
@@ -57,8 +60,16 @@ export async function provisionBackgroundAgent(
   } catch {
     return;
   }
-  // The background work runs on Qwen by default.
-  const modelEntries = await chatModelEntries(agents, 'alibaba');
+  // The background work runs on Qwen by default, its fast model first: a
+  // model that reasons at length (Qwen Max) spent minutes and some six
+  // thousand tokens of thinking on each follow-up, which the work does not
+  // need.
+  const entries = await chatModelEntries(agents, 'alibaba');
+  const fast = entries.findIndex((entry) => entry.model === BACKGROUND_MODEL);
+  const modelEntries =
+    fast > 0
+      ? [entries[fast], ...entries.slice(0, fast), ...entries.slice(fast + 1)]
+      : entries;
   const agent = await agents.agents.create(creator.id, {
     name: BACKGROUND_NAME,
     type: 'online',
