@@ -9590,6 +9590,70 @@ describe("The assistant's conversations on the Agents plugin", () => {
       'skill-3',
     ]);
   });
+
+  it('adds the skills a start without their files missed, and never one already put there', async () => {
+    const created: string[] = [];
+    const fakeAgents = {
+      skills: {
+        list: () => Promise.resolve([]),
+        create: (_by: null, input: { content: string }) => {
+          created.push(/^name:\s*(\S+)$/mu.exec(input.content)?.[1] ?? '');
+          return Promise.resolve({ id: `skill-${String(created.length)}` });
+        },
+        attached: () => Promise.resolve([]),
+        attach: (_target: unknown, ids: string[]) => Promise.resolve(ids),
+      },
+    } as never;
+    await database
+      .query()
+      .deleteFrom('crmSettings')
+      .where('id', '=', 'agents-skills-v1')
+      .execute();
+    // A deployment built without the files: nothing to add, but the marker
+    // is written.
+    await provisionSkills(
+      fakeAgents,
+      database,
+      resolve(process.cwd(), 'no-such-dir'),
+    );
+    expect(created).toEqual([]);
+    // An administrator's deleted skill keeps its id in the marker.
+    await database
+      .query()
+      .updateTable('crmSettings')
+      .set({
+        value: JSON.stringify({
+          version: 1,
+          skillIds: { 'lead-follow-up': 'deleted-one' },
+        }),
+      })
+      .where('id', '=', 'agents-skills-v1')
+      .execute();
+    // The next start finds the files: the three never put there are added.
+    const dir = resolve(process.cwd(), 'ai/skills');
+    await provisionSkills(fakeAgents, database, dir);
+    await provisionSkills(fakeAgents, database, dir);
+    expect(created).toEqual([
+      'opportunity-follow-up',
+      'approval-review',
+      'task-preparation',
+    ]);
+    const marker = await database
+      .query()
+      .selectFrom('crmSettings')
+      .select('value')
+      .where('id', '=', 'agents-skills-v1')
+      .executeTakeFirst();
+    expect(JSON.parse(toText(marker?.value))).toEqual({
+      version: 1,
+      skillIds: {
+        'lead-follow-up': 'deleted-one',
+        'opportunity-follow-up': 'skill-1',
+        'approval-review': 'skill-2',
+        'task-preparation': 'skill-3',
+      },
+    });
+  });
 });
 
 describe('the notifications the inbox describes', () => {

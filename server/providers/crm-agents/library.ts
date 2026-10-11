@@ -27,43 +27,51 @@ export async function provisionSkills(
   dir: string,
 ): Promise<void> {
   const query = database.query();
-  const done = await query
+  const marker = await query
     .selectFrom('crmSettings')
-    .select('id')
+    .select('value')
     .where('id', '=', SKILLS_MARKER)
     .executeTakeFirst();
-  if (done) return;
   // The marker first, as the assistant's: an instance starting beside this
   // one finds it and adds nothing.
-  try {
-    await query
-      .insertInto('crmSettings')
-      .values({
-        id: SKILLS_MARKER,
-        value: JSON.stringify({ version: 1, skillIds: {} }),
-        updatedAt: new Date(),
-      })
-      .execute();
-  } catch {
-    return;
-  }
+  if (!marker)
+    try {
+      await query
+        .insertInto('crmSettings')
+        .values({
+          id: SKILLS_MARKER,
+          value: JSON.stringify({ version: 1, skillIds: {} }),
+          updatedAt: new Date(),
+        })
+        .execute();
+    } catch {
+      return;
+    }
+  // Only the skills never put there: one whose id the marker holds stays as
+  // an administrator left it, deleted included, while one that could not be
+  // read at an earlier start (a deployment built without the files) is added
+  // now.
+  const known = skillIdsOf(marker?.value);
+  const missing = METHOD_SKILLS.filter((slug) => !known[slug]);
+  if (!missing.length) return;
   // One a person added under the same name before is taken as it is.
   const library = new Map(
     (await agents.skills.list()).map((skill) => [skill.slug, skill.id]),
   );
-  const skillIds: Record<string, string> = {};
-  for (const slug of METHOD_SKILLS) {
+  const added: Record<string, string> = {};
+  for (const slug of missing) {
     const existing = library.get(slug);
     if (existing) {
-      skillIds[slug] = existing;
+      added[slug] = existing;
       continue;
     }
     const content = await readFile(join(dir, slug, 'SKILL.md'), 'utf8').catch(
       () => null,
     );
     if (!content) continue;
-    skillIds[slug] = (await agents.skills.create(null, { content })).id;
+    added[slug] = (await agents.skills.create(null, { content })).id;
   }
+  if (!Object.keys(added).length) return;
   // Attached to the assistant, beside what it already has.
   const assistant = await query
     .selectFrom('crmSettings')
@@ -76,17 +84,33 @@ export async function provisionSkills(
     const attached = await agents.skills.attached(target).catch(() => null);
     if (attached)
       await agents.skills.attach(target, [
-        ...new Set([...attached, ...Object.values(skillIds)]),
+        ...new Set([...attached, ...Object.values(added)]),
       ]);
   }
   await query
     .updateTable('crmSettings')
     .set({
-      value: JSON.stringify({ version: 1, skillIds }),
+      value: JSON.stringify({ version: 1, skillIds: { ...known, ...added } }),
       updatedAt: new Date(),
     })
     .where('id', '=', SKILLS_MARKER)
     .execute();
+}
+
+function skillIdsOf(value: unknown): Record<string, string> {
+  try {
+    const ids = (JSON.parse(String(value)) as { skillIds?: unknown }).skillIds;
+    return ids && typeof ids === 'object'
+      ? Object.fromEntries(
+          Object.entries(ids).filter(
+            (entry): entry is [string, string] =>
+              typeof entry[1] === 'string' && entry[1] !== '',
+          ),
+        )
+      : {};
+  } catch {
+    return {};
+  }
 }
 
 function agentIdOf(value: unknown): string | null {

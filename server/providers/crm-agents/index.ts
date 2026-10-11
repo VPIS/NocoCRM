@@ -9,6 +9,7 @@ import { crmPlansToken } from '../crm/plans/engine.js';
 import { deliverPlanOutcome } from './plan-news.js';
 import { registerCrmSkill } from './skill.js';
 import { provisionSkills } from './library.js';
+import { SKILLS_DIR } from '../crm/ai-model.js';
 import { provisionBackgroundAgent } from './background.js';
 import { registerContextKinds } from './context.js';
 import { provisionAssistant, renameAssistant } from './assistant.js';
@@ -125,7 +126,9 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
     await provisionSkills(
       agents,
       this.app.container.resolve(databaseManagerToken),
-      this.app.paths.root('ai/skills'),
+      // Beside the compiled server, as the background runs read them: a
+      // host may start the application from another root (NocoBase Studio).
+      SKILLS_DIR,
     );
     await provisionBackgroundAgent(
       agents,

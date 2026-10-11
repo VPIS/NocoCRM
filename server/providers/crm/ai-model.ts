@@ -221,7 +221,7 @@ export function shapeOf(shape: ZodType): string {
 // puts it there), else its SKILL.md as shipped (ai/skills/<name>, beside the
 // server in development, copied into dist by the build). Empty when
 // neither has it.
-const SKILLS = join(
+export const SKILLS_DIR = join(
   dirname(fileURLToPath(import.meta.url)),
   '..',
   '..',
@@ -242,7 +242,7 @@ export async function readSkill(
     } catch {
       // The library cannot be read: the shipped file below.
     }
-  text ??= await readFile(join(SKILLS, name, 'SKILL.md'), 'utf8').catch(
+  text ??= await readFile(join(SKILLS_DIR, name, 'SKILL.md'), 'utf8').catch(
     () => '',
   );
   return text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/u, '').trim();
