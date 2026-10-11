@@ -346,3 +346,91 @@
 [data-sidebar='menu-sub-button']:not([data-active]) {
   color: color-mix(in oklch, var(--sidebar-foreground) 82%, var(--sidebar));
 }
+
+/* The Agents plugin's pages in the CRM's look (components/crm/plugin-page.tsx
+   wraps them): the plugin draws its own copies of the registry primitives,
+   so the CRM's choices are laid over them here, outside the layers, where
+   they win over the primitives' utilities. Its boxes (a table's frame, a
+   settings box, a list) become the CRM's cards: white, rounded, the faint
+   border and a short shadow; inputs, selects, toggles and tinted boxes are
+   left alone. */
+.crm-plugin-page
+  div.rounded-lg.border:not([data-slot]):not(.inline-flex):not(
+    [class*='border-input']
+  ):not([class*='bg-']) {
+  border-radius: var(--radius-xl);
+  border-color: var(--border);
+  background-color: var(--card);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+/* Cards, which the registry draws with a ring, take the same border and
+   shadow. */
+.crm-plugin-page [data-slot='card'] {
+  --tw-ring-color: var(--border);
+  --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+/* A table as the list pages draw one: its header a band of the menu's
+   ground in muted words, its cells a little roomier, the first and last
+   set in from the card's edge. */
+.crm-plugin-page [data-slot='table-header'] {
+  background-color: color-mix(in oklab, var(--sidebar) 60%, transparent);
+}
+.crm-plugin-page [data-slot='table-row'] {
+  border-color: var(--border);
+}
+.crm-plugin-page [data-slot='table-header'] [data-slot='table-row']:hover {
+  background-color: transparent;
+}
+.crm-plugin-page [data-slot='table-head'] {
+  height: calc(var(--spacing) * 11);
+  padding-inline: calc(var(--spacing) * 3);
+  color: var(--muted-foreground);
+}
+.crm-plugin-page [data-slot='table-cell'] {
+  padding: calc(var(--spacing) * 2.5) calc(var(--spacing) * 3);
+}
+.crm-plugin-page [data-slot='table-head']:first-child,
+.crm-plugin-page [data-slot='table-cell']:first-child {
+  padding-left: calc(var(--spacing) * 4);
+}
+.crm-plugin-page [data-slot='table-head']:last-child,
+.crm-plugin-page [data-slot='table-cell']:last-child {
+  padding-right: calc(var(--spacing) * 4);
+}
+/* Line tabs (an agent's General, Capabilities, History) as a record page's
+   tabs: on a thin rule across the page, the open one in the foreground over
+   a 2px line of it that sits on the rule, the others muted until hovered. */
+.crm-plugin-page [data-slot='tabs-list'][data-variant='line'] {
+  width: 100%;
+  height: auto;
+  justify-content: flex-start;
+  gap: calc(var(--spacing) * 5);
+  padding: 0;
+  border-bottom: 1px solid var(--border);
+}
+.crm-plugin-page
+  [data-slot='tabs-list'][data-variant='line']
+  > [data-slot='tabs-trigger'] {
+  flex: none;
+  height: calc(var(--spacing) * 10);
+  padding-inline: 0;
+  color: var(--muted-foreground);
+}
+.crm-plugin-page
+  [data-slot='tabs-list'][data-variant='line']
+  > [data-slot='tabs-trigger']:hover,
+.crm-plugin-page
+  [data-slot='tabs-list'][data-variant='line']
+  > [data-slot='tabs-trigger'][data-active] {
+  color: var(--foreground);
+}
+.crm-plugin-page
+  [data-slot='tabs-list'][data-variant='line']
+  > [data-slot='tabs-trigger']::after {
+  bottom: -1px;
+}
+/* The usage chart's first series in the primary colour, as the reports
+   page's bars are, rather than the palette's orange. */
+.crm-plugin-page {
+  --chart-1: color-mix(in oklch, var(--primary) 75%, transparent);
+}

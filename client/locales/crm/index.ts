@@ -1477,8 +1477,8 @@ const wording = {
   agentPreset: {
     name: ['CRM assistant', 'CRM 助手'],
     description: [
-      'Looks records up across the CRM and suggests changes for the person to confirm.',
-      '在 CRM 里查询记录，提出改动交本人确认。',
+      'An AI that knows sales: it looks up your leads, deals and customers, reads where they stand and prepares the next step; any change it suggests waits for you to confirm.',
+      '懂销售的 AI 助手：查线索、商机和客户，分析进展、准备跟进；要改的内容先列出来，由你确认。',
     ],
   },
   // The agent whose model and instructions the CRM's background work

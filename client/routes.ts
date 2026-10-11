@@ -2,7 +2,10 @@ import {
   defineAppRoutes,
   type AppClientRouteContribution,
 } from '@nocobase/app-client/plugins';
-import type { AppClientRouteDefinition } from '@nocobase/app-client/plugins';
+import type {
+  AppClientRouteComponentLoader,
+  AppClientRouteDefinition,
+} from '@nocobase/app-client/plugins';
 import {
   agentsRoute,
   modelsRoute,
@@ -31,6 +34,24 @@ import {
   CalendarClock,
   SquareCheckBig,
 } from 'lucide-react';
+
+// One of the Agents plugin's pages, drawn in the CRM's look
+// (components/crm/plugin-page.tsx): its component is loaded as the plugin
+// declares it and wrapped, the route otherwise the plugin's own.
+const crmStyled = <
+  Route extends { componentLoader: AppClientRouteComponentLoader },
+>(
+  route: Route,
+): Route => ({
+  ...route,
+  componentLoader: async () => {
+    const [{ default: Page }, { withCrmStyle }] = await Promise.all([
+      route.componentLoader(),
+      import('./components/crm/plugin-page.js'),
+    ]);
+    return { default: withCrmStyle(Page) };
+  },
+});
 
 // Navigation is read from these declarations, and the sidebar follows their
 // order: the workspace and what to do first, then the AI team, the records
@@ -216,19 +237,19 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         ],
       },
       {
-        ...agentsRoute,
+        ...crmStyled(agentsRoute),
         navigation: { title: 'crm.navigation.agentList', icon: Bot },
       },
       {
-        ...skillsRoute,
+        ...crmStyled(skillsRoute),
         navigation: { title: 'crm.navigation.skills', icon: BookOpen },
       },
       {
-        ...modelsRoute,
+        ...crmStyled(modelsRoute),
         navigation: { title: 'crm.navigation.models', icon: Cpu },
       },
       {
-        ...usageRoute,
+        ...crmStyled(usageRoute),
         navigation: { title: 'crm.navigation.usage', icon: Gauge },
       },
     ],
