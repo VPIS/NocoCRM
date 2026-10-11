@@ -14,7 +14,8 @@ description: How to look records up in the CRM with its commands, and how to pro
 
 ## Looking things up
 
-- \`crm --help\` lists the commands: leads, companies, contacts, opportunities, tasks and approvals each have \`list\`, \`get\`, \`history\`, \`summary\` and \`statistics\`; besides them \`search\`, \`colleagues list\` and \`plan\`.
+- The commands: leads, companies, contacts, opportunities, tasks and approvals each have \`list\`, \`get\`, \`history\`, \`summary\` and \`statistics\`; besides them \`search\`, \`colleagues list\`, \`dashboard\` and \`plan\`.
+- \`crm dashboard\` (\`--scope team\` for the team's) gives today's and the overdue tasks, the approvals waiting, what needs attention, this month's business and the reports in one call.
 - \`crm <area> list --q <words>\` finds records; \`crm <area> get <id>\` reads one with its first page of history and related records; \`crm <area> summary\` counts and totals, grouped by a field or a period.
 - \`crm search --q <words>\` looks in every kind of record at once.
 - \`crm colleagues list\` turns a person's name into the id \`ownerId\`, \`approverId\` and \`internalParticipants\` take.

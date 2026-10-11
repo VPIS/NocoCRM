@@ -488,6 +488,10 @@ export function registerWorkspaceRoutes(
       tags: ['Dashboard'],
       summary: 'Get the dashboard',
       operationId: 'getDashboard',
+      // An agent's one call for what to do today and how the business goes,
+      // instead of a dozen lists: it reads only what the reader may read,
+      // as the search does, so it asks what the search asks.
+      ...runCommand(SEARCH_ACTION, { command: 'dashboard' }),
       description:
         "Today's work, what needs attention, this month's business and the reports, of the reader's own records or the team's.",
       responses: { '200': dataResponse(Dashboard), ...apiErrorResponses },
