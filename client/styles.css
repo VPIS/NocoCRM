@@ -339,12 +339,12 @@
   color: currentColor;
 }
 
-/* The menu's words a touch lighter than the menu's foreground, the current
+/* The menu's words lighter than the menu's foreground, the current
    entry's kept in full; mixed toward the menu's ground, so every theme and
    both colour schemes follow. */
 [data-sidebar='menu-button']:not([data-active]),
 [data-sidebar='menu-sub-button']:not([data-active]) {
-  color: color-mix(in oklch, var(--sidebar-foreground) 82%, var(--sidebar));
+  color: color-mix(in oklch, var(--sidebar-foreground) 70%, var(--sidebar));
 }
 
 /* The Agents plugin's pages in the CRM's look (components/crm/plugin-page.tsx
