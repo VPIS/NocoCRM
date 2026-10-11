@@ -50,6 +50,7 @@ const REMINDER_DAYS = [
 const NOTIFICATIONS = [
   'notifyApprovals',
   'notifyRecordChanges',
+  'notifyComments',
   'notifyTaskReminders',
 ] as const;
 const REMINDERS = [...REMINDER_DAYS, ...NOTIFICATIONS] as const;

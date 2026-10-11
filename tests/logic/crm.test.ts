@@ -6995,6 +6995,53 @@ describe('record notifications', () => {
     );
   });
 
+  it('tells of mentions under their own switch, not the record changes one', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Quietly mentioned lead',
+      ownerId: 'rep',
+    });
+    // Record changes off: a mention is still told.
+    await service.saveSettings(actor('admin'), { notifyRecordChanges: false });
+    try {
+      await service.addComment(
+        actor('rep'),
+        'leads',
+        toText(lead.id),
+        '@Manager a look',
+        ['manager'],
+      );
+      await vi.waitFor(async () =>
+        expect(
+          (await queued(lead.id)).map(([event, recipient]) => [
+            event,
+            recipient,
+          ]),
+        ).toEqual([['mentioned', 'manager']]),
+      );
+    } finally {
+      await service.saveSettings(actor('admin'), {
+        notifyRecordChanges: true,
+      });
+    }
+    // Comments off: the next mention is not.
+    await service.saveSettings(actor('admin'), { notifyComments: false });
+    try {
+      await service.addComment(
+        actor('rep'),
+        'leads',
+        toText(lead.id),
+        '@Other another look',
+        ['other'],
+      );
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(
+        (await queued(lead.id)).map(([event, recipient]) => [event, recipient]),
+      ).toEqual([['mentioned', 'manager']]);
+    } finally {
+      await service.saveSettings(actor('admin'), { notifyComments: true });
+    }
+  });
+
   it('attaches files to a comment, which the readers of its record may then open', async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: 'Comment file lead',

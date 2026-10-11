@@ -1663,8 +1663,13 @@ const wording = {
     ],
     notifyRecordChanges: ['Record change notifications', '记录变更通知'],
     notifyRecordChangesHint: [
-      "To the new owner when a record changes hands, to a task's participants when they are invited or removed or the task is rescheduled or cancelled, and to a colleague a comment mentions.",
-      '记录更换负责人时通知新负责人；任务参与人被邀请、移除，或任务改期、取消时通知参与人；评论里 @ 到的同事会收到通知。',
+      "To the new owner when a record changes hands, and to a task's participants when they are invited or removed or the task is rescheduled or cancelled.",
+      '记录更换负责人时通知新负责人；任务参与人被邀请、移除，或任务改期、取消时通知参与人。',
+    ],
+    notifyComments: ['Comment notifications', '评论通知'],
+    notifyCommentsHint: [
+      'To a colleague a comment @-mentions, and to everyone who has written in a thread when someone replies to it.',
+      '评论里 @ 到的同事会收到通知；有人回复时，通知参与过该讨论的人。',
     ],
     notifyTaskReminders: ['Task reminders', '任务提醒'],
     notifyTaskRemindersHint: [

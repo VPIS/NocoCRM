@@ -227,6 +227,13 @@ export class CrmService {
       !aiLanguages.includes(stored.aiLanguage)
     )
       delete stored.aiLanguage;
+    // Mentions and replies were told under the record-change switch until
+    // they had one of their own: a row from before keeps what it chose.
+    if (
+      stored.notifyComments === undefined &&
+      stored.notifyRecordChanges === false
+    )
+      stored.notifyComments = false;
     return {
       ...defaultSettings,
       ...stored,
@@ -2032,7 +2039,7 @@ export class CrmService {
       for (const recipientId of thread.people.filter(
         (person) => !mentioned.includes(person),
       ))
-        void this.queueMessage('recordChanges', {
+        void this.queueMessage('comments', {
           entity,
           recordId: id,
           recipientId,
@@ -2249,7 +2256,7 @@ export class CrmService {
     recipients: readonly string[],
   ): void {
     for (const recipientId of recipients)
-      void this.queueMessage('recordChanges', {
+      void this.queueMessage('comments', {
         entity,
         recordId,
         recipientId,

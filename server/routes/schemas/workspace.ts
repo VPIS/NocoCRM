@@ -24,6 +24,7 @@ const SettingsShape = {
   aiLanguage: z.enum(['en-US', 'zh-CN']),
   notifyApprovals: z.boolean(),
   notifyRecordChanges: z.boolean(),
+  notifyComments: z.boolean(),
   notifyTaskReminders: z.boolean(),
   businessGuidance: z.string().max(LONG_TEXT_LIMIT).meta({
     description:

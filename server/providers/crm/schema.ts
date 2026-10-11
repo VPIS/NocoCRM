@@ -463,10 +463,12 @@ export interface CrmSettings {
   aiLanguage: string;
   // Whether the CRM sends each kind of in-app message (service.ts,
   // queueMessage): approvals submitted, withdrawn and decided; records
-  // changing hands, task participants told of a change, mentions in a comment;
-  // and reminders before a task starts.
+  // changing hands and task participants told of a change; a colleague a
+  // comment mentions and the people of a thread a reply answers; and
+  // reminders before a task starts.
   notifyApprovals: boolean;
   notifyRecordChanges: boolean;
+  notifyComments: boolean;
   notifyTaskReminders: boolean;
   // The deployment's business guidance as an administrator wrote it on the
   // settings page (Markdown); empty for the one shipped in guidance.ts, in
@@ -475,10 +477,12 @@ export interface CrmSettings {
   businessGuidance: string;
   options: Record<string, string[]>;
 }
-export type NotificationKind = 'approvals' | 'recordChanges' | 'taskReminders';
+export type NotificationKind =
+  'approvals' | 'recordChanges' | 'comments' | 'taskReminders';
 export const notificationSwitches = {
   approvals: 'notifyApprovals',
   recordChanges: 'notifyRecordChanges',
+  comments: 'notifyComments',
   taskReminders: 'notifyTaskReminders',
 } as const satisfies Record<NotificationKind, keyof CrmSettings>;
 export const aiLanguages = ['zh-CN', 'en-US'];
@@ -494,6 +498,7 @@ export const defaultSettings: CrmSettings = {
   aiLanguage: 'en-US',
   notifyApprovals: true,
   notifyRecordChanges: true,
+  notifyComments: true,
   notifyTaskReminders: true,
   businessGuidance: '',
   options: {
