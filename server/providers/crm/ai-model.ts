@@ -4,7 +4,10 @@ import { fileURLToPath } from 'node:url';
 import { agentsToken } from '@nocobase/app-plugin-agents/server/tokens';
 import { databaseManagerToken } from '@nocobase/db';
 import type { ServiceResolver } from '@nocobase/service-provider';
-import { BACKGROUND_MARKER } from '../crm-agents/background.js';
+import {
+  BACKGROUND_MARKER,
+  BACKGROUND_SOURCE,
+} from '../crm-agents/background.js';
 import { z, type ZodType } from 'zod';
 import { CrmError, toText } from './schema.js';
 
@@ -21,8 +24,9 @@ import { CrmError, toText } from './schema.js';
 // checked against the shape the caller gives; the gateway's `generate` has
 // no structured output of its own.
 
-// Who the gateway records the use as.
-export const AI_SOURCE = 'crm';
+// Who the gateway records the use as: the Background AI agent, whose model
+// and instructions the work follows (crm-agents/background.ts).
+export const AI_SOURCE = BACKGROUND_SOURCE;
 
 type ModelRef = { modelService: string; model: string };
 

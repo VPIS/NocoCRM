@@ -20,6 +20,12 @@ import { chatModelEntries } from './assistant.js';
 // model without these instructions.
 
 export const BACKGROUND_MARKER = 'agents-background-v1';
+// What the model gateway records the background work's use as (AI_SOURCE in
+// crm/ai-model.ts): the Agents plugin's usage page lists it as written, under
+// its model calls outside runs, so it reads as this agent's. It was `crm`
+// before (renameUsageSource).
+export const BACKGROUND_SOURCE = 'Background AI';
+const FORMER_SOURCE = 'crm';
 // The model the background work asks first when its service is configured
 // (server/config/ai.ts).
 const BACKGROUND_MODEL = 'qwen3.8-flash';
@@ -88,4 +94,20 @@ export async function provisionBackgroundAgent(
     })
     .where('id', '=', BACKGROUND_MARKER)
     .execute();
+}
+
+// The background work's model use recorded before it was named for the
+// agent, renamed so the usage page shows one
+// row for it. @temporary(nocobase-official): the plugin's own table, written
+// directly, the plugin having no way to rename a source.
+export async function renameUsageSource(
+  database: DatabaseManager,
+): Promise<void> {
+  await database
+    .query()
+    .updateTable('agModelUsage')
+    .set({ source: BACKGROUND_SOURCE })
+    .where('source', '=', FORMER_SOURCE)
+    .execute()
+    .catch(() => undefined);
 }

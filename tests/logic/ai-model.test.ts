@@ -106,10 +106,10 @@ describe("the CRM's model", () => {
     );
     expect(answer).toEqual({ grade: 'A' });
     expect(calls).toHaveLength(2);
-    // Recorded as the CRM's use, told the time where the CRM works.
+    // Recorded as the Background AI's use.
     expect(calls[0]).toMatchObject({
       model: { modelService: 'qwen', model: 'qwen-max' },
-      source: 'crm',
+      source: 'Background AI',
     });
     // Told the time where the CRM works, and the business guidance.
     expect(calls[0].system).toContain('(Asia/Shanghai)');
