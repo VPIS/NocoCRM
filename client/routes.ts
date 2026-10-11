@@ -20,7 +20,6 @@ import {
   Inbox,
   ListChecks,
   Mail,
-  MessagesSquare,
   Radar,
   ScanSearch,
   ShieldCheck,
@@ -119,10 +118,9 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         path: '/crm/agent-chat',
         auth: 'required',
         authz: page('crm-agent-chat'),
-        navigation: {
-          title: 'crm.navigation.conversations',
-          icon: MessagesSquare,
-        },
+        // No menu entry: the overview lists the latest conversations and
+        // leads here through View all; the header still names the page.
+        breadcrumb: { title: 'crm.navigation.conversations' },
         componentLoader: () => import('./pages/crm-agent-chat/index.js'),
         children: [
           {

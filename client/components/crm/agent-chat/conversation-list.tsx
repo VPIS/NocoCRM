@@ -220,7 +220,7 @@ function RowTarget({
 // led by who wrote it ("You:", or the agent's name); `at` is what it is read
 // again on: the plugin's list carries no preview, so each row reads its
 // conversation's last message, read again when the conversation moves on.
-function LastMessage({
+export function LastMessage({
   id,
   at,
   agent,
