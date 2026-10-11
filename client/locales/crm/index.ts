@@ -1515,7 +1515,7 @@ const wording = {
       home: ['Overview', '工作台'],
       record: ['Record pages', '记录详情页'],
       decisions: ['AI suggestions in the inbox', '收件箱的 AI 建议'],
-      agents: ['Agent team', 'Agent 团队'],
+      agents: ['Auto follow-up', '自动跟进'],
       reports: ['Reports', '报表'],
       agentChat: ['AI conversations', 'AI 对话'],
     },
@@ -2117,6 +2117,8 @@ const wording = {
     scheduledTasks: ['Scheduled tasks', '定时任务'],
     // The Agents plugin's pages, in Settings (migration step 2).
     agentsGroup: ['Agent team', 'Agent 团队'],
+    // The CRM's four agents on one page (pages/crm-agents.tsx).
+    autoFollowUp: ['Auto follow-up', '自动跟进'],
     agentList: ['Agents', 'Agent'],
     models: ['Models', '模型'],
     skills: ['Skills', '技能'],

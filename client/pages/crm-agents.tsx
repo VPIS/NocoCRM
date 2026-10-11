@@ -1,14 +1,19 @@
 import { useState, type ReactElement } from 'react';
 import { useCan } from '@nocobase/app-plugin-authorization/client';
-import { Link, useLocation } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import {
   Ban,
   CircleCheck,
   CircleX,
+  ClipboardList,
   Clock3,
   Hourglass,
   Percent,
   Play,
+  ScanSearch,
+  ShieldCheck,
+  TrendingUp,
+  type LucideIcon,
 } from 'lucide-react';
 import { Badge } from '../components/ui/badge.js';
 import { Button } from '../components/ui/button.js';
@@ -28,6 +33,7 @@ import {
   RecordLink,
 } from '../components/crm/common.js';
 import { VerdictBadge } from '../components/crm/lead-evaluation.js';
+import { useRunningAgents } from '../components/crm/waiting-count.js';
 import {
   relativeTime,
   toText,
@@ -40,11 +46,12 @@ import {
   type Data,
 } from '../components/crm/api.js';
 
-// One of the CRM's agents (server/providers/crm/agents.ts): what it does,
-// when it runs (each trigger switched on or off by an administrator), how
-// its runs fared over the last week or month, and its runs, newest first,
-// each opening its record. The agent comes from the path, one route each in
-// the menu's Agents section.
+// The CRM's four agents (server/providers/crm/agents.ts) on one page, Auto
+// follow-up in the menu, a tab each: what the agent does, when it runs (each
+// trigger switched on or off by an administrator), how its runs fared over
+// the last week or month, and its runs, newest first, each opening its
+// record. The tab is the path's last segment (/crm/agents/<agent>, the
+// address the menu's four entries once had), the first when there is none.
 
 type AgentName = 'leads' | 'opportunities' | 'approvals' | 'tasks';
 // The method skill each agent works by (ai/skills).
@@ -60,6 +67,12 @@ const AGENTS: readonly AgentName[] = [
   'approvals',
   'tasks',
 ];
+const ICONS: Record<AgentName, LucideIcon> = {
+  leads: ScanSearch,
+  opportunities: TrendingUp,
+  approvals: ShieldCheck,
+  tasks: ClipboardList,
+};
 const FRAME = 'border border-border shadow-xs ring-0';
 const STATUSES = ['pending', 'accepted', 'dismissed', 'running', 'failed'];
 
@@ -73,12 +86,67 @@ interface Overview {
   runs: Data[];
 }
 
-export default function AgentPage(): ReactElement {
+export default function AgentsPage(): ReactElement {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { text } = useCrmText();
+  const { data: meta } = useMetadata();
+  const running = useRunningAgents();
   const agent =
     AGENTS.find((name) => pathname.endsWith(`/agents/${name}`)) ?? 'leads';
-  // A new agent starts from the top, its own filters.
-  return <AgentView key={agent} agent={agent} />;
+  return (
+    <CrmFrame title={text('navigation.autoFollowUp')}>
+      {/* Underlined tabs on a thin rule, as a record page's: the open one
+          over a 2px line of the foreground, the others muted until
+          hovered; an agent with runs under way shows the AI's pulsing dot
+          and their count, one switched off says so. */}
+      <div
+        role='tablist'
+        className='flex w-full flex-wrap gap-x-5 border-b border-border'
+      >
+        {AGENTS.map((name) => {
+          const Icon = ICONS[name];
+          const selected = name === agent;
+          const count = running[name] ?? 0;
+          const off = meta?.agents?.[name]?.enabled === false;
+          return (
+            <button
+              key={name}
+              type='button'
+              role='tab'
+              aria-selected={selected}
+              onClick={() =>
+                void navigate(`/crm/agents/${name}`, { replace: true })
+              }
+              className={`-mb-px flex h-10 items-center gap-1.5 border-b-2 text-sm font-medium transition-colors outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset ${
+                selected
+                  ? 'border-foreground text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Icon className='size-4' />
+              {text(`agents.${name}.title`)}
+              {count > 0 ? (
+                <span
+                  className='inline-flex items-center gap-1 text-xs text-ai tabular-nums'
+                  title={text('agents.runningHint', { count })}
+                >
+                  <span className='size-1.5 animate-pulse rounded-full bg-ai' />
+                  {count}
+                </span>
+              ) : off ? (
+                <span className='text-xs font-normal text-muted-foreground'>
+                  {text('agents.off')}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+      {/* A new agent starts from the top, its own filters. */}
+      <AgentView key={agent} agent={agent} />
+    </CrmFrame>
+  );
 }
 
 function AgentView({ agent }: { agent: AgentName }): ReactElement {
@@ -117,11 +185,7 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
     }
   };
   if (!data)
-    return (
-      <CrmFrame title={text(`agents.${agent}.title`)}>
-        {query.error ? <ErrorNotice error={query.error} /> : <Loading />}
-      </CrmFrame>
-    );
+    return query.error ? <ErrorNotice error={query.error} /> : <Loading />;
   const stats = data[period];
   const enabled = data.switches.enabled;
   const percent = (value: unknown): string =>
@@ -131,23 +195,19 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
       ? text(`agents.started.${trigger}`)
       : text(`agents.triggers.${trigger}.label`, { defaultValue: trigger });
   return (
-    <CrmFrame
-      title={
-        <span className='flex items-center gap-3'>
-          {text(`agents.${agent}.title`)}
-          {/* Whether it runs on its own: on or off. "Running" is a run
-              under way, which the menu counts. */}
-          <Badge variant={enabled ? 'success' : 'muted'}>
-            {text(enabled ? 'agents.enabledTag' : 'agents.off')}
-          </Badge>
-        </span>
-      }
-    >
+    <>
       <ErrorNotice error={error} />
       <div className='grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]'>
         <Card className={FRAME}>
           <CardHeader>
-            <CardTitle className='text-base'>{text('agents.duty')}</CardTitle>
+            {/* Whether it runs on its own: on or off. "Running" is a run
+                under way, which the tab counts. */}
+            <CardTitle className='flex items-center gap-2 text-base'>
+              {text('agents.duty')}
+              <Badge variant={enabled ? 'success' : 'muted'}>
+                {text(enabled ? 'agents.enabledTag' : 'agents.off')}
+              </Badge>
+            </CardTitle>
           </CardHeader>
           <CardContent className='space-y-3 text-sm'>
             <p className='leading-relaxed'>
@@ -413,6 +473,6 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
           onLoad={() => setSize((current) => Math.min(100, current + 20))}
         />
       </section>
-    </CrmFrame>
+    </>
   );
 }

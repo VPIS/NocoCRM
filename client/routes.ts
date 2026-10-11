@@ -16,7 +16,6 @@ import {
   Gauge,
   Building2,
   ChartLine,
-  ClipboardList,
   UserRound,
   Handshake,
   LayoutDashboard,
@@ -24,9 +23,7 @@ import {
   ListChecks,
   Mail,
   Radar,
-  ScanSearch,
-  ShieldCheck,
-  TrendingUp,
+  Workflow,
   Settings2,
   ShieldUser,
   UsersRound,
@@ -166,10 +163,8 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     ],
   },
   // The Agent team, after Integrations: the AI's work the system starts on
-  // its own, one page per agent (pages/crm-agents.tsx, which reads the agent
-  // from the path; the four share the page grant crm-agents, an exception to
-  // "the page id is the route name": they are one feature, granted
-  // together), then the Agents plugin's own pages, which it leaves to the
+  // its own, its four agents on one page with a tab each (Auto follow-up,
+  // pages/crm-agents.tsx), then the Agents plugin's own pages, which it leaves to the
   // application to route (migration step 2): the agents, the skill library,
   // their model services and what runs used. Each of those keeps the page
   // grant or settings item its definition declares, so it shows only to
@@ -201,22 +196,25 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
           },
         ],
       },
-      ...[
-        ['leads', ScanSearch],
-        ['opportunities', TrendingUp],
-        ['approvals', ShieldCheck],
-        ['tasks', ClipboardList],
-      ].map(([agent, icon]) => ({
-        name: `crm-agents-${String(agent)}`,
-        path: `/crm/agents/${String(agent)}`,
-        auth: 'required' as const,
+      // The four agents on one page, a tab each: /crm/agents/<agent> names
+      // the tab (the page draws it, as a record page draws its own;
+      // pages/crm-record-tab.tsx renders nothing), and /crm/agents opens on
+      // the first.
+      {
+        name: 'crm-agents',
+        path: '/crm/agents',
+        auth: 'required',
         authz: page('crm-agents'),
-        navigation: {
-          title: `crm.agents.${String(agent)}.title`,
-          icon: icon as typeof Radar,
-        },
+        navigation: { title: 'crm.navigation.autoFollowUp', icon: Workflow },
         componentLoader: () => import('./pages/crm-agents.js'),
-      })),
+        children: [
+          {
+            name: 'crm-agents-tab',
+            path: ':agent',
+            componentLoader: () => import('./pages/crm-record-tab.js'),
+          },
+        ],
+      },
       {
         ...agentsRoute,
         navigation: { title: 'crm.navigation.agentList', icon: Bot },

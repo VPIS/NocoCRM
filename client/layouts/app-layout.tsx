@@ -19,7 +19,10 @@ import { NavigationMenu } from './components/navigation-menu.js';
 // Application changes: the counts beside "Inbox", "Approvals" and "Mailbox"
 // (navigation-badges.ts, waiting-count.ts, mail-unread.ts) and the banner
 // offering the demo dataset.
-import { NavigationBadgesContext } from './components/navigation-badges.js';
+import {
+  NavigationBadgesContext,
+  type NavigationBadge,
+} from './components/navigation-badges.js';
 import {
   useApprovalsToDecide,
   useInboxCount,
@@ -65,21 +68,24 @@ export function AppLayout({ routes }: AppLayoutProps): ReactElement {
   const inbox = useInboxCount();
   // And beside Approvals, those waiting on the reader's decision.
   const toDecide = useApprovalsToDecide();
-  // And beside each agent, its runs under way, as a live badge.
+  // And beside Auto follow-up, the four agents' runs under way, as a live
+  // badge.
   const running = useRunningAgents();
   const { text: crmText } = useCrmText();
-  const runningBadges = Object.fromEntries(
-    Object.entries(running)
-      .filter(([, count]) => count > 0)
-      .map(([agent, count]) => [
-        `crm-agents-${agent}`,
-        {
-          count,
-          live: true as const,
-          hint: crmText('agents.runningHint', { count }),
-        },
-      ]),
+  const runningCount = Object.values(running).reduce(
+    (sum, count) => sum + count,
+    0,
   );
+  const runningBadges: Record<string, NavigationBadge> =
+    runningCount > 0
+      ? {
+          'crm-agents': {
+            count: runningCount,
+            live: true as const,
+            hint: crmText('agents.runningHint', { count: runningCount }),
+          },
+        }
+      : {};
   const unreadMail = useMailUnreadCount();
 
   return (
