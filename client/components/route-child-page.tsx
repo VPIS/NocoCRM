@@ -117,7 +117,7 @@ export function RouteChildPage({
         <EnclosingLayerContext.Provider value={scrollerRef}>
           {/* Application change: a covering page draws its own heading, not
               the tabs of the page it covers (page-frame.ts). */}
-          <PageFrameContext.Provider value={null}>
+          <PageFrameContext.Provider value={false}>
             {children}
           </PageFrameContext.Provider>
         </EnclosingLayerContext.Provider>

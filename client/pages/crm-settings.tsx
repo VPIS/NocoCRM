@@ -257,7 +257,7 @@ function SettingsForm({
           dataset is imported and removed on its own. */}
       <Card
         id='settings-business'
-        className='max-w-4xl scroll-mt-4 border border-border shadow-xs ring-0'
+        className='max-w-4xl scroll-mt-16 border border-border shadow-xs ring-0'
       >
         <CardHeader>
           <CardTitle>{text('business')}</CardTitle>
@@ -269,7 +269,7 @@ function SettingsForm({
       </Card>
       <Card
         id='settings-reminders'
-        className='max-w-4xl scroll-mt-4 border border-border shadow-xs ring-0'
+        className='max-w-4xl scroll-mt-16 border border-border shadow-xs ring-0'
       >
         <CardHeader>
           <CardTitle>{text('reminders')}</CardTitle>
@@ -310,7 +310,7 @@ function SettingsForm({
       </Card>
       <Card
         id='settings-demoData'
-        className='max-w-4xl scroll-mt-4 border border-border shadow-xs ring-0'
+        className='max-w-4xl scroll-mt-16 border border-border shadow-xs ring-0'
       >
         <CardHeader>
           <CardTitle>{text('demoData')}</CardTitle>

@@ -100,6 +100,8 @@ export default function AgentsPage(): ReactElement {
       {/* An agent with runs under way shows the AI's pulsing dot and their
           count, one switched off says so. */}
       <LinkTabs
+        // Close under the heading, past the frame's spacing.
+        className='-mt-4'
         label={text('navigation.autoFollowUp')}
         tabs={AGENTS.map((name) => {
           const count = running[name] ?? 0;

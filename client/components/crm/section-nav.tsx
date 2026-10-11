@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useState, type ReactElement } from 'react';
 
-// A long page's own navigation (the overview): a row of its sections that
+// A long page's own navigation (the reports): a row of its sections that
 // stays under the header as the page scrolls, marks the one being read and
 // scrolls to one at a click. The sections carry the ids it names and a top
 // scroll margin clearing the row.
@@ -47,33 +47,40 @@ export function SectionNav({
     <nav
       aria-label={label}
       // The page scrolls in the layout's column under the header, so the
-      // row sticks to that column's top.
-      className='sticky top-0 z-30 -mx-4 flex gap-1 overflow-x-auto border-b border-border bg-background/85 px-4 py-2 backdrop-blur-xl scroll-quiet md:-mx-8 md:px-8'
+      // row sticks to that column's top; it sits close under the heading,
+      // as every page's tabs do, and keeps a band of its ground under its
+      // rule, so the content scrolling beneath stays clear of it.
+      className='sticky top-0 z-30 -mx-4 -mt-4 mb-3 pb-3 bg-background/85 px-4 backdrop-blur-xl md:-mx-8 md:px-8'
     >
-      {sections.map((section) => (
-        <a
-          key={section.id}
-          href={`#${section.id}`}
-          aria-current={active === section.id ? 'true' : undefined}
-          onClick={(event) => {
-            event.preventDefault();
-            setActive(section.id);
-            document
-              .getElementById(section.id)
-              ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }}
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1 text-sm whitespace-nowrap transition-colors ${
-            active === section.id
-              ? 'border-transparent bg-card font-medium text-foreground shadow-xs'
-              : 'border-transparent text-muted-foreground hover:bg-card/60 hover:text-foreground'
-          }`}
-        >
-          {section.icon && (
-            <section.icon aria-hidden className='size-3.5 shrink-0' />
-          )}
-          {section.label}
-        </a>
-      ))}
+      {/* Drawn as the application's tabs (LinkTabs, a record page's):
+          underlined on a thin rule, the one being read in the foreground
+          over a 2px line of it, the others muted until hovered. */}
+      <div className='flex gap-x-5 overflow-x-auto border-b border-border scroll-quiet'>
+        {sections.map((section) => (
+          <a
+            key={section.id}
+            href={`#${section.id}`}
+            aria-current={active === section.id ? 'true' : undefined}
+            onClick={(event) => {
+              event.preventDefault();
+              setActive(section.id);
+              document
+                .getElementById(section.id)
+                ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            className={`-mb-px inline-flex h-10 shrink-0 items-center gap-1.5 border-b-2 text-sm font-medium whitespace-nowrap transition-colors ${
+              active === section.id
+                ? 'border-foreground text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {section.icon && (
+              <section.icon aria-hidden className='size-4 shrink-0' />
+            )}
+            {section.label}
+          </a>
+        ))}
+      </div>
     </nav>
   );
 }

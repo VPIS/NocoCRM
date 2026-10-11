@@ -11,6 +11,7 @@ import type { LucideIcon } from 'lucide-react';
 export function LinkTabs({
   tabs,
   label,
+  className = '',
 }: {
   tabs: readonly {
     to: string;
@@ -20,13 +21,15 @@ export function LinkTabs({
     extra?: ReactNode;
   }[];
   label?: string;
+  // Where the page places it: close under its heading.
+  className?: string;
 }): ReactElement {
   const navigate = useNavigate();
   return (
     <div
       role='tablist'
       aria-label={label}
-      className='flex w-full flex-wrap gap-x-5 border-b border-border'
+      className={`flex w-full flex-wrap gap-x-5 border-b border-border ${className}`}
     >
       {tabs.map(({ to, label: name, icon: Icon, selected, extra }) => (
         <button

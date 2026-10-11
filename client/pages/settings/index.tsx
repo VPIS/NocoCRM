@@ -18,7 +18,8 @@ import { useCrmText } from '../../components/crm/api.js';
 // and its people, a tab each, at the addresses they had as entries of their
 // own (/settings/crm, /settings/users …). Each tab's route still checks its
 // own grant; a tab shows only to whoever that grant lets open it, and
-// /settings opens on the first of those. The tabs' pages keep their
+// /settings opens on the first of those. This page draws the title and the
+// tabs, which stick to the top as it scrolls; the tabs' pages keep their
 // description and actions, which PageHeader draws under the tabs
 // (components/page-frame.ts).
 interface Tab {
@@ -70,23 +71,30 @@ export default function SettingsPage(): ReactElement {
     return <Navigate to={`/settings/${tabs[0]?.path ?? 'api-keys'}`} replace />;
   }
   return (
-    <PageFrameContext.Provider
-      value={{
-        title: text('navigation.settings'),
-        tabs: (
-          <LinkTabs
-            label={text('navigation.settings')}
-            tabs={tabs.map((tab) => ({
-              to: `/settings/${tab.path}`,
-              label: text(tab.label),
-              icon: tab.icon,
-              selected: tab.path === current,
-            }))}
-          />
-        ),
-      }}
-    >
-      <Outlet />
-    </PageFrameContext.Provider>
+    <>
+      <div className='px-6 pt-6 md:px-8 md:pt-8'>
+        <h1 className='font-heading text-2xl font-semibold tracking-[-0.035em]'>
+          {text('navigation.settings')}
+        </h1>
+      </div>
+      {/* The tabs stick to the top of the layout's scrolling column as the
+          page scrolls, as the reports page's section row does, with a band
+          under their rule that the content scrolls beneath; below the
+          covering pages (z-10) that a tab opens over itself. */}
+      <div className='sticky top-0 z-[9] bg-background/85 px-6 pt-2 pb-3 backdrop-blur-xl md:px-8'>
+        <LinkTabs
+          label={text('navigation.settings')}
+          tabs={tabs.map((tab) => ({
+            to: `/settings/${tab.path}`,
+            label: text(tab.label),
+            icon: tab.icon,
+            selected: tab.path === current,
+          }))}
+        />
+      </div>
+      <PageFrameContext.Provider value>
+        <Outlet />
+      </PageFrameContext.Provider>
+    </>
   );
 }
