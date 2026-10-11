@@ -11,6 +11,9 @@ import {
 } from '@nocobase/app-plugin-agents/client/routes';
 import {
   Bot,
+  BookOpen,
+  Cpu,
+  Gauge,
   Building2,
   ChartLine,
   ClipboardList,
@@ -100,54 +103,6 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     },
     componentLoader: () => import('./pages/crm-list.js'),
   })),
-  // The agents: the AI's work the system starts on its own, one page per
-  // agent (pages/crm-agents.tsx, which reads the agent from the path). The
-  // four share the page grant crm-agents, an exception to "the page id is
-  // the route name": they are one feature, granted together.
-  // Conversations leads them: the person's own talks with the CRM's agent,
-  // the assistant panel's full-page view, in place of the list the sidebar
-  // once kept under the menu. The open conversation, or "new", is the
-  // child's segment; the page draws it, as a record page draws its tab
-  // (pages/crm-record-tab.tsx renders nothing).
-  {
-    name: 'crm-agent-group',
-    navigation: { title: 'crm.navigation.agents' },
-    children: [
-      {
-        name: 'crm-agent-chat',
-        path: '/crm/agent-chat',
-        auth: 'required',
-        authz: page('crm-agent-chat'),
-        // No menu entry: the overview lists the latest conversations and
-        // leads here through View all; the header still names the page.
-        breadcrumb: { title: 'crm.navigation.conversations' },
-        componentLoader: () => import('./pages/crm-agent-chat/index.js'),
-        children: [
-          {
-            name: 'crm-agent-chat-conversation',
-            path: ':conversationId',
-            componentLoader: () => import('./pages/crm-record-tab.js'),
-          },
-        ],
-      },
-      ...[
-        ['leads', ScanSearch],
-        ['opportunities', TrendingUp],
-        ['approvals', ShieldCheck],
-        ['tasks', ClipboardList],
-      ].map(([agent, icon]) => ({
-        name: `crm-agents-${String(agent)}`,
-        path: `/crm/agents/${String(agent)}`,
-        auth: 'required' as const,
-        authz: page('crm-agents'),
-        navigation: {
-          title: `crm.agents.${String(agent)}.title`,
-          icon: icon as typeof Radar,
-        },
-        componentLoader: () => import('./pages/crm-agents.js'),
-      })),
-    ],
-  },
   // The records: leads and deals, then the companies and their people.
   {
     name: 'crm-records',
@@ -207,6 +162,76 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         auth: 'required',
         authz: page('mail.workspace'),
         componentLoader: () => import('./pages/crm-mail/accounts.js'),
+      },
+    ],
+  },
+  // The Agent team, after Integrations: the AI's work the system starts on
+  // its own, one page per agent (pages/crm-agents.tsx, which reads the agent
+  // from the path; the four share the page grant crm-agents, an exception to
+  // "the page id is the route name": they are one feature, granted
+  // together), then the Agents plugin's own pages, which it leaves to the
+  // application to route (migration step 2): the agents, the skill library,
+  // their model services and what runs used. Each of those keeps the page
+  // grant or settings item its definition declares, so it shows only to
+  // whoever may open it; the coding-tool runtimes page is left out, the
+  // CRM's agents being online ones.
+  // Conversations leads them: the person's own talks with the CRM's agent,
+  // the assistant panel's full-page view, in place of the list the sidebar
+  // once kept under the menu. The open conversation, or "new", is the
+  // child's segment; the page draws it, as a record page draws its tab
+  // (pages/crm-record-tab.tsx renders nothing).
+  {
+    name: 'crm-agent-group',
+    navigation: { title: 'crm.navigation.agentsGroup' },
+    children: [
+      {
+        name: 'crm-agent-chat',
+        path: '/crm/agent-chat',
+        auth: 'required',
+        authz: page('crm-agent-chat'),
+        // No menu entry: the overview lists the latest conversations and
+        // leads here through View all; the header still names the page.
+        breadcrumb: { title: 'crm.navigation.conversations' },
+        componentLoader: () => import('./pages/crm-agent-chat/index.js'),
+        children: [
+          {
+            name: 'crm-agent-chat-conversation',
+            path: ':conversationId',
+            componentLoader: () => import('./pages/crm-record-tab.js'),
+          },
+        ],
+      },
+      ...[
+        ['leads', ScanSearch],
+        ['opportunities', TrendingUp],
+        ['approvals', ShieldCheck],
+        ['tasks', ClipboardList],
+      ].map(([agent, icon]) => ({
+        name: `crm-agents-${String(agent)}`,
+        path: `/crm/agents/${String(agent)}`,
+        auth: 'required' as const,
+        authz: page('crm-agents'),
+        navigation: {
+          title: `crm.agents.${String(agent)}.title`,
+          icon: icon as typeof Radar,
+        },
+        componentLoader: () => import('./pages/crm-agents.js'),
+      })),
+      {
+        ...agentsRoute,
+        navigation: { title: 'crm.navigation.agentList', icon: Bot },
+      },
+      {
+        ...skillsRoute,
+        navigation: { title: 'crm.navigation.skills', icon: BookOpen },
+      },
+      {
+        ...modelsRoute,
+        navigation: { title: 'crm.navigation.models', icon: Cpu },
+      },
+      {
+        ...usageRoute,
+        navigation: { title: 'crm.navigation.usage', icon: Gauge },
       },
     ],
   },
@@ -452,24 +477,6 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
             componentLoader: () =>
               import('./pages/settings/scheduled-tasks/detail.js'),
           },
-        ],
-      },
-      // The Agents plugin's pages, which it leaves to the application to route
-      // (migration step 2): the agents, their model services, the skill
-      // library and what runs used. Each keeps the page grant or settings item
-      // its definition declares; the coding-tool runtimes page is left out, the
-      // CRM's agents being online ones.
-      {
-        name: 'agents-settings',
-        navigation: { title: 'crm.navigation.agentsGroup', icon: Bot },
-        children: [
-          {
-            ...agentsRoute,
-            navigation: { title: 'crm.navigation.agentList' },
-          },
-          { ...modelsRoute, navigation: { title: 'crm.navigation.models' } },
-          { ...skillsRoute, navigation: { title: 'crm.navigation.skills' } },
-          { ...usageRoute, navigation: { title: 'crm.navigation.usage' } },
         ],
       },
     ],
