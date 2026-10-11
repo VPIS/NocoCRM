@@ -273,7 +273,6 @@ export const adminWording = {
     // Page grants whose routes name no menu entry of their own, or that
     // several entries share, by the page id `client/routes.ts` declares.
     pages: {
-      'crm-agents': ['Agent pages (all four)', 'Agent 页面（全部四个）'],
       'crm-agent-chat': ['Agent conversations', 'Agent 对话'],
       'crm-record': ['Record pages', '记录详情页'],
       'crm-decisions': ['AI suggestions', 'AI 建议'],

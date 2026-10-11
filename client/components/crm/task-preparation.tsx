@@ -22,6 +22,7 @@ import {
 } from './api.js';
 import { cardPin, recordPin } from './agent-chat/ask.js';
 import { DiscussButton } from './agent-chat/discuss-button.js';
+import { DEFAULT_TIME_ZONE } from '../../../server/providers/crm/zone-time.js';
 
 // The AI's preparation of a task for its owner
 // (server/providers/crm/task-preparation.ts): what the task should achieve,
@@ -533,7 +534,7 @@ export function PrepFeedEntry({
       }
       title={
         (status === 'accepted' || status === 'dismissed') && ai.decidedAt
-          ? `${meta?.users.find((u) => u.id === ai.decidedById)?.name ?? ''} · ${localDate(ai.decidedAt, language, meta?.settings.timeZone ?? 'Asia/Shanghai')}`
+          ? `${meta?.users.find((u) => u.id === ai.decidedById)?.name ?? ''} · ${localDate(ai.decidedAt, language, meta?.settings.timeZone ?? DEFAULT_TIME_ZONE)}`
           : undefined
       }
     >

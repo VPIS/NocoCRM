@@ -8,6 +8,7 @@ import {
   type CrmRecord,
   type Entity,
 } from './api.js';
+import { DEFAULT_TIME_ZONE } from '../../../server/providers/crm/zone-time.js';
 
 // A record as the global search lists it (search-dialog.tsx, and the AI
 // answer's found records): its name, the typed words in bold, and a muted
@@ -40,7 +41,7 @@ export function SearchRow({
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
   const fields = meta?.definitions[entity]?.fields ?? [];
-  const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
+  const timeZone = meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
   const parts = DETAILS[entity].flatMap((key) => {
     const value = record[key];
     if (value == null || value === '') return [];

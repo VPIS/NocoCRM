@@ -170,6 +170,7 @@ import {
   ReviewPanel,
   type ReviewEntry,
 } from '../components/crm/approval-review.js';
+import { DEFAULT_TIME_ZONE } from '../../server/providers/crm/zone-time.js';
 
 const drawerEntities: Entity[] = [
   'leads',
@@ -2339,7 +2340,7 @@ function TaskEvent({
       ? { ...changes, id: changes.taskId }
       : (event.task ?? {})
   ) as Data;
-  const zone = meta?.settings.timeZone ?? 'Asia/Shanghai';
+  const zone = meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
   const verb = taskState(event);
   // Short (no year), beside the entry's own time on the right.
   const when = (at: unknown): string => {
@@ -2903,7 +2904,7 @@ export function HistoryFeed({
       return next;
     });
   };
-  const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
+  const timeZone = meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
   // The moment the entries' "how long ago" is counted from, moved on each
   // minute.
   const [now, setNow] = useState(() => Date.now());
@@ -4153,7 +4154,7 @@ export function InfoRow({
 export function RecordTimes({ record }: { record: CrmRecord }): ReactElement {
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
-  const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
+  const timeZone = meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
   return (
     <>
       {(['createdAt', 'updatedAt'] as const).map((key) => (

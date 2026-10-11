@@ -1,4 +1,7 @@
-import { isEndOfDay } from '../../../server/providers/crm/zone-time.js';
+import {
+  isEndOfDay,
+  DEFAULT_TIME_ZONE,
+} from '../../../server/providers/crm/zone-time.js';
 import { toText } from './api.js';
 import { CountryLabel, SubdivisionLabel } from './geography.js';
 import {
@@ -398,7 +401,7 @@ export function Value({
         {localDate(
           value,
           language,
-          meta?.settings.timeZone ?? 'Asia/Shanghai',
+          meta?.settings.timeZone ?? DEFAULT_TIME_ZONE,
           // A task due on a date alone shows the date, not the end of the
           // day it is stored as.
           field.type !== 'date' &&
@@ -406,7 +409,7 @@ export function Value({
               field.key === 'dueAt' &&
               isEndOfDay(
                 new Date(toText(value)),
-                meta?.settings.timeZone ?? 'Asia/Shanghai',
+                meta?.settings.timeZone ?? DEFAULT_TIME_ZONE,
               )
             ),
         )}

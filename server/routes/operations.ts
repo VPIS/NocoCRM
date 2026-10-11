@@ -59,6 +59,7 @@ import {
   RecordOutcomeInput,
 } from './schemas/operations.js';
 import { RecordParams, RecordSchemas } from './schemas/records.js';
+import { DEFAULT_TIME_ZONE } from '../providers/crm/zone-time.js';
 
 // The leads', opportunities', tasks' and approvals' own operations, as
 // custom methods on the object (`/leads/capture`) or on one record
@@ -86,7 +87,7 @@ export function registerOperationRoutes(
   const service = app.container.resolve(crmToken);
   const ai = aiWorkers(app);
   const timeZone = async () =>
-    (await service.settings()).timeZone || 'Asia/Shanghai';
+    (await service.settings()).timeZone || DEFAULT_TIME_ZONE;
 
   // Leads ---------------------------------------------------------------
   const leadTags = ['Leads'];

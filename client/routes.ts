@@ -27,11 +27,8 @@ import {
   Mail,
   Radar,
   Workflow,
+  ScrollText,
   Settings2,
-  ShieldUser,
-  UsersRound,
-  KeyRound,
-  CalendarClock,
   SquareCheckBig,
 } from 'lucide-react';
 
@@ -236,6 +233,20 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
           },
         ],
       },
+      // The business guidance the AI works from, which the settings page
+      // once kept as a tab (pages/crm-guidance.tsx); saved with the
+      // settings, so it checks what they check.
+      {
+        name: 'crm-guidance',
+        path: '/crm/guidance',
+        auth: 'required',
+        authz: {
+          resource: { type: 'settings', id: 'crm' },
+          action: 'manage',
+        },
+        navigation: { title: 'crm.navigation.guidance', icon: ScrollText },
+        componentLoader: () => import('./pages/crm-guidance.js'),
+      },
       {
         ...crmStyled(agentsRoute),
         navigation: { title: 'crm.navigation.agentList', icon: Bot },
@@ -333,22 +344,25 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     name: 'device',
     path: '/device',
   },
-  // Settings: what configures the CRM, its AI and its people, as ordinary
-  // pages in a section of the menu. Template 1.0.0-beta.60 has no settings
-  // area of its own (no /settings layout or header entry), and plugins
-  // contribute no settings pages: each entry carries its own grant, so the
-  // section shows only what the reader may open. The CRM's own pages keep
-  // their /settings/... addresses; the Agents plugin's pages keep the paths
-  // it navigates to.
+  // Settings: what configures the CRM and its people, one entry of the menu
+  // that opens a page with a tab each (pages/settings/index.tsx). Template
+  // 1.0.0-beta.60 has no settings area of its own (no /settings layout or
+  // header entry), and plugins contribute no settings pages: the tabs are
+  // this page's children at the /settings/... addresses they had as entries
+  // of their own, each with its grant, and a tab shows only to whoever may
+  // open it. The Agents plugin's pages are in the Agent team section.
   {
-    name: 'crm-settings-group',
-    navigation: { title: 'crm.navigation.settings' },
+    name: 'settings',
+    path: '/settings',
+    auth: 'required',
+    // Opens on the first tab its reader may open; API keys are everyone's.
+    authz: 'skip',
+    navigation: { title: 'crm.navigation.settings', icon: Settings2 },
+    componentLoader: () => import('./pages/settings/index.js'),
     children: [
       {
         name: 'crm-settings',
-        path: '/settings/crm',
-        auth: 'required',
-        navigation: { title: 'crm.settings', icon: Settings2 },
+        path: 'crm',
         authz: {
           resource: { type: 'settings', id: 'crm' },
           action: 'manage',
@@ -362,9 +376,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         // The users plugin's `user` record type, which it does not place in
         // the permission catalog: only the unrestricted root set opens it.
         name: 'settings-users',
-        path: '/settings/users',
-        auth: 'required',
-        navigation: { title: 'crm.navigation.users', icon: UsersRound },
+        path: 'users',
         authz: { resource: { type: 'user', id: '*' }, action: 'read' },
         componentLoader: () => import('./pages/settings/users/index.js'),
         children: [
@@ -397,12 +409,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       },
       {
         name: 'settings-permission-sets',
-        path: '/settings/permission-sets',
-        auth: 'required',
-        navigation: {
-          title: 'crm.navigation.permissionSets',
-          icon: ShieldUser,
-        },
+        path: 'permission-sets',
         authz: {
           resource: { type: 'settings', id: 'authorization.permission-sets' },
           action: 'read',
@@ -464,9 +471,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         // Every signed-in person manages their own keys only; the API
         // answers for the caller alone.
         name: 'settings-api-keys',
-        path: '/settings/api-keys',
-        auth: 'required',
-        navigation: { title: 'crm.navigation.apiKeys', icon: KeyRound },
+        path: 'api-keys',
         authz: 'skip',
         componentLoader: () => import('./pages/settings/api-keys/index.js'),
         children: [
@@ -480,12 +485,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       {
         // The page grant the scheduler's API checks.
         name: 'settings-scheduled-tasks',
-        path: '/settings/scheduled-tasks',
-        auth: 'required',
-        navigation: {
-          title: 'crm.navigation.scheduledTasks',
-          icon: CalendarClock,
-        },
+        path: 'scheduled-tasks',
         authz: page('scheduler.schedules'),
         componentLoader: () =>
           import('./pages/settings/scheduled-tasks/index.js'),

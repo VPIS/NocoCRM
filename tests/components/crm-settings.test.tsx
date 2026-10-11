@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
@@ -6,8 +6,9 @@ import { crmEn } from '../../client/locales/crm/index.js';
 import { defaultSettings } from '../../server/providers/crm/schema.js';
 
 // The settings page's in-app notification switches: each kind of message
-// the CRM sends, on by default, saved with the rest of the settings; and the
-// business guidance, the shipped one until an administrator writes over it.
+// the CRM sends, on by default, saved by the reminders card's own Save with
+// that card's settings alone; and the business guidance page, the shipped
+// guidance until an administrator writes over it.
 
 const state = vi.hoisted(() => ({
   api: vi.fn(),
@@ -50,13 +51,15 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
 
 const { default: SettingsPage } =
   await import('../../client/pages/crm-settings.js');
+const { default: GuidancePage } =
+  await import('../../client/pages/crm-guidance.js');
 
 describe('the settings page', () => {
-  it('switches a kind of in-app message off and saves it with the settings', async () => {
+  it("switches a kind of in-app message off and saves it with the reminders card's settings", async () => {
     const user = userEvent.setup();
     state.api.mockResolvedValue({ data: {} });
     render(
-      <MemoryRouter initialEntries={['/settings/crm?section=reminders']}>
+      <MemoryRouter initialEntries={['/settings/crm']}>
         <SettingsPage />
       </MemoryRouter>,
     );
@@ -71,9 +74,13 @@ describe('the settings page', () => {
       expect(
         screen.getByRole('switch', { name }).getAttribute('aria-checked'),
       ).toBe('true');
+    const card = document.getElementById('settings-reminders') as HTMLElement;
+    const save = within(card).getByRole('button', { name: crmEn.save });
+    // Nothing to save until something on the card changes.
+    expect(save).toHaveProperty('disabled', true);
     await user.click(approvals);
     expect(approvals.getAttribute('aria-checked')).toBe('false');
-    await user.click(screen.getByRole('button', { name: crmEn.save }));
+    await user.click(save);
     expect(state.api).toHaveBeenCalledWith(
       'systemSettings',
       'PUT',
@@ -83,6 +90,8 @@ describe('the settings page', () => {
         notifyTaskReminders: true,
       }),
     );
+    // The business card's settings are its own Save's.
+    expect(state.api.mock.lastCall?.[2]).not.toHaveProperty('currency');
   });
 
   it('shows the shipped business guidance, saves one written over it, and restores the default', async () => {
@@ -90,8 +99,8 @@ describe('the settings page', () => {
     state.api.mockReset();
     state.api.mockResolvedValue({ data: {} });
     render(
-      <MemoryRouter initialEntries={['/settings/crm?section=guidance']}>
-        <SettingsPage />
+      <MemoryRouter initialEntries={['/crm/guidance']}>
+        <GuidancePage />
       </MemoryRouter>,
     );
     const box = screen.getByRole('textbox', { name: crmEn.guidance });

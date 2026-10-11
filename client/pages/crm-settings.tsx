@@ -1,11 +1,10 @@
 import { PageContainer } from '../components/page-container.js';
 import { PageHeader } from '../components/page-header.js';
 import { toText } from '../components/crm/api.js';
-import { useRef, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useSearchParams } from 'react-router';
 import { Button } from '../components/ui/button.js';
 import { Input } from '../components/ui/input.js';
-import { Textarea } from '../components/ui/textarea.js';
 import { Switch } from '../components/ui/switch.js';
 import {
   Card,
@@ -16,8 +15,6 @@ import {
 import { Loading, ErrorNotice } from '../components/crm/common.js';
 import { Choice } from '../components/crm/form.js';
 import { ConfirmDialog } from './crm-detail.js';
-import { settingsGuidance } from '../../server/providers/crm/guidance.js';
-import { LONG_TEXT_LIMIT } from '../../server/providers/crm/limits.js';
 import {
   localDate,
   useCrmApi,
@@ -40,6 +37,23 @@ interface SettingsResponse {
   settings: CrmSettings;
   demo: DemoStatus;
 }
+// What each card holds and saves.
+const BUSINESS = ['currency', 'timeZone', 'aiLanguage'] as const;
+const REMINDER_DAYS = [
+  'taskReminderMinutes',
+  'closeReminderDays',
+  'uncontactedDays',
+  'leadStaleDays',
+  'staleDays',
+  'nurtureReviewDays',
+] as const;
+const NOTIFICATIONS = [
+  'notifyApprovals',
+  'notifyRecordChanges',
+  'notifyTaskReminders',
+] as const;
+const REMINDERS = [...REMINDER_DAYS, ...NOTIFICATIONS] as const;
+
 export default function SettingsPage(): ReactElement {
   const settings = useCrmQuery<CrmSettings>('systemSettings');
   const demo = useCrmQuery<DemoStatus>('demoData');
@@ -65,18 +79,23 @@ function SettingsForm({
   const api = useCrmApi();
   const refresh = useRefresh();
   const [settings, setSettings] = useState(initial.settings);
+  // What the server holds, which a card's Save is offered against.
+  const [stored, setStored] = useState(initial.settings);
   const [error, setError] = useState<unknown>();
   const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
-  // ?section=demoData opens a tab directly (the demo banner links there).
+  // The card being saved, and the card saved last.
+  const [saving, setSaving] = useState<string>();
+  const [saved, setSaved] = useState<string>();
+  // ?section=demoData brings that part into view (the demo banner links
+  // there).
   const [searchParams] = useSearchParams();
-  const [section, setSection] = useState(
-    ['business', 'reminders', 'guidance', 'demoData'].includes(
-      searchParams.get('section') ?? '',
-    )
-      ? (searchParams.get('section') as string)
-      : 'business',
-  );
+  const target = searchParams.get('section');
+  useEffect(() => {
+    if (target)
+      document
+        .getElementById(`settings-${target}`)
+        ?.scrollIntoView({ block: 'start' });
+  }, [target]);
   // The demo dataset: imported and removed from here, never saved with the
   // settings form, so it keeps its own state and confirmation.
   const [demo, setDemo] = useState(initial.demo);
@@ -120,9 +139,47 @@ function SettingsForm({
   };
   const set = (key: keyof CrmSettings, value: unknown): void => {
     setSettings((s) => ({ ...s, [key]: value }));
-    setSaved(false);
+    setSaved(undefined);
   };
-  const fields = (keys: (keyof CrmSettings)[]): ReactElement => (
+  // Each card saves its own settings alone, the route taking any part of
+  // them, and only once one of them differs from what is stored.
+  const saveCard = (card: string, keys: readonly (keyof CrmSettings)[]) => {
+    const changed = keys.some((key) => settings[key] !== stored[key]);
+    return (
+      <div className='flex items-center justify-end gap-3'>
+        {saved === card && (
+          <span role='status' className='text-sm text-muted-foreground'>
+            {text('settingsSaved')}
+          </span>
+        )}
+        <Button
+          disabled={!changed || saving !== undefined}
+          onClick={() => {
+            void (async () => {
+              setSaving(card);
+              setError(undefined);
+              try {
+                const changes = Object.fromEntries(
+                  keys.map((key) => [key, settings[key]]),
+                );
+                await api('systemSettings', 'PUT', changes);
+                setStored((current) => ({ ...current, ...changes }));
+                await refresh();
+                setSaved(card);
+              } catch (e) {
+                setError(e);
+              } finally {
+                setSaving(undefined);
+              }
+            })();
+          }}
+        >
+          {saving === card ? text('saving') : text('save')}
+        </Button>
+      </div>
+    );
+  };
+  const fields = (keys: readonly (keyof CrmSettings)[]): ReactElement => (
     <div className='grid gap-4 sm:grid-cols-2'>
       {keys.map((key) => (
         <label key={key} className='grid gap-2 text-sm'>
@@ -192,260 +249,162 @@ function SettingsForm({
       <PageHeader
         title={text('settings')}
         description={text('settingsDescription')}
-        actions={
-          <>
-            <Button
-              disabled={busy}
-              onClick={() => {
-                void (async () => {
-                  setBusy(true);
-                  setError(undefined);
-                  try {
-                    // The option lists are not settings to send back.
-                    const { options: _options, ...changes } = settings;
-                    await api('systemSettings', 'PUT', changes);
-                    await refresh();
-                    setSaved(true);
-                  } catch (e) {
-                    setError(e);
-                  } finally {
-                    setBusy(false);
-                  }
-                })();
-              }}
-            >
-              {busy ? text('saving') : text('save')}
-            </Button>
-          </>
-        }
       />
       <ErrorNotice error={error} />
-      {saved && (
-        <p role='status' className='rounded-lg bg-primary/10 p-3 text-sm'>
-          {text('settingsSaved')}
-        </p>
-      )}
-      <div className='flex gap-1 overflow-x-auto border-b'>
-        {['business', 'reminders', 'guidance', 'demoData'].map((key) => (
-          <Button
-            key={key}
-            variant='ghost'
-            className={`h-auto rounded-none border-0 border-b-2 px-3 py-2 transition-colors hover:bg-transparent dark:hover:bg-transparent ${
-              section === key
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-            onClick={() => setSection(key)}
-          >
-            {text(key)}
-          </Button>
-        ))}
-      </div>
-      <Card className='max-w-4xl shadow-none'>
+      {/* One page, its parts one under another: the business defaults and
+          the reminders each saved by their own card's Save; the demo
+          dataset is imported and removed on its own. */}
+      <Card
+        id='settings-business'
+        className='max-w-4xl scroll-mt-4 border border-border shadow-xs ring-0'
+      >
         <CardHeader>
-          <CardTitle>{text(section)}</CardTitle>
+          <CardTitle>{text('business')}</CardTitle>
         </CardHeader>
         <CardContent className='space-y-6'>
-          {section === 'demoData' ? (
-            <>
-              <p className='text-sm text-muted-foreground'>
-                {text('demoDescription')}
+          {fields(BUSINESS)}
+          {saveCard('business', BUSINESS)}
+        </CardContent>
+      </Card>
+      <Card
+        id='settings-reminders'
+        className='max-w-4xl scroll-mt-4 border border-border shadow-xs ring-0'
+      >
+        <CardHeader>
+          <CardTitle>{text('reminders')}</CardTitle>
+        </CardHeader>
+        <CardContent className='space-y-6'>
+          <div className='space-y-6'>
+            {fields(REMINDER_DAYS)}
+            {/* Each kind of in-app message the CRM sends, on unless
+                switched off (service.ts, queueMessage). */}
+            <div className='space-y-2'>
+              <p className='text-sm font-medium'>
+                {text('notifications.heading')}
               </p>
-              <ul className='grid gap-1 text-sm sm:grid-cols-2'>
-                {/* The accounts the import will create in the language
-                    picked, or those of the import present. */}
-                {(
-                  (!demo.present && demo.accountsByLanguage?.[demoLanguage]) ||
-                  demo.accounts
-                ).map((account) => (
-                  <li key={account.username} className='flex gap-2'>
-                    <code className='rounded bg-muted px-1.5 py-0.5 text-xs'>
-                      {account.username}
-                    </code>
-                    <span>{account.name}</span>
-                    <span className='text-muted-foreground'>
-                      {text(`options.${account.role}`)}
-                    </span>
+              <ul className='divide-y divide-border rounded-lg border border-border px-3'>
+                {NOTIFICATIONS.map((key) => (
+                  <li
+                    key={key}
+                    className='flex items-start justify-between gap-4 py-2.5'
+                  >
+                    <div className='min-w-0 space-y-0.5'>
+                      <p className='text-sm'>{text(`notifications.${key}`)}</p>
+                      <p className='text-xs text-muted-foreground'>
+                        {text(`notifications.${key}Hint`)}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings[key] !== false}
+                      onCheckedChange={(on) => set(key, on)}
+                      aria-label={toText(text(`notifications.${key}`))}
+                    />
                   </li>
                 ))}
               </ul>
-              {demoNotice && (
-                <p
-                  role='status'
-                  className='rounded-lg bg-primary/10 p-3 text-sm'
-                >
-                  {demoNotice}
-                </p>
-              )}
-              <p className='text-sm'>
-                {demo.present
-                  ? text('demoPresent', {
-                      date: localDate(
-                        demo.createdAt,
-                        language,
-                        settings.timeZone,
-                      ),
-                      count: demo.records,
-                    })
-                  : text('demoAbsent')}
-              </p>
-              {!demo.present && (
-                <label className='flex items-center gap-3 text-sm'>
-                  <span className='shrink-0'>{text('demoLanguage')}</span>
-                  <span className='w-40'>
-                    <Choice
-                      label={text('demoLanguage')}
-                      value={demoLanguage}
-                      choices={['zh-CN', 'en-US'].map((v) => ({
-                        value: v,
-                        label: text(`aiLanguages.${v}`),
-                      }))}
-                      onChange={(v) => v && setDemoLanguage(v)}
-                    />
-                  </span>
-                </label>
-              )}
-              <div className='flex flex-wrap gap-2'>
-                <Button
-                  disabled={busy || demo.present}
-                  onClick={() => setDemoAction('populate')}
-                >
-                  {text('demoImport')}
-                </Button>
-                <Button
-                  variant='outline'
-                  disabled={busy || !demo.present}
-                  onClick={() => setDemoAction('reset')}
-                >
-                  {text('demoReset')}
-                </Button>
-              </div>
-              {demoAction && (
-                <ConfirmDialog
-                  title={text(
-                    demoAction === 'populate'
-                      ? 'demoImportTitle'
-                      : 'demoResetTitle',
-                  )}
-                  description={text(
-                    demoAction === 'populate'
-                      ? 'demoImportHint'
-                      : 'demoResetHint',
-                  )}
-                  busy={busy}
-                  onCancel={() => setDemoAction(undefined)}
-                  onConfirm={() => void runDemo(demoAction)}
-                />
-              )}
-            </>
-          ) : section === 'guidance' ? (
-            <GuidanceEditor
-              settings={settings}
-              onChange={(value) => set('businessGuidance', value)}
-            />
-          ) : section === 'business' ? (
-            fields(['currency', 'timeZone', 'aiLanguage'])
-          ) : section === 'reminders' ? (
-            <div className='space-y-6'>
-              {fields([
-                'taskReminderMinutes',
-                'closeReminderDays',
-                'uncontactedDays',
-                'leadStaleDays',
-                'staleDays',
-                'nurtureReviewDays',
-              ])}
-              {/* Each kind of in-app message the CRM sends, on unless
-                  switched off (service.ts, queueMessage). */}
-              <div className='space-y-2'>
-                <p className='text-sm font-medium'>
-                  {text('notifications.heading')}
-                </p>
-                <ul className='divide-y divide-border rounded-lg border border-border px-3'>
-                  {(
-                    [
-                      'notifyApprovals',
-                      'notifyRecordChanges',
-                      'notifyTaskReminders',
-                    ] as const
-                  ).map((key) => (
-                    <li
-                      key={key}
-                      className='flex items-start justify-between gap-4 py-2.5'
-                    >
-                      <div className='min-w-0 space-y-0.5'>
-                        <p className='text-sm'>
-                          {text(`notifications.${key}`)}
-                        </p>
-                        <p className='text-xs text-muted-foreground'>
-                          {text(`notifications.${key}Hint`)}
-                        </p>
-                      </div>
-                      <Switch
-                        checked={settings[key] !== false}
-                        onCheckedChange={(on) => set(key, on)}
-                        aria-label={toText(text(`notifications.${key}`))}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </div>
             </div>
-          ) : null}
+          </div>
+          {saveCard('reminders', REMINDERS)}
+        </CardContent>
+      </Card>
+      <Card
+        id='settings-demoData'
+        className='max-w-4xl scroll-mt-4 border border-border shadow-xs ring-0'
+      >
+        <CardHeader>
+          <CardTitle>{text('demoData')}</CardTitle>
+        </CardHeader>
+        <CardContent className='space-y-6'>
+          <>
+            <p className='text-sm text-muted-foreground'>
+              {text('demoDescription')}
+            </p>
+            <ul className='grid gap-1 text-sm sm:grid-cols-2'>
+              {/* The accounts the import will create in the language
+                  picked, or those of the import present. */}
+              {(
+                (!demo.present && demo.accountsByLanguage?.[demoLanguage]) ||
+                demo.accounts
+              ).map((account) => (
+                <li key={account.username} className='flex gap-2'>
+                  <code className='rounded bg-muted px-1.5 py-0.5 text-xs'>
+                    {account.username}
+                  </code>
+                  <span>{account.name}</span>
+                  <span className='text-muted-foreground'>
+                    {text(`options.${account.role}`)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {demoNotice && (
+              <p role='status' className='rounded-lg bg-primary/10 p-3 text-sm'>
+                {demoNotice}
+              </p>
+            )}
+            <p className='text-sm'>
+              {demo.present
+                ? text('demoPresent', {
+                    date: localDate(
+                      demo.createdAt,
+                      language,
+                      settings.timeZone,
+                    ),
+                    count: demo.records,
+                  })
+                : text('demoAbsent')}
+            </p>
+            {!demo.present && (
+              <label className='flex items-center gap-3 text-sm'>
+                <span className='shrink-0'>{text('demoLanguage')}</span>
+                <span className='w-40'>
+                  <Choice
+                    label={text('demoLanguage')}
+                    value={demoLanguage}
+                    choices={['zh-CN', 'en-US'].map((v) => ({
+                      value: v,
+                      label: text(`aiLanguages.${v}`),
+                    }))}
+                    onChange={(v) => v && setDemoLanguage(v)}
+                  />
+                </span>
+              </label>
+            )}
+            <div className='flex flex-wrap gap-2'>
+              <Button
+                disabled={busy || demo.present}
+                onClick={() => setDemoAction('populate')}
+              >
+                {text('demoImport')}
+              </Button>
+              <Button
+                variant='outline'
+                disabled={busy || !demo.present}
+                onClick={() => setDemoAction('reset')}
+              >
+                {text('demoReset')}
+              </Button>
+            </div>
+            {demoAction && (
+              <ConfirmDialog
+                title={text(
+                  demoAction === 'populate'
+                    ? 'demoImportTitle'
+                    : 'demoResetTitle',
+                )}
+                description={text(
+                  demoAction === 'populate'
+                    ? 'demoImportHint'
+                    : 'demoResetHint',
+                )}
+                busy={busy}
+                onCancel={() => setDemoAction(undefined)}
+                onConfirm={() => void runDemo(demoAction)}
+              />
+            )}
+          </>
         </CardContent>
       </Card>
     </PageContainer>
-  );
-}
-
-// The business guidance the AI works from (server/providers/crm/guidance.ts):
-// the shipped one, which follows the reminders' days and the AI language,
-// until an administrator writes over it. Saved with the other settings;
-// writing it back to the shipped text, or leaving it blank, returns to the
-// shipped one. What is typed stays in the box as typed (blank included);
-// until then it shows the guidance in force.
-function GuidanceEditor({
-  settings,
-  onChange,
-}: {
-  settings: CrmSettings;
-  onChange: (value: string) => void;
-}): ReactElement {
-  const { text } = useCrmText();
-  const shipped = settingsGuidance({ ...settings, businessGuidance: '' });
-  const custom = Boolean(settings.businessGuidance.trim());
-  const [draft, setDraft] = useState<string | null>(null);
-  return (
-    <div className='space-y-3'>
-      <p className='text-sm text-muted-foreground'>{text('guidanceHint')}</p>
-      <Textarea
-        aria-label={toText(text('guidance'))}
-        value={draft ?? (custom ? settings.businessGuidance : shipped)}
-        onChange={(event) => {
-          const value = event.target.value;
-          setDraft(value);
-          onChange(value === shipped || !value.trim() ? '' : value);
-        }}
-        maxLength={LONG_TEXT_LIMIT}
-        // Grows with the text up to most of the screen, then scrolls.
-        className='max-h-[60vh] min-h-80 overflow-y-auto font-mono text-xs leading-relaxed md:text-xs'
-      />
-      <div className='flex flex-wrap items-center justify-between gap-2'>
-        <p className='text-xs text-muted-foreground'>
-          {text(custom ? 'guidanceCustom' : 'guidanceShipped')}
-        </p>
-        <Button
-          variant='outline'
-          size='sm'
-          disabled={!custom && draft === null}
-          onClick={() => {
-            setDraft(null);
-            onChange('');
-          }}
-        >
-          {text('guidanceRestore')}
-        </Button>
-      </div>
-    </div>
   );
 }

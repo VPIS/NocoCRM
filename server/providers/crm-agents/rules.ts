@@ -1,6 +1,7 @@
 import type { ConversationRules } from '@nocobase/app-plugin-agents/server/tokens';
 import { settingsGuidance } from '../crm/guidance.js';
 import type { CrmSettings } from '../crm/schema.js';
+import { DEFAULT_TIME_ZONE } from '../crm/zone-time.js';
 
 // What every conversation with an agent on the CRM holds, whatever the
 // agent's own instructions say (an administrator may change those): the
@@ -24,7 +25,7 @@ export function crmConversationRules(
         "An item of kind crm-evaluation in the page context is an AI card (a lead's or a deal's follow-up, an approval's review, a task's preparation) in its record's history: read it with the record's history command and find the entry by its id before discussing it. To do something else than it proposes, propose a plan; never decide the card for the person.",
         "For a lead's or a deal's next step read the lead-follow-up or opportunity-follow-up skill, for judging an approval the approval-review skill, and for getting ready for a task the task-preparation skill, before advising.",
         'There is no web search: when a question needs information from outside the CRM, say so.',
-        `Times the commands return are UTC; speak of them in the CRM's time zone, ${current?.timeZone ?? 'Asia/Shanghai'}.`,
+        `Times the commands return are UTC; speak of them in the CRM's time zone, ${current?.timeZone ?? DEFAULT_TIME_ZONE}.`,
       ],
       sections: guidanceSections(guidance),
     });

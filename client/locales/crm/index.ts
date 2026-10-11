@@ -1544,7 +1544,9 @@ const wording = {
     empty: ['Nothing is waiting on you.', '没有等你处理的事。'],
     handled: ['Handled', '已处理'],
   },
-  settings: ['System settings', '系统设置'],
+  // The settings' General tab, named so in the permission catalog too
+  // (server/providers/crm/authorization.ts).
+  settings: ['General settings', '通用设置'],
   leadCapture: {
     aiTab: ['Organise with AI', 'AI 整理'],
     formTab: ['Fill in a form', '表单录入'],
@@ -1631,12 +1633,12 @@ const wording = {
     create: ['Create opportunity', '创建商机'],
   },
   settingsDescription: [
-    'Business defaults, reminders, the business guidance and the demo dataset.',
-    '配置业务选项、提醒、业务指导和演示数据',
+    'Business defaults, reminders and the demo dataset.',
+    '配置业务选项、提醒和演示数据',
   ],
   business: ['Business defaults', '业务配置'],
   reminders: ['Reminders', '提醒设置'],
-  // The settings page's business guidance tab (crm-settings.tsx).
+  // The business guidance page (crm-guidance.tsx).
   guidance: ['Business guidance', '业务指导'],
   guidanceHint: [
     'What the AI works from in every conversation and every follow-up, review and preparation: who you are, your editions and prices, when to follow up and when to ask for approval. Markdown.',
@@ -2108,7 +2110,7 @@ const wording = {
     // (WhatsApp, LinkedIn) later.
     integrations: ['Integrations', '集成'],
     mailbox: ['Mailbox', '邮箱'],
-    // The menu's Settings section (client/routes.ts).
+    // The menu's Settings entry and page (client/routes.ts).
     settings: ['Settings', '设置'],
     // The administration pages (client/pages/settings/).
     users: ['Users', '用户'],
@@ -2119,6 +2121,9 @@ const wording = {
     agentsGroup: ['Agent team', 'Agent 团队'],
     // The CRM's four agents on one page (pages/crm-agents.tsx).
     autoFollowUp: ['Auto follow-up', '自动跟进'],
+    guidance: ['Business guidance', '业务指导'],
+    // The first tab of Settings (pages/settings/index.tsx).
+    general: ['General', '通用'],
     agentList: ['Agents', 'Agent'],
     models: ['Models', '模型'],
     skills: ['Skills', '技能'],

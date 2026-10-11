@@ -1,5 +1,6 @@
 import type { Row } from '@nocobase/db';
 import { countryCodes } from './geography.js';
+import { DEFAULT_TIME_ZONE } from './zone-time.js';
 export function toText(value: unknown): string {
   if (value == null) return '';
   if (typeof value === 'object')
@@ -483,7 +484,7 @@ export const notificationSwitches = {
 export const aiLanguages = ['zh-CN', 'en-US'];
 export const defaultSettings: CrmSettings = {
   currency: 'USD',
-  timeZone: 'Asia/Shanghai',
+  timeZone: DEFAULT_TIME_ZONE,
   taskReminderMinutes: 30,
   closeReminderDays: 7,
   uncontactedDays: 2,

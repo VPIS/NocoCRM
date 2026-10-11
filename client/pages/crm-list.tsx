@@ -1,5 +1,8 @@
 import { AiStateTag } from '../components/crm/ai-state-tag.js';
-import { isEndOfDay } from '../../server/providers/crm/zone-time.js';
+import {
+  isEndOfDay,
+  DEFAULT_TIME_ZONE,
+} from '../../server/providers/crm/zone-time.js';
 import { OpportunityCaptureDialog } from '../components/crm/opportunity-capture.js';
 import {
   PAGE_SIZE,
@@ -270,7 +273,7 @@ function EntityList({
   // Read once on mount: a page open across midnight is rare enough.
   const [now] = useState(() => new Date());
   const today = new Intl.DateTimeFormat('en-CA', {
-    timeZone: meta?.settings.timeZone ?? 'Asia/Shanghai',
+    timeZone: meta?.settings.timeZone ?? DEFAULT_TIME_ZONE,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -453,7 +456,7 @@ function EntityList({
     enabled: Boolean(definition) && view === 'calendar',
   });
   const filtered = calendar.data ?? [];
-  const calendarTimeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
+  const calendarTimeZone = meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
   // The month's tasks by the day they start on in the business time
   // zone, morning first, the way a day is read.
   const byDay = new Map<string, CrmRecord[]>();

@@ -47,7 +47,10 @@ import type { FollowUpRequest } from './follow-up-request.js';
 import { Choice } from './form.js';
 import { Input } from '../ui/input.js';
 import { DateTimeInput } from './datetime-input.js';
-import { contactTime } from '../../../server/providers/crm/zone-time.js';
+import {
+  contactTime,
+  DEFAULT_TIME_ZONE,
+} from '../../../server/providers/crm/zone-time.js';
 import {
   mergePlanDescription,
   planDescription,
@@ -1668,7 +1671,7 @@ export function EvaluationFeedEntry({
   const name = (id: string | undefined): string =>
     meta?.users.find((u) => u.id === id)?.name ?? '';
   const when = (at: string | undefined): string =>
-    localDate(at, language, meta?.settings.timeZone ?? 'Asia/Shanghai');
+    localDate(at, language, meta?.settings.timeZone ?? DEFAULT_TIME_ZONE);
   // One line on the timeline: the verdict, cut if it must be, and its
   // status; who decided and when on hover, as the line has no room.
   return (

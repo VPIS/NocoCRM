@@ -11,6 +11,7 @@ import {
   useMetadata,
   type CrmRecord,
 } from './api.js';
+import { DEFAULT_TIME_ZONE } from '../../../server/providers/crm/zone-time.js';
 
 // What waits on the reader from the AI (server/providers/crm/lead-evaluation.ts,
 // pendingDecisions): its follow-ups of leads and deals and its reviews of
@@ -118,6 +119,6 @@ export function useWording() {
     ownerOf: (entry: DecisionItem): string =>
       toText(meta?.users.find((u) => u.id === recordOf(entry).ownerId)?.name),
     when: (at: string): string =>
-      localDate(at, language, meta?.settings.timeZone ?? 'Asia/Shanghai'),
+      localDate(at, language, meta?.settings.timeZone ?? DEFAULT_TIME_ZONE),
   };
 }

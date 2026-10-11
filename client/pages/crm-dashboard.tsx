@@ -37,6 +37,7 @@ import {
   type Data,
   type Entity,
 } from '../components/crm/api.js';
+import { DEFAULT_TIME_ZONE } from '../../server/providers/crm/zone-time.js';
 
 // The six risk cards: which list page they open, the metric key that page
 // filters by, and the icon. The number itself comes from the same rule the
@@ -126,7 +127,7 @@ export default function DashboardPage(): ReactElement {
   const query = useCrmQuery<Data>('dashboard?scope=team');
   const data = query.data;
   const attention = (data?.attention ?? {}) as Data;
-  const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
+  const timeZone = meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
   // The page greets the user by the time of day rather than naming itself;
   // the menu, the breadcrumb and the window title still call it the
   // overview.

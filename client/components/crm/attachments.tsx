@@ -16,6 +16,7 @@ import {
   type Entity,
 } from './api.js';
 import { fileRecord, type CrmFile } from './file-record.js';
+import { DEFAULT_TIME_ZONE } from '../../../server/providers/crm/zone-time.js';
 
 // Attachments, wherever they appear: the list of files on a record's tab
 // and in a dialog's form, the preview dialog a file opens in, and the drop
@@ -40,7 +41,7 @@ export function FileLinks({
   const attachmentStep = PAGE_SIZE;
   const [shown, setShown] = useState(attachmentStep);
   const [previewing, setPreviewing] = useState<string | null>(null);
-  const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
+  const timeZone = meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
   const ids = files.map(toText).filter(Boolean);
   const { data } = useCrmQuery<CrmFile[]>(
     `attachments?ids=${encodeURIComponent(ids.join(','))}`,

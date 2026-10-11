@@ -7,6 +7,7 @@ import { toText, useCrmText, useMetadata } from './api.js';
 import {
   endOfDay,
   isEndOfDay,
+  DEFAULT_TIME_ZONE,
 } from '../../../server/providers/crm/zone-time.js';
 import { TimeColumn } from './datetime-input.js';
 
@@ -74,7 +75,7 @@ export function TaskTimeField({
 }): ReactElement {
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
-  const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
+  const timeZone = meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
   const small = size === 'sm';
   const due = value.dueAt ? new Date(toText(value.dueAt)) : undefined;
   const day =

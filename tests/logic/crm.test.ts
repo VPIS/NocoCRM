@@ -8343,7 +8343,7 @@ describe('tasks', () => {
     // A date alone is the last instant of its business day, which a time
     // picked to the minute never is.
     const zone = (await service.settings()).timeZone;
-    const dayEnd = endOfDay(new Date('2026-11-03T04:00:00.000Z'), zone);
+    const dayEnd = endOfDay(new Date('2026-11-03T14:00:00.000Z'), zone);
     const dated = await service.save(actor('rep'), 'tasks', {
       name: 'Renewal reminder',
       dueAt: dayEnd.toISOString(),

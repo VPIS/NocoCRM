@@ -27,6 +27,7 @@ import {
   type Data,
   type Field,
 } from './api.js';
+import { DEFAULT_TIME_ZONE } from '../../../server/providers/crm/zone-time.js';
 
 // Leads that repeat this one (the same email, the same phone, or the same
 // person at the same company; server/providers/crm/lead-merge.ts), shown
@@ -128,7 +129,7 @@ export function LeadDuplicates({
               localDate(
                 duplicate.createdAt,
                 '',
-                meta?.settings.timeZone ?? 'Asia/Shanghai',
+                meta?.settings.timeZone ?? DEFAULT_TIME_ZONE,
                 false,
               ),
             ]
@@ -238,7 +239,7 @@ export function MergeDialog({
   const fields = meta?.definitions.leads.fields ?? [];
   const field = (key: string): Field =>
     fields.find((f) => f.key === key) ?? { key, type: 'text' };
-  const zone = meta?.settings.timeZone ?? 'Asia/Shanghai';
+  const zone = meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
 
   const body = (() => {
     if (!data) return null;

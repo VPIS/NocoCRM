@@ -27,6 +27,7 @@ import {
 import { AutoLoadMore } from './auto-load.js';
 import { ErrorNotice, RecordLink } from './common.js';
 import { RecordOutcomeDialog } from './outcome.js';
+import { DEFAULT_TIME_ZONE } from '../../../server/providers/crm/zone-time.js';
 
 // The task list as a to-do list rather than a table: a box to tick, the
 // task, and what it concerns, when it is and whose it is. Open tasks,
@@ -272,7 +273,7 @@ function TaskRow({
   const [error, setError] = useState<unknown>();
   // When the row was drawn: what counts as overdue.
   const [now] = useState(() => Date.now());
-  const timeZone = meta?.settings.timeZone ?? 'Asia/Shanghai';
+  const timeZone = meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
   const status = toText(task.status);
   const finished = status !== 'open';
   // Ticked by whoever may edit it: their own, or everyone's with the right.

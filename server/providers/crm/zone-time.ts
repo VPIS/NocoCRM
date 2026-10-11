@@ -2,6 +2,10 @@
 // them as well (the lead's follow-up card shows when its task will be
 // planned, as the server plans it).
 
+// The business time zone of a CRM whose settings name none, and what the
+// pages read until the settings have loaded: US Eastern time.
+export const DEFAULT_TIME_ZONE = 'America/New_York';
+
 // The offset of a zone at an instant, so the business day's end can be
 // expressed as an instant without a calendar library.
 export function zoneOffsetMinutes(timeZone: string, date: Date): number {

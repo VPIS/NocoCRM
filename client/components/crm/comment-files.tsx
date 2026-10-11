@@ -24,6 +24,7 @@ import {
   useMetadata,
 } from './api.js';
 import { fileRecord, type CrmFile } from './file-record.js';
+import { DEFAULT_TIME_ZONE } from '../../../server/providers/crm/zone-time.js';
 
 // What a file is, by its extension and stored type: its icon, the colour
 // of the icon's tile (the theme's status colours, lightly), and the short
@@ -155,7 +156,7 @@ export function CommentFiles({
       localDate(
         file.createdAt,
         language,
-        meta?.settings.timeZone ?? 'Asia/Shanghai',
+        meta?.settings.timeZone ?? DEFAULT_TIME_ZONE,
       ),
       detail?.(id),
     ]
@@ -247,7 +248,7 @@ export function CommentFiles({
                       {localDate(
                         file.createdAt,
                         language,
-                        meta?.settings.timeZone ?? 'Asia/Shanghai',
+                        meta?.settings.timeZone ?? DEFAULT_TIME_ZONE,
                       )}
                     </span>
                   ) : null}

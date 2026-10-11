@@ -1,6 +1,6 @@
 import { useState, type ReactElement } from 'react';
 import { useCan } from '@nocobase/app-plugin-authorization/client';
-import { Link, useLocation, useNavigate } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import {
   Ban,
   CircleCheck,
@@ -34,6 +34,7 @@ import {
 } from '../components/crm/common.js';
 import { VerdictBadge } from '../components/crm/lead-evaluation.js';
 import { useRunningAgents } from '../components/crm/waiting-count.js';
+import { LinkTabs } from '../components/crm/link-tabs.js';
 import {
   relativeTime,
   toText,
@@ -45,6 +46,7 @@ import {
   type CrmRecord,
   type Data,
 } from '../components/crm/api.js';
+import { DEFAULT_TIME_ZONE } from '../../server/providers/crm/zone-time.js';
 
 // The CRM's four agents (server/providers/crm/agents.ts) on one page, Auto
 // follow-up in the menu, a tab each: what the agent does, when it runs (each
@@ -88,7 +90,6 @@ interface Overview {
 
 export default function AgentsPage(): ReactElement {
   const { pathname } = useLocation();
-  const navigate = useNavigate();
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
   const running = useRunningAgents();
@@ -96,37 +97,20 @@ export default function AgentsPage(): ReactElement {
     AGENTS.find((name) => pathname.endsWith(`/agents/${name}`)) ?? 'leads';
   return (
     <CrmFrame title={text('navigation.autoFollowUp')}>
-      {/* Underlined tabs on a thin rule, as a record page's: the open one
-          over a 2px line of the foreground, the others muted until
-          hovered; an agent with runs under way shows the AI's pulsing dot
-          and their count, one switched off says so. */}
-      <div
-        role='tablist'
-        className='flex w-full flex-wrap gap-x-5 border-b border-border'
-      >
-        {AGENTS.map((name) => {
-          const Icon = ICONS[name];
-          const selected = name === agent;
+      {/* An agent with runs under way shows the AI's pulsing dot and their
+          count, one switched off says so. */}
+      <LinkTabs
+        label={text('navigation.autoFollowUp')}
+        tabs={AGENTS.map((name) => {
           const count = running[name] ?? 0;
           const off = meta?.agents?.[name]?.enabled === false;
-          return (
-            <button
-              key={name}
-              type='button'
-              role='tab'
-              aria-selected={selected}
-              onClick={() =>
-                void navigate(`/crm/agents/${name}`, { replace: true })
-              }
-              className={`-mb-px flex h-10 items-center gap-1.5 border-b-2 text-sm font-medium transition-colors outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset ${
-                selected
-                  ? 'border-foreground text-foreground'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Icon className='size-4' />
-              {text(`agents.${name}.title`)}
-              {count > 0 ? (
+          return {
+            to: `/crm/agents/${name}`,
+            label: text(`agents.${name}.title`),
+            icon: ICONS[name],
+            selected: name === agent,
+            extra:
+              count > 0 ? (
                 <span
                   className='inline-flex items-center gap-1 text-xs text-ai tabular-nums'
                   title={text('agents.runningHint', { count })}
@@ -138,11 +122,10 @@ export default function AgentsPage(): ReactElement {
                 <span className='text-xs font-normal text-muted-foreground'>
                   {text('agents.off')}
                 </span>
-              ) : null}
-            </button>
-          );
+              ) : null,
+          };
         })}
-      </div>
+      />
       {/* A new agent starts from the top, its own filters. */}
       <AgentView key={agent} agent={agent} />
     </CrmFrame>
@@ -171,7 +154,7 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
     resource: { type: 'page', id: 'skills' },
     action: 'access',
   });
-  const zone = meta?.settings.timeZone ?? 'Asia/Shanghai';
+  const zone = meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
   const save = async (input: Data): Promise<void> => {
     setSaving(true);
     setError(undefined);

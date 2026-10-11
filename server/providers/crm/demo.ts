@@ -25,6 +25,7 @@ import {
   roleKey,
   type Actor,
 } from './authorization.js';
+import { DEFAULT_TIME_ZONE } from './zone-time.js';
 
 // The demo dataset: NocoBase selling its own licences and services (the
 // editions and prices of nocobase.com/cn/commercial) to fictional customers,
@@ -402,7 +403,7 @@ async function populate(
   ];
 
   const settings = await service.settings();
-  const timeZone = settings.timeZone || 'Asia/Shanghai';
+  const timeZone = settings.timeZone || DEFAULT_TIME_ZONE;
   const now = new Date();
   const calendarDay = new Intl.DateTimeFormat('en-CA', {
     timeZone,

@@ -13,7 +13,7 @@ import { authorizationToken } from '@nocobase/app-plugin-authorization';
 import { notificationServiceToken } from '@nocobase/app-plugin-notification/server';
 import { schedulerServiceToken } from '@nocobase/app-plugin-scheduler/server/tokens';
 import { scanLeadSignals } from './lead-signals.js';
-import { isEndOfDay } from './zone-time.js';
+import { isEndOfDay, DEFAULT_TIME_ZONE } from './zone-time.js';
 import { scanDealSignals } from './deal-signals.js';
 import { pick } from '../../locales/crm-ai/index.js';
 import { scheduleTexts } from '../../locales/crm-ai/schedules.js';
@@ -204,7 +204,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
       // The scheduled tasks page shows these as stored, untranslated: in the
       // CRM's working language, the AI's.
       const words = pick(scheduleTexts, settings.aiLanguage.startsWith('zh'));
-      const timezone = settings.timeZone || 'Asia/Shanghai';
+      const timezone = settings.timeZone || DEFAULT_TIME_ZONE;
       const isObject = (config: unknown) =>
         config !== null && typeof config === 'object' && !Array.isArray(config)
           ? { valid: true as const }

@@ -69,6 +69,7 @@ import { CRM_SOURCE, modelKey, useAgentModels } from './ask.js';
 import { Composer } from './composer.js';
 import { StartingPoint } from './starting-point.js';
 import { stepWords } from './step-text.js';
+import { DEFAULT_TIME_ZONE } from '../../../../server/providers/crm/zone-time.js';
 
 // One conversation with an agent, or a new one (`conversationId` null): its
 // messages, the notices of what happened meanwhile, the plans the agent
@@ -623,7 +624,7 @@ function SentAt({
   return (
     <span className='flex items-center gap-1 text-xs text-muted-foreground opacity-0 transition-opacity group-focus-within/message:opacity-100 group-hover/message:opacity-100'>
       <time dateTime={at} className='tabular-nums'>
-        {localDate(at, language, meta?.settings.timeZone ?? 'Asia/Shanghai')}
+        {localDate(at, language, meta?.settings.timeZone ?? DEFAULT_TIME_ZONE)}
       </time>
       <Button
         variant='ghost'
