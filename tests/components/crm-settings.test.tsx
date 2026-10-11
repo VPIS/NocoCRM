@@ -1,4 +1,5 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import { ApiClientError } from '@nocobase/app-client';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -136,4 +137,52 @@ describe('the settings page', () => {
       expect.objectContaining({ businessGuidance: '' }),
     );
   });
+
+  it('takes an import a gateway cut off for done once the dataset is there, and hides the banner', async () => {
+    const user = userEvent.setup();
+    state.api.mockReset();
+    // The import's request is cut off by a gateway; the server finishes it,
+    // and the dataset reads as present on the next ask.
+    state.api.mockImplementation((path: string) =>
+      path === 'demoData/import'
+        ? Promise.reject(
+            new ApiClientError('Gateway Timeout', {
+              status: 504,
+              method: 'POST',
+              url: '/api/demoData/import',
+              payload: null,
+            }),
+          )
+        : Promise.resolve({
+            data: {
+              present: true,
+              createdAt: null,
+              records: 201,
+              accounts: [],
+            },
+          }),
+    );
+    const client = new QueryClient();
+    client.setQueryData(['crm', 'workspace'], { demoPresent: false });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/settings/crm']}>
+          <SettingsPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await user.click(screen.getByRole('button', { name: crmEn.demoImport }));
+    await user.click(screen.getByRole('button', { name: crmEn.confirm }));
+    await waitFor(
+      () =>
+        expect(client.getQueryData(['crm', 'workspace'])).toEqual({
+          demoPresent: true,
+        }),
+      { timeout: 5000 },
+    );
+    expect(client.getQueryData(['crm', 'demoData'])).toMatchObject({
+      present: true,
+    });
+    expect(state.api).toHaveBeenCalledWith('demoData');
+  }, 10000);
 });

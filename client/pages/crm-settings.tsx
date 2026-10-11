@@ -4,7 +4,7 @@ import { toText } from '../components/crm/api.js';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useSearchParams } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { useToaster } from '@nocobase/app-client';
+import { ApiClientError, useToaster } from '@nocobase/app-client';
 import { Button } from '../components/ui/button.js';
 import { Input } from '../components/ui/input.js';
 import { Switch } from '../components/ui/switch.js';
@@ -25,6 +25,7 @@ import {
   useCrmText,
   useRefresh,
   type CrmSettings,
+  type Data,
 } from '../components/crm/api.js';
 interface DemoStatus {
   present: boolean;
@@ -121,27 +122,60 @@ function SettingsForm({
   // A second click on the confirmation, before it closes, starts nothing:
   // an import takes a while, and a second one beside it would be refused.
   const demoRunningRef = useRef(false);
+  // How the dataset stands, asked every few seconds until it is as wanted.
+  const waitForDemo = async (
+    present: boolean,
+  ): Promise<DemoStatus | undefined> => {
+    for (let tries = 0; tries < 60; tries += 1) {
+      await new Promise((done) => setTimeout(done, 3000));
+      const status = await api<{ data: DemoStatus }>('demoData')
+        .then((answer) => answer.data)
+        .catch(() => undefined);
+      if (status?.present === present) return status;
+    }
+    return undefined;
+  };
   const runDemo = async (action: 'populate' | 'reset'): Promise<void> => {
     if (demoRunningRef.current) return;
     demoRunningRef.current = true;
     setBusy(true);
     setError(undefined);
-    try {
-      const answer = (
-        await api<{ data: DemoStatus }>(
-          action === 'populate' ? 'demoData/import' : 'demoData/remove',
-          'POST',
-          action === 'populate' ? { language: demoLanguage } : {},
-        )
-      ).data;
+    const wanted = action === 'populate';
+    // The outcome, written into what every page reads at once: the card's
+    // query and the workspace's `demoPresent`, which the banner reads, so
+    // neither waits for the refresh after it.
+    const settle = async (answer: DemoStatus): Promise<void> => {
       queryClient.setQueryData([...scopeKey, 'demoData'], answer);
+      queryClient.setQueryData<Data>([...scopeKey, 'workspace'], (current) =>
+        current ? { ...current, demoPresent: answer.present } : current,
+      );
       toaster.show({
         type: 'success',
-        title: text(action === 'populate' ? 'demoImported' : 'demoRemoved'),
+        title: text(wanted ? 'demoImported' : 'demoRemoved'),
       });
       await refresh();
+    };
+    try {
+      await settle(
+        (
+          await api<{ data: DemoStatus }>(
+            wanted ? 'demoData/import' : 'demoData/remove',
+            'POST',
+            wanted ? { language: demoLanguage } : {},
+          )
+        ).data,
+      );
     } catch (e) {
-      setError(e);
+      // An import takes long enough for a gateway in front of the server
+      // (a hosted deployment's) to give up on the request while the server
+      // carries on: a timeout or a lost connection is not its failure. The
+      // page then asks how the dataset stands until it is there, for up to
+      // three minutes.
+      const cutOff =
+        !(e instanceof ApiClientError) || [502, 503, 504].includes(e.status);
+      const answer = cutOff ? await waitForDemo(wanted) : undefined;
+      if (answer) await settle(answer);
+      else setError(e);
     } finally {
       demoRunningRef.current = false;
       setBusy(false);
