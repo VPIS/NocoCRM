@@ -3,6 +3,8 @@ import { PageHeader } from '../components/page-header.js';
 import { toText } from '../components/crm/api.js';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useSearchParams } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
+import { useToaster } from '@nocobase/app-client';
 import { Button } from '../components/ui/button.js';
 import { Input } from '../components/ui/input.js';
 import { Switch } from '../components/ui/switch.js';
@@ -19,6 +21,7 @@ import {
   localDate,
   useCrmApi,
   useCrmQuery,
+  useCrmScopeKey,
   useCrmText,
   useRefresh,
   type CrmSettings,
@@ -98,10 +101,18 @@ function SettingsForm({
         ?.scrollIntoView({ block: 'start' });
   }, [target]);
   // The demo dataset: imported and removed from here, never saved with the
-  // settings form, so it keeps its own state and confirmation.
-  const [demo, setDemo] = useState(initial.demo);
+  // settings form. Read from its query rather than kept here: importing or
+  // removing it changes the reader's roles, and the route guards hide and
+  // show the page again while the new permissions load, so this form mounts
+  // anew; its own state would start from what the cache held before. The
+  // answer is written into the cache, and the outcome told in a toast, which
+  // outlives that remount.
+  const demoQuery = useCrmQuery<DemoStatus>('demoData');
+  const demo = demoQuery.data ?? initial.demo;
+  const queryClient = useQueryClient();
+  const scopeKey = useCrmScopeKey();
+  const toaster = useToaster();
   const [demoAction, setDemoAction] = useState<'populate' | 'reset'>();
-  const [demoNotice, setDemoNotice] = useState<string>();
   // The dataset comes in Chinese and in English (the same story, translated);
   // the reader's interface language is the first choice.
   const [demoLanguage, setDemoLanguage] = useState(
@@ -115,21 +126,20 @@ function SettingsForm({
     demoRunningRef.current = true;
     setBusy(true);
     setError(undefined);
-    setDemoNotice(undefined);
     try {
-      setDemo(
-        (
-          await api<{ data: DemoStatus }>(
-            action === 'populate' ? 'demoData/import' : 'demoData/remove',
-            'POST',
-            action === 'populate' ? { language: demoLanguage } : {},
-          )
-        ).data,
-      );
+      const answer = (
+        await api<{ data: DemoStatus }>(
+          action === 'populate' ? 'demoData/import' : 'demoData/remove',
+          'POST',
+          action === 'populate' ? { language: demoLanguage } : {},
+        )
+      ).data;
+      queryClient.setQueryData([...scopeKey, 'demoData'], answer);
+      toaster.show({
+        type: 'success',
+        title: text(action === 'populate' ? 'demoImported' : 'demoRemoved'),
+      });
       await refresh();
-      setDemoNotice(
-        text(action === 'populate' ? 'demoImported' : 'demoRemoved'),
-      );
     } catch (e) {
       setError(e);
     } finally {
@@ -338,11 +348,6 @@ function SettingsForm({
                 </li>
               ))}
             </ul>
-            {demoNotice && (
-              <p role='status' className='rounded-lg bg-primary/10 p-3 text-sm'>
-                {demoNotice}
-              </p>
-            )}
             <p className='text-sm'>
               {demo.present
                 ? text('demoPresent', {

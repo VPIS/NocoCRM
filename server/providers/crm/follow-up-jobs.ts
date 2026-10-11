@@ -79,3 +79,47 @@ export async function markStarted(
     .where('id', '=', entryId)
     .execute();
 }
+
+// One run of a card at a time in this process. A card queued again at start
+// (runningCards) may meet the task the queue kept for it; whichever comes
+// second does nothing while the first runs, and nothing once the card is no
+// longer running.
+export function oncePerCard(
+  run: (payload: FollowUpPayload, signal: AbortSignal) => Promise<void>,
+): (payload: FollowUpPayload, signal: AbortSignal) => Promise<void> {
+  const claimed = new Set<string>();
+  return async (payload, signal) => {
+    if (claimed.has(payload.entryId)) return;
+    claimed.add(payload.entryId);
+    try {
+      await run(payload, signal);
+    } finally {
+      claimed.delete(payload.entryId);
+    }
+  };
+}
+
+// The cards still running when the application starts. The memory queue
+// writes its tasks to storage on a shutdown that finishes; one cut short
+// (a forced exit, a killed process) loses them, and their cards would wait
+// a day before reading as failed. The provider queues these again; a card
+// whose task was kept runs once all the same (oncePerCard, and a run does
+// nothing for a card no longer running).
+export async function runningCards(
+  database: DatabaseManager,
+): Promise<FollowUpPayload[]> {
+  const rows = await database
+    .query()
+    .selectFrom('crmHistory')
+    .select(['id', 'entity'])
+    .where('action', '=', 'ai')
+    .where('aiStatus', '=', 'running')
+    .where('entity', 'in', ['leads', 'opportunities', 'approvals', 'tasks'])
+    .orderBy('createdAt')
+    .execute();
+  return rows.map((row) => ({
+    entity: String(row.entity) as FollowUpPayload['entity'],
+    entryId: String(row.id),
+    language: null,
+  }));
+}

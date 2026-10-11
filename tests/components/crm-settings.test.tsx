@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
 import { crmEn } from '../../client/locales/crm/index.js';
 import { defaultSettings } from '../../server/providers/crm/schema.js';
@@ -38,6 +39,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
           : { present: false, createdAt: null, records: 0, accounts: [] },
     }),
     useCrmApi: () => state.api,
+    useCrmScopeKey: () => ['crm'],
     useRefresh: () => async () => undefined,
     useCrmText: () => ({
       text: (key: string): string => {
@@ -59,9 +61,11 @@ describe('the settings page', () => {
     const user = userEvent.setup();
     state.api.mockResolvedValue({ data: {} });
     render(
-      <MemoryRouter initialEntries={['/settings/crm']}>
-        <SettingsPage />
-      </MemoryRouter>,
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/settings/crm']}>
+          <SettingsPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
     const approvals = screen.getByRole('switch', {
       name: crmEn.notifications.notifyApprovals,

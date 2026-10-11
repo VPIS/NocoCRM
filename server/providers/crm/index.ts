@@ -19,7 +19,12 @@ import { pick } from '../../locales/crm-ai/index.js';
 import { scheduleTexts } from '../../locales/crm-ai/schedules.js';
 import { jobExecutorServiceToken } from '@nocobase/app-server/jobs';
 import type { JobExecutor } from '@nocobase/jobs';
-import { createFollowUpJob, FOLLOW_UP_JOBS } from './follow-up-jobs.js';
+import {
+  createFollowUpJob,
+  FOLLOW_UP_JOBS,
+  oncePerCard,
+  runningCards,
+} from './follow-up-jobs.js';
 import { CrmPlans, crmPlansToken } from './plans/engine.js';
 import { MailTimeline, mailTimelineToken } from './mail-timeline.js';
 import { mailProviderRegistryToken } from '@nocobase/app-plugin-mail/server';
@@ -329,14 +334,16 @@ export default class CrmProvider extends ServiceProvider<Application> {
       const executor = this.app.container
         .resolve(jobExecutorServiceToken)
         .getJobExecutor('crm', FOLLOW_UP_JOBS);
-      const FollowUpJob = createFollowUpJob((payload, signal) =>
-        payload.entity === 'opportunities'
-          ? deals.runEntry(payload.entryId, payload.language, signal)
-          : payload.entity === 'approvals'
-            ? reviewer.runEntry(payload.entryId, payload.language, signal)
-            : payload.entity === 'tasks'
-              ? preparer.runEntry(payload.entryId, payload.language, signal)
-              : evaluator.runEntry(payload.entryId, payload.language, signal),
+      const FollowUpJob = createFollowUpJob(
+        oncePerCard((payload, signal) =>
+          payload.entity === 'opportunities'
+            ? deals.runEntry(payload.entryId, payload.language, signal)
+            : payload.entity === 'approvals'
+              ? reviewer.runEntry(payload.entryId, payload.language, signal)
+              : payload.entity === 'tasks'
+                ? preparer.runEntry(payload.entryId, payload.language, signal)
+                : evaluator.runEntry(payload.entryId, payload.language, signal),
+        ),
       );
       executor.registerJob(FollowUpJob);
       await executor.setup();
@@ -350,6 +357,20 @@ export default class CrmProvider extends ServiceProvider<Application> {
       deals.useJobs(dispatch);
       reviewer.useJobs(dispatch);
       preparer.useJobs(dispatch);
+      // The cards a shutdown cut short left running, queued again: only on
+      // the memory queue, which this process alone holds; a shared one
+      // (Redis) keeps its tasks through any exit, and another instance may
+      // be running them.
+      const adapter =
+        this.app.config.get<Record<string, { adapter?: string } | undefined>>(
+          'jobs',
+        )?.[FOLLOW_UP_JOBS]?.adapter ?? 'memory';
+      if (adapter === 'memory')
+        void runningCards(service.database)
+          .then(async (cards) => {
+            for (const card of cards) await dispatch(card);
+          })
+          .catch(() => undefined);
     }
     service.opportunityOpened = (by, id) =>
       void (async () => {

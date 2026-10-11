@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createFollowUpJob,
   FOLLOW_UP_JOBS,
+  oncePerCard,
   type FollowUpPayload,
 } from '../../server/providers/crm/follow-up-jobs.js';
 
@@ -87,5 +88,35 @@ describe('AI follow-ups as tasks of the jobs service', () => {
     } finally {
       await rm(folder, { recursive: true, force: true });
     }
+  });
+
+  it('runs a card queued twice once at a time', async () => {
+    let runs = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((done) => (release = done));
+    const run = oncePerCard(async () => {
+      runs += 1;
+      await gate;
+    });
+    const payload: FollowUpPayload = {
+      entity: 'tasks',
+      entryId: 'card',
+      language: null,
+    };
+    const signal = new AbortController().signal;
+    const first = run(payload, signal);
+    // The same card again while it runs (requeued at start beside the task
+    // the queue kept): nothing.
+    await run(payload, signal);
+    expect(runs).toBe(1);
+    // Another card runs beside it.
+    void run({ ...payload, entryId: 'other' }, signal);
+    expect(runs).toBe(2);
+    release();
+    await first;
+    // Once done, the card may run again; whether it does anything is the
+    // runner's, which skips a card no longer running.
+    await run(payload, signal);
+    expect(runs).toBe(3);
   });
 });
