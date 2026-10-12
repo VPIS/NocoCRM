@@ -37,6 +37,11 @@ export const enProjects: DemoProjects = {
     message:
       "We saw your demo at the digital hospitality expo in Shanghai and were impressed.\n\nWe have more than 9,000 hotels, and inspections, maintenance tickets and franchisee communication are spread across three systems, so supervisors, hotels and contractors switch between them all day and head office can't see the whole picture. We want to see whether one platform can cover them.\n\nOur baseline: private deployment, complete audit logs, and sign-in through our membership system's identity service. If possible, we'd like to start with a requirements session; Howard Cheng, our data platform lead, would join me.",
     deal: 'Store operations and ticketing platform (Enterprise)',
+    leadTask: {
+      name: 'Book the requirements session',
+      result:
+        "Booked the requirements session with Chen Lu at H World's Shanghai head office next Tuesday; Howard Cheng will join.\n\nChen Lu will list the systems used today for inspections, maintenance tickets and franchisee repair requests, and we will bring chain hospitality case studies and the architecture for private deployment.",
+    },
     discovery: {
       heading: 'Discovery session',
       body: 'Mapped inspections, maintenance tickets and franchisee repair requests with Chen Lu and Howard Cheng; phase one covers 2,000 stores in East China, needs single sign-on with the membership system, and keeps audit logs for 3 years.',

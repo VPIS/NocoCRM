@@ -5898,6 +5898,26 @@ describe('demo dataset', () => {
         },
       ])
       .execute();
+    // Every converted and invalid lead shows what was done on it before.
+    const settledLeads = await database
+      .query()
+      .selectFrom('crmLeads')
+      .select(['id', 'status'])
+      .where('status', 'in', ['converted', 'invalid'])
+      .execute();
+    expect(settledLeads.length).toBeGreaterThan(0);
+    for (const lead of settledLeads) {
+      const tasks = await database
+        .query()
+        .selectFrom('crmTasks')
+        .select('id')
+        .where('leadId', '=', toText(lead.id))
+        .execute();
+      expect([toText(lead.status), tasks.length > 0]).toEqual([
+        toText(lead.status),
+        true,
+      ]);
+    }
     // Done: present, nothing under way.
     expect(
       (await (await request('/demoData', 'admin')).json()).data,

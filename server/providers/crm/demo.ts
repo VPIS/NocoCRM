@@ -963,6 +963,48 @@ async function populate(
       -5,
       14,
     );
+    // What was done on the leads before they were decided: two tasks on
+    // each lead converted, which the conversion gives its company too, and
+    // a first contact on each invalid one, with what came of it.
+    // Each [day, hour]: after the lead came in (a task is created two days
+    // before it is due), and before the conversion's morning.
+    for (const [i, times] of [
+      [
+        0,
+        [
+          [-14, 10],
+          [-11, 15],
+        ],
+      ],
+      [
+        1,
+        [
+          [-5, 9],
+          [-4, 9],
+        ],
+      ],
+    ] as const)
+      for (const [k, done] of text.convertedLeadTasks[i].entries())
+        await task(
+          done.name,
+          leadLinks(i),
+          times[k]?.[0] ?? -2,
+          times[k]?.[1] ?? 10,
+          'completed',
+          done.result,
+        );
+    for (const [k, i, day] of [
+      [0, 11, -8],
+      [1, 12, -11],
+    ] as const)
+      await task(
+        text.invalidLeadTasks[k].name,
+        leadLinks(i),
+        day,
+        11,
+        'completed',
+        text.invalidLeadTasks[k].result,
+      );
     for (const [i, companyIndex, contactIndex, day] of [
       [0, 0, 0, -10],
       [1, 4, 0, -4],
@@ -1471,6 +1513,14 @@ async function populate(
         message: project.hworld.message,
       },
       -42,
+    );
+    await task(
+      project.hworld.leadTask.name,
+      { leadId: hworldLead.id },
+      -40,
+      10,
+      'completed',
+      project.hworld.leadTask.result,
     );
     await comment(
       'leads',

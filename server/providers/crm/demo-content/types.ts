@@ -139,6 +139,12 @@ export interface DemoMailThread {
   }[];
 }
 
+// A task done, named by what was to be done, with its result.
+export interface DemoDoneTask {
+  readonly name: string;
+  readonly result: string;
+}
+
 export interface DemoContent {
   // The manifest's label for the import.
   readonly label: string;
@@ -166,6 +172,14 @@ export interface DemoContent {
   // The two tasks placed on the first leads.
   readonly discoveryCall: { readonly name: string; readonly feedback: string };
   readonly productDemo: { readonly name: string; readonly feedback: string };
+  // The tasks done on the first two leads before they were converted, and
+  // the one done on each invalid lead before it was set aside, with what
+  // came of it.
+  readonly convertedLeadTasks: readonly [
+    readonly DemoDoneTask[],
+    readonly DemoDoneTask[],
+  ];
+  readonly invalidLeadTasks: readonly [DemoDoneTask, DemoDoneTask];
   // The matters of the completed and planned tasks on the first deals.
   readonly completedMatters: readonly string[];
   readonly completedFeedback: readonly string[];
@@ -244,6 +258,8 @@ export interface DemoProjects {
     ];
     readonly message: string;
     readonly deal: string;
+    // Done on the lead before it was converted, its result written.
+    readonly leadTask: DemoDoneTask;
     readonly discovery: DemoComment;
     readonly poc: DemoComment;
     // Done two days ago, its result written.

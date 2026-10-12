@@ -465,6 +465,44 @@ export const enUS: DemoContent = {
     feedback:
       "Demonstrated the admissions and scheduling prototype; the team confirmed its interest and introduced the director of academic affairs.\n\nThe director was most interested in clash warnings and the parents' timetable, and asked a lot about teachers' maximum hours. The admissions lead wants to see each campus's lead conversion funnel.\n\nNext: adjust the prototype to the director's rules, give a second demo in two weeks, and prepare a Professional quotation.",
   },
+  convertedLeadTasks: [
+    [
+      {
+        name: 'First call back',
+        result:
+          'Reached Grace Mitchell by phone. She saw the demo at the industrial trade show and is most interested in production reporting and equipment checks.\n\nWe booked a discovery call for the day after tomorrow; she will bring the production manager and gather the reporting spreadsheets the three factories use today.',
+      },
+      {
+        name: 'Send manufacturing case studies and a price range',
+        result:
+          'Sent Grace Mitchell two case studies from automotive parts customers and the price range for Enterprise deployed privately.\n\nShe replied that the budget is within the range and the head of the IT centre agreed to go ahead; next, we open an opportunity and arrange a demo for the production department.',
+      },
+    ],
+    [
+      {
+        name: 'Confirm the demo time and attendees',
+        result:
+          "Confirmed the online demo on Thursday afternoon with Ryan Cooper: the admissions lead and two academic staff will join, and the director of academic affairs will try to.\n\nRyan wants to focus on clash warnings and the parents' timetable, so both come in the first half of the demo.",
+      },
+      {
+        name: 'Write up the demo feedback',
+        result:
+          "Sent Ryan Cooper a list of the questions raised in the demo: the rules for teachers' maximum hours, moving classes between campuses, and payment records for parents.\n\nHe replied that the team has confirmed its interest and the director of academic affairs will lead the evaluation, so it can move on as an opportunity.",
+      },
+    ],
+  ],
+  invalidLeadTasks: [
+    {
+      name: 'Reply to the partnership enquiry',
+      result:
+        'Replied to Tyler Grant, pointing him to the partner programme and the community job board, and explained that we have no contract work to offer.\n\nThis is not a purchase; the lead is marked invalid.',
+    },
+    {
+      name: 'Check the contact details by phone',
+      result:
+        'The phone number from the trade show scan does not exist, and the email sent to the registered address bounced.\n\nHighridge Textiles is in the business register, but no other contact details could be found; the lead is marked invalid.',
+    },
+  ],
   completedMatters: [
     'requirements workshop',
     'contract review',
