@@ -6,6 +6,7 @@ const state = vi.hoisted(() => ({
   signOut: vi.fn(),
   refresh: vi.fn(),
   error: vi.fn(),
+  resolveError: vi.fn(),
 }));
 vi.mock('@nocobase/app-plugin-authentication/client', () => ({
   useAuthentication: () => ({
@@ -13,6 +14,10 @@ vi.mock('@nocobase/app-plugin-authentication/client', () => ({
     session: { user: { name: 'Test user' } },
     refresh: state.refresh,
   }),
+}));
+// The plugin turns a sign-out error into its own localized message.
+vi.mock('@nocobase/app-plugin-authentication/client/actions', () => ({
+  useAuthenticationErrorResolver: () => state.resolveError,
 }));
 vi.mock('@nocobase/i18n/client', () => ({
   useTranslation: () => ({
@@ -31,6 +36,10 @@ beforeEach(() => {
   state.signOut.mockReset();
   state.refresh.mockReset();
   state.error.mockReset();
+  state.resolveError.mockReset();
+  state.resolveError.mockReturnValue({
+    message: 'Localized authentication error',
+  });
 });
 it('reports an API sign-out failure without refreshing the session', async () => {
   state.signOut.mockResolvedValue({ error: { message: 'Unavailable' } });
@@ -43,9 +52,10 @@ it('reports an API sign-out failure without refreshing the session', async () =>
   await waitFor(() =>
     expect(state.error).toHaveBeenCalledWith({
       type: 'error',
-      title: 'Unable to sign out. Please try again.',
+      title: 'Localized authentication error',
     }),
   );
+  expect(state.resolveError).toHaveBeenCalledWith({ message: 'Unavailable' });
   expect(state.refresh).not.toHaveBeenCalled();
 });
 it('refreshes the session after successful sign-out', async () => {
