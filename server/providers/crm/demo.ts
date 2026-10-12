@@ -126,11 +126,12 @@ export interface DemoMailboxes {
   remove(userId: string, accountId: string): Promise<void>;
 }
 
-// How the removal clears the in-app notifications about the demo's records
-// from everyone's inbox: through the in-app notification plugin's store in
-// the running application, absent without the plugin.
+// How the removal clears from everyone's inbox the in-app notifications
+// about records that no longer exist, the demo's among them: through the
+// in-app notification plugin's store in the running application, absent
+// without the plugin.
 export interface DemoInbox {
-  remove(recordIds: ReadonlySet<string>): Promise<void>;
+  removeOrphans(): Promise<void>;
 }
 
 // How the import writes the importer's finished conversations with the
@@ -2231,13 +2232,10 @@ export async function resetDemo(
       await mailboxes.remove(userId, accountId).catch(() => undefined);
   if (chats && manifest.chats?.length)
     await chats.remove(manifest.chats).catch(() => undefined);
-  // The notifications already in people's inboxes about its records, which
-  // would otherwise stay, opening records that are gone.
-  if (inbox)
-    await inbox
-      .remove(new Set(manifest.records.map((record) => record.id)))
-      .catch(() => undefined);
   await deleteRecords(service, manifest);
+  // The notifications already in people's inboxes about its records, and
+  // any other about a record gone, which would only open nothing.
+  if (inbox) await inbox.removeOrphans().catch(() => undefined);
   await query
     .deleteFrom('crmSettings')
     .where('id', 'in', [DEMO_MARKER, DEMO_MAIL_ROW])

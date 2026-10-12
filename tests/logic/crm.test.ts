@@ -5847,14 +5847,18 @@ describe('demo dataset', () => {
     expect((await request('/demoData/remove', 'rep', 'POST', {})).status).toBe(
       403,
     );
-    // A notification in someone's inbox about one of its records, and one
-    // about a record of the CRM's own.
+    // Notifications in someone's inbox: about one of its records, about a
+    // record deleted long ago, and about a record that stays.
     const [demoLead] = (
       await service.list(actor('admin'), 'leads', {
         pageSize: 1,
         ownerId: 'admin',
       })
     ).data;
+    // Made after the demo's lead is picked, which lists newest first.
+    const kept = await service.save(actor('admin'), 'leads', {
+      name: 'Kept lead',
+    });
     await database
       .query()
       .insertInto('notificationInAppItems')
@@ -5878,15 +5882,30 @@ describe('demo dataset', () => {
           updatedAt: new Date().toISOString(),
           target: JSON.stringify({
             type: 'route',
-            path: '/crm/leads/own-lead',
+            path: `/crm/leads/${toText(kept.id)}`,
+          }),
+        },
+        {
+          id: 'item-gone',
+          userId: 'rep',
+          notificationId: 'n-gone',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          target: JSON.stringify({
+            type: 'route',
+            path: '/crm/accounts/gone-company',
           }),
         },
       ])
       .execute();
     const reset = await request('/demoData/remove', 'admin', 'POST', {});
     expect(reset.status).toBe(200);
-    // The one about its record goes from the inbox; the other stays.
-    expect(deletedNotices).toEqual([{ id: 'item-demo', userId: 'admin' }]);
+    // Those about records gone leave the inbox; the other stays.
+    expect(deletedNotices).toEqual([
+      { id: 'item-demo', userId: 'admin' },
+      { id: 'item-gone', userId: 'rep' },
+    ]);
+    await service.remove(actor('admin'), 'leads', toText(kept.id));
     expect((await reset.json()).data.present).toBe(false);
     // Its mailboxes go with it, removed as their owners; so do their messages.
     expect(demoMail.removed.map((r) => r.accountId).sort()).toEqual(

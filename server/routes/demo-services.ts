@@ -24,6 +24,18 @@ import { CrmError, toText } from '../providers/crm/schema.js';
 // accounts through the users plugin, its mailboxes through the Mail plugin,
 // the importer's conversations through the Agents plugin, and the
 // notifications about its records through the in-app notification plugin.
+// The CRM's table for each kind a notification's route names; companies
+// were accounts until 202610100001_crm_companies, ids unchanged.
+const RECORD_TABLES: Record<string, string> = {
+  leads: 'crmLeads',
+  opportunities: 'crmOpportunities',
+  companies: 'crmCompanies',
+  accounts: 'crmCompanies',
+  contacts: 'crmContacts',
+  tasks: 'crmTasks',
+  approvals: 'crmApprovals',
+};
+
 export function demoServices(app: Application): {
   demoAccounts: DemoAccountCreator;
   demoMailboxes: DemoMailboxes | undefined;
@@ -264,37 +276,55 @@ export function demoServices(app: Application): {
         },
       }
     : undefined;
-  // Everyone's in-app notifications whose route target names one of the
-  // demo's records: found by reading the plugin's items, deleted through its
-  // store, as a person deleting one from their inbox would.
+  // Everyone's in-app notifications whose route target names a CRM record
+  // that no longer exists: the demo's, once its records are deleted, and any
+  // left by an earlier removal or a deleted record, which would only open a
+  // record that is gone. Found by reading the plugin's items and the CRM's
+  // tables, deleted through its store, as a person deleting one from their
+  // inbox would.
   const demoInbox: DemoInbox | undefined = app.container.has(
     inAppNotificationStoreToken,
   )
     ? {
-        async remove(recordIds) {
-          if (!recordIds.size) return;
+        async removeOrphans() {
           const store = app.container.resolve(inAppNotificationStoreToken);
-          const items = await app.container
-            .resolve(crmToken)
-            .database.query()
+          const query = app.container.resolve(crmToken).database.query();
+          const items = await query
             .selectFrom('notificationInAppItems')
             .select(['id', 'userId', 'target'])
             .where('target', 'like', '%/crm/%')
             .execute();
-          for (const item of items) {
+          const byTable = new Map<string, Set<string>>();
+          const targets = items.flatMap((item) => {
             const target = (jsonValue(item.target) ?? {}) as {
               path?: unknown;
             };
-            const id = /^\/crm\/[a-z]+\/([^/?#]+)/.exec(
+            const match = /^\/crm\/([a-z]+)\/([^/?#]+)/.exec(
               toText(target.path),
-            )?.[1];
-            if (id && recordIds.has(id))
+            );
+            const table = match ? RECORD_TABLES[match[1] ?? ''] : undefined;
+            if (!match || !table) return [];
+            const id = match[2] ?? '';
+            byTable.set(table, (byTable.get(table) ?? new Set()).add(id));
+            return [{ item, table, id }];
+          });
+          const present = new Set<string>();
+          for (const [table, ids] of byTable)
+            for (let at = 0; at < ids.size; at += 500) {
+              const rows = await query
+                .selectFrom(table)
+                .select('id')
+                .where('id', 'in', [...ids].slice(at, at + 500))
+                .execute();
+              for (const row of rows) present.add(`${table}:${toText(row.id)}`);
+            }
+          for (const { item, table, id } of targets)
+            if (!present.has(`${table}:${id}`))
               await store.update({
                 id: toText(item.id),
                 userId: toText(item.userId),
                 action: 'delete',
               });
-          }
         },
       }
     : undefined;
