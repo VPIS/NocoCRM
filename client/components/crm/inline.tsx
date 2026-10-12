@@ -165,7 +165,11 @@ export function InlineField({
         JSON.stringify(arrayValues(record[field.key]).map(toText))
       : field.type === 'boolean'
         ? next === Boolean(record[field.key])
-        : toText(next) === toText(record[field.key]);
+        : // A date by its day: the stored instant (…T09:00:00Z) and the
+          // edited yyyy-mm-dd name the same day when nothing was picked.
+          field.type === 'date'
+          ? toText(next ?? '') === toInputValue(record[field.key])
+          : toText(next) === toText(record[field.key]);
     if (same) {
       setEditing(false);
       return true;
