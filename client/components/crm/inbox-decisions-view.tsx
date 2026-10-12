@@ -233,8 +233,9 @@ export function DecisionDetail({
           the record's kind, as the record drawer's bar names it; and the
           record's full page, with its particulars. A bar over a rule, as
           the drawer's is, as tall as the list's tabs beside it, so the two
-          rules meet in one line. */}
-      <div className='flex h-10 shrink-0 items-center gap-2 border-b border-border bg-card px-4'>
+          rules meet in one line. It stays at the top while the pane
+          scrolls. */}
+      <div className='sticky top-0 z-20 flex h-10 shrink-0 items-center gap-2 border-b border-border bg-card px-4'>
         <button
           type='button'
           onClick={onBack}
