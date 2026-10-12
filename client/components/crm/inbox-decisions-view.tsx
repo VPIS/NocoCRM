@@ -100,19 +100,23 @@ export function DecisionList({
             }`}
           />
           <Sparkles className='mt-0.5 size-4 shrink-0 text-ai' />
+          {/* Two lines: what it is about (its kind, muted, then its record)
+              with when, and then where it stands. */}
           <span className='grid min-w-0 flex-1 gap-1'>
-            <span className='flex items-center gap-1.5 text-xs text-muted-foreground'>
-              <span className='shrink-0'>{kindOf(entry)}</span>
+            <span className='flex min-w-0 items-baseline gap-1.5'>
+              <span className='shrink-0 text-xs text-muted-foreground'>
+                {kindOf(entry)}
+              </span>
+              <span className='min-w-0 truncate text-sm font-medium'>
+                {nameOf(entry)}
+              </span>
               <time
-                className='ml-auto shrink-0 tabular-nums'
+                className='ml-auto shrink-0 text-xs text-muted-foreground tabular-nums'
                 dateTime={entry.createdAt}
                 title={new Date(entry.createdAt).toLocaleString(language)}
               >
                 {relativeTime(entry.createdAt, language, now, text('justNow'))}
               </time>
-            </span>
-            <span className='truncate text-sm font-medium'>
-              {nameOf(entry)}
             </span>
             {entry.status === 'running' ? (
               <span className='text-xs text-muted-foreground'>
@@ -126,8 +130,7 @@ export function DecisionList({
                 )}
               </span>
             ) : result ? (
-              // Its tags and summary over two lines, cut after the second.
-              <span className='line-clamp-2 text-xs text-muted-foreground'>
+              <span className='line-clamp-1 text-xs text-muted-foreground'>
                 {/* Handled, what became of it first: decided on the card,
                     dismissed, or an approval withdrawn or decided on
                     itself. */}
