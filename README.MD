@@ -104,10 +104,9 @@ pnpm build --target linux-x64 --tar   # writes storage/exports/dist.tar.gz
   ```
 
 - **By hand.** Unpack the archive, run `pnpm nocobase config init` and `pnpm nocobase config check` inside `dist/`, and run `node ./dist/server/standalone.js` under a service manager, with `config.yml` and `storage/` kept beside `dist/` across updates.
-- **Docker.** Build with `docker build -t nococrm .`, or use `ghcr.io/nocobase/nococrm`, which CI publishes from `main` and `v*` tags. Mount `config.yml` read-only at `/app/config.yml` and a volume at `/app/storage`, and choose the path with `-e APP_BASE_PATH=/crm`; `playground/` runs it with Docker Compose.
 - **NocoBase Hub.** Upload the archive to the application on a Hub, or deploy from the source checkout: add the Hub's App as a remote with `pnpm nocobase hub remote add origin <Hub URL>/apps/<App ID>`, save a Hub publishing key with `pnpm nocobase hub auth login`, then run `pnpm nocobase hub deploy`, which builds for the Hub's platform itself.
 
-To serve the client's static files from a CDN, build with its prefix, `CDN_BASE_URL=https://cdn.example.com/crm/v1/ pnpm build` (or `docker build --build-arg CDN_BASE_URL=…`), upload `dist/client/` there with its paths kept and CORS allowed for the application's origin, and keep the complete `dist/client/` on the server too, which still serves the HTML. Unset, the files load from the application as before.
+To serve the client's static files from a CDN, build with its prefix, `CDN_BASE_URL=https://cdn.example.com/crm/v1/ pnpm build`, upload `dist/client/` there with its paths kept and CORS allowed for the application's origin, and keep the complete `dist/client/` on the server too, which still serves the HTML. Unset, the files load from the application as before.
 
 Behind a reverse proxy, keep the public host and protocol and pass WebSocket upgrades. After deploying, set the AI keys (`DASHSCOPE_API_KEY`, `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`, each optional: the Qwen, DeepSeek and OpenAI services are defined in the code, and one without its key is left out) and check `/<base path>/api/healthz`. Back up the database and `storage/` before upgrading.
 
