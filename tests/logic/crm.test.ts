@@ -49,6 +49,7 @@ import {
   type ServiceResolver,
 } from '@nocobase/service-provider';
 import { mailServiceToken } from '@nocobase/app-plugin-mail/server';
+import { inAppNotificationStoreToken } from '@nocobase/app-plugin-notification-in-app/server';
 import { DEMO_MAIL_SECRET } from '../../server/providers/crm/demo-mail.js';
 import {
   MailTimeline,
@@ -265,6 +266,8 @@ const demoMail: {
   }[];
   removed: { userId: string; accountId: string }[];
 } = { connected: [], removed: [] };
+// The in-app notifications the demo's removal deletes, by item id.
+const deletedNotices: { id: string; userId: string }[] = [];
 const actor = (id: string): Actor => ({
   id,
   locale: 'en-US',
@@ -289,6 +292,21 @@ beforeAll(async () => {
     }),
   );
   await database.connect();
+  // The in-app notification plugin's items, as the demo's removal reads them.
+  await database.builder().createCollection('notificationInAppItems', (c) => {
+    c.string('id');
+    c.primary('id');
+    c.string('userId');
+    c.string('deliveryId').nullable();
+    c.string('notificationId');
+    c.string('title').nullable();
+    c.text('body').nullable();
+    c.string('actionUrl').nullable();
+    c.text('target').nullable();
+    c.datetimeTz('readAt').nullable();
+    c.datetimeTz('createdAt').nullable();
+    c.datetimeTz('updatedAt').nullable();
+  });
   await database.builder().createCollection('user', (c) => {
     c.string('id');
     c.primary('id');
@@ -507,6 +525,15 @@ beforeAll(async () => {
     },
   } as unknown as ReturnType<
     typeof container.resolve<typeof mailServiceToken>
+  >);
+  container.instance(inAppNotificationStoreToken, {
+    async update(input: { id: string; userId: string; action: string }) {
+      if (input.action === 'delete')
+        deletedNotices.push({ id: input.id, userId: input.userId });
+      return undefined;
+    },
+  } as unknown as ReturnType<
+    typeof container.resolve<typeof inAppNotificationStoreToken>
   >);
   router = await crmRoutes.createRouter({
     container,
@@ -5820,8 +5847,46 @@ describe('demo dataset', () => {
     expect((await request('/demoData/remove', 'rep', 'POST', {})).status).toBe(
       403,
     );
+    // A notification in someone's inbox about one of its records, and one
+    // about a record of the CRM's own.
+    const [demoLead] = (
+      await service.list(actor('admin'), 'leads', {
+        pageSize: 1,
+        ownerId: 'admin',
+      })
+    ).data;
+    await database
+      .query()
+      .insertInto('notificationInAppItems')
+      .values([
+        {
+          id: 'item-demo',
+          userId: 'admin',
+          notificationId: 'n-demo',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          target: JSON.stringify({
+            type: 'route',
+            path: `/crm/leads/${toText(demoLead?.id)}`,
+          }),
+        },
+        {
+          id: 'item-own',
+          userId: 'admin',
+          notificationId: 'n-own',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          target: JSON.stringify({
+            type: 'route',
+            path: '/crm/leads/own-lead',
+          }),
+        },
+      ])
+      .execute();
     const reset = await request('/demoData/remove', 'admin', 'POST', {});
     expect(reset.status).toBe(200);
+    // The one about its record goes from the inbox; the other stays.
+    expect(deletedNotices).toEqual([{ id: 'item-demo', userId: 'admin' }]);
     expect((await reset.json()).data.present).toBe(false);
     // Its mailboxes go with it, removed as their owners; so do their messages.
     expect(demoMail.removed.map((r) => r.accountId).sort()).toEqual(

@@ -126,6 +126,13 @@ export interface DemoMailboxes {
   remove(userId: string, accountId: string): Promise<void>;
 }
 
+// How the removal clears the in-app notifications about the demo's records
+// from everyone's inbox: through the in-app notification plugin's store in
+// the running application, absent without the plugin.
+export interface DemoInbox {
+  remove(recordIds: ReadonlySet<string>): Promise<void>;
+}
+
 // How the import writes the importer's finished conversations with the
 // assistant: through the Agents plugin in the running application, a stub in
 // tests, absent without the plugin or before the assistant exists.
@@ -2205,6 +2212,7 @@ export async function resetDemo(
   accounts?: DemoAccountCreator,
   mailboxes?: DemoMailboxes,
   chats?: DemoChats,
+  inbox?: DemoInbox,
 ): Promise<DemoStatus> {
   await requireCapability(actor, 'manage', 'settings');
   const query = service.database.query();
@@ -2223,6 +2231,12 @@ export async function resetDemo(
       await mailboxes.remove(userId, accountId).catch(() => undefined);
   if (chats && manifest.chats?.length)
     await chats.remove(manifest.chats).catch(() => undefined);
+  // The notifications already in people's inboxes about its records, which
+  // would otherwise stay, opening records that are gone.
+  if (inbox)
+    await inbox
+      .remove(new Set(manifest.records.map((record) => record.id)))
+      .catch(() => undefined);
   await deleteRecords(service, manifest);
   await query
     .deleteFrom('crmSettings')

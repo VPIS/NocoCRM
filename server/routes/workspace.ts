@@ -141,7 +141,8 @@ export function registerWorkspaceRoutes(
   router: Hono<CrmEnv>,
 ): void {
   const service = app.container.resolve(crmToken);
-  const { demoAccounts, demoMailboxes, demoChats } = demoServices(app);
+  const { demoAccounts, demoMailboxes, demoChats, demoInbox } =
+    demoServices(app);
   const contentUrl = (id: string) =>
     `${toText(app.publicBasePath)}/api/attachments/${encodeURIComponent(id)}/content`;
 
@@ -360,6 +361,7 @@ export function registerWorkspaceRoutes(
           demoAccounts,
           demoMailboxes,
           demoChats,
+          demoInbox,
         ),
       }),
   );

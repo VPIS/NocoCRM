@@ -2,10 +2,12 @@ import { randomUUID } from 'node:crypto';
 import type { Application } from '@nocobase/app-server/application';
 import { agentsToken } from '@nocobase/app-plugin-agents/server/tokens';
 import { mailServiceToken } from '@nocobase/app-plugin-mail/server';
+import { inAppNotificationStoreToken } from '@nocobase/app-plugin-notification-in-app/server';
 import { userManagementServiceToken } from '@nocobase/app-plugin-users/server/tokens';
 import type {
   DemoAccountCreator,
   DemoChats,
+  DemoInbox,
   DemoMailboxes,
 } from '../providers/crm/demo.js';
 import { crmToken } from '../providers/crm/index.js';
@@ -20,11 +22,13 @@ import { CrmError, toText } from '../providers/crm/schema.js';
 
 // What the demo dataset's import and removal do through other plugins: its
 // accounts through the users plugin, its mailboxes through the Mail plugin,
-// the importer's conversations through the Agents plugin.
+// the importer's conversations through the Agents plugin, and the
+// notifications about its records through the in-app notification plugin.
 export function demoServices(app: Application): {
   demoAccounts: DemoAccountCreator;
   demoMailboxes: DemoMailboxes | undefined;
   demoChats: DemoChats | undefined;
+  demoInbox: DemoInbox | undefined;
 } {
   // The demo dataset's mailboxes, through the Mail plugin's service as the
   // user each belongs to (demo-mail.ts); none without the plugin.
@@ -260,5 +264,39 @@ export function demoServices(app: Application): {
         },
       }
     : undefined;
-  return { demoAccounts, demoMailboxes, demoChats };
+  // Everyone's in-app notifications whose route target names one of the
+  // demo's records: found by reading the plugin's items, deleted through its
+  // store, as a person deleting one from their inbox would.
+  const demoInbox: DemoInbox | undefined = app.container.has(
+    inAppNotificationStoreToken,
+  )
+    ? {
+        async remove(recordIds) {
+          if (!recordIds.size) return;
+          const store = app.container.resolve(inAppNotificationStoreToken);
+          const items = await app.container
+            .resolve(crmToken)
+            .database.query()
+            .selectFrom('notificationInAppItems')
+            .select(['id', 'userId', 'target'])
+            .where('target', 'like', '%/crm/%')
+            .execute();
+          for (const item of items) {
+            const target = (jsonValue(item.target) ?? {}) as {
+              path?: unknown;
+            };
+            const id = /^\/crm\/[a-z]+\/([^/?#]+)/.exec(
+              toText(target.path),
+            )?.[1];
+            if (id && recordIds.has(id))
+              await store.update({
+                id: toText(item.id),
+                userId: toText(item.userId),
+                action: 'delete',
+              });
+          }
+        },
+      }
+    : undefined;
+  return { demoAccounts, demoMailboxes, demoChats, demoInbox };
 }
