@@ -7,6 +7,7 @@ import { DateTimeInput } from './datetime-input.js';
 import { RecordMultiPicker, RecordPicker } from './record-picker.js';
 import { FileDropZone } from './attachments.js';
 import { CommentFiles } from './comment-files.js';
+import { ConfirmDialog } from './confirm-dialog.js';
 import { editsAll, fieldLabelKey, toText } from './api.js';
 import { CountryChoice, SubdivisionChoice } from './geography.js';
 import {
@@ -419,6 +420,33 @@ export function RecordForm({
   // Files dropped or pasted into a new task's description, or picked with
   // its paperclip, go up as the task's attachments.
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Files held over the dialog: the whole of it takes them, and says so.
+  const [dropping, setDropping] = useState(false);
+  // A file taken off the form: at once on a record not yet saved; on a
+  // saved one, confirmed first, as on its Attachments tab.
+  const [removing, setRemoving] = useState<{ key: string; id: string }>();
+  const dropFile = (key: string, fileId: string): void =>
+    set(
+      key,
+      arrayValues(input[key]).filter((value) => toText(value) !== fileId),
+    );
+  const removeFile = (key: string, fileId: string): void => {
+    if (id) setRemoving({ key, id: fileId });
+    else dropFile(key, fileId);
+  };
+  const removeConfirm = removing ? (
+    <ConfirmDialog
+      title={toText(text('removeFileTitle'))}
+      description={text('removeFileHint')}
+      busy={false}
+      confirmLabel={toText(text('remove'))}
+      onCancel={() => setRemoving(undefined)}
+      onConfirm={() => {
+        dropFile(removing.key, removing.id);
+        setRemoving(undefined);
+      }}
+    />
+  ) : null;
   const uploadFiles = (picked: File[]): void => {
     if (!picked.length || busy) return;
     void (async () => {
@@ -783,12 +811,7 @@ export function RecordForm({
             <CommentFiles
               className=''
               ids={arrayValues(value).map(toText)}
-              onRemove={(id) =>
-                set(
-                  field.key,
-                  arrayValues(value).filter((v) => toText(v) !== id),
-                )
-              }
+              onRemove={(fileId) => removeFile(field.key, fileId)}
             />
           )}
         </div>
@@ -1109,7 +1132,33 @@ export function RecordForm({
         <DialogContent
           showCloseButton={false}
           className='max-h-[90svh] overflow-y-auto sm:max-w-xl'
+          onDragEnter={(e) => {
+            if (!e.dataTransfer.types.includes('Files')) return;
+            e.preventDefault();
+            setDropping(true);
+          }}
+          onDragOver={(e) => {
+            if (e.dataTransfer.types.includes('Files')) e.preventDefault();
+          }}
+          onDragLeave={(e) => {
+            // Left the dialog, not one of its children.
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null))
+              setDropping(false);
+          }}
+          onDrop={(e) => {
+            setDropping(false);
+            if (!e.dataTransfer.files.length) return;
+            e.preventDefault();
+            uploadFiles([...e.dataTransfer.files]);
+          }}
         >
+          {/* Over the whole dialog while files are held over it. */}
+          {dropping ? (
+            <div className='pointer-events-none absolute inset-1 z-10 flex items-center justify-center gap-2 rounded-[calc(var(--radius-xl)-4px)] border-2 border-dashed border-ring bg-background/90 text-sm text-muted-foreground'>
+              <Paperclip className='size-4' />
+              {text('taskQuick.dropToAttach')}
+            </div>
+          ) : null}
           {/* Named for screen readers; the record's own title leads. */}
           <DialogHeader className='sr-only'>
             <DialogTitle>
@@ -1137,15 +1186,6 @@ export function RecordForm({
                 onChange={(e) => set('name', e.target.value)}
               />
               <textarea
-                onDragOver={(e) => {
-                  if (e.dataTransfer.types.includes('Files'))
-                    e.preventDefault();
-                }}
-                onDrop={(e) => {
-                  if (!e.dataTransfer.files.length) return;
-                  e.preventDefault();
-                  uploadFiles([...e.dataTransfer.files]);
-                }}
                 onPaste={(e) => {
                   if (!e.clipboardData.files.length) return;
                   e.preventDefault();
@@ -1172,14 +1212,7 @@ export function RecordForm({
               {arrayValues(input.attachments).length > 0 && (
                 <CommentFiles
                   ids={arrayValues(input.attachments).map(toText)}
-                  onRemove={(fileId) =>
-                    set(
-                      'attachments',
-                      arrayValues(input.attachments).filter(
-                        (v) => toText(v) !== fileId,
-                      ),
-                    )
-                  }
+                  onRemove={(fileId) => removeFile('attachments', fileId)}
                 />
               )}
             </div>
@@ -1304,6 +1337,7 @@ export function RecordForm({
               )}
             </DialogFooter>
           </form>
+          {removeConfirm}
         </DialogContent>
       </Dialog>
     );
@@ -1396,6 +1430,7 @@ export function RecordForm({
             </DialogFooter>
           </form>
         )}
+        {removeConfirm}
       </DialogContent>
     </Dialog>
   );

@@ -356,6 +356,7 @@ const wording = {
       '添加描述或上传附件…',
     ],
     attach: ['Attach files', '上传附件'],
+    dropToAttach: ['Drop to attach', '松开以上传附件'],
     record: ['Record', '关联记录'],
     clear: ['Clear', '清除'],
     searchRecords: [
