@@ -2921,18 +2921,28 @@ export function HistoryFeed({
   // was asked for) closed, and a new arrival opens it again.
   const arrival = focus ? `${focus}:${toText(focusAt ?? '')}` : '';
   const [closedArrival, setClosedArrival] = useState('');
-  const isOpen = (key: string): boolean =>
-    opened.has(key) || (key === focus && closedArrival !== arrival);
+  // The entries the reader closed: a waiting AI card opens by itself until
+  // closed.
+  const [shut, setShut] = useState<ReadonlySet<string>>(() => new Set());
+  const isOpen = (key: string, waiting = false): boolean =>
+    !shut.has(key) &&
+    (opened.has(key) ||
+      waiting ||
+      (key === focus && closedArrival !== arrival));
   // Opens or closes an entry: an AI entry's card, a save's fields.
-  const toggle = (key: string): void => {
-    const wasOpen = isOpen(key);
+  const toggle = (key: string, waiting = false): void => {
+    const wasOpen = isOpen(key, waiting);
     if (wasOpen && key === focus) setClosedArrival(arrival);
-    setOpened((previous) => {
-      const next = new Set(previous);
-      if (wasOpen) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+    const change =
+      (add: boolean) =>
+      (previous: ReadonlySet<string>): ReadonlySet<string> => {
+        const next = new Set(previous);
+        if (add) next.add(key);
+        else next.delete(key);
+        return next;
+      };
+    setOpened(change(!wasOpen));
+    setShut(change(wasOpen));
   };
   const timeZone = meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
   // The moment the entries' "how long ago" is counted from, moved on each
@@ -3160,10 +3170,11 @@ export function HistoryFeed({
                   // A task's AI preparation for its owner
                   // (task-preparation.tsx).
                   const prep = ai && entity === 'tasks';
-                  // Every AI card starts closed, a waiting one too, its
-                  // line saying it waits; the entry the page was sent to
-                  // opens on arrival.
-                  const open = isOpen(key);
+                  // A waiting AI card starts open, to be handled; any other
+                  // starts closed, its line saying where it stands; the
+                  // entry the page was sent to opens on arrival.
+                  const waiting = ai && event.aiStatus === 'pending';
+                  const open = isOpen(key, waiting);
                   // Files added or removed show the attachments' clip.
                   // An entry of one of the record's tasks: planned,
                   // done or called off, or moved.
@@ -3287,7 +3298,7 @@ export function HistoryFeed({
                                 <TaskEvent
                                   event={event}
                                   open={open}
-                                  onToggle={() => toggle(key)}
+                                  onToggle={() => toggle(key, waiting)}
                                   names={allNames}
                                   fileNames={fileNames}
                                   resultLong={longNotes.has(key)}
@@ -3402,7 +3413,7 @@ export function HistoryFeed({
                                     names={allNames}
                                     fileNames={fileNames}
                                     open={open}
-                                    onToggle={() => toggle(key)}
+                                    onToggle={() => toggle(key, waiting)}
                                   />
                                 )}
                               {/* What the person asked the AI to change, in
@@ -3453,7 +3464,7 @@ export function HistoryFeed({
                               {ai && event.aiStatus !== 'running' && (
                                 <FoldToggle
                                   open={open}
-                                  onToggle={() => toggle(key)}
+                                  onToggle={() => toggle(key, waiting)}
                                 />
                               )}
                             </span>
