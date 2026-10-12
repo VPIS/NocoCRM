@@ -70,13 +70,11 @@ export default function InboxPage(): ReactElement {
     <RecordDrawerContext.Provider
       value={{ open: drawer.open, close: drawer.close, inDrawer: false }}
     >
-      {/* No line under the heading, as the CRM's list pages have none. */}
       <InboxBlock
         key={key}
         registry={registry}
         source={crmInboxSource}
         selectParams={selectParams}
-        description=''
       />
       {drawerLoaded && (
         <Suspense fallback={null}>

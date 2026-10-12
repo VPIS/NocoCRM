@@ -18,7 +18,6 @@ import {
 } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 
-import { PageHeader } from '#components/page-header';
 import { Button } from '#components/ui/button';
 import { Spinner } from '#components/ui/spinner';
 import { cn } from 'cn';
@@ -72,7 +71,7 @@ export interface InboxPageProps {
   readonly registry?: InboxRegistry;
   /** The page title; `inbox.title` when left out. */
   readonly title?: ReactNode;
-  /** The sentence under the title; `inbox.description` when left out. */
+  /** Unused: the page draws no heading (an application change). */
   readonly description?: ReactNode;
   /** What the detail pane shows before its read, delete and open buttons, such as an "Ask agent" button. */
   readonly detailToolbar?: (input: InboxDetailToolbarInput) => ReactNode;
@@ -155,7 +154,6 @@ export function InboxPage({
 function InboxPageContent({
   source = defaultInboxSource,
   title,
-  description,
   detailToolbar,
   listFooter,
   selectParams,
@@ -423,31 +421,12 @@ function InboxPageContent({
 
   return (
     <div className='flex h-full min-h-0 flex-col'>
-      <div className='shrink-0 border-b px-6 py-5 md:px-8'>
-        {/* Application change: the refresh spinner beside the title rather
-            than as the header's actions, which on a phone take a row of
-            their own under it, a gap even while empty. */}
-        <PageHeader
-          title={
-            <span className='inline-flex items-center gap-3'>
-              {title ?? t('inbox.title', { defaultValue: 'Inbox' })}
-              {(pages.isFetching || notices.isFetching || waiting.isFetching) &&
-              pages.data ? (
-                <Spinner
-                  className='size-4 text-muted-foreground'
-                  aria-label={t('inbox.loading', { defaultValue: 'Loading' })}
-                />
-              ) : null}
-            </span>
-          }
-          description={
-            description ??
-            t('inbox.description', {
-              defaultValue: 'Notifications and requests sent to you.',
-            })
-          }
-        />
-      </div>
+      {/* Application change: no heading over the list and the pane; the
+          layout's breadcrumb names the page, and the views' tabs lead it.
+          The title stays for screen readers. */}
+      <h1 className='sr-only'>
+        {title ?? t('inbox.title', { defaultValue: 'Inbox' })}
+      </h1>
       <div className='flex min-h-0 flex-1'>
         <div
           className={cn(
