@@ -4031,11 +4031,11 @@ export function InfoGroup({
 }
 
 // A small action a particular's row shows on hover (copy; a website's
-// edit): a white square with the cards' faint border, its icon muted,
-// centred on the row's first line (the value's 1.5 of padding and half a
-// line, less half its own 6).
+// edit): its icon muted on the card's white, with no border, a faint fill
+// under the pointer, centred on the row's first line (the value's 1.5 of
+// padding and half a line, less half its own 6).
 const ROW_ACTION =
-  'top-[calc(var(--spacing)*1.5+0.5lh-var(--spacing)*3)] size-6 place-items-center rounded-md bg-card text-muted-foreground shadow-xs ring-1 ring-border transition-colors hover:text-foreground';
+  'top-[calc(var(--spacing)*1.5+0.5lh-var(--spacing)*3)] size-6 place-items-center rounded-md bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground';
 
 // A value a button on hover copies as it reads (a particular, a lead's
 // original message): not while it is empty (a placeholder or a dash,
