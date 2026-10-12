@@ -583,7 +583,8 @@ function EntityList({
         {r.status === 'cancelled' && <Ban className='size-3 shrink-0' />}
         <RecordLink entity={entity} record={r} />
       </span>
-      <p className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground'>
+      {/* The time and the owner, a line each. */}
+      <p className='mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground'>
         {/* A task due on a date alone has no time to show. */}
         {!isEndOfDay(new Date(toText(r.dueAt)), calendarTimeZone) && (
           <span className='inline-flex items-center gap-1 tabular-nums'>
@@ -591,9 +592,11 @@ function EntityList({
             {localTime(r.dueAt, calendarTimeZone)}
           </span>
         )}
-        <span className='inline-flex items-center gap-1'>
+        <span className='inline-flex min-w-0 items-center gap-1'>
           <User className='size-3 shrink-0' />
-          {meta?.users.find((u) => u.id === r.ownerId)?.name}
+          <span className='truncate'>
+            {meta?.users.find((u) => u.id === r.ownerId)?.name}
+          </span>
         </span>
       </p>
     </div>
