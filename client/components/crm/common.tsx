@@ -305,7 +305,8 @@ export function Metric({
 }
 // A link to a record by its name. Long names never wrap into the layout
 // around them: they are cut with an ellipsis after one line (two where a card
-// has the room, the board), and the full name shows on hover.
+// has the room, the board), and the full name shows on hover. Under the
+// pointer it takes the primary colour, without an underline.
 export function RecordLink({
   entity,
   record,
@@ -320,16 +321,13 @@ export function RecordLink({
   const link = useRecordLink(entity, toText(record.id));
   if (lines === 'all')
     return (
-      <Link
-        className='font-medium break-words hover:text-primary hover:underline'
-        {...link}
-      >
+      <Link className='font-medium break-words hover:text-primary' {...link}>
         {record.name}
       </Link>
     );
   return lines === 1 ? (
     <Link
-      className='inline-block max-w-full min-w-0 truncate align-bottom font-medium hover:text-primary hover:underline'
+      className='inline-block max-w-full min-w-0 truncate align-bottom font-medium hover:text-primary'
       title={record.name}
       {...link}
     >
@@ -337,7 +335,7 @@ export function RecordLink({
     </Link>
   ) : (
     <Link
-      className='line-clamp-2 block max-w-full font-medium break-words hover:text-primary hover:underline'
+      className='line-clamp-2 block max-w-full font-medium break-words hover:text-primary'
       title={record.name}
       {...link}
     >

@@ -189,7 +189,7 @@ export default function ScheduledTasksPage(): ReactElement {
                         pathname: encodeURIComponent(schedule.id),
                         search: location.search,
                       }}
-                      className='block font-medium hover:underline'
+                      className='block font-medium hover:text-primary'
                     >
                       <TruncatedText>{schedule.title}</TruncatedText>
                     </Link>

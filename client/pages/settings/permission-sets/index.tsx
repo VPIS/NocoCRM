@@ -128,7 +128,7 @@ export default function PermissionSetsPage(): ReactElement {
                   <TableCell className='max-w-72'>
                     <Link
                       to={link(`${encodeURIComponent(set.key)}/permissions`)}
-                      className='block font-medium hover:underline'
+                      className='block font-medium hover:text-primary'
                     >
                       <TruncatedText>{name}</TruncatedText>
                     </Link>
