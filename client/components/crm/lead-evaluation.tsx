@@ -352,7 +352,7 @@ export function EvaluationStatus({
           ) : (
             <Sparkles className='size-3.5 text-ai' />
           )}
-          <span className='min-w-0 truncate font-medium'>
+          <span className='min-w-0 truncate font-medium text-ai'>
             {text(live ? aiStateWords.followUp.running : 'evaluation.start')}
           </span>
           {live ? null : <AiStatusWord status={entry.status} />}
@@ -377,7 +377,7 @@ export function EvaluationStatus({
       {/* Following it up again, after where it stands. */}
       {again ? (
         <>
-          <span aria-hidden className='h-3.5 w-px shrink-0 bg-border' />
+          <span aria-hidden className='h-3.5 w-px shrink-0 bg-ai/20' />
           {/* Following it up again, in a word, its full name on hover. */}
           <Tooltip>
             <TooltipTrigger

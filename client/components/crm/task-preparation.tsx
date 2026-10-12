@@ -441,7 +441,7 @@ export function PrepStatus({
               ) : (
                 <Sparkles className='size-3.5 text-ai' />
               )}
-              <span className='min-w-0 truncate font-medium'>
+              <span className='min-w-0 truncate font-medium text-ai'>
                 {text(live ? aiStateWords.prep.running : 'taskPrep.ask')}
               </span>
               {live ? null : <AiStatusWord status={toText(entry.status)} />}
@@ -463,7 +463,7 @@ export function PrepStatus({
           </Tooltip>
           {again ? (
             <>
-              <span aria-hidden className='h-3.5 w-px shrink-0 bg-border' />
+              <span aria-hidden className='h-3.5 w-px shrink-0 bg-ai/20' />
               <Tooltip>
                 <TooltipTrigger
                   render={
