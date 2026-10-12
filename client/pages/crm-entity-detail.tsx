@@ -487,6 +487,7 @@ export default function EntityDetail({
         <RecordMailPanel
           target={mailTarget}
           focus={mailFocus}
+          record={{ entity, id: toText(record.id) }}
           scope={
             entity === 'companies'
               ? { kind: 'company', name: toText(record.name) }

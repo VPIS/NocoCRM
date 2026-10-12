@@ -782,6 +782,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
             <RecordMailPanel
               target={{ addresses: emailsOf([record]) }}
               focus={mailFocus}
+              record={{ entity: 'leads', id: toText(record.id) }}
             />
           ) : tab === 'attachments' ? (
             <RecordAttachments

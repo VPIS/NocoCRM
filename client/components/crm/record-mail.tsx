@@ -19,7 +19,15 @@ import {
 import { Link } from 'react-router';
 import { Button } from '../ui/button.js';
 import { flash } from './flash.js';
-import { localDate, toText, useCrmText, useMetadata } from './api.js';
+import {
+  localDate,
+  toText,
+  useCrmQuery,
+  useCrmText,
+  useMetadata,
+  type Data,
+  type Entity,
+} from './api.js';
 import {
   uniqueMessages,
   useMailSent,
@@ -55,8 +63,12 @@ export function RecordMailPanel({
   target,
   scope,
   focus,
+  record,
 }: {
   readonly target: MailTarget;
+  // The record whose tab this is: its timeline tells which of its
+  // conversations sit in colleagues' mailboxes (ColleaguesMail).
+  readonly record?: { entity: Entity; id: string };
   readonly scope?: MailScope;
   // A conversation to open, as a timeline mail entry names it
   // (`accountId:conversationId`, mail-timeline.ts).
@@ -252,6 +264,15 @@ export function RecordMailPanel({
     );
   else if (threads.length === 0)
     body = <Empty icon={<Mail />} title={toText(text('mail.empty'))} />;
+  // Above what the reader's own mailboxes hold: the conversations with the
+  // record that only colleagues' mailboxes hold.
+  if (record)
+    body = (
+      <>
+        <ColleaguesMail record={record} />
+        {body}
+      </>
+    );
   else
     // A white card, as the Tasks tab's list is.
     body = (
@@ -454,5 +475,49 @@ function Empty({
       <p className='text-sm text-muted-foreground'>{title}</p>
       {children}
     </div>
+  );
+}
+
+// The record's conversations that sit in colleagues' mailboxes: the tab
+// lists the reader's own mail alone, each mailbox being its owner's, so a
+// record whose mail is all a colleague's showed nothing here while its
+// timeline told of it. A line says how many there are and whose they are;
+// their summaries are on the timeline (mail-timeline.ts writes one entry per
+// conversation, the mailbox's owner its actor).
+function ColleaguesMail({
+  record,
+}: {
+  record: { entity: Entity; id: string };
+}): ReactElement | null {
+  const { text, language } = useCrmText();
+  const { data: meta } = useMetadata();
+  const { data } = useCrmQuery<Data[]>(
+    `${record.entity}/${encodeURIComponent(record.id)}/history?action=mail&pageSize=100`,
+  );
+  if (!meta || !data) return null;
+  const theirs = new Map<string, Set<string>>();
+  for (const entry of data) {
+    // A record's history may ignore the filter (one gathered with its
+    // tasks' entries is filtered in code), so the kind is checked here.
+    if (toText(entry.action) !== 'mail') continue;
+    const owner = toText(entry.actorId);
+    if (!owner || owner === meta.userId) continue;
+    const keys = theirs.get(owner) ?? new Set<string>();
+    keys.add(toText(entry.sourceKey) || toText(entry.id));
+    theirs.set(owner, keys);
+  }
+  if (!theirs.size) return null;
+  const count = [...theirs.values()].reduce((sum, keys) => sum + keys.size, 0);
+  const names = new Intl.ListFormat(language, { type: 'conjunction' }).format(
+    [...theirs.keys()].map(
+      (id) =>
+        toText(meta.users.find((user) => toText(user.id) === id)?.name) || id,
+    ),
+  );
+  return (
+    <p className='mb-3 flex items-start gap-2 text-sm text-muted-foreground'>
+      <Mail aria-hidden className='mt-0.5 size-4 shrink-0' />
+      {text('mail.inColleagues', { count, names })}
+    </p>
   );
 }

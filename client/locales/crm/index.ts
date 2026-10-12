@@ -271,6 +271,12 @@ const wording = {
       'Your mailboxes have no mail with this record yet.',
       '你的邮箱里还没有与这条记录的往来邮件。',
     ],
+    // The record's conversations in colleagues' mailboxes (ColleaguesMail
+    // in record-mail.tsx), which only their owners open.
+    inColleagues: [
+      "Conversations with it in {{names}}'s mailbox: {{count}}. Their summaries are on the timeline; only the mailbox's owner opens them.",
+      '还有 {{count}} 个往来会话在{{names}}的邮箱里：摘要可在动态里查看，只有邮箱主人能打开原文。',
+    ],
     loadFailed: ['Mail could not be loaded.', '邮件加载失败。'],
     scope: ['Your mail with {{terms}}', '你与 {{terms}} 的往来邮件'],
     scopeCompany: ['Your mail with {{name}}', '你与{{name}}的往来邮件'],
