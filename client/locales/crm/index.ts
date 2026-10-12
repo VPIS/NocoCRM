@@ -1154,8 +1154,8 @@ const wording = {
   chooseFiles: ['choose files', '点击选择文件'],
   removeFileTitle: ['Remove this file?', '移除此附件？'],
   removeFileHint: [
-    'The file stays in the system and is only unlinked from this record.',
-    '文件仍保留在系统中，仅解除与此记录的关联。',
+    'If no other record uses the file, it is deleted from the system 7 days after it is removed.',
+    '移除后，如果这个文件没有其他记录在用，7 天后会从系统中删除。',
   ],
   removeFileFromRecord: [
     'This removes the attachment from the {{entity}} “{{name}}”.',

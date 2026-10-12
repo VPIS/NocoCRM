@@ -24,6 +24,16 @@ export const scheduleTexts = {
     '每天检查进行中的商机：太久没有联系、预计成交日期临近或已过、暂停到了预计恢复日期（天数见 CRM 设置的提醒）。AI 对每个跟进一次，结果进商机负责人的「待我处理」。',
     "Every day, the open opportunities are checked: one gone quiet, one whose expected close date is near or past, a paused one due to resume (the days are the CRM settings' reminders). The AI follows each up once, and the result waits on its owner.",
   ],
+  fileTarget: ['附件清理', 'Attachment cleanup'],
+  fileTargetDescription: [
+    '删除不再被任何记录或评论使用的附件',
+    'Deletes the attachments no record or comment uses any more',
+  ],
+  fileTitle: ['附件每日清理', 'Daily attachment cleanup'],
+  fileDescription: [
+    '每天检查附件：不在任何记录的附件里、也不在任何评论里的文件，第一次发现后再过 7 天、且上传满 7 天，从系统中删除（包括存储的文件）。期间重新被使用的文件会保留。',
+    'Every day, the attachments are checked: a file no record lists among its attachments and no comment carries is deleted from the system, its stored file included, 7 days after it was first found unused and once it is 7 days old. One used again meanwhile is kept.',
+  ],
   taskTarget: ['任务准备', 'Task preparation'],
   taskTargetDescription: [
     'AI 为当天有具体时间的任务做准备',

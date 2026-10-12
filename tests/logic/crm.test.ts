@@ -178,6 +178,7 @@ import {
 } from '../../server/providers/crm/demo.js';
 import type { Application } from '@nocobase/app-server/application';
 import { noticesOf } from '../../server/providers/crm/notices.js';
+import { GRACE_MS, sweepFiles } from '../../server/providers/crm/file-sweep.js';
 import {
   latestPreparation,
   scanTaskPreparation,
@@ -9948,5 +9949,86 @@ describe('the notifications the inbox describes', () => {
     expect(await noticesOf(service, actor('other'), ['notice-test-1'])).toEqual(
       [],
     );
+  });
+});
+
+describe('the attachment cleanup', () => {
+  it('deletes a file nothing uses a week after it was found unused, and keeps one used', async () => {
+    const query = database.query();
+    const at = new Date();
+    for (const id of ['sweep-used', 'sweep-unused', 'sweep-comment'])
+      await query
+        .insertInto('crmFiles')
+        .values({
+          id,
+          disk: 'local',
+          key: `${id}.txt`,
+          filename: `${id}.txt`,
+          createdAt: at,
+          updatedAt: at,
+        })
+        .execute();
+    // A record using one, and a comment carrying another.
+    await query
+      .insertInto('crmTasks')
+      .values({
+        id: 'sweep-task',
+        name: 'Sweep task',
+        ownerId: 'admin',
+        createdById: 'admin',
+        status: 'open',
+        attachments: JSON.stringify(['sweep-used']),
+        createdAt: at.toISOString(),
+        updatedAt: at.toISOString(),
+      })
+      .execute();
+    await query
+      .insertInto('crmHistory')
+      .values({
+        id: 'sweep-note',
+        entity: 'tasks',
+        recordId: 'sweep-task',
+        actorId: 'admin',
+        action: 'comment',
+        changes: JSON.stringify({
+          text: 'with a file',
+          attachments: ['sweep-comment'],
+        }),
+        createdAt: at.toISOString(),
+      })
+      .execute();
+    const deleted: string[] = [];
+    const disk = {
+      delete: async (key: string) => {
+        deleted.push(key);
+      },
+    };
+    // The drive manager's `use(disk)`, named so as not to read as a hook.
+    const pick = 'use';
+    const drive = { [pick]: () => disk } as unknown as Parameters<
+      typeof sweepFiles
+    >[1];
+    // Found unused, kept for now.
+    const first = await sweepFiles(service, drive, at);
+    expect(first.deleted).toBe(0);
+    const left = async (): Promise<string[]> =>
+      (
+        await query
+          .selectFrom('crmFiles')
+          .select('id')
+          .where('id', 'in', ['sweep-used', 'sweep-unused', 'sweep-comment'])
+          .execute()
+      )
+        .map((row) => toText(row.id))
+        .sort();
+    expect(await left()).toEqual([
+      'sweep-comment',
+      'sweep-unused',
+      'sweep-used',
+    ]);
+    // A week later: the unused one goes, its stored file with it.
+    await sweepFiles(service, drive, new Date(at.getTime() + GRACE_MS + 1000));
+    expect(await left()).toEqual(['sweep-comment', 'sweep-used']);
+    expect(deleted).toContain('sweep-unused.txt');
   });
 });

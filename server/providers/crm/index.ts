@@ -13,6 +13,8 @@ import { authorizationToken } from '@nocobase/app-plugin-authorization';
 import { notificationServiceToken } from '@nocobase/app-plugin-notification/server';
 import { schedulerServiceToken } from '@nocobase/app-plugin-scheduler/server/tokens';
 import { scanLeadSignals } from './lead-signals.js';
+import { sweepFiles } from './file-sweep.js';
+import { driveManagerToken } from '@nocobase/app-server/drive';
 import { isEndOfDay, DEFAULT_TIME_ZONE } from './zone-time.js';
 import { scanDealSignals } from './deal-signals.js';
 import { pick } from '../../locales/crm-ai/index.js';
@@ -272,6 +274,42 @@ export default class CrmProvider extends ServiceProvider<Application> {
         description: words.dealDescription,
         schedule: { cron: '0 9 * * *', timezone },
         target: { type: 'app.crm-deal-signals', config: {} },
+      });
+      // The attachments nothing uses any more, deleted (file-sweep.ts), at
+      // three in the morning, away from the working day.
+      scheduler.registerTarget({
+        type: 'app.crm-file-sweep',
+        title: words.fileTarget,
+        validate: isObject,
+        describe: async () => ({
+          targetLabel: words.fileTarget,
+          description: words.fileTargetDescription,
+          state: 'ready',
+        }),
+        start: async () => {
+          const pass = await sweepFiles(
+            service,
+            this.app.container.has(driveManagerToken)
+              ? this.app.container.resolve(driveManagerToken)
+              : undefined,
+          );
+          return {
+            state: 'completed',
+            outcome: 'succeeded',
+            result: {
+              checked: pass.checked,
+              noticed: pass.noticed,
+              deleted: pass.deleted,
+            },
+          };
+        },
+      });
+      scheduler.defineSchedule({
+        key: 'crm.file-sweep',
+        title: words.fileTitle,
+        description: words.fileDescription,
+        schedule: { cron: '0 3 * * *', timezone },
+        target: { type: 'app.crm-file-sweep', config: {} },
       });
       // The day's timed tasks prepared for their owners
       // (task-preparation.ts), at the same hour.
