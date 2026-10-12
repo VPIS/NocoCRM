@@ -5898,12 +5898,25 @@ describe('demo dataset', () => {
         },
       ])
       .execute();
-    // Every converted and invalid lead shows what was done on it before.
+    // Every converted and invalid lead of the demo shows what was done on
+    // it before.
+    const demoManifest = await database
+      .query()
+      .selectFrom('crmSettings')
+      .select('value')
+      .where('id', '=', DEMO_MARKER)
+      .executeTakeFirstOrThrow();
+    const demoIds = (
+      JSON.parse(toText(demoManifest.value)) as {
+        records: { id: string }[];
+      }
+    ).records.map((record) => record.id);
     const settledLeads = await database
       .query()
       .selectFrom('crmLeads')
       .select(['id', 'status'])
       .where('status', 'in', ['converted', 'invalid'])
+      .where('id', 'in', demoIds)
       .execute();
     expect(settledLeads.length).toBeGreaterThan(0);
     for (const lead of settledLeads) {
@@ -5918,6 +5931,33 @@ describe('demo dataset', () => {
         true,
       ]);
     }
+    // A task done reads as one a person kept: created, then completed
+    // with its result on the entry that closed it, later than its creation.
+    const doneTask = await database
+      .query()
+      .selectFrom('crmTasks')
+      .select('id')
+      .where('status', '=', 'completed')
+      .where('result', 'is not', null)
+      .where('id', 'in', demoIds)
+      .executeTakeFirstOrThrow();
+    const steps = await database
+      .query()
+      .selectFrom('crmHistory')
+      .select(['action', 'toValue', 'changes', 'createdAt'])
+      .where('recordId', '=', toText(doneTask.id))
+      .orderBy('createdAt', 'asc')
+      .execute();
+    expect(steps.map((step) => toText(step.action))).toEqual([
+      'created',
+      'status',
+    ]);
+    expect(toText(steps[1]?.toValue)).toBe('completed');
+    expect(toText(steps[1]?.changes)).toContain('result');
+    expect(
+      Date.parse(toText(steps[1]?.createdAt)) >
+        Date.parse(toText(steps[0]?.createdAt)),
+    ).toBe(true);
     // Done: present, nothing under way.
     expect(
       (await (await request('/demoData', 'admin')).json()).data,

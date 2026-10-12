@@ -510,9 +510,22 @@ async function populate(
   const saver =
     (prepared: Actor, q: QueryAdapter) =>
     async (entity: Entity, input: Row, day = -1, id?: string): Promise<Row> => {
+      // A task done or cancelled is written as it happened: created open,
+      // then closed at its time with what came of it, so its timeline reads
+      // as one a person kept, the result under the entry that closed it.
+      const closing =
+        entity === 'tasks' &&
+        !id &&
+        ['completed', 'cancelled'].includes(toText(input.status));
       const record = track(
         entity,
-        await service.save(prepared, entity, input, id, q),
+        await service.save(
+          prepared,
+          entity,
+          closing ? { ...input, status: 'open', result: null } : input,
+          id,
+          q,
+        ),
       );
       const date = at(day);
       const patch: Row = { updatedAt: date };
@@ -530,6 +543,26 @@ async function populate(
         .where('id', '=', record.id)
         .execute();
       await historyAt(q, date);
+      if (closing) {
+        await service.save(
+          prepared,
+          'tasks',
+          { status: input.status, result: input.result ?? null },
+          toText(record.id),
+          q,
+        );
+        // Closed when it was due, or when it was written down.
+        const when = record.dueAt ? toText(record.dueAt) : date;
+        await q
+          .updateTable('crmTasks')
+          .set({
+            updatedAt: when,
+            completedAt: input.status === 'completed' ? when : null,
+          })
+          .where('id', '=', record.id)
+          .execute();
+        await historyAt(q, when);
+      }
       return service.get(prepared, entity, toText(record.id), q);
     };
 
