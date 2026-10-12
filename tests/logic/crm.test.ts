@@ -10076,6 +10076,32 @@ describe('the attachment cleanup', () => {
     expect(await left()).toEqual(['sweep-comment', 'sweep-used']);
     expect(deleted).toContain('sweep-unused.txt');
   });
+  it("finds a deal and a contact by their company's name, word by word", async () => {
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Haoyang Energy',
+    });
+    const deal = await service.save(actor('rep'), 'opportunities', {
+      name: 'Safety training system',
+      companyId: company.id,
+    });
+    const contact = await service.save(actor('rep'), 'contacts', {
+      name: 'Gu Lan',
+      companyId: company.id,
+    });
+    const found = async (
+      entity: 'opportunities' | 'contacts',
+      search: string,
+    ) =>
+      (
+        await service.list(actor('rep'), entity, { search, pageSize: 100 })
+      ).data.map((row) => row.id);
+    expect(await found('opportunities', 'Haoyang')).toContain(deal.id);
+    expect(await found('opportunities', 'haoyang safety')).toContain(deal.id);
+    expect(await found('opportunities', 'Haoyang nothing')).not.toContain(
+      deal.id,
+    );
+    expect(await found('contacts', 'Haoyang')).toContain(contact.id);
+  });
   it("keeps a search's AI answer as a conversation, deletes one left and sweeps those left behind", async () => {
     const query = service.database.query();
     const at = new Date('2026-10-01T09:00:00.000Z');

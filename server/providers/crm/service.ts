@@ -608,13 +608,56 @@ export class CrmService {
         const words = searchWords(term);
         if (!words.length || !searchFields.length)
           select = select.where('id', '=', '');
-        for (const word of words)
+        // A deal and a contact are titled with their company's name, which
+        // they link rather than hold: a word finds them through the
+        // companies it names that the reader may read.
+        const byCompany =
+          (entity === 'opportunities' || entity === 'contacts') &&
+          fields.includes('companyId')
+            ? await this.companiesNamed(actor, words, query)
+            : undefined;
+        for (const word of words) {
+          const companies = byCompany?.get(word) ?? [];
           select = select.where((eb) =>
-            eb.or(searchFields.map((f) => eb(f, 'like', `%${word}%`))),
+            eb.or([
+              ...searchFields.map((f) => eb(f, 'like', `%${word}%`)),
+              ...(companies.length ? [eb('companyId', 'in', companies)] : []),
+            ]),
           );
+        }
       }
     }
     return { select, fields };
+  }
+  // For each word, the companies the reader may read whose name holds it
+  // (at most 500 each).
+  private async companiesNamed(
+    actor: Actor,
+    words: readonly string[],
+    query: QueryAdapter,
+  ): Promise<Map<string, string[]>> {
+    const named = new Map<string, string[]>();
+    let access;
+    try {
+      access = await conditions(actor, 'companies', 'read');
+    } catch {
+      return named;
+    }
+    if (!outputFields('companies', access).includes('name')) return named;
+    for (const word of words) {
+      const rows = await query
+        .selectFrom(definitions.companies.table)
+        .select('id')
+        .where((eb) => compileFilter(eb, access.scope))
+        .where('name', 'like', `%${word}%`)
+        .limit(500)
+        .execute();
+      named.set(
+        word,
+        rows.map((row) => toText(row.id)),
+      );
+    }
+    return named;
   }
   async list(
     actor: Actor,
