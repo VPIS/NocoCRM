@@ -5,6 +5,7 @@ import { InboxPage as InboxBlock } from '#extensions/nocobase-inbox/inbox-page';
 import type { InboxEntry } from '#extensions/nocobase-inbox/model';
 import { useCrmInboxRegistry } from '../components/crm/inbox-decisions.js';
 import { crmInboxSource } from '../components/crm/inbox-notices.js';
+import { refocus } from '../components/crm/flash.js';
 import {
   RecordDrawerContext,
   useRecordDrawerState,
@@ -67,12 +68,26 @@ export default function InboxPage(): ReactElement {
     <RecordDrawerContext.Provider
       value={{ open: drawer.open, close: drawer.close, inDrawer: false }}
     >
-      <InboxBlock
-        key={key}
-        registry={registry}
-        source={crmInboxSource}
-        selectParams={selectParams}
-      />
+      {/* A card picked in either list, even the one already shown: the
+          pane's timeline lights its entry up anew (refocus). */}
+      <div
+        className='contents'
+        onClickCapture={(event) => {
+          const target = event.target as Element;
+          if (
+            target.closest('[data-inbox-item], [data-decision-item]') &&
+            !target.closest('[aria-haspopup]')
+          )
+            refocus();
+        }}
+      >
+        <InboxBlock
+          key={key}
+          registry={registry}
+          source={crmInboxSource}
+          selectParams={selectParams}
+        />
+      </div>
       {drawerLoaded && (
         <Suspense fallback={null}>
           <RecordDrawer

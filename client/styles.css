@@ -170,7 +170,7 @@
   }
 }
 .crm-flash {
-  --crm-flash-color: color-mix(in oklch, var(--info) 12%, transparent);
+  --crm-flash-color: color-mix(in oklch, var(--info) 8%, transparent);
   animation: crm-flash 3s ease-out;
 }
 .crm-flash-ai {

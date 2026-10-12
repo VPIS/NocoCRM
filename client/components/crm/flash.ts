@@ -17,3 +17,10 @@ export function flash(nodes: Iterable<Element>, tone?: 'ai'): void {
     );
   }
 }
+
+// Picking the item already shown in the inbox's pane again: the pane's
+// timeline brings its entry back into view and lights it up anew.
+export const REFOCUS_EVENT = 'crm:refocus';
+export function refocus(): void {
+  window.dispatchEvent(new Event(REFOCUS_EVENT));
+}

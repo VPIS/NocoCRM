@@ -85,6 +85,7 @@ export function DecisionList({
         <button
           type='button'
           aria-current={selected ? 'true' : undefined}
+          data-decision-item=''
           onClick={() => onSelect(entry.id)}
           className={`relative flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-[background-color,border-color] ${
             // On the list's white: the selected one on the grey a hovered

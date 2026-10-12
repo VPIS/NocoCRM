@@ -39,7 +39,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '../components/ui/tooltip.js';
-import { flash } from '../components/crm/flash.js';
+import { flash, REFOCUS_EVENT } from '../components/crm/flash.js';
 import {
   RecordDrawerContext,
   useRecordDrawer,
@@ -2554,7 +2554,8 @@ function CommentThread({
               ) : null}
               <div
                 data-comment={replyId}
-                className='group/reply -mx-1 rounded-md px-1'
+                // Lit across the comment's card, edge to edge.
+                className='group/reply -mx-3 px-3'
               >
                 <div className='flex min-h-[26px] items-center gap-2 text-sm'>
                   <CommentAvatar name={name(reply.actorId)} />
@@ -2904,6 +2905,14 @@ export function HistoryFeed({
   const [searchParams] = useSearchParams();
   const paneFocus = useRecordDrawer()?.focus;
   const focus = focusId ?? paneFocus ?? searchParams.get('focus') ?? undefined;
+  // In the inbox's pane, its item picked again (refocus in flash.ts).
+  const [refocused, setRefocused] = useState(0);
+  useEffect(() => {
+    if (!paneFocus) return;
+    const again = (): void => setRefocused((count) => count + 1);
+    window.addEventListener(REFOCUS_EVENT, again);
+    return () => window.removeEventListener(REFOCUS_EVENT, again);
+  }, [paneFocus]);
   const { data: meta } = useMetadata();
   // The evaluations opened into their records.
   const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set());
@@ -3032,7 +3041,7 @@ export function HistoryFeed({
       window.clearTimeout(settled);
       window.clearTimeout(later);
     };
-  }, [focus, entryId, focusTone, focusAt]);
+  }, [focus, entryId, focusTone, focusAt, refocused]);
   useEffect(() => {
     if (focus && !loaded && more.hasMore && !more.loading) void more.loadMore();
   }, [focus, loaded, more]);
@@ -3225,11 +3234,18 @@ export function HistoryFeed({
                       >
                         {/* A comment's whole message, its line, its text
                             and its files, as one block, as a reply's is: what
-                            a jump to it lights up. */}
+                            a jump to it lights up, across the card. */}
                         <div
                           data-comment={comment ? key : undefined}
+                          // Lit to the card's edges: its sides and top, and
+                          // its foot too while no thread follows, the card's
+                          // corners carried over.
                           className={
-                            comment ? '-mx-1 rounded-md px-1' : undefined
+                            comment
+                              ? threaded
+                                ? '-mx-3 -mt-2 rounded-t-[inherit] px-3 pt-2'
+                                : '-mx-3 -my-2 rounded-[inherit] px-3 py-2'
+                              : undefined
                           }
                         >
                           <div className='group/comment relative flex min-h-[26px] items-center gap-3 text-sm'>
