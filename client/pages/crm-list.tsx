@@ -243,6 +243,8 @@ function EntityList({
     entity === 'tasks' ? 'involved' : 'all',
   );
   const [approverId, setApproverId] = useState('');
+  // A task's: one of its participants.
+  const [participantId, setParticipantId] = useState('');
   // The task list's tab: what is to do, or what is done or cancelled.
   // Leads and opportunities are worked as funnels, so they open on the
   // board; the rest, tasks too (the calendar beside the list), on the list.
@@ -316,7 +318,8 @@ function EntityList({
     source ||
     employed ||
     topic ||
-    approverId,
+    approverId ||
+    participantId,
   );
   const [month, setMonth] = useState(() =>
     new Date().toISOString().slice(0, 7),
@@ -449,6 +452,7 @@ function EntityList({
     employed,
     topic,
     approverId: whose === 'approving' ? toText(meta?.userId) : approverId,
+    participantId: entity === 'tasks' ? participantId : '',
     involvedId: whose === 'involved' ? toText(meta?.userId) : '',
     page: toText(page),
     pageSize: String(PAGE_SIZE),
@@ -971,6 +975,23 @@ function EntityList({
               }
             />
           </div>
+          {entity === 'tasks' && (
+            <div className='w-44'>
+              <Choice
+                label={text('fields.internalParticipants')}
+                emptyLabel={text('allOf', {
+                  what: text('fields.internalParticipants'),
+                })}
+                value={participantId}
+                onChange={change(setParticipantId)}
+                choices={
+                  meta?.users
+                    .filter((u) => !u.disabled)
+                    .map((u) => ({ value: u.id, label: u.name })) ?? []
+                }
+              />
+            </div>
+          )}
           {entity === 'approvals' && (
             <>
               <div className='w-44'>
