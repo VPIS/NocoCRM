@@ -487,16 +487,25 @@ export function localDate(
 }
 // The time of day alone, 14:30, where the date is already on screen.
 // When a task is due, as a list shows it: its date alone for a date-only
-// task, else its date and time; empty when it has no due time.
+// task, else its date and time, the year left out within the current one
+// (10-12 14:30); empty when it has no due time.
 export function dueText(task: Data, timeZone: string): string {
   if (!task.dueAt) return '';
   // A date alone is kept as the last instant of its day.
-  return localDate(
+  const text = localDate(
     task.dueAt,
     '',
     timeZone,
     !isEndOfDay(new Date(toText(task.dueAt)), timeZone),
   );
+  try {
+    const year = dateParts(new Date(), timeZone, false).year ?? '';
+    return year && text.startsWith(`${year}-`)
+      ? text.slice(year.length + 1)
+      : text;
+  } catch {
+    return text;
+  }
 }
 
 export function localTime(value: unknown, timeZone: string): string {
