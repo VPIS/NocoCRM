@@ -353,6 +353,23 @@
     var(--crm-ai-lift, 0 0 #0000);
 }
 
+/* A field's focus, across the application, as the record pages' inline
+   fields show it (LIGHT_FOCUS in client/components/crm/focus.ts): a lighter
+   border and a faint, narrow halo, instead of the input, textarea, select
+   and input-group primitives' 3px ring at half the ring colour, which read
+   heavy in a form. Unlayered, so it wins over the primitives' utilities
+   without editing them; an invalid field keeps its red, and the AI's ask
+   boxes their own glow. */
+[data-slot='input']:focus-visible:not([aria-invalid='true']),
+[data-slot='textarea']:focus-visible:not([aria-invalid='true']),
+[data-slot='select-trigger']:focus-visible:not([aria-invalid='true']),
+[data-slot='input-group']:not(.crm-ai-border):has(
+    [data-slot='input-group-control']:focus-visible
+  ):not(:has([aria-invalid='true'])) {
+  border-color: color-mix(in oklch, var(--ring) 50%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--ring) 10%, transparent);
+}
+
 /* The menu's icons in the menu's own deeper hue (--sidebar-icon), the
    current entry's in its words' colour. Set from outside the sidebar
    primitive, which stays as the shadcn CLI writes it. */
