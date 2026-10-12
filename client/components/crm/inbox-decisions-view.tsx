@@ -126,7 +126,8 @@ export function DecisionList({
                 )}
               </span>
             ) : result ? (
-              <span className='line-clamp-1 text-xs text-muted-foreground'>
+              // Its tags and summary over two lines, cut after the second.
+              <span className='line-clamp-2 text-xs text-muted-foreground'>
                 {/* Handled, what became of it first: decided on the card,
                     dismissed, or an approval withdrawn or decided on
                     itself. */}
