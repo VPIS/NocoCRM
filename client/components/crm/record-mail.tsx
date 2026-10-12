@@ -264,15 +264,6 @@ export function RecordMailPanel({
     );
   else if (threads.length === 0)
     body = <Empty icon={<Mail />} title={toText(text('mail.empty'))} />;
-  // Above what the reader's own mailboxes hold: the conversations with the
-  // record that only colleagues' mailboxes hold.
-  if (record)
-    body = (
-      <>
-        <ColleaguesMail record={record} />
-        {body}
-      </>
-    );
   else
     // A white card, as the Tasks tab's list is.
     body = (
@@ -432,6 +423,15 @@ export function RecordMailPanel({
       </ul>
     );
 
+  // Above what the reader's own mailboxes hold: the conversations with the
+  // record that only colleagues' mailboxes hold.
+  if (record)
+    body = (
+      <>
+        <ColleaguesMail record={record} />
+        {body}
+      </>
+    );
   return (
     <div className='space-y-3'>
       {available && (
