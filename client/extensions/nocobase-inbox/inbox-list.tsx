@@ -91,8 +91,8 @@ export interface InboxListProps {
   readonly collections?: Readonly<Record<string, InboxListCollection>>;
   /** Beside the kind filter, such as a sound reminder switch. */
   readonly footer?: ReactNode;
-  /** Application change: atop the list itself, such as "Mark all as read". */
-  readonly head?: ReactNode;
+  /** Application change: at the right end of the tabs' row, such as "Mark all as read". */
+  readonly tabsEnd?: ReactNode;
   /** The prefix of the element ids it renders. */
   readonly idPrefix?: string;
 }
@@ -124,7 +124,7 @@ export function InboxList({
   feedCount = 0,
   collections = {},
   footer,
-  head,
+  tabsEnd,
   idPrefix = 'nocobase-inbox',
 }: InboxListProps): ReactElement {
   const { t } = useInboxFrameText();
@@ -175,12 +175,6 @@ export function InboxList({
         </CollectionSlot>
       ));
 
-  // Application change: the list's head (Mark all as read) on the first
-  // group's heading line, at its right, rather than on a line of its own.
-  const headGroup = head
-    ? shown.find(({ entries }) => !(entries.length === 0 && kind === 'all'))
-        ?.category.id
-    : undefined;
   // Application change: a view with a single group (Notifications) does not
   // repeat its tab's name over it; the heading stays for screen readers.
   const lone =
@@ -278,9 +272,7 @@ export function InboxList({
                   <div
                     className={cn(
                       'flex items-center justify-between gap-2 pr-1',
-                      // The heading hidden, its head still at the right.
-                      lone && 'justify-end',
-                      lone && category.id !== headGroup && 'hidden',
+                      lone && 'hidden',
                     )}
                   >
                     <h2
@@ -296,7 +288,6 @@ export function InboxList({
                         <span className='tabular-nums'>{count}</span>
                       ) : null}
                     </h2>
-                    {category.id === headGroup ? head : null}
                   </div>
                   <ul aria-label={category.title(t)} className='space-y-0.5'>
                     {entries.map((entry) => (
@@ -407,6 +398,10 @@ export function InboxList({
               </button>
             );
           })}
+          {/* Application change: the view's own action at the row's end. */}
+          {tabsEnd ? (
+            <div className='ml-auto flex items-center'>{tabsEnd}</div>
+          ) : null}
         </div>
       ) : null}
       {/* Application change: the type filter only where a view offers more than one kind to choose between. */}
@@ -445,10 +440,7 @@ export function InboxList({
           </div>
         </div>
       ) : null}
-      <div className='min-h-0 flex-1 overflow-y-auto px-6 py-3'>
-        {headGroup ? null : head}
-        {content}
-      </div>
+      <div className='min-h-0 flex-1 overflow-y-auto px-6 py-3'>{content}</div>
       {/* Application change: no keyboard hints at the list's foot. */}
     </>
   );

@@ -20,6 +20,11 @@ import { useNavigate, useSearchParams } from 'react-router';
 
 import { Button } from '#components/ui/button';
 import { Spinner } from '#components/ui/spinner';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '#components/ui/tooltip';
 import { cn } from 'cn';
 
 import type { InboxAction } from './inbox-actions.js';
@@ -484,26 +489,32 @@ function InboxPageContent({
             collections={listCollections}
             footer={listFooter}
             // Application change: "Mark all as read" acts on notifications
-            // only, so it heads their tab's list, at its right, where the AI
-            // suggestions' tab has its mine/team switch, rather than sitting
-            // in the page's header for every tab.
-            head={
-              view === 'all' ? (
-                <div className='flex shrink-0 justify-end'>
-                  <Button
-                    variant='ghost'
-                    size='xs'
-                    disabled={readAll.isPending || unreadShown === 0}
-                    onClick={() => readAll.mutate()}
+            // only, so it ends the tabs' row while their tab is open and
+            // something is unread, an icon with its name on hover, rather
+            // than a row of its own atop the list or the page's header.
+            tabsEnd={
+              view === 'all' && unreadShown > 0 ? (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant='ghost'
+                        size='icon-sm'
+                        className='-mr-1.5 text-muted-foreground'
+                        aria-label={t('inbox.readAll', {
+                          defaultValue: 'Mark all as read',
+                        })}
+                        disabled={readAll.isPending}
+                        onClick={() => readAll.mutate()}
+                      />
+                    }
                   >
-                    {readAll.isPending ? (
-                      <Spinner data-icon='inline-start' />
-                    ) : (
-                      <CheckCheckIcon data-icon='inline-start' />
-                    )}
+                    {readAll.isPending ? <Spinner /> : <CheckCheckIcon />}
+                  </TooltipTrigger>
+                  <TooltipContent side='bottom'>
                     {t('inbox.readAll', { defaultValue: 'Mark all as read' })}
-                  </Button>
-                </div>
+                  </TooltipContent>
+                </Tooltip>
               ) : undefined
             }
             idPrefix={idPrefix}
