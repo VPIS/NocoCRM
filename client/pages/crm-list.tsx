@@ -1738,7 +1738,7 @@ function BoardColumn({
     <section
       className={`flex max-w-sm min-w-72 flex-1 basis-0 flex-col rounded-xl border p-3 transition-colors ${toText(
         over
-          ? 'border-dashed border-primary bg-primary/5'
+          ? 'border-dashed border-muted-foreground/40 bg-muted'
           : 'border-transparent bg-muted',
       )}`}
       // A non-droppable column (converted, reached only through the
