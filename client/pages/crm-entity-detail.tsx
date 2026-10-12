@@ -1749,7 +1749,14 @@ function DealCard({
       <InfoGroup title={title ?? text('approvalGroups.deal')}>
         {picker}
         {deal && meta
-          ? ['stage', 'amount', 'expectedCloseAt', 'ownerId'].map((key) => (
+          ? [
+              'stage',
+              // After the stage, as the opportunities list shows it.
+              'businessType',
+              'amount',
+              'expectedCloseAt',
+              'ownerId',
+            ].map((key) => (
               <InfoRow
                 key={key}
                 field={key}
@@ -1768,6 +1775,21 @@ function DealCard({
               </InfoRow>
             ))
           : null}
+        {/* Last, its description, as the company card ends on its
+            introduction: three fading lines, read whole beside the column. */}
+        {deal && meta ? (
+          <InfoRow
+            field='description'
+            label={text(fieldLabelKey('opportunities', 'description'))}
+          >
+            <LongTextField
+              value={toText(deal.description ?? '')}
+              label={text(fieldLabelKey('opportunities', 'description'))}
+              editable={false}
+              onSave={() => Promise.resolve(false)}
+            />
+          </InfoRow>
+        ) : null}
       </InfoGroup>
       {/* The deal's company, as a contact's page shows its own. */}
       {deal?.companyId ? <CompanyCard id={toText(deal.companyId)} /> : null}
