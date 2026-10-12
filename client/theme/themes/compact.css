@@ -67,9 +67,11 @@
   --status-warning-background: rgb(255 246 229);
   --secondary: oklch(0.96 0 0);
   --secondary-foreground: oklch(0.22 0 0);
-  --muted: oklch(0.96 0 0);
+  /* The grey a hovered button, row or menu item takes (and the muted
+     grounds), kept light: a touch fainter than the template's. */
+  --muted: oklch(0.968 0 0);
   --muted-foreground: oklch(0.52 0 0);
-  --accent: oklch(0.94 0 0);
+  --accent: oklch(0.955 0 0);
   --accent-foreground: oklch(0.22 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   /* The CRM's faint line, the one its cards were drawn with as
@@ -89,8 +91,8 @@
      template's 10%), the same as on the default preset. */
   --sidebar-primary: color-mix(in oklch, var(--primary) 8%, var(--sidebar));
   --sidebar-primary-foreground: var(--primary);
-  /* A hovered entry, a shade darker than the menu it is on. */
-  --sidebar-accent: color-mix(in oklch, var(--foreground) 6%, var(--sidebar));
+  /* A hovered entry, a faint shade darker than the menu it is on. */
+  --sidebar-accent: color-mix(in oklch, var(--foreground) 4.5%, var(--sidebar));
   --sidebar-accent-foreground: var(--foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
