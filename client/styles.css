@@ -93,6 +93,33 @@
   samp {
     @apply font-mono;
   }
+
+  /* Application change: whatever may be clicked shows the pointer, the
+     plugins' pages included. Tailwind 4 leaves buttons with the arrow; a
+     control disabled (natively, or as Base UI and ARIA mark it) keeps it,
+     and a utility on an element (`cursor-default`, `cursor-not-allowed`)
+     still wins over this layer. */
+  :is(
+    button,
+    [role='button'],
+    [role='tab'],
+    [role='menuitem'],
+    [role='menuitemcheckbox'],
+    [role='menuitemradio'],
+    [role='option'],
+    [role='switch'],
+    [role='checkbox'],
+    [role='radio'],
+    summary,
+    select,
+    label[for],
+    input[type='checkbox'],
+    input[type='radio'],
+    input[type='file'],
+    a[href]
+  ):not(:disabled, [aria-disabled='true'], [data-disabled]) {
+    cursor: pointer;
+  }
 }
 
 /* Application change: every modal overlay gets the same frosted backdrop.
