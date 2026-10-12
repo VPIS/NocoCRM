@@ -154,9 +154,9 @@ function ItemCard({
         data-selected={selected ? 'true' : undefined}
         className={cn(
           'group relative flex items-start gap-3 rounded-lg border border-transparent p-3 transition-[background-color,border-color,opacity] duration-200',
-          // Application change: the selected card without a border, as the
-          // CRM's conversation list marks its open one.
-          selected ? 'bg-card shadow-xs' : 'hover:bg-accent/60',
+          // Application change: the selected card without a border, on the
+          // grey a hovered one takes a shade deeper, the list being white.
+          selected ? 'bg-accent' : 'hover:bg-muted',
           settled && 'opacity-55',
           fresh &&
             'animate-in duration-200 fade-in slide-in-from-top-1 motion-reduce:animate-none',

@@ -451,7 +451,9 @@ function InboxPageContent({
       <div className='flex min-h-0 flex-1'>
         <div
           className={cn(
-            'flex min-h-0 w-full flex-col border-r bg-sidebar/60 lg:w-96 lg:shrink-0',
+            // Application change: the list on the card's white, its selected
+            // item on the grey a hovered one takes, a shade deeper.
+            'flex min-h-0 w-full flex-col border-r bg-card lg:w-96 lg:shrink-0',
             showsDetail ? 'max-lg:hidden' : undefined,
           )}
         >

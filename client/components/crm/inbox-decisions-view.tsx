@@ -87,9 +87,11 @@ export function DecisionList({
           aria-current={selected ? 'true' : undefined}
           onClick={() => onSelect(entry.id)}
           className={`relative flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-[background-color,border-color] ${
+            // On the list's white: the selected one on the grey a hovered
+            // one takes, a shade deeper.
             selected
-              ? 'border-transparent bg-card shadow-xs'
-              : 'border-transparent hover:bg-accent/60'
+              ? 'border-transparent bg-accent'
+              : 'border-transparent hover:bg-muted'
           } ${decided ? 'opacity-55' : ''}`}
         >
           {/* As the inbox marks what waits, in the AI's colour. */}
@@ -230,8 +232,9 @@ export function DecisionDetail({
       {/* The way back to the list, narrow, as the inbox's own items have;
           the record's kind, as the record drawer's bar names it; and the
           record's full page, with its particulars. A bar over a rule, as
-          the drawer's is. */}
-      <div className='flex items-center gap-2 border-b border-border px-4 py-2'>
+          the drawer's is, as tall as the list's tabs beside it, so the two
+          rules meet in one line. */}
+      <div className='flex h-10 shrink-0 items-center gap-2 border-b border-border bg-card px-4'>
         <button
           type='button'
           onClick={onBack}
