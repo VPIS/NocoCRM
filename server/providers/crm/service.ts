@@ -822,7 +822,12 @@ export class CrmService {
     const createdAt = Number.isNaN(born)
       ? undefined
       : new Date(born).toISOString();
-    const foldsMail = Boolean(createdAt) && options.action !== 'comment';
+    // The mail alone (a Mail tab's colleagues' conversations) is never
+    // folded: every conversation is wanted.
+    const foldsMail =
+      Boolean(createdAt) &&
+      options.action !== 'comment' &&
+      options.source !== 'mail';
     // An approval's AI review is its approver's working draft: it reads
     // with the approver's access (precedents on companies the applicant may
     // not see) and leans on a decision not yet made, so no one else reads it.
@@ -932,7 +937,9 @@ export class CrmService {
           ? select.where('source', 'in', ['ai', 'assistant', 'capture'])
           : options.source === 'user'
             ? select.where('source', 'is', null)
-            : select;
+            : options.source === 'mail'
+              ? select.where('action', '=', 'mail')
+              : select;
       const shown = hideReviews
         ? sourced.where('action', 'not in', ['ai', 'aiRevise'])
         : sourced;

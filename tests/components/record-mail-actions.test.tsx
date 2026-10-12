@@ -23,6 +23,10 @@ const message = {
   receivedAt: '2026-10-09T01:00:00.000Z',
 };
 
+// Only the reader's own mail here: no colleagues' conversations.
+vi.mock('../../client/components/crm/colleagues-mail.js', () => ({
+  useColleaguesMail: () => undefined,
+}));
 vi.mock('@nocobase/app-plugin-mail/client', async (importOriginal) => ({
   ...(await importOriginal<
     typeof import('@nocobase/app-plugin-mail/client')

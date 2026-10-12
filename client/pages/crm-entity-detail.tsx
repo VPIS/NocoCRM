@@ -1018,7 +1018,10 @@ export default function EntityDetail({
         icon: tabIcons[name] ?? History,
         count:
           name === 'mail' ? (
-            <MailCount target={mailTarget} />
+            <MailCount
+              target={mailTarget}
+              record={{ entity, id: toText(record.id) }}
+            />
           ) : name === 'historyTab' ? undefined : (
             count
           ),

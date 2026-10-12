@@ -274,9 +274,10 @@ const wording = {
     // The record's conversations in colleagues' mailboxes (ColleaguesMail
     // in record-mail.tsx), which only their owners open.
     inColleagues: [
-      "Conversations with it in {{names}}'s mailbox: {{count}}. Their summaries are on the timeline; only the mailbox's owner opens them.",
-      '还有 {{count}} 个往来会话在{{names}}的邮箱里：摘要可在动态里查看，只有邮箱主人能打开原文。',
+      "In colleagues' mailboxes: {{count}}. Only a mailbox's owner opens its mail.",
+      '同事邮箱里的往来：{{count}} 个会话，只有邮箱主人能打开原文。',
     ],
+    mailboxOf: ["In {{name}}'s mailbox", '在{{name}}的邮箱'],
     loadFailed: ['Mail could not be loaded.', '邮件加载失败。'],
     scope: ['Your mail with {{terms}}', '你与 {{terms}} 的往来邮件'],
     scopeCompany: ['Your mail with {{name}}', '你与{{name}}的往来邮件'],

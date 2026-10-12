@@ -8,7 +8,13 @@ import {
 } from '../../client/components/crm/record-mail.js';
 
 // A record's Mail tab: the line naming whose mail it lists, and the empty
-// state, for a reader with a connected mailbox.
+// state, for a reader with a connected mailbox; and the record's
+// conversations in colleagues' mailboxes, listed after the reader's own.
+
+const colleagues = vi.hoisted(() => ({ list: undefined as unknown }));
+vi.mock('../../client/components/crm/colleagues-mail.js', () => ({
+  useColleaguesMail: () => colleagues.list,
+}));
 
 vi.mock('@nocobase/app-plugin-mail/client', async (importOriginal) => ({
   ...(await importOriginal<
@@ -55,7 +61,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => ({
 
 function show(
   addresses: string[],
-  more: { domain?: string; scope?: MailScope } = {},
+  more: { domain?: string; scope?: MailScope; record?: boolean } = {},
 ): void {
   render(
     <QueryClientProvider client={new QueryClient()}>
@@ -63,15 +69,39 @@ function show(
         <RecordMailPanel
           target={{ addresses, domain: more.domain }}
           scope={more.scope}
+          record={more.record ? { entity: 'leads', id: 'l1' } : undefined}
         />
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  colleagues.list = undefined;
+});
 
 describe('a record’s Mail tab', () => {
+  it("lists the conversations in colleagues' mailboxes, in place of an empty list of the reader's own", () => {
+    colleagues.list = [
+      {
+        key: 'acc:c1',
+        subject: 'Re: data migration',
+        count: 2,
+        lastFrom: 'Zheng Liang',
+        owner: 'Chen',
+        at: '2026-10-10T03:00:00.000Z',
+      },
+    ];
+    show(['zheng@lead.example'], { record: true });
+    expect(screen.getByText(/mail\.inColleagues/)).toBeInTheDocument();
+    expect(screen.getByText('Re: data migration')).toBeInTheDocument();
+    expect(screen.getByText('Zheng Liang')).toBeInTheDocument();
+    expect(screen.getByText(/mail\.mailboxOf/)).toHaveTextContent('Chen');
+    // The reader's own mailboxes hold none, but there is mail to show.
+    expect(screen.queryByText('mail.empty')).not.toBeInTheDocument();
+  });
+
   it('names the addresses it looks for', () => {
     show(['zhang@wg.example']);
     expect(screen.getByText(/mail\.scope/)).toHaveTextContent(

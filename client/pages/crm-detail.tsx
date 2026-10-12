@@ -158,6 +158,7 @@ import { ConvertDialog } from '../components/crm/conversion.js';
 import { LeadDuplicates } from '../components/crm/lead-merge.js';
 import { WaitingPlans } from '../components/crm/plan-card.js';
 import { RecordMailPanel } from '../components/crm/record-mail.js';
+import { useColleaguesMail } from '../components/crm/colleagues-mail.js';
 import {
   emailsOf,
   useMailSetup,
@@ -517,7 +518,12 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                 name: 'mail',
                 label: 'mail.tab',
                 icon: Mail,
-                count: <MailCount target={{ addresses: emailsOf([record]) }} />,
+                count: (
+                  <MailCount
+                    target={{ addresses: emailsOf([record]) }}
+                    record={{ entity: 'leads', id: toText(record.id) }}
+                  />
+                ),
               },
             ]
           : []),
@@ -1288,18 +1294,23 @@ function TabCount({ value }: { value: number }): ReactElement {
 // record has loaded and the reader has a mailbox connected.
 export function MailCount({
   target,
+  record,
 }: {
   target: MailTarget;
+  // The record whose tab it is: its conversations in colleagues' mailboxes
+  // count too, as the tab lists them (useColleaguesMail).
+  record?: { entity: Entity; id: string };
 }): ReactElement | null {
   const setup = useMailSetup();
   const { data, fetchStatus } = useRecordMessages(
     target,
     setup.accounts.length > 0,
   );
+  const colleagues = useColleaguesMail(record)?.length ?? 0;
   // Nothing to look for (no address, no mailbox) is none: 0, as the other
   // tabs say; while it is being looked up, no number yet.
-  if (data) return <TabCount value={data.length} />;
-  return fetchStatus === 'idle' ? <TabCount value={0} /> : null;
+  if (data) return <TabCount value={data.length + colleagues} />;
+  return fetchStatus === 'idle' ? <TabCount value={colleagues} /> : null;
 }
 
 // Status and its invalid reason are one decision: the server refuses an invalid

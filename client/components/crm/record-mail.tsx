@@ -20,12 +20,14 @@ import { Link } from 'react-router';
 import { Button } from '../ui/button.js';
 import { flash } from './flash.js';
 import {
+  useColleaguesMail,
+  type ColleagueConversation,
+} from './colleagues-mail.js';
+import {
   localDate,
   toText,
-  useCrmQuery,
   useCrmText,
   useMetadata,
-  type Data,
   type Entity,
 } from './api.js';
 import {
@@ -86,6 +88,7 @@ export function RecordMailPanel({
     isLoading,
     error,
   } = useRecordMessages(target, connected);
+  const colleagues = useColleaguesMail(record);
   const { available, compose, composer } = useMailComposer();
   const log = useMailSent();
   const [selected, setSelected] = useState<string>();
@@ -423,15 +426,19 @@ export function RecordMailPanel({
       </ul>
     );
 
-  // Above what the reader's own mailboxes hold: the conversations with the
-  // record that only colleagues' mailboxes hold.
-  if (record)
+  // After what the reader's own mailboxes hold, the conversations with the
+  // record that only colleagues' mailboxes hold; when those are all there
+  // is, without the empty state of the reader's own.
+  if (colleagues?.length) {
+    if (threads.length === 0 && connected && terms.length > 0 && !error)
+      body = null;
     body = (
       <>
-        <ColleaguesMail record={record} />
         {body}
+        <ColleaguesMail conversations={colleagues} timeZone={timeZone} />
       </>
     );
+  }
   return (
     <div className='space-y-3'>
       {available && (
@@ -478,46 +485,55 @@ function Empty({
   );
 }
 
-// The record's conversations that sit in colleagues' mailboxes: the tab
-// lists the reader's own mail alone, each mailbox being its owner's, so a
-// record whose mail is all a colleague's showed nothing here while its
-// timeline told of it. A line says how many there are and whose they are;
-// their summaries are on the timeline (mail-timeline.ts writes one entry per
-// conversation, the mailbox's owner its actor).
+// Those conversations, after the reader's own: a heading saying whose they
+// are, and a row each laid out as the reader's own rows (who wrote last and
+// when, the subject, then how many messages and whose mailbox), not opened.
 function ColleaguesMail({
-  record,
+  conversations,
+  timeZone,
 }: {
-  record: { entity: Entity; id: string };
+  conversations: readonly ColleagueConversation[];
+  timeZone: string;
 }): ReactElement | null {
-  const { text, language } = useCrmText();
-  const { data: meta } = useMetadata();
-  const { data } = useCrmQuery<Data[]>(
-    `${record.entity}/${encodeURIComponent(record.id)}/history?action=mail&pageSize=100`,
-  );
-  if (!meta || !data) return null;
-  const theirs = new Map<string, Set<string>>();
-  for (const entry of data) {
-    // A record's history may ignore the filter (one gathered with its
-    // tasks' entries is filtered in code), so the kind is checked here.
-    if (toText(entry.action) !== 'mail') continue;
-    const owner = toText(entry.actorId);
-    if (!owner || owner === meta.userId) continue;
-    const keys = theirs.get(owner) ?? new Set<string>();
-    keys.add(toText(entry.sourceKey) || toText(entry.id));
-    theirs.set(owner, keys);
-  }
-  if (!theirs.size) return null;
-  const count = [...theirs.values()].reduce((sum, keys) => sum + keys.size, 0);
-  const names = new Intl.ListFormat(language, { type: 'conjunction' }).format(
-    [...theirs.keys()].map(
-      (id) =>
-        toText(meta.users.find((user) => toText(user.id) === id)?.name) || id,
-    ),
-  );
+  const { text } = useCrmText();
+  if (!conversations.length) return null;
   return (
-    <p className='mb-3 flex items-start gap-2 text-sm text-muted-foreground'>
-      <Mail aria-hidden className='mt-0.5 size-4 shrink-0' />
-      {text('mail.inColleagues', { count, names })}
-    </p>
+    <section className='space-y-2'>
+      <p className='text-sm text-muted-foreground'>
+        {text('mail.inColleagues', { count: conversations.length })}
+      </p>
+      <ul className='divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-xs'>
+        {conversations.map((conversation) => (
+          <li
+            key={conversation.key}
+            className='flex min-w-0 items-start gap-3 px-3 py-2.5'
+          >
+            <span aria-hidden className='mt-1.5 size-2 shrink-0' />
+            <span className='min-w-0 flex-1'>
+              <span className='flex items-baseline gap-2'>
+                <span className='truncate text-sm'>
+                  {conversation.lastFrom || conversation.owner}
+                </span>
+                <span className='ml-auto shrink-0 text-xs text-muted-foreground'>
+                  {localDate(conversation.at, '', timeZone)}
+                </span>
+              </span>
+              <span className='block truncate text-sm'>
+                {conversation.subject || toText(text('feed.mail.noSubject'))}
+              </span>
+              <span className='block truncate text-xs text-muted-foreground'>
+                {toText(
+                  conversation.count === 1
+                    ? text('feed.mail.countOne')
+                    : text('feed.mail.count', { count: conversation.count }),
+                )}
+                {' · '}
+                {text('mail.mailboxOf', { name: conversation.owner })}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
