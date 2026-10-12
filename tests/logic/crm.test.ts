@@ -5898,6 +5898,10 @@ describe('demo dataset', () => {
         },
       ])
       .execute();
+    // Done: present, nothing under way.
+    expect(
+      (await (await request('/demoData', 'admin')).json()).data,
+    ).toMatchObject({ present: true, importing: null });
     const reset = await request('/demoData/remove', 'admin', 'POST', {});
     expect(reset.status).toBe(200);
     // Those about records gone leave the inbox; the other stays.
@@ -5943,6 +5947,28 @@ describe('demo dataset', () => {
       expect([entity, await count(entity)]).toEqual([entity, total]);
     const missing = await request('/demoData/remove', 'admin', 'POST', {});
     expect(missing.status).toBe(404);
+    // A claim left by an import the server never finished (stopped
+    // mid-import) counts as none once it is ten minutes old: nothing shows
+    // under way, and the banner offers the dataset again.
+    await database
+      .query()
+      .insertInto('crmSettings')
+      .values({
+        id: DEMO_MARKER,
+        value: JSON.stringify({ version: 7, importing: true, records: [] }),
+        updatedAt: new Date(Date.now() - 11 * 60 * 1000).toISOString(),
+      })
+      .execute();
+    const stale = await request('/demoData', 'admin');
+    expect((await stale.json()).data).toMatchObject({
+      present: false,
+      importing: null,
+    });
+    await database
+      .query()
+      .deleteFrom('crmSettings')
+      .where('id', '=', DEMO_MARKER)
+      .execute();
   }, 120000);
 
   it('enables the accounts a removal disabled, and leaves an existing account with a demo username as it was', async () => {

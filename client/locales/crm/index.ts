@@ -1711,6 +1711,7 @@ const wording = {
   ],
   demoBannerAction: ['Import demo data', '导入演示数据'],
   demoBannerDismiss: ['Dismiss', '不再显示'],
+  demoImporting: ['Importing the demo data…', '正在导入演示数据…'],
   enabled: ['Enabled', '启用'],
   disabled: ['Disabled', '停用'],
   role: ['Sales role', '销售角色'],

@@ -27,16 +27,7 @@ import {
   type CrmSettings,
   type Data,
 } from '../components/crm/api.js';
-interface DemoStatus {
-  present: boolean;
-  createdAt: string | null;
-  records: number;
-  accounts: { username: string; name: string; role: string }[];
-  accountsByLanguage?: Record<
-    string,
-    { username: string; name: string; role: string }[]
-  >;
-}
+import type { DemoStatus } from '../components/crm/demo-status.js';
 interface SettingsResponse {
   settings: CrmSettings;
   demo: DemoStatus;
@@ -155,6 +146,14 @@ function SettingsForm({
       });
       await refresh();
     };
+    // Under way at once in what the banner reads, which then follows the
+    // import's progress (demo-banner.tsx).
+    if (wanted)
+      queryClient.setQueryData<DemoStatus>(
+        [...scopeKey, 'demoData'],
+        (current) =>
+          current ? { ...current, importing: { percent: 0 } } : current,
+      );
     try {
       await settle(
         (

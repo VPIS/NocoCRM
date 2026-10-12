@@ -169,7 +169,17 @@ export interface DemoStatus {
     DemoLanguage,
     readonly { username: string; name: string; role: string }[]
   >;
+  // An import under way: how far it has got, 0 to 100, when this process
+  // runs it (null when another does); null when none runs.
+  importing: { percent: number | null } | null;
 }
+
+// How far the import this process runs has got, 0 to 100, for the banner
+// that shows it while it runs (demoStatus); none while no import runs here.
+let importPercent: number | undefined;
+const reached = (percent: number): void => {
+  importPercent = percent;
+};
 
 interface Manifest {
   version: number;
@@ -193,15 +203,34 @@ interface Manifest {
 
 // Whether a demo dataset is imported, for the banner that offers one to
 // whoever may import it (the metadata route asks only for them).
+// An import under way is not one yet: the banner stays, showing its
+// progress.
 export async function demoPresent(service: CrmService): Promise<boolean> {
-  return Boolean(
-    await service.database
-      .query()
-      .selectFrom('crmSettings')
-      .select('id')
-      .where('id', '=', DEMO_MARKER)
-      .executeTakeFirst(),
-  );
+  const row = await service.database
+    .query()
+    .selectFrom('crmSettings')
+    .select('value')
+    .where('id', '=', DEMO_MARKER)
+    .executeTakeFirst();
+  return Boolean(row) && !isImporting(row?.value);
+}
+
+// The marker an import claims before it writes anything, until its manifest
+// replaces it.
+function isImporting(value: unknown): boolean {
+  const parsed: unknown = typeof value === 'string' ? JSON.parse(value) : value;
+  return object(parsed).importing === true;
+}
+
+// A claim no import holds any more: claimed ten minutes ago or more and not
+// run by this process, as when the server was stopped mid-import (one that
+// fails takes its claim back). It counts as none: nothing shows it under
+// way, and a new import may claim the marker again.
+const STALE_IMPORT_MS = 10 * 60 * 1000;
+function abandoned(row: Row): boolean {
+  if (!isImporting(row.value) || importPercent !== undefined) return false;
+  const at = Date.parse(toText(row.updatedAt));
+  return !Number.isNaN(at) && Date.now() - at >= STALE_IMPORT_MS;
 }
 
 // The language of the demo imported, if any (the demo mailboxes' label
@@ -224,13 +253,16 @@ export async function demoStatus(
   actor: Actor,
 ): Promise<DemoStatus> {
   await requireCapability(actor, 'manage', 'settings');
-  const row = await service.database
+  const found = await service.database
     .query()
     .selectFrom('crmSettings')
-    .select('value')
+    .select(['value', 'updatedAt'])
     .where('id', '=', DEMO_MARKER)
     .executeTakeFirst();
-  const manifest = row ? (parseManifest(row.value) ?? null) : null;
+  const row = found && !abandoned(found) ? found : undefined;
+  const importing = row ? isImporting(row.value) : false;
+  const manifest =
+    row && !importing ? (parseManifest(row.value) ?? null) : null;
   // The accounts of the language of the import present, else of the
   // reader's.
   const language: DemoLanguage | null = manifest
@@ -244,6 +276,7 @@ export async function demoStatus(
     records: manifest?.records.length ?? 0,
     accounts: listed(names),
     accountsByLanguage: { 'zh-CN': listed('zh-CN'), 'en-US': listed('en-US') },
+    importing: importing ? { percent: importPercent ?? null } : null,
   };
 }
 const listed = (language: DemoLanguage) =>
@@ -291,6 +324,16 @@ export async function populateDemo(
   // refused at once instead of writing a second dataset that no manifest
   // records. An import that fails takes back what it wrote.
   const query = service.database.query();
+  const claimed = await query
+    .selectFrom('crmSettings')
+    .select(['value', 'updatedAt'])
+    .where('id', '=', DEMO_MARKER)
+    .executeTakeFirst();
+  if (claimed && abandoned(claimed))
+    await query
+      .deleteFrom('crmSettings')
+      .where('id', 'in', [DEMO_MARKER, DEMO_MAIL_ROW])
+      .execute();
   try {
     await query
       .insertInto('crmSettings')
@@ -304,6 +347,7 @@ export async function populateDemo(
     throw new CrmError('demoExists', 409);
   }
   const claim: { manifest?: Manifest } = {};
+  reached(0);
   try {
     return await populate(
       service,
@@ -322,6 +366,8 @@ export async function populateDemo(
       .where('id', 'in', [DEMO_MARKER, DEMO_MAIL_ROW])
       .execute();
     throw error;
+  } finally {
+    importPercent = undefined;
   }
 }
 
@@ -395,6 +441,7 @@ async function populate(
       managedPermissionSets: [managerSet],
       permissionSets: [managerSet],
     });
+  reached(5);
   const actorFor = (id: string): Actor => ({
     id,
     locale: language,
@@ -1123,6 +1170,7 @@ async function populate(
 
   // Approvals are raised by whoever owns the deal. The importing
   // administrator, a sales manager for the demo, decides the sellers' and the
+  reached(35);
   // manager's: two wait on them, one they have decided; their own go to the
   // manager. So the importer's inbox holds approvals to decide, each with the
   // AI's review, as well as approvals of their own waiting on someone else.
@@ -1253,6 +1301,7 @@ async function populate(
         .execute();
       return id;
     };
+  reached(45);
   type ProjectCompany = typeof project.hworld.company;
   type ProjectPerson = (typeof project.hworld.people)[number];
   const projects = await service.mutate(owner, async (prepared, q) => {
@@ -1736,6 +1785,7 @@ async function populate(
   // H World's lead converted, GAC's follow-up accepted, New Hope's extension
   // ignored and an approval decided as the review advised. Written straight
   // in, so nothing runs a model; the agents' pages count them as runs.
+  reached(60);
   const ai = project.ai;
   const aiEntry = async (
     entity: 'leads' | 'opportunities' | 'tasks' | 'approvals',
@@ -1816,6 +1866,7 @@ async function populate(
     ...decided(-5, 15),
   });
 
+  reached(65);
   setDemoMailLanguage(language);
   // The demo mailboxes: the messages first, which the plugin reads as soon
   // as a mailbox connects, then a mailbox for each demo account and the
@@ -2094,13 +2145,16 @@ async function populate(
       ),
     ];
     manifest.mailAccounts = [];
-    for (const [userId, mailbox] of owners) {
+    for (const [index, [userId, mailbox]] of owners.entries()) {
       const accountId = await mailboxes
         .connect(userId, mailbox)
         .catch(() => undefined);
       if (accountId) manifest.mailAccounts.push({ userId, accountId });
+      // The mailboxes take the longest, the plugin copying each one's mail.
+      reached(70 + Math.round(((index + 1) / owners.length) * 20));
     }
   }
+  reached(90);
 
   // The import queued a notification for every assignment; a demo inbox
   // full of "assigned to you" would drown what the demo is meant to show.
@@ -2157,6 +2211,7 @@ async function populate(
 
   // The importer's conversations with the assistant about their projects,
   // each a few minutes long, over the last days.
+  reached(95);
   if (chats) {
     manifest.chats = [];
     const when: readonly [number, number][] = [
@@ -2201,6 +2256,7 @@ async function populate(
     .set({ value: JSON.stringify(manifest), updatedAt: new Date() })
     .where('id', '=', DEMO_MARKER)
     .execute();
+  reached(100);
   return demoStatus(service, actor);
 }
 

@@ -135,6 +135,13 @@ export const DemoDataStatus: z.ZodType<DemoStatus> = z
       'zh-CN': z.array(DemoAccount),
       'en-US': z.array(DemoAccount),
     }),
+    importing: z
+      .object({ percent: z.number().int().min(0).max(100).nullable() })
+      .nullable()
+      .meta({
+        description:
+          'An import under way: how far it has got, 0 to 100, or null when another server process runs it; null when none runs.',
+      }),
   })
   .meta({ ref: 'CrmDemoData' });
 
