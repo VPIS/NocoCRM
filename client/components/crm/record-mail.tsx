@@ -499,7 +499,8 @@ function ColleaguesMail({
   if (!conversations.length) return null;
   return (
     <section className='space-y-2'>
-      <p className='text-sm text-muted-foreground'>
+      {/* Worded and set as the line over the reader's own mail. */}
+      <p className='truncate text-xs text-muted-foreground'>
         {text('mail.inColleagues', { count: conversations.length })}
       </p>
       <ul className='divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-xs'>
