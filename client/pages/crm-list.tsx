@@ -559,11 +559,13 @@ function EntityList({
   const calendarCard = (r: CrmRecord, large = false): ReactElement => (
     <div
       key={r.id}
-      className={`rounded-lg ${toText(
+      // The whole card opens the task: its link stretched over it, and it
+      // shades under the pointer.
+      className={`relative cursor-pointer rounded-lg transition-colors [&_a]:after:absolute [&_a]:after:inset-0 [&_a]:after:content-[''] ${toText(
         large
-          ? 'border border-border bg-card p-3 text-sm shadow-xs'
+          ? 'border border-border bg-card p-3 text-sm shadow-xs hover:bg-hover'
           : // On the menu's own grey, in the white of the month's grid.
-            'bg-sidebar p-2 text-xs',
+            'bg-sidebar p-2 text-xs hover:bg-sidebar-accent',
       )} ${
         // Done or cancelled: struck through and faded, marked by its kind,
         // so what is still to do stands out on the day.
