@@ -6,7 +6,7 @@ import {
   type ReactElement,
 } from 'react';
 import { Check, CircleCheck, Sparkles } from 'lucide-react';
-import { Button, buttonVariants } from '../ui/button.js';
+import { Button } from '../ui/button.js';
 import { Checkbox } from '../ui/checkbox.js';
 import {
   Dialog,
@@ -100,12 +100,13 @@ export function OutcomeBox({
           className='w-full resize-none bg-transparent text-sm outline-none placeholder:text-muted-foreground'
         />
         <ErrorNotice error={error} />
-        {/* The options as the new task's chips. */}
-        <div className='flex flex-wrap items-center gap-1.5'>
+        {/* The options under the result: the follow-up a plain choice, its
+            box under the words above, then the AI's organising. */}
+        <div className='flex flex-wrap items-center gap-3'>
           {onFollowUp && meta?.assistant ? (
             <label
               htmlFor={id}
-              className={`${buttonVariants({ variant: 'outline', size: 'sm' })} cursor-pointer font-normal`}
+              className='flex cursor-pointer items-center gap-2 text-sm'
             >
               <Checkbox
                 id={id}
