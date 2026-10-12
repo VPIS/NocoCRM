@@ -1021,14 +1021,18 @@ export function DetailColumns({
             the parts inside give it back. */}
         <div
           className={`flex h-full flex-col @3xl:-mx-4 ${
-            inDrawer ? '' : 'md:@3xl:-mx-8 -mx-4 md:-mx-8'
+            inDrawer ? '-mx-2' : 'md:@3xl:-mx-8 -mx-4 md:-mx-8'
           }`}
         >
           {/* Stacked, the header, the particulars and the tabs scroll as one;
               side by side, the header stays and each column scrolls. */}
           <div
+            // In a drawer or the inbox's pane, stacked, 8px each side given
+            // back by the block's margin: room for an inline editor that
+            // reaches past the text (-mx-2), which the column's scrolling
+            // would otherwise cut, leaving its top and bottom lines alone.
             className={`flex min-h-0 flex-1 flex-col overflow-y-auto pb-36 @3xl:overflow-hidden @3xl:pb-0 ${
-              inDrawer ? '' : 'px-4 md:px-8 @3xl:px-0'
+              inDrawer ? 'px-2 @3xl:px-0' : 'px-4 md:px-8 @3xl:px-0'
             }`}
           >
             <div
