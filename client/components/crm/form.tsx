@@ -5,7 +5,8 @@ import {
 import { LengthHint } from './length-hint.js';
 import { DateTimeInput } from './datetime-input.js';
 import { RecordMultiPicker, RecordPicker } from './record-picker.js';
-import { FileDropZone, FileLinks } from './attachments.js';
+import { FileDropZone } from './attachments.js';
+import { CommentFiles } from './comment-files.js';
 import { editsAll, fieldLabelKey, toText } from './api.js';
 import { CountryChoice, SubdivisionChoice } from './geography.js';
 import {
@@ -779,8 +780,9 @@ export function RecordForm({
           {/* The drop zone above already says there is nothing yet; the
               list appears with the first file. */}
           {arrayValues(value).length > 0 && (
-            <FileLinks
-              files={arrayValues(value)}
+            <CommentFiles
+              className=''
+              ids={arrayValues(value).map(toText)}
               onRemove={(id) =>
                 set(
                   field.key,
@@ -1166,9 +1168,10 @@ export function RecordForm({
                 value={toText(input.description ?? '')}
                 onChange={(e) => set('description', e.target.value)}
               />
+              {/* As a comment's and the Attachments tab's files. */}
               {arrayValues(input.attachments).length > 0 && (
-                <FileLinks
-                  files={arrayValues(input.attachments)}
+                <CommentFiles
+                  ids={arrayValues(input.attachments).map(toText)}
                   onRemove={(fileId) =>
                     set(
                       'attachments',

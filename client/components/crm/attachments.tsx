@@ -1,164 +1,23 @@
-import { Download, Paperclip, Trash2, Upload } from 'lucide-react';
-import { useRef, useState, type ReactElement, type ReactNode } from 'react';
-import { FilePreviewDialog } from '#extensions/nocobase-file-component-ui';
-import { Button } from '../ui/button.js';
+import { Upload } from 'lucide-react';
+import { useRef, useState, type ReactElement } from 'react';
 import {
-  PAGE_SIZE,
   arrayValues,
-  localDate,
   toText,
   useCrmApi,
-  useCrmQuery,
   useCrmText,
-  useMetadata,
   useRefresh,
   type Data,
   type Entity,
 } from './api.js';
-import { fileRecord, type CrmFile } from './file-record.js';
-import { DEFAULT_TIME_ZONE } from '../../../server/providers/crm/zone-time.js';
 
-// Attachments, wherever they appear: the list of files on a record's tab
-// and in a dialog's form, the preview dialog a file opens in, and the drop
-// zone that adds files. One look everywhere.
+// Attachments, wherever they appear: the drop zone that adds files, and
+// the record's files as its Attachments tab lists them; the files
+// themselves are drawn by CommentFiles (comment-files.tsx), one look
+// everywhere, a form's included.
 
 // The CRM's file rows and the preview dialog's record shape, in their own
 // module so this one exports components only.
 export type { CrmFile } from './file-record.js';
-
-export function FileLinks({
-  files,
-  onRemove,
-  sourceLabel,
-}: {
-  files: unknown[];
-  onRemove?: (id: string) => void;
-  // Names the record a file came from, used where one list mixes several.
-  sourceLabel?: (id: string) => ReactNode;
-}): ReactElement {
-  const { text, language } = useCrmText();
-  const { data: meta } = useMetadata();
-  const attachmentStep = PAGE_SIZE;
-  const [shown, setShown] = useState(attachmentStep);
-  const [previewing, setPreviewing] = useState<string | null>(null);
-  const timeZone = meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
-  const ids = files.map(toText).filter(Boolean);
-  const { data } = useCrmQuery<CrmFile[]>(
-    `attachments?ids=${encodeURIComponent(ids.join(','))}`,
-    ids.length > 0,
-  );
-  // Newest upload first, so a truncated list shows the most recent files rather
-  // than whichever happened to be appended first.
-  const ordered = data
-    ? [...ids].sort(
-        (left, right) =>
-          new Date(
-            data.find((file) => file.id === right)?.createdAt ?? 0,
-          ).getTime() -
-          new Date(
-            data.find((file) => file.id === left)?.createdAt ?? 0,
-          ).getTime(),
-      )
-    : ids;
-  const visible = ordered.slice(0, shown);
-  // The dialog pages through the listed files in the order shown.
-  const records = visible.flatMap((id) => {
-    const file = data?.find((f) => f.id === id);
-    return file ? [fileRecord(file)] : [];
-  });
-  const previewIndex = records.findIndex((r) => r.id === previewing);
-  if (!ids.length)
-    return (
-      <p className='text-sm text-muted-foreground'>{text('noAttachments')}</p>
-    );
-  return (
-    <ul className='space-y-1'>
-      <FilePreviewDialog
-        files={records}
-        initialIndex={Math.max(previewIndex, 0)}
-        open={previewIndex >= 0}
-        onOpenChange={(open) => !open && setPreviewing(null)}
-      />
-      {visible.map((id) => {
-        const file = data?.find((f) => f.id === id);
-        return (
-          <li key={id} className='flex items-start gap-1'>
-            {file ? (
-              // The name opens the preview dialog; the download and remove
-              // icons sit together at the end of the row (the endpoint sends
-              // Content-Disposition: attachment, so the link saves the file).
-              // One flex row so the name, its time and its source sit on a
-              // single centre line despite the differing text sizes.
-              <span className='flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5'>
-                <button
-                  type='button'
-                  className='inline-flex min-w-0 items-center gap-2 text-left text-sm text-primary hover:underline'
-                  aria-label={`${toText(text('preview'))} ${file.filename}`}
-                  onClick={() => setPreviewing(file.id)}
-                >
-                  <Paperclip className='size-3.5 shrink-0 text-muted-foreground' />
-                  <span className='break-all'>{file.filename}</span>
-                </button>
-                <span className='text-xs text-muted-foreground'>
-                  {localDate(file.createdAt, language, timeZone)}
-                </span>
-                {sourceLabel ? (
-                  <span className='text-xs'>{sourceLabel(id)}</span>
-                ) : null}
-              </span>
-            ) : (
-              <span className='inline-flex items-center gap-2 text-sm text-muted-foreground'>
-                <Paperclip className='size-3.5 shrink-0' />…
-              </span>
-            )}
-            <span className='ml-auto flex shrink-0 items-center'>
-              {file && (
-                <a
-                  className='inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-foreground'
-                  href={file.url}
-                  download={file.filename}
-                  aria-label={`${toText(text('download'))} ${file.filename}`}
-                >
-                  <Download className='size-3.5' />
-                </a>
-              )}
-              {onRemove && (
-                <Button
-                  className='size-6 text-muted-foreground hover:text-destructive'
-                  variant='ghost'
-                  size='icon-sm'
-                  // Two uploads may share a filename, so the label carries the
-                  // upload time to stay distinguishable to screen readers.
-                  aria-label={`${toText(text('remove'))} ${toText(
-                    file?.filename ?? id,
-                  )}${
-                    file
-                      ? ` · ${toText(localDate(file.createdAt, language, timeZone))}`
-                      : ''
-                  }`}
-                  onClick={() => onRemove(id)}
-                >
-                  <Trash2 />
-                </Button>
-              )}
-            </span>
-          </li>
-        );
-      })}
-      {ids.length > shown && (
-        <li>
-          <Button
-            variant='ghost'
-            size='sm'
-            onClick={() => setShown((n) => n + attachmentStep)}
-          >
-            {text('loadMore')} · {ids.length - shown}
-          </Button>
-        </li>
-      )}
-    </ul>
-  );
-}
 
 // The drop zone every attachment list shares: drag files onto it or click
 // it to pick them. It uploads them and hands the new file ids to its owner,
