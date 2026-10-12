@@ -1165,8 +1165,8 @@ export default function EntityDetail({
       ),
       <>
         {/* Two cards, as a contact's page has: the deal (who has it,
-            where it stands, what it is worth and when it should close,
-            how it came), then its company. */}
+            where it stands and what kind it is, what it is worth and when
+            it should close, how it came), then its company. */}
         <InfoGroup title={text('companyGroups.general')}>
           {row('ownerId')}
           <InfoRow field='stage' label={text('fields.stage')}>
@@ -1190,8 +1190,10 @@ export default function EntityDetail({
             />
           </InfoRow>
           {stage === 'paused' && row('resumeAt')}
-          {/* What it is worth and when it should close, then the company
-            and how it came. */}
+          {/* What kind of business it is, right under where it stands;
+            then what it is worth and when it should close, and how it
+            came. */}
+          {row('businessType')}
           <InfoRow field='amount' label={text('fields.amount')}>
             {/* One value, its currency and number edited together in a
                 pop-up, as a location is. */}
@@ -1205,7 +1207,7 @@ export default function EntityDetail({
             />
           </InfoRow>
           {row('expectedCloseAt')}
-          {['businessType', 'source'].map(row)}
+          {row('source')}
           {convertedRow}
           <RecordTimes record={record} />
         </InfoGroup>
