@@ -55,7 +55,7 @@ export function SectionNav({
       {/* Drawn as the application's tabs (LinkTabs, a record page's):
           underlined on a thin rule, the one being read in the foreground
           over a 2px line of it, the others muted until hovered. */}
-      <div className='flex gap-x-5 overflow-x-auto border-b border-border scroll-quiet'>
+      <div className='flex gap-x-5 overflow-x-auto border-b border-border'>
         {sections.map((section) => (
           <a
             key={section.id}

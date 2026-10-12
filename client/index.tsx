@@ -12,12 +12,16 @@ import { AppStartupError } from './startup';
 import './styles.css';
 import { initializeTheme } from './theme/theme-preferences';
 import { themePresets } from './theme/theme-presets';
+// Application change: every scrollbar shows only while its element scrolls.
+import { revealScrollbarsWhileScrolling } from './components/crm/scrollbar';
 
 const container = document.getElementById('root');
 
 if (!container) {
   throw new Error('Missing application root element.');
 }
+
+revealScrollbarsWhileScrolling();
 
 const root = createRoot(container);
 let app: ClientApplication | undefined;

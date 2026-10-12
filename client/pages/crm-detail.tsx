@@ -122,7 +122,6 @@ import {
   Status,
   Value,
 } from '../components/crm/common.js';
-import { revealScrollbar } from '../components/crm/scrollbar.js';
 import { RecordForm } from '../components/crm/form.js';
 import {
   EvaluateButton,
@@ -989,7 +988,6 @@ export function DetailColumns({
     return () => observer.disconnect();
   }, []);
   const scrollTab = (event: UIEvent<HTMLElement>): void => {
-    revealScrollbar(event);
     const box = event.currentTarget;
     if (box.scrollTop <= 0) setIntroAway(false);
     else if (
@@ -1022,10 +1020,9 @@ export function DetailColumns({
           {/* Stacked, the header, the particulars and the tabs scroll as one;
               side by side, the header stays and each column scrolls. */}
           <div
-            className={`flex min-h-0 flex-1 flex-col overflow-y-auto pb-36 @3xl:overflow-hidden @3xl:pb-0 scroll-quiet ${
+            className={`flex min-h-0 flex-1 flex-col overflow-y-auto pb-36 @3xl:overflow-hidden @3xl:pb-0 ${
               inDrawer ? '' : 'px-4 md:px-8 @3xl:px-0'
             }`}
-            onScroll={revealScrollbar}
           >
             <div
               className={`grid gap-6 @3xl:min-h-0 @3xl:flex-1 @3xl:grid-rows-[auto_minmax(0,1fr)] @3xl:gap-0 ${
@@ -1080,10 +1077,9 @@ export function DetailColumns({
                   inline editor's hover fill. */}
               {bare ? null : (
                 <section
-                  className={`flex min-w-0 flex-col gap-3 @3xl:col-start-2 @3xl:row-span-2 @3xl:row-start-1 @3xl:overflow-y-auto @3xl:pb-24 scroll-quiet ${
+                  className={`flex min-w-0 flex-col gap-3 @3xl:col-start-2 @3xl:row-span-2 @3xl:row-start-1 @3xl:overflow-y-auto @3xl:pb-24 ${
                     inDrawer ? '@3xl:mr-4' : '@3xl:mr-2 @3xl:pt-4 md:@3xl:mr-3'
                   }`}
-                  onScroll={revealScrollbar}
                 >
                   {recordId ? (
                     <WaitingPlans entity={entity} recordId={recordId} />
@@ -1116,8 +1112,7 @@ export function DetailColumns({
                     <div className='min-h-0 overflow-hidden'>
                       <div
                         ref={introRef}
-                        className={`pb-7 @3xl:max-h-[40vh] @3xl:overflow-y-auto @3xl:[scrollbar-gutter:stable] ${sidePad} scroll-quiet`}
-                        onScroll={revealScrollbar}
+                        className={`pb-7 @3xl:max-h-[40vh] @3xl:overflow-y-auto @3xl:[scrollbar-gutter:stable] ${sidePad}`}
                       >
                         {intro}
                       </div>
@@ -1132,7 +1127,7 @@ export function DetailColumns({
                     tabs' rule ends where the content does. */}
                 <div
                   ref={tabBarRef}
-                  className={`sticky top-0 z-10 flex shrink-0 flex-wrap items-center bg-background pt-1 pb-4 @3xl:overflow-hidden @3xl:[scrollbar-gutter:stable] @3xl:pt-0 ${sidePad} scroll-quiet`}
+                  className={`sticky top-0 z-10 flex shrink-0 flex-wrap items-center bg-background pt-1 pb-4 @3xl:overflow-hidden @3xl:[scrollbar-gutter:stable] @3xl:pt-0 ${sidePad}`}
                 >
                   {tabBar}
                 </div>
@@ -1142,7 +1137,7 @@ export function DetailColumns({
                     it, and its scrollbar's room is kept whether or not a tab
                     scrolls, so switching tabs never re-wraps it. */}
                 <div
-                  className={`min-w-0 @3xl:min-h-0 @3xl:flex-1 @3xl:overflow-y-auto @3xl:[scrollbar-gutter:stable] @3xl:pb-36 ${sidePad} scroll-quiet`}
+                  className={`min-w-0 @3xl:min-h-0 @3xl:flex-1 @3xl:overflow-y-auto @3xl:[scrollbar-gutter:stable] @3xl:pb-36 ${sidePad}`}
                   onScroll={scrollTab}
                 >
                   {right}

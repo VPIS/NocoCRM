@@ -146,8 +146,11 @@
 }
 
 /* Every scrollbar, across and down: a thin rounded bar in a faint grey on no
-   track, a little firmer under the pointer. Chromium and Safari draw it
-   through the -webkit- pseudo-elements, which allow a thinner bar than
+   track, drawn only while its element scrolls (revealScrollbarsWhileScrolling
+   in client/components/crm/scrollbar.ts marks it `data-scrolling` until it
+   has been still for a moment) and transparent otherwise, so showing it
+   moves nothing; a little firmer under the pointer. Chromium and Safari draw
+   it through the -webkit- pseudo-elements, which allow a thinner bar than
    `scrollbar-width: thin`; they ignore those wherever the standard
    properties are set (scrollbar-color is inherited), so the standard ones
    are given only to a browser without them (Firefox). */
@@ -161,71 +164,34 @@
 }
 ::-webkit-scrollbar-thumb {
   border-radius: 9999px;
+  background-color: transparent;
+}
+[data-scrolling]::-webkit-scrollbar-thumb {
   background-color: color-mix(
     in oklab,
-    var(--muted-foreground) 14%,
+    var(--muted-foreground) 20%,
     transparent
   );
 }
-::-webkit-scrollbar-thumb:hover {
+[data-scrolling]::-webkit-scrollbar-thumb:hover {
   background-color: color-mix(
     in oklab,
-    var(--muted-foreground) 26%,
+    var(--muted-foreground) 30%,
     transparent
   );
 }
 @supports not selector(::-webkit-scrollbar) {
   * {
     scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  [data-scrolling] {
     scrollbar-color: color-mix(
         in oklab,
-        var(--muted-foreground) 14%,
+        var(--muted-foreground) 20%,
         transparent
       )
       transparent;
-  }
-}
-
-/* A scroller whose bar shows only while it is pointed at or scrolls
-   (revealScrollbar in client/components/crm/common.tsx marks the latter):
-   the same thin bar, fainter under the pointer and as firm as the others
-   while it moves, transparent while still, so showing it moves nothing. */
-@utility scroll-quiet {
-  &::-webkit-scrollbar-thumb {
-    background-color: transparent;
-  }
-  &:hover::-webkit-scrollbar-thumb {
-    background-color: color-mix(
-      in oklab,
-      var(--muted-foreground) 10%,
-      transparent
-    );
-  }
-  &[data-scrolling]::-webkit-scrollbar-thumb {
-    background-color: color-mix(
-      in oklab,
-      var(--muted-foreground) 20%,
-      transparent
-    );
-  }
-  @supports not selector(::-webkit-scrollbar) {
-    scrollbar-color: transparent transparent;
-    &:hover {
-      scrollbar-color: color-mix(
-          in oklab,
-          var(--muted-foreground) 10%,
-          transparent
-        )
-        transparent;
-    }
-    &[data-scrolling] {
-      scrollbar-color: color-mix(
-          in oklab,
-          var(--muted-foreground) 20%,
-          transparent
-        )
-        transparent;
-    }
   }
 }
 

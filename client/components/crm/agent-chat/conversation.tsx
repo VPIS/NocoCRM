@@ -372,7 +372,7 @@ export function Conversation({
           // content must not bring a sideways scrollbar under the pointer.
           // It reaches into the side padding of the panel and the page around
           // it, so its scrollbar stands clear of the messages.
-          className='relative -mr-3 h-full overflow-x-hidden overflow-y-auto py-4 pr-3 scroll-quiet'
+          className='relative -mr-3 h-full overflow-x-hidden overflow-y-auto py-4 pr-3'
         >
           {loading || (conversationId && !messages.loaded) ? (
             <div className='flex flex-col gap-4' role='status'>
