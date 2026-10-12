@@ -50,9 +50,10 @@
   /* Application change: the default preset's rounder corners (the
      template's compact 0.375rem looked square on the taller controls). */
   --radius: 0.5rem;
-  /* Application change: the pages sit on white, the menu beside them on a
-     light neutral grey (--sidebar), cards white with their faint border. */
-  --background: oklch(1 0 0);
+  /* Application change: the pages sit on a very light grey, lighter than
+     the menu's (--sidebar), so white cards stand off them with their faint
+     border. */
+  --background: rgb(251 251 252);
   --foreground: oklch(0.16 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.16 0 0);
