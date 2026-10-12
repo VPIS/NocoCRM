@@ -78,6 +78,7 @@ import {
 } from '../components/crm/lead-evaluation.js';
 import { useFollowUpRequest } from '../components/crm/follow-up-request.js';
 import { LocationField } from '../components/crm/location-field.js';
+import { LongTextField } from '../components/crm/long-text-field.js';
 import { MoneyField } from '../components/crm/money-field.js';
 import { ReviewStatus } from '../components/crm/approval-review.js';
 import { PrepStatus } from '../components/crm/task-preparation.js';
@@ -1654,6 +1655,17 @@ function CompanyCard({
           editable={false}
           label={text('location')}
           countries={fieldOf('country').options ?? []}
+        />
+      </InfoRow>
+      {/* Last, its introduction: three lines that fade out, read whole in
+          the pop-up beside the column, as the company's own page shows it;
+          edited there. */}
+      <InfoRow field='description' label={text('fields.companyDescription')}>
+        <LongTextField
+          value={toText(company.description ?? '')}
+          label={text('fields.companyDescription')}
+          editable={false}
+          onSave={() => Promise.resolve(false)}
         />
       </InfoRow>
     </InfoGroup>
