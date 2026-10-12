@@ -114,5 +114,53 @@ export async function noticesOf(
       outcome: null,
     });
   }
+  // A notification the outbox no longer holds (sent before its id was
+  // recorded, or its row removed with a demo dataset) is still the reader's
+  // in-app item, whose route target names the record: known by that, with
+  // nothing more to say of it.
+  const known = new Set(notices.map((notice) => notice.notificationId));
+  const rest = ids.filter((id) => !known.has(id));
+  if (rest.length) {
+    // Without the in-app plugin's table, they stay plain notifications.
+    const items = await query
+      .selectFrom('notificationInAppItems')
+      .select(['notificationId', 'target', 'createdAt'])
+      .where('userId', '=', actor.id)
+      .where('notificationId', 'in', rest)
+      .execute()
+      .catch(() => []);
+    for (const item of items) {
+      const target = (jsonValue(item.target) ?? {}) as Row;
+      const match = /^\/crm\/([a-z]+)\/([^/?#]+)/.exec(toText(target.path));
+      if (!match || !CRM_ENTITIES.has(match[1] ?? '')) continue;
+      notices.push({
+        notificationId: toText(item.notificationId),
+        source: 'crm',
+        kind: 'info',
+        type: '',
+        subject: { type: match[1] ?? '', id: match[2] ?? '', label: null },
+        decisionKey: null,
+        data: {
+          entity: match[1] ?? '',
+          recordId: match[2] ?? '',
+          actorId: null,
+          at: toText(item.createdAt),
+          comment: null,
+        },
+        count: 1,
+        resolvedAt: null,
+        outcome: null,
+      });
+    }
+  }
   return notices;
 }
+
+const CRM_ENTITIES = new Set([
+  'leads',
+  'opportunities',
+  'companies',
+  'contacts',
+  'tasks',
+  'approvals',
+]);

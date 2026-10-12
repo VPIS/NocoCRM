@@ -208,7 +208,6 @@ export function DecisionDetail({
   readonly onBack: () => void;
 }): ReactElement {
   const { text } = useCrmText();
-  const { t } = useTranslation();
   const query = useDecisions();
   const items = query.data?.data ?? [];
   const current =
@@ -225,7 +224,38 @@ export function DecisionDetail({
       </p>
     );
   const record = recordOf(current);
-  const entity = current.entity as Entity;
+  return (
+    <RecordPaneFrame
+      entity={current.entity}
+      recordId={record.id}
+      focus={current.id}
+      paneKey={current.id}
+      onBack={onBack}
+    />
+  );
+}
+
+// A record in the inbox's detail pane, an AI suggestion's or a
+// notification's (inbox-notice-detail.tsx): its record's left column
+// (heading, actions and tabs, without the particulars), opened on the
+// timeline at `focus` when given. Its code loads with the pane.
+export function RecordPaneFrame({
+  entity,
+  recordId,
+  focus,
+  paneKey,
+  onBack,
+}: {
+  readonly entity: Entity;
+  readonly recordId: string;
+  readonly focus?: string;
+  // A new pane for each item: its timeline, scrolled to it.
+  readonly paneKey: string;
+  readonly onBack?: () => void;
+}): ReactElement {
+  const { text } = useCrmText();
+  const { t } = useTranslation();
+  const search = focus ? `?focus=${encodeURIComponent(focus)}` : '';
   return (
     <div className='flex min-h-full flex-col'>
       {/* The way back to the list, narrow, as the inbox's own items have;
@@ -235,14 +265,16 @@ export function DecisionDetail({
           rules meet in one line. It stays at the top while the pane
           scrolls. */}
       <div className='sticky top-0 z-20 flex h-11 shrink-0 items-center gap-2 border-b border-border bg-card px-4'>
-        <button
-          type='button'
-          onClick={onBack}
-          className='inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground lg:hidden'
-        >
-          <ArrowLeft className='size-4' />
-          {t('navigation.back')}
-        </button>
+        {onBack ? (
+          <button
+            type='button'
+            onClick={onBack}
+            className='inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground lg:hidden'
+          >
+            <ArrowLeft className='size-4' />
+            {t('navigation.back')}
+          </button>
+        ) : null}
         <p className='min-w-0 flex-1 truncate text-sm text-muted-foreground'>
           {text(`entities.${entity}`)}
         </p>
@@ -253,24 +285,14 @@ export function DecisionDetail({
           // content's right edge does below.
           className='-mr-2.5'
           nativeButton={false}
-          render={
-            <Link
-              to={`/crm/${entity}/${record.id}/history?focus=${current.id}`}
-            />
-          }
+          render={<Link to={`/crm/${entity}/${recordId}/history${search}`} />}
         >
           <Maximize2 />
           {text('openFullPage')}
         </Button>
       </div>
       <Suspense fallback={<Loading />}>
-        {/* A new pane for each suggestion: its timeline, scrolled to it. */}
-        <RecordPane
-          key={current.id}
-          entity={entity}
-          id={record.id}
-          focus={current.id}
-        />
+        <RecordPane key={paneKey} entity={entity} id={recordId} focus={focus} />
       </Suspense>
     </div>
   );

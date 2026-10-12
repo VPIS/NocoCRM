@@ -10,7 +10,7 @@ import {
   useRecordDrawerState,
 } from '../components/crm/record-drawer.js';
 
-// The record a notification is about opens in the detail page's drawer over
+// The records the detail pane links to open in the detail page's drawer over
 // the inbox; its code loads only when a record is first opened.
 const RecordDrawer = lazy(() =>
   import('./crm-detail.js').then((module) => ({
@@ -31,8 +31,8 @@ const ENTITIES = new Set<string>([
  * Route `/inbox`: the UI Library's inbox block over the in-app notification plugin, first in the menu's Action
  * section. Application change: its registry adds the AI's suggestions waiting on the reader to the To do view, as a
  * collection category read from the CRM's API (`client/components/crm/inbox-decisions.tsx`); the CRM's own
- * notifications are known to the CRM (`inbox-notices.ts`), and picking one opens the record it is about in a drawer over
- * the inbox, at the comment it concerns, the detail pane left to a hint.
+ * notifications are known to the CRM (`inbox-notices.ts`), and picking one shows the record it is about in the detail
+ * pane, at the comment it concerns, as an AI suggestion's pane does.
  */
 export default function InboxPage(): ReactElement {
   const { registry, key } = useCrmInboxRegistry();
@@ -41,9 +41,10 @@ export default function InboxPage(): ReactElement {
   // Loaded on the first open and kept mounted after, so closing animates.
   const [drawerLoaded, setDrawerLoaded] = useState(false);
   if (drawer.opened && !drawerLoaded) setDrawerLoaded(true);
-  // Picking one of the CRM's notifications opens its record in the drawer,
-  // its timeline at the comment's thread (?focus=); picking anything else
-  // closes it.
+  // Picking one of the CRM's notifications shows its record in the detail
+  // pane (inbox-notice-detail.tsx); a phone, whose list and pane take turns,
+  // opens the record's page instead, at the comment's thread (?focus=).
+  // Records the pane links to open in the drawer over the inbox.
   const selectParams = (entry: InboxEntry, params: URLSearchParams): void => {
     params.delete('open');
     params.delete('focus');
@@ -54,17 +55,13 @@ export default function InboxPage(): ReactElement {
     };
     if (entry.notice?.source !== 'crm' || !data.recordId) return;
     if (!ENTITIES.has(data.entity ?? '')) return;
-    const target = `${data.entity ?? ''}/${data.recordId}`;
+    if (!window.matchMedia('(max-width: 767px)').matches) return;
     const focus = data.comment?.thread || data.comment?.id;
-    // A phone has no drawer: the record's page opens instead, once the
-    // pick is in the address.
-    if (window.matchMedia('(max-width: 767px)').matches) {
-      const search = focus ? `?focus=${encodeURIComponent(focus)}` : '';
-      setTimeout(() => void navigate(`/crm/${target}${search}`));
-      return;
-    }
-    params.set('open', target);
-    if (focus) params.set('focus', focus);
+    const search = focus ? `?focus=${encodeURIComponent(focus)}` : '';
+    setTimeout(
+      () =>
+        void navigate(`/crm/${data.entity ?? ''}/${data.recordId}${search}`),
+    );
   };
   return (
     <RecordDrawerContext.Provider

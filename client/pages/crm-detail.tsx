@@ -206,8 +206,8 @@ export default function CrmDetailPage(): ReactElement {
 
 // A record's left column alone (its heading, actions and tabs, without the
 // particulars), drawn as the drawer draws a record and opened on its
-// timeline at `focus`: the inbox's AI suggestions pane, where the AI card
-// is handled in its record's story. Links in it open the drawer of the page
+// timeline at `focus` when given: the inbox's pane, where an AI card is
+// handled in its record's story and a notification's record is read. Links in it open the drawer of the page
 // around it.
 export function RecordPane({
   entity,
@@ -216,7 +216,7 @@ export function RecordPane({
 }: {
   entity: Entity;
   id: string;
-  focus: string;
+  focus?: string;
 }): ReactElement {
   const page = useRecordDrawer();
   const noop = (): void => undefined;

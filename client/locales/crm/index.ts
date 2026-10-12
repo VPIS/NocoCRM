@@ -1538,15 +1538,6 @@ const wording = {
     hideHandled: ['Hide', '收起'],
     noHandled: ['No handled suggestions yet.', '还没有已处理的建议。'],
   },
-  // A notification's detail in the inbox (inbox-notice-body.tsx).
-  notice: {
-    // The detail pane's hint, the notification's record being in the drawer.
-    hint: ['Click a notification to view its record', '点击通知查看记录'],
-    hintBody: [
-      'The record opens in a drawer, at the comment a mention or a reply is about.',
-      '记录在右侧抽屉中打开，提及和回复会定位到那条评论。',
-    ],
-  },
   decisions: {
     empty: ['Nothing is waiting on you.', '没有等你处理的事。'],
     handled: ['Handled', '已处理'],

@@ -11,15 +11,15 @@ import {
 import type { InboxNotice } from '#extensions/nocobase-inbox/model';
 import { defineInboxRenderer } from '#extensions/nocobase-inbox/registry';
 import type { InboxSource } from '#extensions/nocobase-inbox/source';
-import { CrmNoticeHint } from './inbox-notice-hint.js';
+import { CrmNoticeDetail } from './inbox-notice-detail.js';
 import { sentence, toText, useCrmText } from './api.js';
 
 // The inbox's knowledge of the notifications the CRM sends (the server's
 // notices.ts): the template's InboxSource asks the CRM about each in-app
 // item by its notification id, and this renderer draws those it knows — the
-// record's kind and icon on the card; picked, the record opens in the drawer
-// over the inbox at the comment it concerns (client/pages/inbox.tsx), and
-// the detail pane only says so (inbox-notice-hint.tsx).
+// record's kind on the card; picked, the record in the detail pane, at the
+// comment it concerns (inbox-notice-detail.tsx), or on a phone its page
+// (client/pages/inbox.tsx).
 // An item the CRM did not send keeps the inbox's plain rendering.
 
 export const crmInboxSource: InboxSource = {
@@ -62,5 +62,5 @@ export const crmNoticeRenderer = defineInboxRenderer<unknown>({
       }),
     };
   },
-  Placeholder: CrmNoticeHint,
+  Placeholder: CrmNoticeDetail,
 });

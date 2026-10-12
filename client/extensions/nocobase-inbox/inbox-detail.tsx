@@ -95,8 +95,8 @@ export function InboxDetail({
       </div>
     );
   const renderer = rendererOf(entry);
-  // Application change: an item shown elsewhere when picked leaves the pane
-  // to its contributor's placeholder.
+  // Application change: an item its contributor draws its own way leaves the
+  // pane to its contributor's placeholder.
   if (renderer.Placeholder)
     return (
       <ContributorScope
@@ -104,7 +104,7 @@ export function InboxDetail({
         namespace={renderer.namespace}
         resources={renderer.resources}
       >
-        <renderer.Placeholder entry={entry} />
+        <renderer.Placeholder entry={entry} onBack={props.onBack} />
       </ContributorScope>
     );
   return (

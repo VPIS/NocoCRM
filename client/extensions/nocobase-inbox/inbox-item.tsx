@@ -165,8 +165,9 @@ function ItemCard({
       >
         {/* Application change: laid out as the AI suggestions' cards
             (inbox-decisions-view.tsx): no icon, the bar at the card's edge
-            marking what is unread, then two lines, the kind as a grey tag,
-            the title and the time, then the sentence. */}
+            marking what is unread, then two lines, the title and the time,
+            then the sentence; no kind tag, the title saying what happened
+            and to what. */}
         <span
           aria-hidden='true'
           className={cn(
@@ -189,9 +190,6 @@ function ItemCard({
           onKeyDown={onKeyDown}
         >
           <span className='flex min-w-0 items-baseline gap-1.5'>
-            <Badge variant='muted' className='shrink-0 self-center'>
-              {wording.label(entry)}
-            </Badge>
             <span
               className={cn(
                 'min-w-0 truncate text-sm group-has-focus-visible:underline',
