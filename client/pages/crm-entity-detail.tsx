@@ -1549,7 +1549,7 @@ function RelatedItem({
       {/* One line: the name and its state, and what else there is, muted,
           at the row's end; the name gives way first. */}
       <Link
-        className='flex min-w-0 items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40'
+        className='flex min-w-0 items-center gap-3 px-4 py-3 transition-colors hover:bg-hover'
         {...link}
       >
         <span className='flex min-w-0 items-center gap-2'>
@@ -1855,7 +1855,7 @@ function ContactItem({
   return (
     <li>
       {/* The shading covers the star too, so the row reads as one unit. */}
-      <div className='flex items-center gap-2.5 px-4 transition-colors hover:bg-muted/40'>
+      <div className='flex items-center gap-2.5 px-4 transition-colors hover:bg-hover'>
         {leading ? (
           <span className='flex shrink-0 items-center'>{leading}</span>
         ) : null}
@@ -2264,7 +2264,7 @@ function ApprovalItem({ approval }: { approval: Data }): ReactElement {
   return (
     <li>
       <Link
-        className='flex min-w-0 items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40'
+        className='flex min-w-0 items-center gap-3 px-4 py-3 transition-colors hover:bg-hover'
         {...approvalLink}
       >
         <span className='flex min-w-0 items-center gap-2'>

@@ -1357,7 +1357,7 @@ function LeadStatusField({
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={text('fields.status')}
-        className='flex w-full items-center rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted'
+        className='flex w-full items-center rounded-md px-2 py-1.5 text-left transition-colors hover:bg-hover'
       >
         {trigger}
       </DropdownMenuTrigger>
@@ -1449,7 +1449,7 @@ export function WebsiteField({
       aria-label={editable ? label : undefined}
       className={`group/site relative flex items-center rounded-md px-2 py-1.5 ${toText(
         editable
-          ? 'cursor-text transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
+          ? 'cursor-text transition-colors hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
           : '',
       )}`}
       onDoubleClick={editable ? () => setEditing(true) : undefined}
@@ -1468,7 +1468,7 @@ export function WebsiteField({
       <a
         // Its padding taken back from the line, so the row is as tall as
         // any other.
-        className='-my-0.5 inline-flex min-w-0 items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-sm text-foreground transition-colors hover:bg-muted/70'
+        className='-my-0.5 inline-flex min-w-0 items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-sm text-foreground transition-colors hover:bg-hover'
         href={href}
         target='_blank'
         rel='noopener noreferrer'
@@ -4024,7 +4024,7 @@ export function InfoGroup({
             type='button'
             aria-expanded={!folded}
             onClick={toggle}
-            className='group/fold flex w-full items-center gap-1.5 rounded-md px-2 py-0.5 text-left text-sm font-medium hover:bg-muted/60'
+            className='group/fold flex w-full items-center gap-1.5 rounded-md px-2 py-0.5 text-left text-sm font-medium hover:bg-hover'
           >
             <span className='min-w-0 flex-1 truncate'>{title}</span>
             <ChevronDown
@@ -4046,7 +4046,7 @@ export function InfoGroup({
 // under the pointer, centred on the row's first line (the value's 1.5 of
 // padding and half a line, less half its own 6).
 const ROW_ACTION =
-  'top-[calc(var(--spacing)*1.5+0.5lh-var(--spacing)*3)] size-6 place-items-center rounded-md bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground';
+  'top-[calc(var(--spacing)*1.5+0.5lh-var(--spacing)*3)] size-6 place-items-center rounded-md bg-card text-muted-foreground transition-colors hover:bg-hover hover:text-foreground';
 
 // A value a button on hover copies as it reads (a particular, a lead's
 // original message): not while it is empty (a placeholder or a dash,

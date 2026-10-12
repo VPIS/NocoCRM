@@ -261,7 +261,7 @@ export function EditablePreview({
         // without opening it.
         className={`-mx-2 min-h-7 rounded-md px-2 py-1 break-words ${
           canEdit
-            ? 'cursor-text transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
+            ? 'cursor-text transition-colors hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
             : ''
         }`}
         onDoubleClick={canEdit ? () => open(key) : undefined}

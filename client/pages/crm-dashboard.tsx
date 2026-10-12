@@ -243,7 +243,7 @@ function AttentionCard({
     <button
       type='button'
       onClick={onClick}
-      className='flex min-w-0 items-start gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left shadow-xs transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
+      className='flex min-w-0 items-start gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left shadow-xs transition-colors hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
     >
       <span className='grid size-9 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground'>
         <Icon className='size-4' aria-hidden />

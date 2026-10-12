@@ -664,7 +664,7 @@ function CaptureReview({
                   className={`flex items-start gap-2 rounded-lg border p-2 ${
                     row.key === active.key
                       ? 'border-primary/60 bg-primary/5'
-                      : 'hover:bg-muted/50'
+                      : 'hover:bg-hover'
                   }`}
                 >
                   <Checkbox

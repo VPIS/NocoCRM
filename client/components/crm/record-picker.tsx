@@ -125,7 +125,7 @@ function ResultList({
                   type='button'
                   role='option'
                   aria-selected={picked}
-                  className='flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground'
+                  className='flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-hover hover:text-accent-foreground'
                   onClick={() => onPick(record, page.meta.titles)}
                 >
                   <Check
@@ -229,8 +229,8 @@ export function RecordPicker({
         aria-label={label}
         className={
           variant === 'inline'
-            ? 'flex h-7 w-full min-w-0 items-center justify-between gap-2 rounded-md border border-transparent bg-transparent px-2 text-xs hover:border-border hover:bg-muted disabled:opacity-50'
-            : 'flex h-8 w-full min-w-32 items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm shadow-xs hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50'
+            ? 'flex h-7 w-full min-w-0 items-center justify-between gap-2 rounded-md border border-transparent bg-transparent px-2 text-xs hover:border-border hover:bg-hover disabled:opacity-50'
+            : 'flex h-8 w-full min-w-32 items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm shadow-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50'
         }
       >
         <span
@@ -322,7 +322,7 @@ export function RecordMultiPicker({
         role='combobox'
         aria-expanded={open}
         aria-label={label}
-        className='flex min-h-8 w-full min-w-32 items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-1 text-left text-sm shadow-xs hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50'
+        className='flex min-h-8 w-full min-w-32 items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-1 text-left text-sm shadow-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50'
       >
         <span
           className={`min-w-0 whitespace-normal ${value.length ? '' : 'text-muted-foreground'}`}

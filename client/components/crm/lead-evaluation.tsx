@@ -1405,7 +1405,7 @@ function PlannedTask({
               aria-label={canEdit && !disabled ? label : undefined}
               className={`-mx-2 min-h-7 rounded-md px-2 py-1 ${
                 canEdit && !disabled
-                  ? 'cursor-text transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
+                  ? 'cursor-text transition-colors hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
                   : ''
               }`}
               onDoubleClick={canEdit && !disabled ? () => open(key) : undefined}

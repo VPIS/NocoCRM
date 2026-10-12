@@ -91,7 +91,7 @@ export function DecisionList({
             // one takes, a shade deeper.
             selected
               ? 'border-transparent bg-accent'
-              : 'border-transparent hover:bg-muted'
+              : 'border-transparent hover:bg-hover'
           } ${decided ? 'opacity-55' : ''}`}
         >
           {/* As the inbox marks what waits, in the AI's colour. */}

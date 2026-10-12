@@ -114,7 +114,7 @@ export function FileLinks({
             <span className='ml-auto flex shrink-0 items-center'>
               {file && (
                 <a
-                  className='inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground'
+                  className='inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-foreground'
                   href={file.url}
                   download={file.filename}
                   aria-label={`${toText(text('download'))} ${file.filename}`}
@@ -212,7 +212,7 @@ export function FileDropZone({
       className={`flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 rounded-md border border-dashed px-3 py-3 text-sm transition-colors ${
         over
           ? 'border-primary bg-primary/5 text-foreground'
-          : 'border-border text-muted-foreground hover:border-primary/60 hover:bg-muted/40'
+          : 'border-border text-muted-foreground hover:border-primary/60 hover:bg-hover'
       } ${busy ? 'cursor-progress opacity-60' : 'cursor-pointer'}`}
       onClick={() => !busy && fileRef.current?.click()}
       onKeyDown={(event) => {

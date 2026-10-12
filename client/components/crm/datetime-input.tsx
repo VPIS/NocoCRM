@@ -95,7 +95,7 @@ export function TimeColumn({
             role='option'
             aria-selected={value === selected}
             data-value={value}
-            className={`shrink-0 rounded-md py-1 text-center text-sm tabular-nums transition-colors ${value === selected ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+            className={`shrink-0 rounded-md py-1 text-center text-sm tabular-nums transition-colors ${value === selected ? 'bg-primary text-primary-foreground' : 'hover:bg-hover'}`}
             onClick={() => {
               onPick(value);
             }}

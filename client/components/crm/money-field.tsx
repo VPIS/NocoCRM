@@ -124,7 +124,7 @@ export function MoneyField({
         nativeButton={false}
         aria-label={label}
         render={<div />}
-        className='w-full cursor-pointer rounded-md px-2 py-1.5 text-left text-sm tabular-nums transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
+        className='w-full cursor-pointer rounded-md px-2 py-1.5 text-left text-sm tabular-nums transition-colors hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
       >
         {shown ?? (
           <span data-placeholder className='text-muted-foreground'>

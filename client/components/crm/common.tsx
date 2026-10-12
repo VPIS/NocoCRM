@@ -288,7 +288,7 @@ export function Metric({
       role='button'
       tabIndex={0}
       aria-pressed={active}
-      className={`${frame} cursor-pointer text-left transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
+      className={`${frame} cursor-pointer text-left transition-colors hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
       onClick={onClick}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {

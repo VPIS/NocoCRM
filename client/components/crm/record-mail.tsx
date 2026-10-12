@@ -278,7 +278,7 @@ export function RecordMailPanel({
               <button
                 type='button'
                 aria-expanded={open}
-                className={`flex w-full min-w-0 items-start gap-3 px-3 py-2.5 text-left ${open ? 'bg-muted' : 'hover:bg-muted/50'}`}
+                className={`flex w-full min-w-0 items-start gap-3 px-3 py-2.5 text-left ${open ? 'bg-muted' : 'hover:bg-hover'}`}
                 onClick={() => setSelected(open ? undefined : key)}
               >
                 <span

@@ -231,7 +231,7 @@ export function StageField({
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label={text(`fields.${field}`)}
-          className='flex w-full items-center rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted'
+          className='flex w-full items-center rounded-md px-2 py-1.5 text-left transition-colors hover:bg-hover'
         >
           {trigger}
         </DropdownMenuTrigger>

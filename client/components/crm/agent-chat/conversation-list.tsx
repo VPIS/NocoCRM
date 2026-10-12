@@ -111,7 +111,7 @@ export function ConversationList({
                     onOpen={onOpen ? () => onOpen(conversation.id) : undefined}
                     current={current}
                     className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left transition-colors ${
-                      current ? 'bg-accent' : 'hover:bg-muted'
+                      current ? 'bg-accent' : 'hover:bg-hover'
                     }`}
                   >
                     <AgentAvatar

@@ -260,7 +260,7 @@ export function InlineField({
         role='button'
         tabIndex={0}
         aria-label={label}
-        className={`${titled ? 'box-decoration-clone' : 'w-full'} cursor-text rounded-md px-2 py-1.5 text-left transition-colors select-text hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${readText}`}
+        className={`${titled ? 'box-decoration-clone' : 'w-full'} cursor-text rounded-md px-2 py-1.5 text-left transition-colors select-text hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${readText}`}
         onDoubleClick={() => {
           // The double-click also selected the word under it; left alone, that
           // selection lands on the new value once the editor closes, so a

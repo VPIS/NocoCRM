@@ -172,7 +172,7 @@ export function Choice({
       <SelectTrigger
         className={
           variant === 'inline'
-            ? 'h-7 w-full min-w-0 border-transparent bg-transparent text-xs hover:border-border hover:bg-muted data-[size=default]:h-7'
+            ? 'h-7 w-full min-w-0 border-transparent bg-transparent text-xs hover:border-border hover:bg-hover data-[size=default]:h-7'
             : variant === 'tag'
               ? 'h-5.5 w-auto min-w-0 gap-0.5 rounded-md border-transparent bg-foreground/7 px-1.5 py-0 text-xs font-medium text-muted-foreground hover:bg-foreground/12 data-[size=default]:h-5.5 [&_svg]:size-3'
               : compact

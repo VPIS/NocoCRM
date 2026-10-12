@@ -205,7 +205,7 @@ export function CommentFiles({
             // The row opens the preview; its end downloads and removes.
             <div
               key={id}
-              className='flex min-w-0 items-center rounded-lg border border-border bg-card pr-1.5 shadow-xs transition-colors hover:bg-muted/60'
+              className='flex min-w-0 items-center rounded-lg border border-border bg-card pr-1.5 shadow-xs transition-colors hover:bg-hover'
             >
               <button
                 type='button'
@@ -256,7 +256,7 @@ export function CommentFiles({
               </button>
               {file ? (
                 <a
-                  className='inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground'
+                  className='inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-foreground'
                   href={file.url}
                   download={file.filename}
                   aria-label={`${toText(text('download'))} ${file.filename}`}
@@ -268,7 +268,7 @@ export function CommentFiles({
               {onRemove ? (
                 <button
                   type='button'
-                  className='inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive'
+                  className='inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-hover hover:text-destructive'
                   aria-label={`${toText(text('remove'))} ${file?.filename ?? ''}`}
                   title={toText(text('remove'))}
                   onClick={() => onRemove(id)}
@@ -330,7 +330,7 @@ export function CommentFiles({
                   disabled={!file}
                   title={titleOf(id)}
                   aria-label={label(id)}
-                  className='flex h-8 max-w-72 min-w-0 items-center gap-2 rounded-md border border-border bg-card pr-2.5 pl-1 text-left shadow-xs transition-colors hover:bg-muted/60'
+                  className='flex h-8 max-w-72 min-w-0 items-center gap-2 rounded-md border border-border bg-card pr-2.5 pl-1 text-left shadow-xs transition-colors hover:bg-hover'
                   onClick={() => file && setPreviewing(id)}
                 >
                   <span
