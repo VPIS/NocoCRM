@@ -392,7 +392,7 @@
 /* A section's label (Records, Integrations…) lighter still than the
    entries under it, so it reads as a heading over them, not as one of them. */
 [data-sidebar='group-label'] {
-  color: color-mix(in oklch, var(--sidebar-foreground) 45%, var(--sidebar));
+  color: color-mix(in oklch, var(--sidebar-foreground) 32%, var(--sidebar));
 }
 
 /* The Agents plugin's pages in the CRM's look (components/crm/plugin-page.tsx
