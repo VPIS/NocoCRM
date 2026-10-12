@@ -304,8 +304,8 @@ export function Metric({
   );
 }
 // A link to a record by its name. Long names never wrap into the layout
-// around them: they are cut with an ellipsis after one line (two where a card
-// has the room, the board), and the full name shows on hover. Under the
+// around them: they are cut with an ellipsis after one line (three where a
+// card has the room, the board), and the full name shows on hover. Under the
 // pointer it takes the primary colour, without an underline.
 export function RecordLink({
   entity,
@@ -316,7 +316,7 @@ export function RecordLink({
   record: { id: string; name: string };
   // 'all': the whole name, wrapping over as many lines as it takes (a
   // record's particulars, where nothing sits beside it).
-  lines?: 1 | 2 | 'all';
+  lines?: 1 | 3 | 'all';
 }): ReactElement {
   const link = useRecordLink(entity, toText(record.id));
   if (lines === 'all')
@@ -335,7 +335,7 @@ export function RecordLink({
     </Link>
   ) : (
     <Link
-      className='line-clamp-2 block max-w-full font-medium break-words hover:text-primary'
+      className='line-clamp-3 block max-w-full font-medium break-words hover:text-primary'
       title={record.name}
       {...link}
     >

@@ -1281,7 +1281,7 @@ function EntityList({
                         id: record.id,
                         name: recordTitle(entity, record, titles),
                       }}
-                      lines={2}
+                      lines={3}
                     />
                     {/* The AI at work on the lead, or its verdict waiting
                         on a decision (on the lead's page and Waiting on me). */}
