@@ -1752,6 +1752,8 @@ const wording = {
   month: ['Month', '月份'],
   previousMonth: ['Previous month', '上个月'],
   nextMonth: ['Next month', '下个月'],
+  previousYear: ['Previous year', '上一年'],
+  nextYear: ['Next year', '下一年'],
   thisMonth: ['This month', '本月'],
   changed: ['Changed fields', '变更字段'],
   owner: ['Owner', '负责人'],

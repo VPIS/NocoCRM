@@ -28,6 +28,7 @@ import {
 } from '../components/crm/record-drawer.js';
 import { useLocation, useNavigate } from 'react-router';
 import { openOnRowClick } from '../components/crm/row-open.js';
+import { MonthPicker } from '../components/crm/month-picker.js';
 import {
   useInfiniteQuery,
   useQuery,
@@ -705,17 +706,6 @@ function EntityList({
           carries its own. */}
       {entity === 'tasks' && view === 'calendar' && (
         <div className='hidden items-center gap-1 lg:flex'>
-          {/* Back to this month, offered once another is shown. */}
-          {month !== today.slice(0, 7) && (
-            <Button
-              variant='outline'
-              size='sm'
-              className='mr-1'
-              onClick={() => setMonth(today.slice(0, 7))}
-            >
-              {text('thisMonth')}
-            </Button>
-          )}
           <Button
             variant='ghost'
             size='icon-sm'
@@ -724,9 +714,13 @@ function EntityList({
           >
             <ChevronLeft />
           </Button>
-          <span className='min-w-24 text-center text-sm font-medium tabular-nums'>
-            {monthTitle}
-          </span>
+          {/* The month opens a picker of months, this month among them. */}
+          <MonthPicker
+            month={month}
+            current={today.slice(0, 7)}
+            title={monthTitle}
+            onChange={setMonth}
+          />
           <Button
             variant='ghost'
             size='icon-sm'
