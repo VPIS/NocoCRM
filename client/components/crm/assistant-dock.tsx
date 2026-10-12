@@ -186,8 +186,10 @@ export function AssistantDock(): ReactElement | null {
         ) : (
           <div
             ref={dockRef}
+            // A little narrower than the md and xl widths it had, as the
+            // line it closes to and the composer it opens into.
             className={`pointer-events-auto relative w-full ${
-              expanded ? 'max-w-xl' : 'max-w-md'
+              expanded ? 'max-w-[34rem]' : 'max-w-[26rem]'
             }`}
             onFocus={() => {
               if (!focused) setListOpen(true);
