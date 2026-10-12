@@ -260,7 +260,10 @@ export function InlineField({
         role='button'
         tabIndex={0}
         aria-label={label}
-        className={`${titled ? 'box-decoration-clone' : 'w-full'} cursor-text rounded-md px-2 py-1.5 text-left transition-colors select-text hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${readText}`}
+        // A title's ground, cloned on each line it wraps to, keeps within its
+        // line: taller, the second line's ground lay over the first line's
+        // words. A block's padding is its own.
+        className={`${titled ? 'box-decoration-clone py-px' : 'w-full py-1.5'} cursor-text rounded-md px-2 text-left transition-colors select-text hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${readText}`}
         onDoubleClick={() => {
           // The double-click also selected the word under it; left alone, that
           // selection lands on the new value once the editor closes, so a
