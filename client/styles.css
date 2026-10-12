@@ -262,34 +262,49 @@
 }
 
 /* The assistant's ask boxes (the overview's and the dock on the other
-   pages): a border of the AI colour shading into the info colour and back,
-   over the card, with a soft AI glow that deepens while the box has focus.
+   pages): a faint border of the AI colour shading into the info colour and
+   back, over the card, firmer while the box has focus.
    It stands still, unlike the turning band of `.crm-ai-working`, which means
    the AI is at work. A floating box adds its lift through
    `--crm-ai-lift`. */
 .crm-ai-border {
   border-color: transparent;
+  /* The AI's colours, mixed far toward the card's white, so the line reads
+     as faint as the application's other borders, only tinted. */
+  --crm-ai-line: 32%;
   background:
     linear-gradient(var(--card), var(--card)) padding-box,
     linear-gradient(
         120deg,
-        var(--ai),
-        color-mix(in oklch, var(--ai) 45%, var(--info)) 35%,
-        color-mix(in oklch, var(--ai) 70%, var(--destructive)) 70%,
-        var(--ai)
+        color-mix(in oklch, var(--ai) var(--crm-ai-line), var(--card)),
+        color-mix(
+            in oklch,
+            color-mix(in oklch, var(--ai) 45%, var(--info)) var(--crm-ai-line),
+            var(--card)
+          )
+          35%,
+        color-mix(
+            in oklch,
+            color-mix(in oklch, var(--ai) 70%, var(--destructive))
+              var(--crm-ai-line),
+            var(--card)
+          )
+          70%,
+        color-mix(in oklch, var(--ai) var(--crm-ai-line), var(--card))
       )
       border-box;
-  /* A quiet glow: a thin halo and a short, light shadow, so the border's
-     colours lead rather than the light around them. */
+  /* A short, light shadow, as the cards have, barely tinted. */
   box-shadow:
-    0 0 0 2px color-mix(in oklch, var(--ai) 5%, transparent),
-    0 4px 14px -8px color-mix(in oklch, var(--ai) 24%, transparent),
+    0 2px 10px -6px color-mix(in oklch, var(--ai) 14%, transparent),
     var(--crm-ai-lift, 0 0 #0000);
 }
+/* Focused, the line firms a little and a thin halo shows where typing
+   goes. */
 .crm-ai-border:focus-within {
+  --crm-ai-line: 55%;
   box-shadow:
-    0 0 0 2px color-mix(in oklch, var(--ai) 12%, transparent),
-    0 6px 18px -8px color-mix(in oklch, var(--ai) 32%, transparent),
+    0 0 0 2px color-mix(in oklch, var(--ai) 8%, transparent),
+    0 4px 14px -8px color-mix(in oklch, var(--ai) 22%, transparent),
     var(--crm-ai-lift, 0 0 #0000);
 }
 
