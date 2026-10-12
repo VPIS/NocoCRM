@@ -9,6 +9,9 @@ import { Input } from '../ui/input.js';
 import { Textarea } from '../ui/textarea.js';
 import { Choice, MultiChoice } from './form.js';
 import { LIGHT_FOCUS } from './focus.js';
+import { DatePicker } from '../date-picker.js';
+import { format } from 'date-fns';
+import { enUS, zhCN } from 'date-fns/locale';
 import { RecordMultiPicker, RecordPicker } from './record-picker.js';
 import { CountryChoice, SubdivisionChoice } from './geography.js';
 import { Value } from './common.js';
@@ -135,8 +138,8 @@ export function InlineField({
         ?.focus();
   }, [editing]);
 
-  // A native date input speaks yyyy-mm-dd with no zone, so the stored ISO
-  // value is cut down on open; a datetime keeps its ISO instant, which
+  // A date is edited as yyyy-mm-dd with no zone, so the stored ISO value is
+  // cut down on open; a datetime keeps its ISO instant, which
   // DateTimeInput shows on the 24-hour clock and hands back as ISO.
   const toInputValue = (raw: unknown): string => {
     // SQLite hands booleans back as 1 / 0; the picker speaks "true" / "false".
@@ -247,8 +250,8 @@ export function InlineField({
     );
 
   const startEditing = (): void => {
-    // A task's time opens with its calendar showing.
-    if (entity === 'tasks' && field.key === 'dueAt')
+    // A task's time and a date open with their calendar showing.
+    if ((entity === 'tasks' && field.key === 'dueAt') || field.type === 'date')
       popupOpenRef.current = true;
     draftRef.current = toInputValue(record[field.key]);
     setDraft(draftRef.current);
@@ -354,8 +357,12 @@ export function InlineField({
       // one control (a select and its popup) must not count as leaving.
       onBlur={(event) => {
         if (saving || event.currentTarget.contains(event.relatedTarget)) return;
-        // The date and time popup holds focus while open and saves on close.
-        if (field.type === 'datetime' && popupOpenRef.current) return;
+        // The date and time popups hold focus while open and save on close.
+        if (
+          (field.type === 'datetime' || field.type === 'date') &&
+          popupOpenRef.current
+        )
+          return;
         // Nothing to save for a list: the value only changes by picking one, so
         // leaving without a pick simply returns to the read view.
         if (picker.includes(field.type)) {
@@ -522,6 +529,28 @@ export function InlineField({
             if (!open) void save(draftRef.current);
           }}
         />
+      ) : field.type === 'date' ? (
+        // A day, picked from a calendar as a task's time and a record form's
+        // date are (DatePicker), not a native date input; saved when the
+        // calendar closes, the latest pick read from the ref, since the pick
+        // and the close come in one event.
+        <DatePicker
+          defaultOpen
+          aria-label={label}
+          className='w-full'
+          disabled={saving}
+          value={localDay(draft)}
+          locale={language.startsWith('zh') ? zhCN : enUS}
+          placeholder={toText(text('taskTime.pickDate'))}
+          onChange={(picked) => {
+            draftRef.current = picked ? format(picked, 'yyyy-MM-dd') : '';
+            setDraft(draftRef.current);
+          }}
+          onOpenChange={(open) => {
+            popupOpenRef.current = open;
+            if (!open) void save(draftRef.current);
+          }}
+        />
       ) : field.type === 'datetime' ? (
         <DateTimeInput
           label={label}
@@ -556,7 +585,7 @@ export function InlineField({
               : undefined
           }
           type={
-            ['date', 'email', 'number'].includes(field.type)
+            field.type === 'email' || field.type === 'number'
               ? field.type
               : 'text'
           }
@@ -589,6 +618,14 @@ export function InlineField({
       {error ? <p className='px-2 text-xs text-destructive'>{error}</p> : null}
     </div>
   );
+}
+
+// A "yyyy-mm-dd" draft as that day on the local calendar, for the picker.
+function localDay(draft: string): Date | undefined {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(draft);
+  return parts
+    ? new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]))
+    : undefined;
 }
 
 // Nothing to show: no value, an empty text or an empty list.
