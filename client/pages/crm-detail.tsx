@@ -3034,7 +3034,12 @@ export function HistoryFeed({
     const message = node?.querySelector(
       `[data-comment="${CSS.escape(focus)}"]`,
     );
-    if (node) flash([message ?? node], focusTone);
+    // An AI entry lit on its card alone, not its line.
+    const card =
+      focusTone === 'ai'
+        ? node?.querySelector('[data-ai-card] > *')
+        : undefined;
+    if (node) flash([message ?? card ?? node], focusTone);
     const settled = window.setTimeout(bring, 400);
     const later = window.setTimeout(bring, 1200);
     return () => {
@@ -3565,7 +3570,7 @@ export function HistoryFeed({
                         {/* A waiting verdict is handled here once opened; any
                             other evaluation is its record. */}
                         {prep && open && event.aiStatus !== 'running' ? (
-                          <div className='mt-1'>
+                          <div data-ai-card className='mt-1'>
                             <PrepPanel
                               entry={
                                 {
@@ -3582,7 +3587,7 @@ export function HistoryFeed({
                             />
                           </div>
                         ) : review && open && event.aiStatus !== 'running' ? (
-                          <div className='mt-1'>
+                          <div data-ai-card className='mt-1'>
                             <ReviewPanel
                               entry={
                                 {
@@ -3600,7 +3605,7 @@ export function HistoryFeed({
                             />
                           </div>
                         ) : pending && open ? (
-                          <div className='mt-1'>
+                          <div data-ai-card className='mt-1'>
                             <VerdictPanel
                               entry={
                                 {
@@ -3619,7 +3624,7 @@ export function HistoryFeed({
                             />
                           </div>
                         ) : ai && open ? (
-                          <div className='mt-1'>
+                          <div data-ai-card className='mt-1'>
                             {/* A decided evaluation opened: its own card,
                                 read-only, on a neutral ground. */}
                             <VerdictPanel
