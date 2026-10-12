@@ -263,7 +263,8 @@
 
 /* The assistant's ask boxes (the overview's and the dock on the other
    pages): a faint border of the AI colour shading into the info colour and
-   back, over the card, firmer while the box has focus.
+   back, over the card, with a soft AI glow, both firmer while the box has
+   focus.
    It stands still, unlike the turning band of `.crm-ai-working`, which means
    the AI is at work. A floating box adds its lift through
    `--crm-ai-lift`. */
@@ -293,18 +294,19 @@
         color-mix(in oklch, var(--ai) var(--crm-ai-line), var(--card))
       )
       border-box;
-  /* A short, light shadow, as the cards have, barely tinted. */
+  /* A quiet glow: a thin halo and a short, light shadow, so the border's
+     colours lead rather than the light around them. */
   box-shadow:
-    0 2px 10px -6px color-mix(in oklch, var(--ai) 14%, transparent),
+    0 0 0 2px color-mix(in oklch, var(--ai) 5%, transparent),
+    0 4px 14px -8px color-mix(in oklch, var(--ai) 24%, transparent),
     var(--crm-ai-lift, 0 0 #0000);
 }
-/* Focused, the line firms a little and a thin halo shows where typing
-   goes. */
+/* Focused, the line firms a little and the glow deepens. */
 .crm-ai-border:focus-within {
   --crm-ai-line: 55%;
   box-shadow:
-    0 0 0 2px color-mix(in oklch, var(--ai) 8%, transparent),
-    0 4px 14px -8px color-mix(in oklch, var(--ai) 22%, transparent),
+    0 0 0 2px color-mix(in oklch, var(--ai) 12%, transparent),
+    0 6px 18px -8px color-mix(in oklch, var(--ai) 32%, transparent),
     var(--crm-ai-lift, 0 0 #0000);
 }
 
