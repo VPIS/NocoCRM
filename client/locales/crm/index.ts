@@ -337,6 +337,16 @@ const wording = {
     nothingDone: ['Nothing closed', '没有已结束的任务'],
     complete: ['Mark as completed', '标记为已完成'],
     reopen: ['Open again', '重新打开'],
+    // The task page's table, its tasks to do by when they are due.
+    record: ['Record', '关联记录'],
+    groups: {
+      overdue: ['Overdue', '已逾期'],
+      today: ['Today', '今天'],
+      tomorrow: ['Tomorrow', '明天'],
+      thisWeek: ['Later this week', '本周'],
+      later: ['Later', '以后'],
+      noTime: ['No time', '无时间'],
+    },
   },
   // A new task's quick form: a title, a description and chips.
   taskQuick: {
