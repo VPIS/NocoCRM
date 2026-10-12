@@ -118,11 +118,13 @@ export function OutcomeBox({
             </label>
           ) : null}
           {meta?.assistant ? (
+            // Drawn as the AI's first-run buttons (AI 准备): on the AI's
+            // tint, without a border.
             <Button
               type='button'
               size='sm'
-              variant='outline'
-              className='font-normal text-ai hover:text-ai'
+              variant='ghost'
+              className='h-7 gap-1.5 rounded-lg bg-ai/10 px-2.5 font-medium text-ai hover:bg-ai/15 hover:text-ai dark:bg-ai/20'
               disabled={disabled || organising || !value.trim()}
               onClick={organise}
             >
@@ -170,8 +172,8 @@ export function OutcomeBox({
           <Button
             type='button'
             size='sm'
-            variant='outline'
-            className='ml-auto text-ai hover:text-ai'
+            variant='ghost'
+            className='ml-auto h-7 gap-1.5 rounded-lg bg-ai/10 px-2.5 font-medium text-ai hover:bg-ai/15 hover:text-ai dark:bg-ai/20'
             disabled={disabled || organising || !value.trim()}
             onClick={organise}
           >
