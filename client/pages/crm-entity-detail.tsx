@@ -1660,10 +1660,13 @@ function CompanyCard({
       {/* Last, its introduction: three lines that fade out, read whole in
           the pop-up beside the column, as the company's own page shows it;
           edited there. */}
-      <InfoRow field='description' label={text('fields.companyDescription')}>
+      <InfoRow
+        field='description'
+        label={text(fieldLabelKey('companies', 'description'))}
+      >
         <LongTextField
           value={toText(company.description ?? '')}
-          label={text('fields.companyDescription')}
+          label={text(fieldLabelKey('companies', 'description'))}
           editable={false}
           onSave={() => Promise.resolve(false)}
         />
