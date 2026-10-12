@@ -286,7 +286,7 @@ export function InboxList({
                     <h2
                       id={heading}
                       className={cn(
-                        'flex items-center gap-2 px-3 text-xs font-medium tracking-wider text-muted-foreground uppercase',
+                        'flex items-center gap-2 pr-3 pl-5.5 text-xs font-medium tracking-wider text-muted-foreground uppercase',
                         lone && 'sr-only',
                       )}
                     >

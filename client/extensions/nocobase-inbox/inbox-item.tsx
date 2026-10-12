@@ -154,7 +154,9 @@ function ItemCard({
         data-inbox-item={item.id}
         data-selected={selected ? 'true' : undefined}
         className={cn(
-          'group relative flex items-start gap-3 rounded-lg border border-transparent p-3 transition-[background-color,border-color,opacity] duration-200',
+          // Application change: its words start where the tabs' labels do, its
+          // bar under their icons (inbox-decisions-view.tsx).
+          'group relative flex items-start gap-3 rounded-lg border border-transparent py-3 pr-3 pl-[calc(--spacing(5.5)-1px)] transition-[background-color,border-color,opacity] duration-200',
           // Application change: the selected card without a border, on the
           // grey a hovered one takes a shade deeper, the list being white.
           selected ? 'bg-accent' : 'hover:bg-hover',
