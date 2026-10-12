@@ -48,6 +48,7 @@ import {
   DialogTitle,
 } from '../components/ui/dialog.js';
 import {
+  mayEditField,
   useCrmApi,
   useCrmQuery,
   useCrmText,
@@ -78,7 +79,6 @@ import {
 } from '../components/crm/lead-evaluation.js';
 import { useFollowUpRequest } from '../components/crm/follow-up-request.js';
 import { LocationField } from '../components/crm/location-field.js';
-import { LongTextField } from '../components/crm/long-text-field.js';
 import { MoneyField } from '../components/crm/money-field.js';
 import { ReviewStatus } from '../components/crm/approval-review.js';
 import { PrepStatus } from '../components/crm/task-preparation.js';
@@ -1606,24 +1606,10 @@ function CompanyCard({
       key,
       type: 'text',
     };
-  const valueRow = (key: string): ReactElement => (
-    <InfoRow
-      key={key}
-      field={key}
-      label={text(fieldLabelKey('companies', key))}
-    >
-      <div className='px-2 py-1.5 text-sm'>
-        {company[key] === null ||
-        company[key] === undefined ||
-        company[key] === '' ? (
-          <span data-placeholder className='text-muted-foreground'>
-            —
-          </span>
-        ) : (
-          <Value record={company} field={fieldOf(key)} />
-        )}
-      </div>
-    </InfoRow>
+  const may = (key: string): boolean =>
+    mayEditField(meta, 'companies', company, key);
+  const field = (key: string): ReactElement => (
+    <RelatedField key={key} entity='companies' record={company} field={key} />
   );
   return (
     <InfoGroup title={title ?? text('contactGroups.company')}>
@@ -1638,42 +1624,76 @@ function CompanyCard({
         </InfoRow>
       )}
       {standing}
-      {/* In the company page's order: its status, then its profile.
-          Every row shows, a dash for what it leaves empty. */}
-      {valueRow('status')}
+      {/* In the company page's order: its status, then its profile, and
+          last its introduction; each changed here as on the company's own
+          page by whoever may change the company. */}
+      {field('status')}
       <InfoRow field='website' label={text('fields.website')}>
         <WebsiteField
           entity='companies'
           record={company}
-          editable={false}
+          editable={may('website')}
           label={text('fields.website')}
         />
       </InfoRow>
-      {['industry', 'employees', 'annualRevenue'].map(valueRow)}
+      {['industry', 'employees'].map(field)}
+      <InfoRow field='annualRevenue' label={text('fields.annualRevenue')}>
+        <MoneyField
+          entity='companies'
+          record={company}
+          amountKey='annualRevenue'
+          editable={may('annualRevenue')}
+          label={text('fields.annualRevenue')}
+          placeholder={toText(text('amountPlaceholder'))}
+        />
+      </InfoRow>
       <InfoRow field='location' label={text('location')}>
         <LocationField
           entity='companies'
           record={company}
-          editable={false}
+          editable={may('country')}
           label={text('location')}
           countries={fieldOf('country').options ?? []}
         />
       </InfoRow>
-      {/* Last, its introduction: three lines that fade out, read whole in
-          the pop-up beside the column, as the company's own page shows it;
-          edited there. */}
-      <InfoRow
-        field='description'
-        label={text(fieldLabelKey('companies', 'description'))}
-      >
-        <LongTextField
-          value={toText(company.description ?? '')}
-          label={text(fieldLabelKey('companies', 'description'))}
-          editable={false}
-          onSave={() => Promise.resolve(false)}
-        />
-      </InfoRow>
+      {field('description')}
     </InfoGroup>
+  );
+}
+
+// One field of a record shown beside another (the company, deal and lead
+// cards): changed in place, as on that record's own page, by whoever may
+// change it (mayEditField); read only otherwise.
+function RelatedField({
+  entity,
+  record,
+  field: key,
+}: {
+  entity: Entity;
+  record: CrmRecord;
+  field: string;
+}): ReactElement {
+  const { text } = useCrmText();
+  const { data: meta } = useMetadata();
+  const label = text(fieldLabelKey(entity, key));
+  return (
+    <InfoRow field={key} label={label}>
+      <InlineField
+        entity={entity}
+        record={record}
+        field={
+          meta?.definitions[entity].fields.find((f) => f.key === key) ?? {
+            key,
+            type: 'text',
+          }
+        }
+        editable={mayEditField(meta, entity, record, key)}
+        label={label}
+        hint
+        // A long text previews here and opens beside the column.
+        longText='popover'
+      />
+    </InfoRow>
   );
 }
 
@@ -1697,29 +1717,30 @@ function LeadCard({
   return (
     <InfoGroup title={text('taskGroups.lead')}>
       {picker}
-      {lead && meta
-        ? ['status', 'company', 'phone', 'email', 'ownerId'].map((key) => (
-            <InfoRow
-              key={key}
-              field={key}
-              label={text(fieldLabelKey('leads', key))}
-            >
-              <div className='px-2 py-1.5 text-sm'>
-                <Value
-                  record={lead}
-                  field={
-                    meta.definitions.leads.fields.find(
-                      (f) => f.key === key,
-                    ) ?? {
-                      key,
-                      type: 'text',
-                    }
-                  }
-                />
-              </div>
-            </InfoRow>
-          ))
-        : null}
+      {lead && meta ? (
+        <>
+          {/* Where it stands, read only: a lead's status moves by its own
+              rules (a reason to close it, a conversion) on its page. */}
+          <InfoRow
+            field='status'
+            label={text(fieldLabelKey('leads', 'status'))}
+          >
+            <div className='px-2 py-1.5 text-sm'>
+              <Value
+                record={lead}
+                field={
+                  meta.definitions.leads.fields.find(
+                    (f) => f.key === 'status',
+                  ) ?? { key: 'status', type: 'text' }
+                }
+              />
+            </div>
+          </InfoRow>
+          {['company', 'phone', 'email', 'ownerId'].map((key) => (
+            <RelatedField key={key} entity='leads' record={lead} field={key} />
+          ))}
+        </>
+      ) : null}
     </InfoGroup>
   );
 }
@@ -1746,51 +1767,59 @@ function DealCard({
     Boolean(id),
   );
   const deal = id ? data?.[0] : undefined;
+  const api = useCrmApi();
+  const refresh = useRefresh();
   return (
     <>
       <InfoGroup title={title ?? text('approvalGroups.deal')}>
         {picker}
-        {deal && meta
-          ? [
-              'stage',
-              // After the stage, as the opportunities list shows it.
-              'businessType',
-              'amount',
-              'expectedCloseAt',
-              'ownerId',
-            ].map((key) => (
-              <InfoRow
-                key={key}
-                field={key}
-                label={text(fieldLabelKey('opportunities', key))}
-              >
-                <div className='px-2 py-1.5 text-sm'>
-                  <Value
-                    record={deal}
-                    field={
-                      meta.definitions.opportunities.fields.find(
-                        (f) => f.key === key,
-                      ) ?? { key, type: 'text' }
-                    }
-                  />
-                </div>
-              </InfoRow>
-            ))
-          : null}
-        {/* Last, its description, as the company card ends on its
-            introduction: three fading lines, read whole beside the column. */}
         {deal && meta ? (
-          <InfoRow
-            field='description'
-            label={text(fieldLabelKey('opportunities', 'description'))}
-          >
-            <LongTextField
-              value={toText(deal.description ?? '')}
-              label={text(fieldLabelKey('opportunities', 'description'))}
-              editable={false}
-              onSave={() => Promise.resolve(false)}
+          <>
+            {/* Each changed here as on the deal's own page by whoever may
+                change the deal: its stage clearing the outcomes' fields as
+                there, its amount with its currency. */}
+            <InfoRow field='stage' label={text('fields.stage')}>
+              <StageField
+                entity='opportunities'
+                record={deal}
+                field='stage'
+                editable={mayEditField(meta, 'opportunities', deal, 'stage')}
+                title={toText(deal.name)}
+                onSave={async (values) => {
+                  await api(`opportunities/${toText(deal.id)}`, 'PATCH', {
+                    lostReason: null,
+                    pauseReason: null,
+                    resumeAt: null,
+                    ...values,
+                  });
+                  await refresh();
+                }}
+              />
+            </InfoRow>
+            <RelatedField
+              entity='opportunities'
+              record={deal}
+              field='businessType'
             />
-          </InfoRow>
+            <InfoRow field='amount' label={text('fields.amount')}>
+              <MoneyField
+                entity='opportunities'
+                record={deal}
+                amountKey='amount'
+                editable={mayEditField(meta, 'opportunities', deal, 'amount')}
+                label={text('fields.amount')}
+                placeholder={toText(text('amountPlaceholder'))}
+              />
+            </InfoRow>
+            {['expectedCloseAt', 'ownerId', 'description'].map((key) => (
+              <RelatedField
+                key={key}
+                entity='opportunities'
+                record={deal}
+                field={key}
+              />
+            ))}
+          </>
         ) : null}
       </InfoGroup>
       {/* The deal's company, as a contact's page shows its own. */}

@@ -536,6 +536,30 @@ export function editsAll(meta: Metadata | undefined, entity: Entity): boolean {
   return Boolean(update && update.all);
 }
 
+// Whether the reader may change a record shown beside another one (the
+// company, deal or lead card on a record page), as far as the page can tell
+// without asking: the object's edit scope, every record or their own, and
+// the field among those it lets them change; never a converted lead or an
+// approval, whose own pages hold their rules. The server checks every save
+// again.
+export function mayEditField(
+  meta: Metadata | undefined,
+  entity: Entity,
+  record: CrmRecord,
+  field: string,
+): boolean {
+  const update = meta?.permissions[entity]?.update;
+  if (!meta || !update) return false;
+  if (entity === 'approvals') return false;
+  if (entity === 'leads' && toText(record.status) === 'converted') return false;
+  if (update.fields !== '*' && !update.fields.includes(field)) return false;
+  return (
+    Boolean(update.all) ||
+    toText(record.ownerId) === meta.userId ||
+    toText(record.createdById) === meta.userId
+  );
+}
+
 export function fieldLabelKey(entity: Entity, field: string): string {
   if (entity === 'leads' && field === 'name') return 'fields.leadName';
   if (entity === 'contacts' && field === 'name') return 'fields.contactName';
