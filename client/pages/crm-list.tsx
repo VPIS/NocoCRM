@@ -1286,12 +1286,12 @@ function EntityList({
                     {/* The AI at work on the lead, or its verdict waiting
                         on a decision (on the lead's page and Waiting on me). */}
                     <AiStateTag state={ai} work='followUp' />
-                    <div className='space-y-0.5 text-xs text-muted-foreground'>
+                    <div className='space-y-0.5 text-sm text-muted-foreground'>
                       {/* One particular a line, each led by its field's icon
                           on the detail pages, so the card reads without
                           headings. */}
-                      <p className='flex items-center gap-1'>
-                        <UserRound className='size-3 shrink-0' />
+                      <p className='flex items-center gap-1.5'>
+                        <UserRound className='size-3.5 shrink-0' />
                         <span className='truncate'>
                           {
                             meta?.users.find((u) => u.id === record.ownerId)
@@ -1300,8 +1300,8 @@ function EntityList({
                         </span>
                       </p>
                       {entity === 'companies' && Boolean(record.industry) && (
-                        <p className='flex items-center gap-1'>
-                          <Factory className='size-3 shrink-0' />
+                        <p className='flex items-center gap-1.5'>
+                          <Factory className='size-3.5 shrink-0' />
                           <span className='truncate'>
                             <Value
                               record={record}
@@ -1312,8 +1312,8 @@ function EntityList({
                       )}
                       {entity === 'opportunities' &&
                         Boolean(record.expectedCloseAt) && (
-                          <p className='flex items-center gap-1'>
-                            <CalendarDays className='size-3 shrink-0' />
+                          <p className='flex items-center gap-1.5'>
+                            <CalendarDays className='size-3.5 shrink-0' />
                             <Value
                               record={record}
                               field={{ key: 'expectedCloseAt', type: 'date' }}
@@ -1321,14 +1321,17 @@ function EntityList({
                           </p>
                         )}
                       {/* When it last changed, under the detail pages'
-                          icon for it. */}
-                      <p className='flex items-center gap-1 tabular-nums'>
-                        <CalendarClock className='size-3 shrink-0' />
-                        <Value
-                          record={record}
-                          field={{ key: 'updatedAt', type: 'datetime' }}
-                        />
-                      </p>
+                          icon for it; a deal's card shows its expected
+                          close date instead. */}
+                      {entity !== 'opportunities' && (
+                        <p className='flex items-center gap-1.5 tabular-nums'>
+                          <CalendarClock className='size-3.5 shrink-0' />
+                          <Value
+                            record={record}
+                            field={{ key: 'updatedAt', type: 'datetime' }}
+                          />
+                        </p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
