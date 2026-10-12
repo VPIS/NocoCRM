@@ -1310,16 +1310,6 @@ function EntityList({
                           </span>
                         </p>
                       )}
-                      {entity === 'opportunities' &&
-                        Boolean(record.expectedCloseAt) && (
-                          <p className='flex items-center gap-1.5'>
-                            <CalendarDays className='size-3.5 shrink-0' />
-                            <Value
-                              record={record}
-                              field={{ key: 'expectedCloseAt', type: 'date' }}
-                            />
-                          </p>
-                        )}
                       {/* When it last changed, under the detail pages'
                           icon for it. */}
                       <p className='flex items-center gap-1.5 tabular-nums'>
