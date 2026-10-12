@@ -100,13 +100,14 @@ export function DecisionList({
             }`}
           />
           <Sparkles className='mt-0.5 size-4 shrink-0 text-ai' />
-          {/* Two lines: what it is about (its kind, muted, then its record)
+          {/* Two lines: what it is about (its kind's tag, then its record)
               with when, and then where it stands. */}
           <span className='grid min-w-0 flex-1 gap-1'>
             <span className='flex min-w-0 items-baseline gap-1.5'>
-              <span className='shrink-0 text-xs text-muted-foreground'>
+              {/* Its kind as a grey tag, as the application's other tags. */}
+              <Badge variant='muted' className='shrink-0 self-center'>
                 {kindOf(entry)}
-              </span>
+              </Badge>
               <span className='min-w-0 truncate text-sm font-medium'>
                 {nameOf(entry)}
               </span>
@@ -226,9 +227,11 @@ export function DecisionDetail({
   const entity = current.entity as Entity;
   return (
     <div className='flex min-h-full flex-col'>
-      {/* The way back to the list, narrow, as the inbox's own items have,
-          and the record's full page, with its particulars. */}
-      <div className='flex items-center gap-2 px-4 pt-3'>
+      {/* The way back to the list, narrow, as the inbox's own items have;
+          the record's kind, as the record drawer's bar names it; and the
+          record's full page, with its particulars. A bar over a rule, as
+          the drawer's is. */}
+      <div className='flex items-center gap-2 border-b border-border px-4 py-2'>
         <button
           type='button'
           onClick={onBack}
@@ -237,8 +240,10 @@ export function DecisionDetail({
           <ArrowLeft className='size-4' />
           {t('navigation.back')}
         </button>
+        <p className='min-w-0 flex-1 truncate text-sm text-muted-foreground'>
+          {text(`entities.${entity}`)}
+        </p>
         <Button
-          className='ml-auto'
           variant='ghost'
           size='sm'
           nativeButton={false}
