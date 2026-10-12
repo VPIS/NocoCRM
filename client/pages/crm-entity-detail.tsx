@@ -1145,7 +1145,27 @@ export default function EntityDetail({
             picker={linkRow('companyId')}
             title={toText(text('taskGroups.company'))}
           />
-        ) : record.leadId ? (
+        ) : null}
+        {/* A converted lead's task, which its conversion gave the company
+            and the deal, keeps the lead too: its card after theirs, the
+            link read only, since a task takes a lead or a company. */}
+        {(record.opportunityId || record.companyId) && record.leadId ? (
+          <LeadCard
+            id={toText(record.leadId)}
+            picker={
+              <InfoRow field='leadId' label={text('fields.name')}>
+                <InlineField
+                  entity={entity}
+                  record={record}
+                  field={field('leadId')}
+                  editable={false}
+                  lookup={names}
+                  label={text(fieldLabelKey(entity, 'leadId'))}
+                />
+              </InfoRow>
+            }
+          />
+        ) : record.opportunityId || record.companyId ? null : record.leadId ? (
           <LeadCard id={toText(record.leadId)} picker={linkRow('leadId')} />
         ) : (
           <InfoGroup title={text('taskGroups.linked')}>
