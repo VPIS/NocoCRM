@@ -11,8 +11,8 @@ import {
 import { DEFAULT_TIME_ZONE } from '../../../server/providers/crm/zone-time.js';
 
 // A record as the global search lists it (search-dialog.tsx, and the AI
-// answer's found records): its name, the typed words in bold, and a muted
-// line of what tells it apart. Plain text throughout: the row itself is the
+// answer's found records): its name, the typed words in bold, and after it
+// on the same line, muted, what tells it apart. Plain text throughout: the row itself is the
 // one thing to choose, so it holds no links of its own.
 
 // The particulars on each kind's line, the ones the reader may read.
@@ -58,12 +58,14 @@ export function SearchRow({
   });
   const detail = parts.filter(Boolean).join(' · ');
   return (
-    <span className='flex min-w-0 flex-1 flex-col'>
-      <span className='truncate'>
+    // One line: the name, then what tells it apart, muted, each cut where
+    // the row ends, the name keeping at least half of it.
+    <span className='flex min-w-0 flex-1 items-baseline gap-2'>
+      <span className='max-w-full min-w-0 shrink truncate'>
         <Highlight text={toText(record.name)} words={words} />
       </span>
       {detail && (
-        <span className='truncate text-xs text-muted-foreground'>
+        <span className='min-w-[40%] flex-1 truncate text-xs text-muted-foreground'>
           <Highlight text={detail} words={words} />
         </span>
       )}
