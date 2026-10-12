@@ -1321,17 +1321,14 @@ function EntityList({
                           </p>
                         )}
                       {/* When it last changed, under the detail pages'
-                          icon for it; a deal's card shows its expected
-                          close date instead. */}
-                      {entity !== 'opportunities' && (
-                        <p className='flex items-center gap-1.5 tabular-nums'>
-                          <CalendarClock className='size-3.5 shrink-0' />
-                          <Value
-                            record={record}
-                            field={{ key: 'updatedAt', type: 'datetime' }}
-                          />
-                        </p>
-                      )}
+                          icon for it. */}
+                      <p className='flex items-center gap-1.5 tabular-nums'>
+                        <CalendarClock className='size-3.5 shrink-0' />
+                        <Value
+                          record={record}
+                          field={{ key: 'updatedAt', type: 'datetime' }}
+                        />
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
