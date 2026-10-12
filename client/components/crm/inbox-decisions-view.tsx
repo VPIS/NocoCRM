@@ -48,7 +48,7 @@ export function DecisionList({
   const handled = items.filter(isDecided);
   const [now] = useState(() => Date.now());
   const heading = (label: string) => (
-    <h2 className='pr-3 pl-5.5 text-xs font-medium tracking-wider text-muted-foreground uppercase'>
+    <h2 className='text-xs font-medium tracking-wider text-muted-foreground uppercase'>
       {label}
     </h2>
   );
@@ -87,7 +87,7 @@ export function DecisionList({
           aria-current={selected ? 'true' : undefined}
           data-decision-item=''
           onClick={() => onSelect(entry.id)}
-          className={`relative flex w-full items-start gap-3 rounded-lg border py-3 pr-3 pl-[calc(--spacing(5.5)-1px)] text-left transition-[background-color,border-color] ${
+          className={`relative -mx-[calc(--spacing(3)+1px)] flex w-[calc(100%+--spacing(6)+2px)] items-start gap-3 rounded-lg border p-3 text-left transition-[background-color,border-color] ${
             // On the list's white: the selected one on the grey a hovered
             // one takes, a shade deeper.
             selected
@@ -95,9 +95,9 @@ export function DecisionList({
               : 'border-transparent hover:bg-hover'
           } ${decided ? 'opacity-55' : ''}`}
         >
-          {/* As the inbox marks what waits, in the AI's colour, under the
-              tab's icon; the card's words start where the tab's label does
-              (its icon and gap, 5.5 units, past its 1px border). */}
+          {/* As the inbox marks what waits, in the AI's colour, in the gutter
+              left of the tabs: the card is pulled out by its padding and
+              border, so its words start under the tabs' icons. */}
           <span
             aria-hidden
             className={`absolute top-3 bottom-3 -left-px w-0.5 rounded-full ${
@@ -179,7 +179,7 @@ export function DecisionList({
           {waiting.length ? (
             <ul className='space-y-0.5'>{waiting.map(row)}</ul>
           ) : (
-            <p className='py-2 pr-3 pl-5.5 text-sm text-muted-foreground'>
+            <p className='py-2 text-sm text-muted-foreground'>
               {text('decisions.empty')}
             </p>
           )}

@@ -286,7 +286,7 @@ export function InboxList({
                     <h2
                       id={heading}
                       className={cn(
-                        'flex items-center gap-2 pr-3 pl-5.5 text-xs font-medium tracking-wider text-muted-foreground uppercase',
+                        'flex items-center gap-2 text-xs font-medium tracking-wider text-muted-foreground uppercase',
                         lone && 'sr-only',
                       )}
                     >
@@ -354,7 +354,7 @@ export function InboxList({
       {views.length > 1 ? (
         <div
           role='tablist'
-          className='flex shrink-0 gap-x-5 border-b border-border px-4'
+          className='flex shrink-0 gap-x-5 border-b border-border px-6'
         >
           {views.map((value) => {
             const count = value === 'todo' ? pending : unread;
@@ -411,7 +411,7 @@ export function InboxList({
       ) : null}
       {/* Application change: the type filter only where a view offers more than one kind to choose between. */}
       {kinds.length > 2 || footer ? (
-        <div className='shrink-0 border-b border-border px-3 py-2.5'>
+        <div className='shrink-0 border-b border-border px-6 py-2.5'>
           <div className='flex flex-wrap items-center justify-between gap-2'>
             {kinds.length > 2 ? (
               <Select
@@ -445,7 +445,7 @@ export function InboxList({
           </div>
         </div>
       ) : null}
-      <div className='min-h-0 flex-1 overflow-y-auto px-4 py-3'>
+      <div className='min-h-0 flex-1 overflow-y-auto px-6 py-3'>
         {headGroup ? null : head}
         {content}
       </div>
