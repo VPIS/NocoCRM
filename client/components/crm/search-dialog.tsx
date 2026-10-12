@@ -325,8 +325,10 @@ function SearchPanel({ search }: { search: GlobalSearch }): ReactElement {
             </CommandGroup>
           );
         })}
+        {/* Asking the AI stays in view at the list's foot however many
+            results scroll above it. */}
         {assistantOn && typed && (
-          <CommandGroup>
+          <CommandGroup className='sticky -bottom-1 -mx-1 -mb-1 border-t border-border bg-popover p-1'>
             <CommandItem value='ask' disabled={!aiReady} onSelect={ask}>
               <Sparkles className='text-ai' />
               <span className='truncate'>
