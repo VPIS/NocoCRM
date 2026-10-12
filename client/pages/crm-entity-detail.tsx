@@ -1138,6 +1138,7 @@ export default function EntityDetail({
             id={toText(record.opportunityId)}
             picker={linkRow('opportunityId')}
             title={toText(text('taskGroups.deal'))}
+            companyTitle={toText(text('taskGroups.company'))}
           />
         ) : record.companyId ? (
           <CompanyCard
@@ -1776,11 +1777,14 @@ function DealCard({
   id,
   picker,
   title,
+  companyTitle,
 }: {
   id?: string;
   // Its heading where "Opportunity" is not what the record calls it (a
   // task's linked deal).
   title?: string;
+  // Likewise its company card's (a task's linked company).
+  companyTitle?: string;
   // The approval's own deal field, which picks or changes it.
   picker: ReactElement;
 }): ReactElement {
@@ -1847,7 +1851,9 @@ function DealCard({
         ) : null}
       </InfoGroup>
       {/* The deal's company, as a contact's page shows its own. */}
-      {deal?.companyId ? <CompanyCard id={toText(deal.companyId)} /> : null}
+      {deal?.companyId ? (
+        <CompanyCard id={toText(deal.companyId)} title={companyTitle} />
+      ) : null}
     </>
   );
 }
