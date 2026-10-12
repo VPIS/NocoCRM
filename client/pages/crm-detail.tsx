@@ -1058,10 +1058,15 @@ export function DetailColumns({
                   <div className='flex items-start gap-2'>
                     {/* Scrolled down with the intro, a long heading
                         keeps one line, cut with an ellipsis, so the
-                        content gets the room; at the top it is whole. */}
+                        content gets the room; at the top it is whole. The
+                        heading itself is clamped, its padding turned into
+                        margin, since the clip falls at the padding's edge
+                        and the next line would show through it. */}
                     <div
                       className={`min-w-0 flex-1 ${
-                        introAway ? '@3xl:line-clamp-1' : ''
+                        introAway
+                          ? '@3xl:[&>[role=heading]]:my-1.5 @3xl:[&>[role=heading]]:line-clamp-1 @3xl:[&>[role=heading]]:py-0'
+                          : ''
                       }`}
                     >
                       {heading}
