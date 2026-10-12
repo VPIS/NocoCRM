@@ -88,10 +88,9 @@ export function DecisionList({
           data-decision-item=''
           onClick={() => onSelect(entry.id)}
           className={`relative -mx-[calc(--spacing(3)+1px)] flex w-[calc(100%+--spacing(6)+2px)] items-start gap-3 rounded-lg border p-3 text-left transition-[background-color,border-color] ${
-            // On the list's white: the selected one on the grey a hovered
-            // one takes, a shade deeper.
+            // On the list's white: the selected one on the menu's own grey.
             selected
-              ? 'border-transparent bg-accent'
+              ? 'border-transparent bg-sidebar'
               : 'border-transparent hover:bg-hover'
           } ${decided ? 'opacity-55' : ''}`}
         >
