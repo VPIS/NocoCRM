@@ -180,6 +180,11 @@ import type { Application } from '@nocobase/app-server/application';
 import { noticesOf } from '../../server/providers/crm/notices.js';
 import { GRACE_MS, sweepFiles } from '../../server/providers/crm/file-sweep.js';
 import {
+  discardSearchAnswer,
+  keepSearchAnswer,
+  sweepSearchAnswers,
+} from '../../server/providers/crm-agents/search-answers.js';
+import {
   latestPreparation,
   scanTaskPreparation,
   TaskPreparer,
@@ -307,6 +312,19 @@ beforeAll(async () => {
     c.datetimeTz('readAt').nullable();
     c.datetimeTz('createdAt').nullable();
     c.datetimeTz('updatedAt').nullable();
+  });
+  // The Agents plugin's conversations, as the search's answers write them.
+  await database.builder().createCollection('agConversations', (c) => {
+    c.string('id');
+    c.primary('id');
+    c.string('userId');
+    c.string('source');
+    c.datetimeTz('createdAt').nullable();
+  });
+  await database.builder().createCollection('agConversationMessages', (c) => {
+    c.string('id');
+    c.primary('id');
+    c.string('conversationId');
   });
   await database.builder().createCollection('user', (c) => {
     c.string('id');
@@ -10057,5 +10075,70 @@ describe('the attachment cleanup', () => {
     await sweepFiles(service, drive, new Date(at.getTime() + GRACE_MS + 1000));
     expect(await left()).toEqual(['sweep-comment', 'sweep-used']);
     expect(deleted).toContain('sweep-unused.txt');
+  });
+  it("keeps a search's AI answer as a conversation, deletes one left and sweeps those left behind", async () => {
+    const query = service.database.query();
+    const at = new Date('2026-10-01T09:00:00.000Z');
+    const answer = async (
+      id: string,
+      userId: string,
+      source = 'crm-search',
+    ) => {
+      await query
+        .insertInto('agConversations')
+        .values({ id, userId, source, createdAt: at.toISOString() })
+        .execute();
+      await query
+        .insertInto('agConversationMessages')
+        .values({ id: `${id}-m`, conversationId: id })
+        .execute();
+    };
+    await answer('sa-kept', 'rep');
+    await answer('sa-left', 'rep');
+    await answer('sa-closed', 'rep');
+    await answer('sa-recent', 'rep');
+    await answer('sa-chat', 'rep', 'crm');
+    // Going on asking makes it one of the CRM's conversations; not another's.
+    expect(await keepSearchAnswer(service, 'manager', 'sa-kept')).toBe(false);
+    expect(await keepSearchAnswer(service, 'rep', 'sa-kept')).toBe(true);
+    // Leaving it deletes it, but never another's or one kept.
+    await discardSearchAnswer(service, 'manager', 'sa-left');
+    await discardSearchAnswer(service, 'rep', 'sa-kept');
+    await discardSearchAnswer(service, 'rep', 'sa-left');
+    const sources = async () =>
+      Object.fromEntries(
+        (
+          await query
+            .selectFrom('agConversations')
+            .select(['id', 'source'])
+            .where('id', 'like', 'sa-%')
+            .execute()
+        ).map((row) => [toText(row.id), toText(row.source)]),
+      );
+    expect(await sources()).toEqual({
+      'sa-kept': 'crm',
+      'sa-closed': 'crm-search',
+      'sa-recent': 'crm-search',
+      'sa-chat': 'crm',
+    });
+    // The daily sweep takes those left an hour or more, messages and all.
+    await query
+      .updateTable('agConversations')
+      .set({ createdAt: new Date().toISOString() })
+      .where('id', '=', 'sa-recent')
+      .execute();
+    expect((await sweepSearchAnswers(service)).deleted).toBe(1);
+    expect(Object.keys(await sources()).sort()).toEqual([
+      'sa-chat',
+      'sa-kept',
+      'sa-recent',
+    ]);
+    expect(
+      await query
+        .selectFrom('agConversationMessages')
+        .select('id')
+        .where('conversationId', '=', 'sa-closed')
+        .execute(),
+    ).toEqual([]);
   });
 });

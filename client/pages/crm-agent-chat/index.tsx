@@ -23,7 +23,10 @@ import {
 } from '../../components/crm/record-drawer.js';
 import { Conversation } from '../../components/crm/agent-chat/conversation.js';
 import { ConversationList } from '../../components/crm/agent-chat/conversation-list.js';
-import { useCrmChatAgents } from '../../components/crm/agent-chat/ask.js';
+import {
+  listedConversations,
+  useCrmChatAgents,
+} from '../../components/crm/agent-chat/ask.js';
 
 // The conversations with the CRM's agents on a page of their own, the
 // assistant panel's full-page view (agent-chat/panel.tsx): the reader's
@@ -61,8 +64,7 @@ export default function AgentChatPage(): ReactElement {
   const listRef = useRef<HTMLElement>(null);
   // Archived ones stay in reach from the empty state, once the last open
   // conversation is archived.
-  const hasArchived =
-    archivedList.data?.pages.some((page) => page.items.length) ?? false;
+  const hasArchived = listedConversations(archivedList.data?.pages).length > 0;
   const showArchived = (shown: boolean): void =>
     setSearchParams((previous) => {
       const next = new URLSearchParams(previous);
@@ -73,7 +75,7 @@ export default function AgentChatPage(): ReactElement {
   const none =
     !open.isLoading &&
     !open.error &&
-    !(open.data?.pages.some((page) => page.items.length) ?? false);
+    !listedConversations(open.data?.pages).length;
 
   // A new conversation stays the same view once its first message creates
   // it and the address becomes its own; each arrival at /new starts afresh,

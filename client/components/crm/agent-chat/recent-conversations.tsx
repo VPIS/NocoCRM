@@ -7,6 +7,7 @@ import {
 import { useState, type ReactElement } from 'react';
 import { Link } from 'react-router';
 import { relativeTime, toText, useCrmText } from '../api.js';
+import { listedConversations } from './ask.js';
 import { LastMessage } from './conversation-list.js';
 
 // How many conversations the overview shows.
@@ -23,9 +24,7 @@ export function RecentConversations(): ReactElement | null {
   const panel = useChatPanel();
   const list = useConversationList({});
   const [now] = useState(() => Date.now());
-  const items = (list.data?.pages ?? [])
-    .flatMap((page) => page.items)
-    .slice(0, SHOWN);
+  const items = listedConversations(list.data?.pages).slice(0, SHOWN);
   if (!items.length) return null;
   return (
     // Set apart from the ask box above it.

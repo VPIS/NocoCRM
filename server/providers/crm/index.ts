@@ -14,6 +14,7 @@ import { notificationServiceToken } from '@nocobase/app-plugin-notification/serv
 import { schedulerServiceToken } from '@nocobase/app-plugin-scheduler/server/tokens';
 import { scanLeadSignals } from './lead-signals.js';
 import { sweepFiles } from './file-sweep.js';
+import { sweepSearchAnswers } from '../crm-agents/search-answers.js';
 import { driveManagerToken } from '@nocobase/app-server/drive';
 import { isEndOfDay, DEFAULT_TIME_ZONE } from './zone-time.js';
 import { scanDealSignals } from './deal-signals.js';
@@ -310,6 +311,33 @@ export default class CrmProvider extends ServiceProvider<Application> {
         description: words.fileDescription,
         schedule: { cron: '0 3 * * *', timezone },
         target: { type: 'app.crm-file-sweep', config: {} },
+      });
+      // The global search's AI answers nobody kept, left behind
+      // (search-answers.ts), at the same hour.
+      scheduler.registerTarget({
+        type: 'app.crm-search-answer-sweep',
+        title: words.searchTarget,
+        validate: isObject,
+        describe: async () => ({
+          targetLabel: words.searchTarget,
+          description: words.searchTargetDescription,
+          state: 'ready',
+        }),
+        start: async () => {
+          const pass = await sweepSearchAnswers(service);
+          return {
+            state: 'completed',
+            outcome: 'succeeded',
+            result: { deleted: pass.deleted },
+          };
+        },
+      });
+      scheduler.defineSchedule({
+        key: 'crm.search-answer-sweep',
+        title: words.searchTitle,
+        description: words.searchDescription,
+        schedule: { cron: '0 3 * * *', timezone },
+        target: { type: 'app.crm-search-answer-sweep', config: {} },
       });
       // The day's timed tasks prepared for their owners
       // (task-preparation.ts), at the same hour.

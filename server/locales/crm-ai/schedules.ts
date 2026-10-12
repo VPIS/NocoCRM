@@ -34,6 +34,16 @@ export const scheduleTexts = {
     '每天检查附件：不在任何记录的附件里、也不在任何评论里的文件，第一次发现后再过 7 天、且上传满 7 天，从系统中删除（包括存储的文件）。期间重新被使用的文件会保留。',
     'Every day, the attachments are checked: a file no record lists among its attachments and no comment carries is deleted from the system, its stored file included, 7 days after it was first found unused and once it is 7 days old. One used again meanwhile is kept.',
   ],
+  searchTarget: ['搜索问答清理', 'Search answer cleanup'],
+  searchTargetDescription: [
+    '删除在全局搜索里问 AI、没有继续追问而遗留的对话',
+    'Deletes the conversations asked from the global search that nobody went on with and were left behind',
+  ],
+  searchTitle: ['搜索问答每日清理', 'Daily search answer cleanup'],
+  searchDescription: [
+    '在全局搜索里问 AI 的回答只在搜索弹窗里显示，离开时即删除，继续追问才保留为对话。每天删除其中因关闭窗口等原因遗留、超过 1 小时的对话。',
+    'An answer asked from the global search shows only in the search dialog and is deleted when it is left, kept as a conversation only when the person goes on asking. Every day, those left behind (a window closed on one) an hour or more are deleted.',
+  ],
   taskTarget: ['任务准备', 'Task preparation'],
   taskTargetDescription: [
     'AI 为当天有具体时间的任务做准备',

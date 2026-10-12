@@ -951,7 +951,7 @@ export function registerWorkspaceRoutes(
       summary: "Keep a search's AI answer as a conversation",
       operationId: 'keepSearchAnswer',
       description:
-        "The reader's own conversation asked from the global search stays, once they go on asking in it.",
+        "The reader's own conversation asked from the global search stays, as one of the CRM's conversations, once they go on asking in it.",
       responses: {
         '204': emptyResponse(),
         '401': apiErrorResponse(401),
@@ -977,7 +977,7 @@ export function registerWorkspaceRoutes(
       summary: "Discard a search's AI answer",
       operationId: 'discardSearchAnswer',
       description:
-        "Deletes the reader's conversation asked from the global search that they did not go on with, and any such of theirs left behind an hour or more.",
+        "Deletes the reader's conversation asked from the global search that they did not go on with.",
       responses: {
         '204': emptyResponse(),
         '401': apiErrorResponse(401),

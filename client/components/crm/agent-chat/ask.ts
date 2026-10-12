@@ -1,6 +1,7 @@
 import { useToaster } from '@nocobase/app-client';
 import {
   buildPageContext,
+  chatKeys,
   newConversationAgent,
   useChatAgents,
   useChatApi,
@@ -18,6 +19,7 @@ import {
   CHAT_ATTACHMENT_SIZE_MAX,
   CHAT_ATTACHMENTS_PER_MESSAGE_MAX,
 } from '@nocobase/app-plugin-agents/shared/conversations';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 import {
   toText,
@@ -43,6 +45,17 @@ export const CRM_SOURCE = 'crm';
 // A question asked from the global search, answered in its dialog
 // (server/providers/crm-agents/search-answers.ts).
 export const SEARCH_SOURCE = 'crm-search';
+
+// The conversations a list shows: every page's, without the search's
+// answers still being read in its dialog (or left behind there), which are
+// a conversation only once the person goes on asking.
+export function listedConversations<T extends { readonly source: string }>(
+  pages: readonly { readonly items: readonly T[] }[] | undefined,
+): T[] {
+  return (pages ?? [])
+    .flatMap((page) => page.items)
+    .filter((conversation) => conversation.source !== SEARCH_SOURCE);
+}
 
 export type AgentReadiness =
   | { state: 'loading'; agent: null; reason?: undefined }
@@ -351,6 +364,7 @@ export function useSearchAnswer(): {
   const crm = useCrmApi();
   const panel = useChatPanel();
   const actions = useConversationActions();
+  const queryClient = useQueryClient();
   return useMemo(
     () => ({
       start: async (question, agent) => {
@@ -370,6 +384,8 @@ export function useSearchAnswer(): {
           'POST',
           {},
         );
+        // Now one of the CRM's conversations, which the lists show.
+        void queryClient.invalidateQueries({ queryKey: chatKeys.lists });
         panel.openChat({ conversationId, view: 'chat' });
         panel.focusComposer();
       },
@@ -386,6 +402,6 @@ export function useSearchAnswer(): {
         })().catch(() => undefined);
       },
     }),
-    [api, crm, panel, actions.stop],
+    [api, crm, panel, actions.stop, queryClient],
   );
 }

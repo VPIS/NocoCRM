@@ -19,6 +19,7 @@ import { relativeTime, toText, useCrmApi, useCrmText } from '../api.js';
 import { markdownLine } from '../line-breaks.js';
 import { AutoLoadMore } from '../auto-load.js';
 import { ErrorNotice } from '../common.js';
+import { listedConversations } from './ask.js';
 
 // The reader's conversations with the agents, last message first: the side
 // list of the page (frontend standard §3.5), each row its conversation's
@@ -52,7 +53,7 @@ export function ConversationList({
     const timer = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(timer);
   }, []);
-  const items = query.data?.pages.flatMap((page) => page.items) ?? [];
+  const items = listedConversations(query.data?.pages);
   const suffix = archived ? '?archived=1' : '';
   const toggle = (
     <Button
