@@ -34,6 +34,9 @@ import { TaskSearchChip } from './task-quick.js';
 import { ApprovalChips } from './approval-quick.js';
 import { TaskLinkChips } from './task-links.js';
 import { TaskTimeField } from './task-time-field.js';
+import { DatePicker } from '../date-picker.js';
+import { format } from 'date-fns';
+import { enUS, zhCN } from 'date-fns/locale';
 import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
 import { Textarea } from '../ui/textarea.js';
@@ -840,19 +843,37 @@ export function RecordForm({
           onChange={(v) => set(field.key, v)}
         />
       );
-    const datetimeValue =
-      value && field.type === 'date' ? new Date(toText(value)) : null;
-    const display =
-      datetimeValue && Number.isFinite(+datetimeValue)
-        ? datetimeValue.toISOString().slice(0, 10)
-        : toText(value ?? '');
-    const typed = !['number', 'date'].includes(field.type);
+    // A day, picked from a calendar as a task's time is (DatePicker), not a
+    // native date input, whose look and format follow the browser.
+    if (field.type === 'date') {
+      const raw = toText(value ?? '');
+      const parts = /^(\d{4})-(\d{2})-(\d{2})/.exec(
+        raw.includes('T') ? new Date(raw).toISOString() : raw,
+      );
+      const day = parts
+        ? new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]))
+        : undefined;
+      return (
+        <DatePicker
+          {...common}
+          className='w-full'
+          value={day}
+          locale={language.startsWith('zh') ? zhCN : enUS}
+          placeholder={toText(text('taskTime.pickDate'))}
+          onChange={(picked) =>
+            set(field.key, picked ? format(picked, 'yyyy-MM-dd') : null)
+          }
+        />
+      );
+    }
+    const display = toText(value ?? '');
+    const typed = field.type !== 'number';
     return (
       <div>
         <Input
           {...common}
           type={
-            ['date', 'email', 'number'].includes(field.type)
+            field.type === 'email' || field.type === 'number'
               ? field.type
               : 'text'
           }
