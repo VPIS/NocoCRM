@@ -5931,6 +5931,24 @@ describe('demo dataset', () => {
         true,
       ]);
     }
+    // A lead converted with its deal gives its tasks the lead, the company
+    // and the deal at once (H World's).
+    const fullyLinked = await database
+      .query()
+      .selectFrom('crmTasks')
+      .select('id')
+      .where('leadId', 'is not', null)
+      .where('companyId', 'is not', null)
+      .where('opportunityId', 'is not', null)
+      .where('id', 'in', demoIds)
+      .execute();
+    expect(fullyLinked.length).toBeGreaterThan(0);
+    // The importer takes part in some of the colleagues' tasks.
+    const joined = await service.list(actor('admin'), 'tasks', {
+      pageSize: 100,
+      participantId: 'admin',
+    });
+    expect(joined.total).toBeGreaterThan(0);
     // A task done reads as one a person kept: created, then completed
     // with its result on the entry that closed it, later than its creation.
     const doneTask = await database

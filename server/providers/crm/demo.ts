@@ -1083,10 +1083,13 @@ async function populate(
         -6 - i,
         10,
       );
+      // The importer joins two of the colleagues' meetings ahead, so the
+      // task list's "ones I take part in" has something to show.
+      const joins = (i === 0 || i === 3) && links.ownerId !== actor.id;
       if (i < 5)
         await task(
           text.plannedMatters[i],
-          links,
+          joins ? { ...links, internalParticipants: [actor.id] } : links,
           [0, 0, -2, 2, 5][i],
           [10, 15, 11, 14, 10][i],
           'open',
@@ -1232,6 +1235,10 @@ async function populate(
                 companyId: companies_[a].id,
                 opportunityId: deal.id,
                 ownerId: companyOwner(a).id,
+                // Now and then the importer takes part in a colleague's.
+                ...(n % 4 === 1 && companyOwner(a).id !== actor.id
+                  ? { internalParticipants: [actor.id] }
+                  : {}),
               },
               day,
               hour,
@@ -1439,8 +1446,10 @@ async function populate(
       stage: string,
       created: number,
       changed: number,
+      // A deal a conversion opened, filled in and moved on from there.
+      id?: string,
     ): Promise<Row> => {
-      let record = await save('opportunities', input, created);
+      let record = await save('opportunities', input, created, id);
       const progression = ['won', 'lost', 'paused'].includes(stage)
         ? ['qualification', 'proposal', stage]
         : stages.slice(1, stages.indexOf(stage) + 1);
@@ -1564,6 +1573,9 @@ async function populate(
       -36,
       10,
     );
+    // Converted with its deal, as a person converting it would: the deal
+    // the conversion opens is the one taken on to proposal below, and the
+    // lead's task is given the company and the deal with it.
     hworldLead = await convertLead(
       service,
       prepared,
@@ -1571,14 +1583,30 @@ async function populate(
       {
         companyId: hworld.id,
         contactId: hworldPeople[0].id,
-        createOpportunity: false,
+        createOpportunity: true,
+        opportunityName: project.hworld.deal,
       },
       q,
+    );
+    const hworldDealId = toText(hworldLead.convertedOpportunityId);
+    track(
+      'opportunities',
+      await service.get(prepared, 'opportunities', hworldDealId, q),
     );
     await q
       .updateTable('crmLeads')
       .set({ convertedAt: at(-33), updatedAt: at(-33) })
       .where('id', '=', hworldLead.id)
+      .execute();
+    await q
+      .updateTable('crmOpportunities')
+      .set({ createdAt: at(-33), updatedAt: at(-33) })
+      .where('id', '=', hworldDealId)
+      .execute();
+    await q
+      .updateTable('crmTasks')
+      .set({ updatedAt: at(-33) })
+      .where('leadId', '=', hworldLead.id)
       .execute();
     await historyAt(q, at(-33));
     const hworldDeal = await deal(
@@ -1600,6 +1628,7 @@ async function populate(
       'proposal',
       -33,
       -2,
+      hworldDealId,
     );
     const hworldLinks = {
       companyId: hworld.id,
