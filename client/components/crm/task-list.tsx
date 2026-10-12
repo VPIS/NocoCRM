@@ -1,4 +1,6 @@
 import { RecordDrawerContext } from './record-drawer.js';
+import { useNavigate } from 'react-router';
+import { openOnRowClick } from './row-open.js';
 import { AiStateTag } from './ai-state-tag.js';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import {
@@ -21,7 +23,6 @@ import {
   TableRow,
 } from '../ui/table.js';
 import { Checkbox } from '../ui/checkbox.js';
-import { Tabs, TabsList, TabsTrigger } from '../ui/tabs.js';
 import {
   dueText,
   editsAll,
@@ -123,56 +124,30 @@ function useTaskSets(
   return { open, done };
 }
 
-export type TaskTab = 'open' | 'done';
-
-// What is to do and what is done or cancelled, a tab each, left of the
-// list's view switch.
-export function TaskTabs({
-  value,
-  onChange,
-}: {
-  value: TaskTab;
-  onChange: (tab: TaskTab) => void;
-}): ReactElement {
-  const { text } = useCrmText();
-  return (
-    <Tabs value={value} onValueChange={(next) => onChange(next as TaskTab)}>
-      <TabsList>
-        <TabsTrigger value='open'>{text('taskList.open')}</TabsTrigger>
-        <TabsTrigger value='done'>{text('taskList.done')}</TabsTrigger>
-      </TabsList>
-    </Tabs>
-  );
-}
-
 export function TaskList({
   params,
   status,
-  tab,
   empty,
 }: {
   // The list's filters (search, owner, scope); status and paging are the
   // list's own.
   params: URLSearchParams;
-  // A status picked in the filters, or '' for the tab's tasks.
+  // A status picked in the filters, or '' for every task.
   status: string;
-  tab: TaskTab;
   empty: ReactNode;
 }): ReactElement {
   const { text } = useCrmText();
   const { open, done } = useTaskSets(params, status);
   if (open.loading || (!status && done.loading)) return <></>;
   if (!open.total && (status || !done.total)) return <>{empty}</>;
-  const shown = status || tab === 'open' ? open : done;
   return (
     <TaskTable
-      pages={shown}
-      // What is to do by when it is due; a status picked, or what is
-      // closed, as one table.
-      grouped={!status && tab === 'open'}
-      emptyText={text(
-        shown === open ? 'taskList.nothingOpen' : 'taskList.nothingDone',
-      )}
+      pages={open}
+      // What is to do by when it is due, what is closed after it; a status
+      // picked, one table.
+      closed={status ? undefined : done}
+      grouped={!status}
+      emptyText={text('taskList.nothingOpen')}
     />
   );
 }
@@ -463,7 +438,7 @@ function TaskCheck({
 // zone: overdue, today, tomorrow, later this week, later, and untimed;
 // those closed, or one status picked in the filters, are one table.
 type DueGroup =
-  'overdue' | 'today' | 'tomorrow' | 'thisWeek' | 'later' | 'noTime';
+  'overdue' | 'today' | 'tomorrow' | 'thisWeek' | 'noTime' | 'later' | 'closed';
 
 function dueGroups(
   rows: readonly CrmRecord[],
@@ -504,10 +479,11 @@ function dueGroups(
     groups.set(group, [...(groups.get(group) ?? []), task]);
   }
   return (
-    ['overdue', 'today', 'tomorrow', 'thisWeek', 'later', 'noTime'] as const
-  )
-    .filter((group) => groups.has(group))
-    .map((group) => ({ group, rows: groups.get(group) ?? [] }));
+    // Untimed before later, so what is closed follows later directly.
+    (['overdue', 'today', 'tomorrow', 'thisWeek', 'noTime', 'later'] as const)
+      .filter((group) => groups.has(group))
+      .map((group) => ({ group, rows: groups.get(group) ?? [] }))
+  );
 }
 
 const HEAD =
@@ -515,11 +491,13 @@ const HEAD =
 
 // The groups folded away, kept in this browser; a blocked or cleared
 // storage only means every group shows again.
-const FOLDED_KEY = 'nococrm:task-groups-folded';
+// Later and closed start folded, the near ones open.
+const FOLDED_KEY = 'nococrm:task-groups-folded-v2';
+const FOLDED_FIRST: readonly DueGroup[] = ['later', 'closed'];
 function readFoldedGroups(): Set<DueGroup> {
   try {
     const stored: unknown = JSON.parse(
-      localStorage.getItem(FOLDED_KEY) ?? '[]',
+      localStorage.getItem(FOLDED_KEY) ?? JSON.stringify(FOLDED_FIRST),
     );
     return new Set(
       Array.isArray(stored)
@@ -527,17 +505,20 @@ function readFoldedGroups(): Set<DueGroup> {
         : [],
     );
   } catch {
-    return new Set();
+    return new Set(FOLDED_FIRST);
   }
 }
 const CELL = 'h-11 truncate px-3 py-2.5 first:pl-4 last:pr-4';
 
 function TaskTable({
   pages,
+  closed,
   emptyText,
   grouped,
 }: {
   pages: TaskPages;
+  // The completed and cancelled tasks, a group after the open ones.
+  closed?: TaskPages;
   emptyText: string;
   grouped: boolean;
 }): ReactElement {
@@ -557,20 +538,48 @@ function TaskTable({
       }
       return next;
     });
-  if (!pages.rows.length)
+  if (!pages.rows.length && !closed?.rows.length)
     return (
       <p className='rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground'>
         {emptyText}
       </p>
     );
-  const sections = grouped
-    ? dueGroups(pages.rows, timeZone)
-    : [{ group: undefined, rows: pages.rows }];
+  const sections: {
+    group: DueGroup | undefined;
+    rows: CrmRecord[];
+    total: number;
+    from: TaskPages;
+  }[] = grouped
+    ? [
+        ...dueGroups(pages.rows, timeZone).map((section) => ({
+          ...section,
+          total: section.rows.length,
+          from: pages,
+        })),
+        ...(closed?.rows.length
+          ? [
+              {
+                group: 'closed' as const,
+                rows: closed.rows,
+                total: closed.total,
+                from: closed,
+              },
+            ]
+          : []),
+      ]
+    : [{ group: undefined, rows: pages.rows, total: 0, from: pages }];
+  // The next page of the open tasks, then of the closed ones while they
+  // show.
+  const loading = pages.more
+    ? pages
+    : closed?.more && !folded.has('closed')
+      ? closed
+      : undefined;
   return (
     <div className='grid gap-3'>
       <div className='overflow-hidden rounded-xl border border-border bg-card shadow-xs'>
         <Table className='min-w-[48rem] table-fixed'>
-          <TableHeader className='bg-sidebar/60'>
+          <TableHeader className='bg-sidebar'>
             <TableRow className='border-border hover:bg-transparent'>
               <TableHead className={HEAD}>{text('fields.taskName')}</TableHead>
               <TableHead className={`${HEAD} w-64`}>
@@ -588,7 +597,7 @@ function TaskTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sections.map(({ group, rows }) => (
+            {sections.map(({ group, rows, total, from }) => (
               <Fragment key={group ?? 'all'}>
                 {group ? (
                   <TableRow className='border-border hover:bg-transparent'>
@@ -611,7 +620,7 @@ function TaskTable({
                           }`}
                         />
                         {text(`taskList.groups.${group}`)}
-                        <span className='tabular-nums'>{rows.length}</span>
+                        <span className='tabular-nums'>{total}</span>
                       </button>
                     </TableCell>
                   </TableRow>
@@ -620,8 +629,8 @@ function TaskTable({
                   <TaskTableRow
                     key={task.id}
                     task={task}
-                    titles={pages.titles}
-                    aiState={pages.ai[toText(task.id)]}
+                    titles={from.titles}
+                    aiState={from.ai[toText(task.id)]}
                   />
                 ))}
               </Fragment>
@@ -630,9 +639,9 @@ function TaskTable({
         </Table>
       </div>
       <AutoLoadMore
-        hasMore={Boolean(pages.more)}
-        loading={pages.fetchingMore}
-        onLoad={() => pages.more?.()}
+        hasMore={Boolean(loading)}
+        loading={Boolean(loading?.fetchingMore)}
+        onLoad={() => loading?.more?.()}
       />
     </div>
   );
@@ -647,6 +656,7 @@ function TaskTableRow({
   titles: Record<string, string>;
   aiState?: 'running' | 'pending';
 }): ReactElement {
+  const navigate = useNavigate();
   const state = useTaskRow(task);
   const {
     text,
@@ -668,7 +678,14 @@ function TaskTableRow({
       ? (full.split(' / ').at(-1) ?? full)
       : full;
   return (
-    <TableRow className='border-border'>
+    // Its empty space opens the task too.
+    <TableRow
+      className='cursor-pointer border-border'
+      onClick={openOnRowClick(
+        `/crm/tasks/${toText(task.id)}`,
+        (path) => void navigate(path),
+      )}
+    >
       <TableCell className={CELL}>
         <span className='flex min-w-0 items-center gap-3'>
           <span className='flex shrink-0 items-center'>

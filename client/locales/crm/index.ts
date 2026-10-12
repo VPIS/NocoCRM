@@ -346,6 +346,7 @@ const wording = {
       thisWeek: ['Later this week', '本周'],
       later: ['Later', '以后'],
       noTime: ['No time', '无时间'],
+      closed: ['Closed', '已结束'],
     },
   },
   // A new task's quick form: a title, a description and chips.
@@ -1102,7 +1103,8 @@ const wording = {
   },
   all: ['All', '全部'],
   mine: ['Mine', '我负责的'],
-  participating: ['Participating', '我参与的'],
+  // A task I own or take part in.
+  involved: ['Mine', '我的'],
   // An approval the reader decides.
   approving: ['To decide', '我审批的'],
   // The header's control choosing whose records a list page shows.

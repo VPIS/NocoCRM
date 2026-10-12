@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useState, type ReactElement } from 'react';
+import type { ReactElement } from 'react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -10,8 +10,9 @@ import {
 } from '../../server/providers/crm/schema.js';
 import { crmZh } from '../../client/locales/crm/index.js';
 
-// The task list reads as a to-do list: open tasks first, then what is done
-// or cancelled, each ticked or set aside in place.
+// The task list reads as a to-do list: open tasks by when they are due,
+// then what is done or cancelled, folded at first, each ticked or set aside
+// in place.
 
 const state = vi.hoisted(() => ({ api: vi.fn() }));
 
@@ -54,24 +55,11 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
   };
 });
 
-const { TaskList, TaskTabs } =
-  await import('../../client/components/crm/task-list.js');
+const { TaskList } = await import('../../client/components/crm/task-list.js');
 
-// The page's tabs beside its heading and the list under it.
 function Page({ status }: { status: string }): ReactElement {
-  const [tab, setTab] = useState<'open' | 'done'>('open');
   const params = new URLSearchParams({ search: '' });
-  return (
-    <>
-      {!status && <TaskTabs value={tab} onChange={setTab} />}
-      <TaskList
-        params={params}
-        status={status}
-        tab={tab}
-        empty={<p>empty</p>}
-      />
-    </>
-  );
+  return <TaskList params={params} status={status} empty={<p>empty</p>} />;
 }
 
 const task = (
@@ -84,7 +72,8 @@ const task = (
   name,
   status,
   ownerId,
-  dueAt: '2026-10-23T03:00:00.000Z',
+  // Untimed, so the open ones sit in a group shown at first.
+  dueAt: null,
   leadId: 'lead-1',
   internalParticipants: [],
 });
@@ -114,6 +103,7 @@ function renderList(status = ''): void {
 }
 
 beforeEach(() => {
+  localStorage.clear();
   state.api.mockReset();
   state.api.mockImplementation((path: string) =>
     Promise.resolve(
@@ -135,11 +125,11 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('the task list', () => {
-  it('lists what is to do and what is done in a tab each', async () => {
+  it('lists what is to do, then what is closed folded away', async () => {
     renderList();
     expect(await screen.findByText('我的待办')).toBeTruthy();
-    const openTab = screen.getByRole('tab', { name: '未完成' });
-    expect(openTab.getAttribute('aria-selected')).toBe('true');
+    const closedGroup = screen.getByRole('button', { name: /已结束/ });
+    expect(closedGroup.getAttribute('aria-expanded')).toBe('false');
     expect(screen.queryByText('已完成的任务')).toBeNull();
     // Open tasks soonest first; what is done latest first.
     const paths = state.api.mock.calls.map(([path]) => String(path));
@@ -154,16 +144,18 @@ describe('the task list', () => {
           p.includes('excludeStatus=open') && p.includes('orderBy=-updatedAt'),
       ),
     ).toBe(true);
-    await userEvent.click(screen.getByRole('tab', { name: '已结束' }));
+    await userEvent.click(closedGroup);
     expect(await screen.findByText('已完成的任务')).toBeTruthy();
-    expect(screen.queryByText('我的待办')).toBeNull();
+    expect(screen.getByText('我的待办')).toBeTruthy();
     // Completed is ticked; cancelled has no box to tick.
     expect(
       screen
         .getByRole('checkbox', { name: '重新打开' })
         .getAttribute('aria-checked'),
     ).toBe('true');
-    expect(screen.getAllByRole('checkbox')).toHaveLength(1);
+    expect(screen.getAllByRole('checkbox', { name: '重新打开' })).toHaveLength(
+      1,
+    );
   });
 
   it('completes a task through its outcome dialog and opens it again', async () => {
@@ -186,7 +178,7 @@ describe('the task list', () => {
       'POST',
       expect.objectContaining({ outcome: '' }),
     );
-    await userEvent.click(screen.getByRole('tab', { name: '已结束' }));
+    await userEvent.click(screen.getByRole('button', { name: /已结束/ }));
     await userEvent.click(
       await screen.findByRole('checkbox', { name: '重新打开' }),
     );

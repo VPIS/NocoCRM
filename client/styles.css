@@ -399,7 +399,7 @@
    ground in muted words, its cells a little roomier, the first and last
    set in from the card's edge. */
 .crm-plugin-page [data-slot='table-header'] {
-  background-color: color-mix(in oklab, var(--sidebar) 60%, transparent);
+  background-color: var(--sidebar);
 }
 .crm-plugin-page [data-slot='table-row'] {
   border-color: var(--border);

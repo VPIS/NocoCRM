@@ -26,7 +26,8 @@ import {
   RecordDrawerContext,
   useRecordDrawerState,
 } from '../components/crm/record-drawer.js';
-import { useLocation } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
+import { openOnRowClick } from '../components/crm/row-open.js';
 import {
   useInfiniteQuery,
   useQuery,
@@ -99,11 +100,7 @@ import {
 import { downloadCsv } from '../components/crm/csv.js';
 import { SortableHead } from '../components/crm/sortable-table.js';
 import { AutoLoadMore } from '../components/crm/auto-load.js';
-import {
-  TaskList,
-  TaskTabs,
-  type TaskTab,
-} from '../components/crm/task-list.js';
+import { TaskList } from '../components/crm/task-list.js';
 
 // A calendar cell lists this many before asking to show the rest.
 const CALENDAR_DAY_LIMIT = 5;
@@ -123,14 +120,15 @@ function shiftMonth(month: string, by: number): string {
 
 // The choices of whose records a list page shows (the header's segmented
 // control); objects not listed have none.
-type Scope = 'all' | 'mine' | 'participating' | 'approving';
+type Scope = 'all' | 'mine' | 'involved' | 'approving';
 const scopes: Partial<Record<string, readonly Scope[]>> = {
   leads: ['all', 'mine'],
   opportunities: ['all', 'mine'],
   companies: ['all', 'mine'],
   contacts: ['all', 'mine'],
   approvals: ['all', 'mine', 'approving'],
-  tasks: ['all', 'mine', 'participating'],
+  // A task is mine whether I own it or take part in it.
+  tasks: ['all', 'involved'],
 };
 
 // The filter a card on the overview or the reports opens is named as that
@@ -222,6 +220,7 @@ function EntityList({
   initialSearch?: string;
   initialFound?: { ids: string[]; title: string };
 }): ReactElement {
+  const navigate = useNavigate();
   const { text, language } = useCrmText();
   const { data: meta, error: metadataError } = useMetadata();
   const api = useCrmApi();
@@ -237,10 +236,13 @@ function EntityList({
   const [topic, setTopic] = useState('');
   // Whose records: everyone's or the ones I own, and for tasks also the
   // ones I take part in, for approvals the ones I decide.
-  const [scope, setScope] = useState<Scope>('all');
+  // A task list opens on the reader's own (owned or taken part in);
+  // every other list on everyone's.
+  const [scope, setScope] = useState<Scope>(
+    entity === 'tasks' ? 'involved' : 'all',
+  );
   const [approverId, setApproverId] = useState('');
   // The task list's tab: what is to do, or what is done or cancelled.
-  const [taskTab, setTaskTab] = useState<TaskTab>('open');
   // Leads and opportunities are worked as funnels, so they open on the
   // board; the rest, tasks too (the calendar beside the list), on the list.
   const [view, setView] = useState(
@@ -426,7 +428,7 @@ function EntityList({
     employed,
     topic,
     approverId: whose === 'approving' ? toText(meta?.userId) : approverId,
-    participantId: whose === 'participating' ? toText(meta?.userId) : '',
+    involvedId: whose === 'involved' ? toText(meta?.userId) : '',
     page: toText(page),
     pageSize: String(PAGE_SIZE),
   });
@@ -703,14 +705,17 @@ function EntityList({
           carries its own. */}
       {entity === 'tasks' && view === 'calendar' && (
         <div className='hidden items-center gap-1 lg:flex'>
-          <Button
-            variant='outline'
-            size='sm'
-            className='mr-1'
-            onClick={() => setMonth(today.slice(0, 7))}
-          >
-            {text('thisMonth')}
-          </Button>
+          {/* Back to this month, offered once another is shown. */}
+          {month !== today.slice(0, 7) && (
+            <Button
+              variant='outline'
+              size='sm'
+              className='mr-1'
+              onClick={() => setMonth(today.slice(0, 7))}
+            >
+              {text('thisMonth')}
+            </Button>
+          )}
           <Button
             variant='ghost'
             size='icon-sm'
@@ -745,15 +750,11 @@ function EntityList({
           <TabsList aria-label={text('listScope')}>
             {scopes[entity].map((value) => (
               <TabsTrigger key={value} value={value}>
-                {text(value)}
+                {text(value === 'all' ? 'team' : value)}
               </TabsTrigger>
             ))}
           </TabsList>
         </Tabs>
-      )}
-      {/* The task list's tabs, left of the view switch. */}
-      {entity === 'tasks' && view === 'list' && !status && (
-        <TaskTabs value={taskTab} onChange={setTaskTab} />
       )}
       {/* A switch with one position says nothing: an object with only the
           list (contacts, approvals) shows none. */}
@@ -998,7 +999,6 @@ function EntityList({
           <TaskList
             params={params}
             status={status}
-            tab={taskTab}
             empty={<Empty action={newButton} />}
           />
         </DrawerHost>
@@ -1013,7 +1013,7 @@ function EntityList({
             <div className='overflow-hidden rounded-xl border border-border bg-card shadow-xs'>
               <Table>
                 {/* A quiet header: small muted words on the menu's ground. */}
-                <TableHeader className='bg-sidebar/60'>
+                <TableHeader className='bg-sidebar'>
                   <TableRow className='border-border hover:bg-transparent'>
                     {columns.map((key) => {
                       const title =
@@ -1040,7 +1040,14 @@ function EntityList({
                   {query.data.data.map((record) => (
                     <Fragment key={record.id}>
                       {/* Ruled as the card is framed. */}
-                      <TableRow className='border-border'>
+                      {/* Its empty space opens the record too. */}
+                      <TableRow
+                        className='cursor-pointer border-border'
+                        onClick={openOnRowClick(
+                          `/crm/${entity}/${toText(record.id)}`,
+                          (path) => void navigate(path),
+                        )}
+                      >
                         {columns.map((key) => (
                           <TableCell
                             // Every value, the name included, is cut with an
@@ -1456,7 +1463,7 @@ function EntityList({
               // the menu's ground.
               <div
                 key={i + 1}
-                className='hidden bg-[color-mix(in_oklab,var(--sidebar)_60%,var(--card))] px-3 py-2 text-sm font-medium text-muted-foreground lg:block'
+                className='hidden bg-sidebar px-3 py-2 text-sm font-medium text-muted-foreground lg:block'
               >
                 {new Intl.DateTimeFormat(language, {
                   weekday: 'short',
