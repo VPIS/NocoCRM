@@ -599,7 +599,7 @@ function TaskTable({
                         type='button'
                         aria-expanded={!folded.has(group)}
                         onClick={() => toggleGroup(group)}
-                        className={`flex h-9 w-full items-center gap-1.5 px-4 pt-1.5 text-left text-xs font-medium transition-colors hover:text-foreground ${
+                        className={`flex h-9 w-full items-center gap-1.5 px-4 text-left text-xs font-medium transition-colors hover:text-foreground ${
                           group === 'overdue'
                             ? 'text-destructive'
                             : 'text-muted-foreground'
