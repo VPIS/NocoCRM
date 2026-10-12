@@ -168,7 +168,7 @@ export default function AgentChatPage(): ReactElement {
     );
 
   // Laid out as the inbox is (inbox-page.tsx): the heading over a rule, the
-  // conversations in a column on the menu's ground at the left, the one open
+  // conversations in a column on the card's white at the left, the one open
   // beside them; narrow, the list and the conversation take turns.
   let body: ReactElement;
   if (open.isLoading && !detailOpen)
@@ -205,7 +205,7 @@ export default function AgentChatPage(): ReactElement {
       <div className='flex min-h-0 flex-1'>
         {first ? null : (
           <div
-            className={`flex min-h-0 w-full flex-col border-r bg-sidebar/60 lg:w-96 lg:shrink-0 ${detailOpen ? 'max-lg:hidden' : ''}`}
+            className={`flex min-h-0 w-full flex-col border-r bg-card lg:w-96 lg:shrink-0 ${detailOpen ? 'max-lg:hidden' : ''}`}
           >
             <ConversationList
               ref={listRef}

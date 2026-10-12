@@ -24,7 +24,7 @@ import { ErrorNotice } from '../common.js';
 // list of the page (frontend standard §3.5), each row its conversation's
 // address, the open one marked. Archived ones are a list of their own. A row
 // is the agent's avatar beside the title and the time, the newest message
-// under them; the open one on the card's white, the others lit on hover.
+// under them; the open one on the grey a hovered one takes, a shade deeper.
 export function ConversationList({
   ref,
   query,
@@ -111,7 +111,7 @@ export function ConversationList({
                     onOpen={onOpen ? () => onOpen(conversation.id) : undefined}
                     current={current}
                     className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left transition-colors ${
-                      current ? 'bg-card shadow-xs' : 'hover:bg-accent/60'
+                      current ? 'bg-accent' : 'hover:bg-muted'
                     }`}
                   >
                     <AgentAvatar
