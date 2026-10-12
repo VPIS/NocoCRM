@@ -185,12 +185,12 @@ const wording = {
       '搜索线索、商机、公司、联系人、任务、审批…',
     ],
     hint: [
-      'Type a name, company, email, phone or website; words in any order',
-      '输入名称、公司、邮箱、电话或网址，几个词顺序不限',
+      'Search leads, opportunities, companies, contacts, tasks and approvals',
+      '搜索线索、商机、公司、联系人、任务和审批',
     ],
     hintAsk: [
-      'Or describe what you are looking for and ask the AI from the last row',
-      '也可以用一句话描述要找的记录，从最后一行交给 AI',
+      'Or ask a question and let the AI answer',
+      '也可以直接提问，让 AI 回答',
     ],
     searching: ['Searching…', '正在搜索…'],
     noResults: ['No matching records', '没有找到匹配的记录'],
