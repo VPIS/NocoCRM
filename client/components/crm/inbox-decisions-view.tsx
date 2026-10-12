@@ -123,8 +123,10 @@ export function DecisionList({
                 {relativeTime(entry.createdAt, language, now, text('justNow'))}
               </time>
             </span>
+            {/* The second line as tall as its tags, with or without one,
+                so every card, and the bar at its edge, is the same height. */}
             {entry.status === 'running' ? (
-              <span className='text-xs text-muted-foreground'>
+              <span className='text-xs leading-5.5 text-muted-foreground'>
                 {/* Not begun yet: waiting its turn behind other follow-ups. */}
                 {text(
                   !entry.ai.startedAt
@@ -135,7 +137,7 @@ export function DecisionList({
                 )}
               </span>
             ) : result ? (
-              <span className='line-clamp-1 text-xs text-muted-foreground'>
+              <span className='line-clamp-1 text-xs leading-5.5 text-muted-foreground [&_[data-slot=badge]]:align-top'>
                 {/* Handled, what became of it first: decided on the card,
                     dismissed, or an approval withdrawn or decided on
                     itself. */}
