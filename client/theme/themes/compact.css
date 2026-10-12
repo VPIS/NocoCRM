@@ -60,6 +60,13 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.16 0 0);
   --primary: oklch(0.18 0 0);
+  /* The sign-in pages' brand panel (client/pages/auth/shared.tsx), dark in
+     both color modes, as the template draws it; its glow is the template's
+     blue, since this application's primary is near black. */
+  --auth-brand-background: #101c3b;
+  --auth-brand-highlight: #8ca9ff;
+  --auth-brand-muted: #b8c4df;
+  --auth-brand-glow: #002ad1;
   --primary-foreground: oklch(0.985 0 0);
   /* The template's StatusBadge (client/components/status-badge.tsx). */
   --status-success: rgb(21 112 70);
