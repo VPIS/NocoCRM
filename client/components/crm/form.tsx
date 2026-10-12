@@ -67,6 +67,7 @@ import {
 } from './api.js';
 import { ErrorNotice, Loading } from './common.js';
 import { FollowUpOption } from './follow-up-option.js';
+import { LIGHT_FOCUS } from './focus.js';
 
 // A multi-select in the same dress as Choice: the trigger lists what is
 // chosen, the popup ticks items on and off and stays open between picks.
@@ -887,7 +888,9 @@ export function RecordForm({
           the form's own width, which beside the lead capture's panels is
           less than the dialog's. Long text, lists and files take the whole
           row. */}
-      <div className='@container'>
+      {/* Its fields show their focus as the record pages' inline fields
+          do. */}
+      <div className={`@container ${LIGHT_FOCUS}`}>
         <div className='grid gap-x-4 gap-y-3 @xl:grid-cols-2 @2xl:grid-cols-3'>
           {fields.map((field) => {
             if (tucked(field)) return null;

@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { Input } from '../ui/input.js';
 import { Textarea } from '../ui/textarea.js';
 import { Choice, MultiChoice } from './form.js';
+import { LIGHT_FOCUS } from './focus.js';
 import { RecordMultiPicker, RecordPicker } from './record-picker.js';
 import { CountryChoice, SubdivisionChoice } from './geography.js';
 import { Value } from './common.js';
@@ -348,7 +349,7 @@ export function InlineField({
       // No ring of its own: the control inside shows the focus, as lightly
       // as the comment box does (the primitives' focus ring is meant for a
       // form, and doubled with a ring here it outweighed the value).
-      className={`rounded-md [&_:focus-visible]:border-ring/50! [&_:focus-visible]:ring-2! [&_:focus-visible]:ring-ring/10! ${titled ? 'min-w-0 max-w-full' : ''}`}
+      className={`rounded-md ${LIGHT_FOCUS} ${titled ? 'min-w-0 max-w-full' : ''}`}
       // Saving on blur is the whole point, but focus moving between the parts of
       // one control (a select and its popup) must not count as leaving.
       onBlur={(event) => {
