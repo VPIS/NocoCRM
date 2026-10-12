@@ -12,6 +12,7 @@ import { RecordMultiPicker, RecordPicker } from './record-picker.js';
 import { CountryChoice, SubdivisionChoice } from './geography.js';
 import { Value } from './common.js';
 import { DateTimeInput } from './datetime-input.js';
+import { TaskTimeField } from './task-time-field.js';
 import { FoldingText, LongTextField } from './long-text-field.js';
 import {
   arrayValues,
@@ -106,6 +107,9 @@ export function InlineField({
   const [draft, setDraft] = useState(() =>
     startOpen ? toText(record[field.key]) : '',
   );
+  // The draft as last picked, for a popup that saves as it closes in the
+  // same event as the pick, before a render brings the state up to date.
+  const draftRef = useRef(draft);
   // A multi field edits a list of ids; the chips toggle it, blur saves it.
   const [listDraft, setListDraft] = useState<string[]>([]);
   const [error, setError] = useState('');
@@ -242,7 +246,11 @@ export function InlineField({
     );
 
   const startEditing = (): void => {
-    setDraft(toInputValue(record[field.key]));
+    // A task's time opens with its calendar showing.
+    if (entity === 'tasks' && field.key === 'dueAt')
+      popupOpenRef.current = true;
+    draftRef.current = toInputValue(record[field.key]);
+    setDraft(draftRef.current);
     setListDraft(arrayValues(record[field.key]).map(toText));
     setEditing(true);
   };
@@ -498,17 +506,37 @@ export function InlineField({
             }
           }}
         />
+      ) : entity === 'tasks' && field.key === 'dueAt' ? (
+        // A task's time: a day, and a time of day or none (a day alone), as
+        // the new task's form picks it; saved when its calendar closes.
+        <TaskTimeField
+          defaultOpen
+          value={{ dueAt: draft || null }}
+          onChange={(time) => {
+            draftRef.current = time.dueAt ?? '';
+            setDraft(draftRef.current);
+          }}
+          onOpenChange={(open) => {
+            popupOpenRef.current = open;
+            if (!open) void save(draftRef.current);
+          }}
+        />
       ) : field.type === 'datetime' ? (
         <DateTimeInput
           label={label}
           value={draft}
           disabled={saving}
-          onChange={(v) => setDraft(v ?? '')}
+          onChange={(v) => {
+            draftRef.current = v ?? '';
+            setDraft(draftRef.current);
+          }}
           onOpenChange={(open) => {
             popupOpenRef.current = open;
             // Like the other popup pickers, closing the popup is done: what
             // was picked saves, and nothing picked returns to the read view.
-            if (!open) void save(draft);
+            // The latest pick, not the value this render closed over: the
+            // pick and the close come in one event.
+            if (!open) void save(draftRef.current);
           }}
           onKeyDown={(event) => {
             if (event.key === 'Enter') void save(draft);

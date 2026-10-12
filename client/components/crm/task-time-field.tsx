@@ -65,11 +65,16 @@ export function TaskTimeField({
   id,
   value,
   onChange,
+  onOpenChange,
+  defaultOpen,
   size = 'default',
 }: {
   id?: string;
   value: { dueAt: unknown };
   onChange: (time: TaskTime) => void;
+  // Told when its calendar opens and closes (the inline editor saves then).
+  onOpenChange?: (open: boolean) => void;
+  defaultOpen?: boolean;
   // `sm` in a row of small buttons (a new task's quick form).
   size?: 'default' | 'sm';
 }): ReactElement {
@@ -112,6 +117,8 @@ export function TaskTimeField({
           : undefined
       }
       onChange={(picked) => onChange(taskTime(picked, clock, timeZone))}
+      onOpenChange={onOpenChange}
+      defaultOpen={defaultOpen}
       aside={
         <div className='flex w-24 flex-col'>
           <div className='relative flex min-h-0 flex-1'>

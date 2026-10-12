@@ -24,6 +24,11 @@ export interface DatePickerProps {
   // Beside the calendar (a time of day); with it, picking a day keeps the
   // popover open so the rest can be set too.
   readonly aside?: ReactNode;
+  // Told when the calendar opens and closes (an inline editor saves on
+  // close).
+  readonly onOpenChange?: (open: boolean) => void;
+  // Open from the start (an inline editor, opened by a double-click).
+  readonly defaultOpen?: boolean;
 }
 
 export function DatePicker({
@@ -38,10 +43,18 @@ export function DatePicker({
   'aria-label': ariaLabel,
   display,
   aside,
+  onOpenChange,
+  defaultOpen = false,
 }: DatePickerProps): ReactElement {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        onOpenChange?.(next);
+      }}
+    >
       <PopoverTrigger
         render={
           <Button
@@ -70,7 +83,10 @@ export function DatePicker({
           locale={locale}
           onSelect={(date) => {
             onChange(date);
-            if (!aside) setOpen(false);
+            if (!aside) {
+              setOpen(false);
+              onOpenChange?.(false);
+            }
           }}
         />
         {aside}
