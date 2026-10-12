@@ -6,6 +6,7 @@ import {
   useChatApi,
   useChatAttachments,
   useChatPanel,
+  useConversationActions,
   type ChatContextItem,
 } from '@nocobase/app-plugin-agents/client/chat';
 import type {
@@ -18,7 +19,13 @@ import {
   CHAT_ATTACHMENTS_PER_MESSAGE_MAX,
 } from '@nocobase/app-plugin-agents/shared/conversations';
 import { useCallback, useMemo, useState } from 'react';
-import { toText, useCrmText, useMetadata, type Entity } from '../api.js';
+import {
+  toText,
+  useCrmApi,
+  useCrmText,
+  useMetadata,
+  type Entity,
+} from '../api.js';
 
 // The CRM's ways into the assistant's chat from outside its panel (migration step 3):
 // whether it can answer, the models a new conversation may answer with, the
@@ -33,6 +40,9 @@ const newClientId = (): string => crypto.randomUUID();
 // Where the CRM's conversations come from (registered by the server's
 // CrmAgentsProvider).
 export const CRM_SOURCE = 'crm';
+// A question asked from the global search, answered in its dialog
+// (server/providers/crm-agents/search-answers.ts).
+export const SEARCH_SOURCE = 'crm-search';
 
 export type AgentReadiness =
   | { state: 'loading'; agent: null; reason?: undefined }
@@ -324,5 +334,58 @@ export function useDiscuss(): (pins: readonly ChatContextItem[]) => void {
       panel.focusComposer();
     },
     [panel],
+  );
+}
+
+// A question from the global search, answered in its dialog: the
+// conversation is created and the question sent, nothing opened; the
+// conversation's id comes back for the dialog to follow. Going on asking
+// keeps it (and opens the panel on it); leaving the answer discards it,
+// stopping a reply still being written first.
+export function useSearchAnswer(): {
+  start: (question: string, agent: ChatAgent) => Promise<string>;
+  keep: (conversationId: string) => Promise<void>;
+  discard: (conversationId: string, running: boolean) => void;
+} {
+  const api = useChatApi();
+  const crm = useCrmApi();
+  const panel = useChatPanel();
+  const actions = useConversationActions();
+  return useMemo(
+    () => ({
+      start: async (question, agent) => {
+        const conversation = await api.createConversation({
+          agentId: agent.id,
+          source: SEARCH_SOURCE,
+        });
+        await api.sendMessage(conversation.id, {
+          content: question,
+          clientId: newClientId(),
+        });
+        return conversation.id;
+      },
+      keep: async (conversationId) => {
+        await crm(
+          `searchAnswers/${encodeURIComponent(conversationId)}/keep`,
+          'POST',
+          {},
+        );
+        panel.openChat({ conversationId, view: 'chat' });
+        panel.focusComposer();
+      },
+      discard: (conversationId, running) => {
+        void (async () => {
+          if (running)
+            await actions.stop
+              .mutateAsync(conversationId)
+              .catch(() => undefined);
+          await crm(
+            `searchAnswers/${encodeURIComponent(conversationId)}`,
+            'DELETE',
+          );
+        })().catch(() => undefined);
+      },
+    }),
+    [api, crm, panel, actions.stop],
   );
 }

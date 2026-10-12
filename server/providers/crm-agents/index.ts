@@ -1,3 +1,4 @@
+import { SEARCH_SOURCE } from './search-answers.js';
 import type { Application } from '@nocobase/app-server/application';
 import {
   agentsAccessToken,
@@ -100,6 +101,11 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
     agents.conversations.sources.register({
       key: 'crm',
       title: { key: 'crm.agentConversationSource', ns: 'crm' },
+    });
+    // A question asked from the global search (search-answers.ts).
+    agents.conversations.sources.register({
+      key: SEARCH_SOURCE,
+      title: { key: 'crm.agentSearchSource', ns: 'crm' },
     });
   }
 

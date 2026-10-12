@@ -200,6 +200,10 @@ const wording = {
       'All {{count}} in {{list}}',
       '在{{list}}中查看全部 {{count}} 条',
     ],
+    // The AI's answer in the dialog (search-answer.tsx).
+    answering: ['The AI is answering…', 'AI 正在回答…'],
+    backToResults: ['Back to results', '返回搜索结果'],
+    continueAsking: ['Continue asking', '继续追问'],
     askAbout: ['Ask AI: {{text}}', '问 AI：{{text}}'],
     foundChip: ['Found by AI: {{title}}', 'AI 找到的：{{title}}'],
   },
@@ -1522,6 +1526,7 @@ const wording = {
     ],
   },
   agentConversationSource: ['CRM', 'CRM'],
+  agentSearchSource: ['CRM search', 'CRM 搜索'],
   // The CRM's permission model as the Permission Sets page shows it.
   authz: {
     group: ['CRM', 'CRM'],

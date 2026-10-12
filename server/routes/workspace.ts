@@ -10,6 +10,7 @@ import {
   apiValidator,
   dataResponse,
   describeRoute,
+  emptyResponse,
   listResponse,
 } from '@nocobase/app-server/router';
 import type { Row } from '@nocobase/db';
@@ -52,6 +53,10 @@ import {
   type Entity,
 } from '../providers/crm/schema.js';
 import { searchAll } from '../providers/crm/search.js';
+import {
+  discardSearchAnswer,
+  keepSearchAnswer,
+} from '../providers/crm-agents/search-answers.js';
 import { array } from '../providers/crm/service.js';
 import { resolveTitles } from '../providers/crm/titles.js';
 import { runCommand, type CrmEnv } from './context.js';
@@ -113,6 +118,7 @@ export const WORKSPACE_PATHS = [
   'attachments',
   'mailTimeline',
   'colleagues',
+  'searchAnswers',
 ];
 
 const MAX_FILE = 20 * 1024 * 1024;
@@ -931,6 +937,61 @@ export function registerWorkspaceRoutes(
       const timeline = app.container.resolve(mailTimelineToken);
       const written = await timeline.syncUser(c.get('actor').id);
       return c.json({ data: { written } });
+    },
+  );
+  // The global search's AI answers (search-answers.ts): kept when the person
+  // goes on asking, deleted when they leave the answer.
+  const SearchAnswerParams = z.object({
+    conversationId: z.string().min(1).max(64),
+  });
+  router.post(
+    '/searchAnswers/:conversationId/keep',
+    describeRoute({
+      tags: ['Workspace'],
+      summary: "Keep a search's AI answer as a conversation",
+      operationId: 'keepSearchAnswer',
+      description:
+        "The reader's own conversation asked from the global search stays, once they go on asking in it.",
+      responses: {
+        '204': emptyResponse(),
+        '401': apiErrorResponse(401),
+        '404': apiErrorResponse(404, 'No such answer of the reader.'),
+        '500': apiErrorResponse(500),
+      },
+    }),
+    apiValidator('param', SearchAnswerParams),
+    async (c) => {
+      const kept = await keepSearchAnswer(
+        service,
+        c.get('actor').id,
+        c.req.valid('param').conversationId,
+      );
+      if (!kept) throw new CrmError('notFound', 404);
+      return c.body(null, 204);
+    },
+  );
+  router.delete(
+    '/searchAnswers/:conversationId',
+    describeRoute({
+      tags: ['Workspace'],
+      summary: "Discard a search's AI answer",
+      operationId: 'discardSearchAnswer',
+      description:
+        "Deletes the reader's conversation asked from the global search that they did not go on with, and any such of theirs left behind an hour or more.",
+      responses: {
+        '204': emptyResponse(),
+        '401': apiErrorResponse(401),
+        '500': apiErrorResponse(500),
+      },
+    }),
+    apiValidator('param', SearchAnswerParams),
+    async (c) => {
+      await discardSearchAnswer(
+        service,
+        c.get('actor').id,
+        c.req.valid('param').conversationId,
+      );
+      return c.body(null, 204);
     },
   );
 }

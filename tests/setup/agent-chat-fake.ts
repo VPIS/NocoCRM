@@ -58,6 +58,10 @@ export const chatFake = {
   conversations: [] as { id: string; title: string | null; read: boolean }[],
   listFails: false,
   archived: [] as string[],
+  // The messages a conversation shows (the search's answer), and the runs
+  // stopped.
+  messages: [] as Row[],
+  stopped: [] as string[],
   reset(): void {
     this.loading = false;
     this.agents = [AI_AGENT];
@@ -75,6 +79,8 @@ export const chatFake = {
     this.conversations = [];
     this.listFails = false;
     this.archived = [];
+    this.messages = [];
+    this.stopped = [];
   },
 };
 
@@ -178,7 +184,19 @@ export function fakeChatModule(actual: Row): Row {
       fetchNextPage: () => undefined,
       refetch: () => Promise.resolve(),
     }),
+    useConversation: (id: string | null) => ({
+      data: id ? { id, agent: AI_AGENT, run: null } : undefined,
+    }),
+    useConversationMessages: () => ({ items: chatFake.messages }),
+    useAgentText: () => ({ name: (agent: { name?: string }) => agent.name }),
+    useLiveRunEvents: () => [],
     useConversationActions: () => ({
+      stop: {
+        mutateAsync: (id: string) => {
+          chatFake.stopped.push(id);
+          return Promise.resolve({});
+        },
+      },
       archive: {
         isPending: false,
         mutate: (

@@ -585,7 +585,7 @@ function MessageRow({
 // An agent's reply: the text across the conversation's width, with no
 // bubble or avatar, its headings and lists given room to read; the
 // person's own messages are the bubbles, on the right.
-function AgentReply({
+export function AgentReply({
   content,
   at,
 }: {
@@ -667,7 +667,7 @@ function UserBubble({
 }
 
 // What the agent's run is doing now, summed up in one line.
-function LiveLine({
+export function LiveLine({
   runId,
   agentName,
 }: {

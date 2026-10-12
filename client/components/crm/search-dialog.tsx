@@ -12,7 +12,7 @@ import {
   SquareCheckBig,
   type LucideIcon,
 } from 'lucide-react';
-import { useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '../ui/button.js';
 import {
@@ -38,7 +38,8 @@ import {
   type CrmRecord,
   type Entity,
 } from './api.js';
-import { useAgentReadiness, useAskAgent } from './agent-chat/ask.js';
+import { useAgentReadiness, useSearchAnswer } from './agent-chat/ask.js';
+import { SearchAnswer } from './agent-chat/search-answer.js';
 import {
   SEARCH_SHORTCUT,
   searchWords,
@@ -99,7 +100,30 @@ function SearchPanel({ search }: { search: GlobalSearch }): ReactElement {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
   const readiness = useAgentReadiness();
-  const askAgent = useAskAgent();
+  const answers = useSearchAnswer();
+  // A question asked here, answered in the dialog: kept as a conversation
+  // only when the person goes on asking, discarded when they leave it (back
+  // to the results, or the dialog closed).
+  const [answer, setAnswer] = useState<{
+    question: string;
+    id: string | null;
+    error?: unknown;
+  } | null>(null);
+  const pendingRef = useRef<string | null>(null);
+  // The latest hook value, read when the dialog closes; only an unmount
+  // discards, never a change of the hook's identity.
+  const answersRef = useRef(answers);
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+  useEffect(
+    () => () => {
+      // The dialog closed on an answer not kept.
+      if (pendingRef.current)
+        answersRef.current.discard(pendingRef.current, true);
+    },
+    [],
+  );
   const navigate = useNavigate();
   const api = useCrmApi();
   const scopeKey = useCrmScopeKey();
@@ -127,15 +151,25 @@ function SearchPanel({ search }: { search: GlobalSearch }): ReactElement {
     search.setOpen(false);
     void navigate(path);
   };
-  // Asking the assistant: the dialog closes and its panel opens on the question,
-  // in a conversation of its own.
+  // Asking the assistant: answered here, in a conversation of its own that
+  // stays only if the person goes on asking.
   const ask = (): void => {
     if (!aiReady || !readiness.agent || !typed) return;
-    search.setOpen(false);
-    search.setValue('');
-    void askAgent({ text: typed, agent: readiness.agent }).catch(
-      () => undefined,
-    );
+    const question = typed;
+    setAnswer({ question, id: null });
+    answers
+      .start(question, readiness.agent)
+      .then((id) => {
+        pendingRef.current = id;
+        setAnswer((current) =>
+          current?.question === question ? { ...current, id } : current,
+        );
+      })
+      .catch((error: unknown) =>
+        setAnswer((current) =>
+          current?.question === question ? { ...current, error } : current,
+        ),
+      );
   };
   // The selection starts on the first result (or on Ask AI when there is
   // none) and keeps a choice made with the arrows or the mouse only until
@@ -150,6 +184,28 @@ function SearchPanel({ search }: { search: GlobalSearch }): ReactElement {
     setSeen(signature);
     setSelected(undefined);
   }
+
+  if (answer)
+    return (
+      <SearchAnswer
+        conversationId={answer.id}
+        question={answer.question}
+        error={answer.error}
+        onBack={(running) => {
+          if (answer.id) answers.discard(answer.id, running);
+          pendingRef.current = null;
+          setAnswer(null);
+        }}
+        onContinue={() => {
+          if (!answer.id) return;
+          const id = answer.id;
+          pendingRef.current = null;
+          search.setOpen(false);
+          search.setValue('');
+          void answers.keep(id).catch(() => undefined);
+        }}
+      />
+    );
 
   const placeholder = toText(text('globalSearch.placeholder'));
 

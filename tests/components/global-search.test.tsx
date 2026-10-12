@@ -139,6 +139,14 @@ describe('the global search', () => {
     state.assistant = true;
     state.requests = [];
     chatFake.reset();
+    chatFake.messages = [
+      {
+        id: 'm1',
+        role: 'assistant',
+        content: { content: 'Orbit has two open leads.' },
+        createdAt: '2026-10-12T08:00:00.000Z',
+      },
+    ];
     // cmdk measures its list and scrolls the selection into view.
     vi.stubGlobal(
       'ResizeObserver',
@@ -225,13 +233,55 @@ describe('the global search', () => {
         english('globalSearch.askAbout', { text: 'orbit' }),
       ),
     );
-    // The dialog closes, and the question goes to the assistant in a
-    // conversation of its own, which its panel opens on.
-    expect(screen.queryByRole('dialog')).toBeNull();
+    // The question goes to the assistant in a conversation of the search's
+    // own, answered in the dialog; the panel opens only on going on asking,
+    // which keeps it.
     await waitFor(() => expect(chatFake.sent).toHaveLength(1));
-    expect(chatFake.created[0]).toMatchObject({ agentId: 'noco' });
+    expect(chatFake.created[0]).toMatchObject({
+      agentId: 'noco',
+      source: 'crm-search',
+    });
     expect(chatFake.sent[0]).toMatchObject({ content: 'orbit' });
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(chatFake.opened).toEqual([]);
+    expect(await screen.findByText('Orbit has two open leads.')).toBeTruthy();
+    await user.click(
+      screen.getByRole('button', {
+        name: english('globalSearch.continueAsking'),
+      }),
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() =>
+      expect(state.requests).toContain('searchAnswers/c1/keep'),
+    );
     expect(chatFake.opened).toEqual([{ conversationId: 'c1', view: 'chat' }]);
+  });
+
+  it('discards an answer left for the results', async () => {
+    const user = userEvent.setup();
+    renderSearch();
+    pressShortcut();
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByRole('combobox'), 'orbit');
+    await user.click(
+      await within(dialog).findByText(
+        english('globalSearch.askAbout', { text: 'orbit' }),
+      ),
+    );
+    await waitFor(() => expect(chatFake.sent).toHaveLength(1));
+    await user.click(
+      await screen.findByRole('button', {
+        name: english('globalSearch.backToResults'),
+      }),
+    );
+    await waitFor(() => expect(state.requests).toContain('searchAnswers/c1'));
+    expect(chatFake.opened).toEqual([]);
+    // Back on the results, the question still typed.
+    expect(
+      await screen.findByText(
+        english('globalSearch.askAbout', { text: 'orbit' }),
+      ),
+    ).toBeTruthy();
   });
 
   it('offers the AI disabled with the reason while the chat cannot start, and not at all with the assistant off', async () => {
