@@ -103,7 +103,9 @@ export async function recordOutcome(
   // What came of it is optional: a task may simply be done.
   const outcome = toText(input.outcome ?? '').trim();
   const task = await service.get(actor, 'tasks', taskId, undefined, 'update');
-  if (task.status !== 'open') throw new CrmError('taskChanged', 409);
+  // An open task, or a cancelled one done after all; one already done is
+  // refused.
+  if (task.status === 'completed') throw new CrmError('taskChanged', 409);
   await service.save(
     actor,
     'tasks',

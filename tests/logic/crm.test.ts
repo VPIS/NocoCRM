@@ -3620,6 +3620,22 @@ describe('CRM lead evaluation', () => {
           { outcome: '再记一次' },
         ),
       ).rejects.toMatchObject({ code: 'taskChanged' });
+      // A cancelled one may be done after all.
+      const dropped = await service.save(actor('rep'), 'tasks', {
+        name: 'Cancelled then done',
+        leadId: early.id,
+        status: 'cancelled',
+      });
+      await recordOutcome(
+        service,
+        { leads: doneRun.evaluator },
+        actor('rep'),
+        toText(dropped.id),
+        { outcome: '还是做了', followUp: false },
+      );
+      expect(
+        await service.get(actor('rep'), 'tasks', toText(dropped.id)),
+      ).toMatchObject({ status: 'completed', result: '还是做了' });
     } finally {
       enabled.mockRestore();
     }

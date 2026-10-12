@@ -1115,14 +1115,10 @@ export default function EntityDetail({
                 editable={editable}
                 title={title}
                 onSave={patch}
-                // Done with an open task goes through the same dialog as
-                // the button: what came of it is written then, and the AI
-                // follows up with it.
-                instead={
-                  currentStatus === 'open'
-                    ? { completed: () => setRecording(true) }
-                    : undefined
-                }
+                // Done, from open or from cancelled, goes through the same
+                // dialog as the button: what came of it is written then,
+                // and the AI follows up with it.
+                instead={{ completed: () => setRecording(true) }}
               />
             </InfoRow>
           )}
