@@ -1761,7 +1761,9 @@ function LeadCard({
               />
             </div>
           </InfoRow>
-          {['company', 'phone', 'email', 'ownerId'].map((key) => (
+          {/* Its company is in its name already ("Person / Company"); what
+              the lead said, last, read whole beside the column. */}
+          {['phone', 'email', 'ownerId', 'message'].map((key) => (
             <RelatedField key={key} entity='leads' record={lead} field={key} />
           ))}
         </>
