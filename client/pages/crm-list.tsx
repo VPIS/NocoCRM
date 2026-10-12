@@ -47,11 +47,10 @@ import {
   ChevronRight,
   X,
   User,
-  Megaphone,
   Factory,
   CalendarClock,
   Clock,
-  History,
+  UserRound,
   Ban,
   CircleCheck,
 } from 'lucide-react';
@@ -1288,52 +1287,47 @@ function EntityList({
                         on a decision (on the lead's page and Waiting on me). */}
                     <AiStateTag state={ai} work='followUp' />
                     <div className='space-y-0.5 text-xs text-muted-foreground'>
-                      {/* Same icons as the detail pages' field labels, so
-                          the card reads without headings. */}
-                      <p className='flex flex-wrap gap-x-3'>
-                        <span className='inline-flex items-center gap-1'>
-                          <User className='size-3 shrink-0' />
+                      {/* One particular a line, each led by its field's icon
+                          on the detail pages, so the card reads without
+                          headings. */}
+                      <p className='flex items-center gap-1'>
+                        <UserRound className='size-3 shrink-0' />
+                        <span className='truncate'>
                           {
                             meta?.users.find((u) => u.id === record.ownerId)
                               ?.name
                           }
                         </span>
-                        {entity === 'leads' && (
-                          <span className='inline-flex items-center gap-1'>
-                            <Megaphone className='size-3 shrink-0' />
-                            <Value
-                              record={record}
-                              field={{ key: 'source', type: 'select' }}
-                            />
-                          </span>
-                        )}
-                        {entity === 'companies' && (
-                          <span className='inline-flex items-center gap-1'>
-                            <Factory className='size-3 shrink-0' />
+                      </p>
+                      {entity === 'companies' && Boolean(record.industry) && (
+                        <p className='flex items-center gap-1'>
+                          <Factory className='size-3 shrink-0' />
+                          <span className='truncate'>
                             <Value
                               record={record}
                               field={{ key: 'industry', type: 'select' }}
                             />
                           </span>
+                        </p>
+                      )}
+                      {entity === 'opportunities' &&
+                        Boolean(record.expectedCloseAt) && (
+                          <p className='flex items-center gap-1'>
+                            <CalendarDays className='size-3 shrink-0' />
+                            <Value
+                              record={record}
+                              field={{ key: 'expectedCloseAt', type: 'date' }}
+                            />
+                          </p>
                         )}
-                        {entity === 'opportunities' &&
-                          Boolean(record.expectedCloseAt) && (
-                            <span className='inline-flex items-center gap-1'>
-                              <CalendarClock className='size-3 shrink-0' />
-                              <Value
-                                record={record}
-                                field={{ key: 'expectedCloseAt', type: 'date' }}
-                              />
-                            </span>
-                          )}
-                      </p>
-                      <p className='inline-flex items-center gap-1 tabular-nums'>
-                        <History className='size-3 shrink-0' />
+                      {/* When it last changed, under the detail pages'
+                          icon for it. */}
+                      <p className='flex items-center gap-1 tabular-nums'>
+                        <CalendarClock className='size-3 shrink-0' />
                         <Value
                           record={record}
                           field={{ key: 'updatedAt', type: 'datetime' }}
-                        />{' '}
-                        {text('updatedSuffix')}
+                        />
                       </p>
                     </div>
                   </CardContent>
@@ -1755,7 +1749,7 @@ function BoardColumn({
       className={`flex max-w-sm min-w-72 flex-1 basis-0 flex-col rounded-xl border p-3 transition-colors ${toText(
         over
           ? 'border-dashed border-primary bg-primary/5'
-          : 'border-transparent bg-muted/40',
+          : 'border-transparent bg-muted',
       )}`}
       // A non-droppable column (converted, reached only through the
       // conversion flow) never calls preventDefault, so the cursor says no

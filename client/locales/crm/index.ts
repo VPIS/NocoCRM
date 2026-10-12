@@ -1905,7 +1905,6 @@ const wording = {
   wonThisMonth: ['Won this month', '本月赢单'],
   upcoming: ['Upcoming', '待进行'],
   completedThisMonth: ['Completed this month', '本月完成'],
-  updatedSuffix: ['updated', '更新'],
   more: ['View all', '查看全部'],
   showMore: ['Show more', '展开'],
   // A record's particular, copied as it reads from the button on its row.

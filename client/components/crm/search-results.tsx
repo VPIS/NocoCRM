@@ -8,17 +8,21 @@ import {
   type CrmRecord,
   type Entity,
 } from './api.js';
+import { recordTitle } from './lookups.js';
 import { DEFAULT_TIME_ZONE } from '../../../server/providers/crm/zone-time.js';
 
 // A record as the global search lists it (search-dialog.tsx, and the AI
-// answer's found records): its name, the typed words in bold, and after it
+// answer's found records): its title as its page heads it (a lead's
+// "name / company", a deal's "company / name"), the typed words in bold,
+// and after it
 // on the same line, muted, what tells it apart. Plain text throughout: the row itself is the
 // one thing to choose, so it holds no links of its own.
 
-// The particulars on each kind's line, the ones the reader may read.
+// The particulars on each kind's line, the ones the reader may read; a
+// lead's and a deal's company are in their title.
 const DETAILS: Record<Entity, readonly string[]> = {
-  leads: ['company', 'status'],
-  opportunities: ['companyId', 'stage', 'amount'],
+  leads: ['status'],
+  opportunities: ['stage', 'amount'],
   companies: ['industry', 'city'],
   contacts: ['companyId', 'jobTitle'],
   tasks: ['dueAt', 'status'],
@@ -62,7 +66,14 @@ export function SearchRow({
     // the row ends, the name keeping at least half of it.
     <span className='flex min-w-0 flex-1 items-baseline gap-2'>
       <span className='max-w-full min-w-0 shrink truncate'>
-        <Highlight text={toText(record.name)} words={words} />
+        <Highlight
+          text={
+            entity === 'leads' || entity === 'opportunities'
+              ? recordTitle(entity, record, titles)
+              : toText(record.name)
+          }
+          words={words}
+        />
       </span>
       {detail && (
         <span className='min-w-[40%] flex-1 truncate text-xs text-muted-foreground'>
