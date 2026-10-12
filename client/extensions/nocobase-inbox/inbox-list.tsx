@@ -375,7 +375,7 @@ export function InboxList({
                   });
                 }}
                 className={cn(
-                  '-mb-px flex h-10 items-center gap-1.5 border-b-2 text-sm font-medium transition-colors outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset',
+                  '-mb-px flex h-11 items-center gap-1.5 border-b-2 text-sm font-medium transition-colors outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset',
                   selected
                     ? 'border-foreground text-foreground'
                     : 'border-transparent text-muted-foreground hover:text-foreground',
@@ -445,7 +445,7 @@ export function InboxList({
           </div>
         </div>
       ) : null}
-      <div className='min-h-0 flex-1 overflow-y-auto px-2 py-3'>
+      <div className='min-h-0 flex-1 overflow-y-auto px-4 py-3'>
         {headGroup ? null : head}
         {content}
       </div>

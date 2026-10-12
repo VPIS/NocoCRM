@@ -1053,7 +1053,11 @@ export function DetailColumns({
                 <div className='grid gap-2'>
                   <div className='flex items-start gap-2'>
                     <div className='min-w-0 flex-1'>{heading}</div>
-                    {more ? <div className='shrink-0'>{more}</div> : null}
+                    {/* Not in the inbox's pane (bare), which handles the
+                        AI's card and opens the full page for the rest. */}
+                    {more && !bare ? (
+                      <div className='shrink-0'>{more}</div>
+                    ) : null}
                   </div>
                   {/* The AI's latest suggestion leads the actions, as what
                       to do next; it draws nothing before the first. */}
@@ -3625,9 +3629,64 @@ export function HistoryFeed({
       />
       {/* Sent to an entry, room under the timeline for it to come to the
           top however few entries follow it; there is none otherwise. */}
-      {focus && loaded ? <div aria-hidden className='h-[70vh]' /> : null}
+      {focus && loaded ? <FocusRoom entryId={`feed-${focus}`} /> : null}
     </>
   );
+}
+
+// The room under a timeline sent to an entry: just what the entry needs to
+// come to the top of what scrolls it, under its scroll margin, and none once
+// the entries after it fill the view, so the pane cannot scroll on into
+// blank space (as a fixed 70vh did in the inbox, whose pane is always sent to
+// a card). Measured again as the entries settle and the view resizes.
+function FocusRoom({ entryId }: { entryId: string }): ReactElement {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const spacer = ref.current;
+    if (!spacer) return;
+    // Every column around it that may scroll: the one that does is the
+    // shortest, since an unconstrained one grows with what it holds, the
+    // room included, and would measure itself taller on every pass.
+    const scrollers: HTMLElement[] = [];
+    for (let node = spacer.parentElement; node; node = node.parentElement) {
+      const { overflowY } = getComputedStyle(node);
+      if (overflowY === 'auto' || overflowY === 'scroll') scrollers.push(node);
+    }
+    const measure = (): void => {
+      const entry = document.getElementById(entryId);
+      if (!entry) return;
+      const view = Math.min(
+        window.innerHeight,
+        ...scrollers.map((node) => node.clientHeight),
+      );
+      const margin = parseFloat(getComputedStyle(entry).scrollMarginTop) || 0;
+      // From the entry's top to the end of what scrolls, whatever the
+      // scroll: to the room, then the padding under it (a record column's
+      // room for the assistant's box) up to the column that scrolls.
+      let tail = 0;
+      for (let node = spacer.parentElement; node; node = node.parentElement) {
+        tail += parseFloat(getComputedStyle(node).paddingBottom) || 0;
+        if (node.clientHeight === view) break;
+      }
+      const below =
+        spacer.getBoundingClientRect().top -
+        entry.getBoundingClientRect().top +
+        tail;
+      // Set on the element: its own height moves neither the entry nor its
+      // top, so measuring again finds the same.
+      spacer.style.height = `${Math.max(0, Math.ceil(view - margin - below))}px`;
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    if (spacer.parentElement) observer.observe(spacer.parentElement);
+    for (const node of scrollers) observer.observe(node);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [entryId]);
+  return <div ref={ref} aria-hidden />;
 }
 
 // A name's initials, as the account menu draws them: the first letter of

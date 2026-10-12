@@ -1,5 +1,5 @@
 import { useTranslation } from '@nocobase/i18n/client';
-import { ArrowLeft, Maximize2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Maximize2 } from 'lucide-react';
 import { lazy, Suspense, useState, type ReactElement } from 'react';
 import { Link } from 'react-router';
 import { Badge } from '../ui/badge.js';
@@ -97,11 +97,10 @@ export function DecisionList({
           {/* As the inbox marks what waits, in the AI's colour. */}
           <span
             aria-hidden
-            className={`absolute top-3 bottom-3 left-0 w-0.5 rounded-full ${
+            className={`absolute top-3 bottom-3 -left-px w-0.5 rounded-full ${
               selected ? 'bg-primary' : decided ? 'bg-transparent' : 'bg-ai'
             }`}
           />
-          <Sparkles className='mt-0.5 size-4 shrink-0 text-ai' />
           {/* Two lines: what it is about (its kind's tag, then its record)
               with when, and then where it stands. */}
           <span className='grid min-w-0 flex-1 gap-1'>
@@ -235,7 +234,7 @@ export function DecisionDetail({
           the drawer's is, as tall as the list's tabs beside it, so the two
           rules meet in one line. It stays at the top while the pane
           scrolls. */}
-      <div className='sticky top-0 z-20 flex h-10 shrink-0 items-center gap-2 border-b border-border bg-card px-4'>
+      <div className='sticky top-0 z-20 flex h-11 shrink-0 items-center gap-2 border-b border-border bg-card px-4'>
         <button
           type='button'
           onClick={onBack}

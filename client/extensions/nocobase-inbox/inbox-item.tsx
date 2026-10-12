@@ -165,7 +165,7 @@ function ItemCard({
         <span
           aria-hidden='true'
           className={cn(
-            'absolute top-3 bottom-3 left-0 w-0.5 rounded-full',
+            'absolute top-3 bottom-3 -left-px w-0.5 rounded-full',
             selected
               ? 'bg-primary'
               : waiting
