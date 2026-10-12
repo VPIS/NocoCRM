@@ -12,7 +12,7 @@ export function AiStatusWord({
 }): ReactElement {
   const { text } = useCrmText();
   return (
-    <span className='flex shrink-0 items-center gap-1 text-xs text-muted-foreground'>
+    <span className='flex shrink-0 items-center gap-1 text-muted-foreground'>
       <span
         aria-hidden
         className={`size-1.5 shrink-0 rounded-full ${statusDot(status)}`}

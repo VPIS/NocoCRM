@@ -4,6 +4,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import {
   Ban,
   Building2,
+  ChevronDown,
   Clock,
   Handshake,
   Radar,
@@ -511,6 +512,24 @@ function dueGroups(
 
 const HEAD =
   'h-11 px-3 py-2.5 text-sm font-medium text-muted-foreground first:pl-4 last:pr-4';
+
+// The groups folded away, kept in this browser; a blocked or cleared
+// storage only means every group shows again.
+const FOLDED_KEY = 'nococrm:task-groups-folded';
+function readFoldedGroups(): Set<DueGroup> {
+  try {
+    const stored: unknown = JSON.parse(
+      localStorage.getItem(FOLDED_KEY) ?? '[]',
+    );
+    return new Set(
+      Array.isArray(stored)
+        ? (stored.filter((group) => typeof group === 'string') as DueGroup[])
+        : [],
+    );
+  } catch {
+    return new Set();
+  }
+}
 const CELL = 'h-11 truncate px-3 py-2.5 first:pl-4 last:pr-4';
 
 function TaskTable({
@@ -525,6 +544,19 @@ function TaskTable({
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
   const timeZone = meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
+  const [folded, setFolded] = useState(readFoldedGroups);
+  const toggleGroup = (group: DueGroup): void =>
+    setFolded((current) => {
+      const next = new Set(current);
+      if (next.has(group)) next.delete(group);
+      else next.add(group);
+      try {
+        localStorage.setItem(FOLDED_KEY, JSON.stringify([...next]));
+      } catch {
+        // Storage unavailable: folded until the page is loaded again.
+      }
+      return next;
+    });
   if (!pages.rows.length)
     return (
       <p className='rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground'>
@@ -560,20 +592,31 @@ function TaskTable({
               <Fragment key={group ?? 'all'}>
                 {group ? (
                   <TableRow className='border-border hover:bg-transparent'>
-                    <TableCell
-                      colSpan={5}
-                      className={`h-9 px-4 pt-3 pb-1.5 text-xs font-medium ${
-                        group === 'overdue'
-                          ? 'text-destructive'
-                          : 'text-muted-foreground'
-                      }`}
-                    >
-                      {text(`taskList.groups.${group}`)}
-                      <span className='ml-1.5 tabular-nums'>{rows.length}</span>
+                    <TableCell colSpan={5} className='h-9 p-0'>
+                      {/* Folds the group away and back, remembered in this
+                          browser. */}
+                      <button
+                        type='button'
+                        aria-expanded={!folded.has(group)}
+                        onClick={() => toggleGroup(group)}
+                        className={`flex h-9 w-full items-center gap-1.5 px-4 pt-1.5 text-left text-xs font-medium transition-colors hover:text-foreground ${
+                          group === 'overdue'
+                            ? 'text-destructive'
+                            : 'text-muted-foreground'
+                        }`}
+                      >
+                        <ChevronDown
+                          className={`size-3.5 shrink-0 transition-transform ${
+                            folded.has(group) ? '-rotate-90' : ''
+                          }`}
+                        />
+                        {text(`taskList.groups.${group}`)}
+                        <span className='tabular-nums'>{rows.length}</span>
+                      </button>
                     </TableCell>
                   </TableRow>
                 ) : null}
-                {rows.map((task) => (
+                {(group && folded.has(group) ? [] : rows).map((task) => (
                   <TaskTableRow
                     key={task.id}
                     task={task}
