@@ -1,3 +1,4 @@
+import { RecordDrawerContext, useRecordDrawer } from './record-drawer.js';
 import { AiStateTag } from './ai-state-tag.js';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import {
@@ -155,6 +156,7 @@ export function TaskList({
   return (
     <TaskRows
       pages={shown}
+      titlesToPage
       emptyText={text(
         shown === open ? 'taskList.nothingOpen' : 'taskList.nothingDone',
       )}
@@ -165,12 +167,15 @@ export function TaskList({
 function TaskRows({
   pages,
   emptyText,
+  titlesToPage,
 }: {
   pages: TaskPages;
   emptyText?: string;
+  titlesToPage?: boolean;
 }): ReactElement {
   return (
     <TaskCards
+      titlesToPage={titlesToPage}
       rows={pages.rows}
       titles={pages.titles}
       ai={pages.ai}
@@ -194,6 +199,7 @@ export function TaskCards({
   emptyText,
   recordId,
   ai = {},
+  titlesToPage = false,
 }: {
   rows: CrmRecord[];
   titles: Record<string, string>;
@@ -205,6 +211,9 @@ export function TaskCards({
   recordId?: string;
   // The AI's preparation of each task, at work or waiting (the task list's).
   ai?: Record<string, 'running' | 'pending'>;
+  // A task's own title opens its page even where the records it links to
+  // open in a drawer (the task list).
+  titlesToPage?: boolean;
 }): ReactElement {
   const { text } = useCrmText();
   // The open ones first, as they came (soonest first); then, under their
@@ -226,6 +235,7 @@ export function TaskCards({
           titles={titles}
           recordId={recordId}
           aiState={ai[toText(task.id)]}
+          titleToPage={titlesToPage}
         />
       ))}
     </div>
@@ -259,14 +269,17 @@ function TaskRow({
   titles,
   recordId,
   aiState,
+  titleToPage = false,
 }: {
   task: CrmRecord;
   titles: Record<string, string>;
   recordId?: string;
   aiState?: 'running' | 'pending';
+  titleToPage?: boolean;
 }): ReactElement {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
+  const drawer = useRecordDrawer();
   const api = useCrmApi();
   const refresh = useRefresh();
   const [busy, setBusy] = useState(false);
@@ -357,10 +370,15 @@ function TaskRow({
             className={`flex min-w-0 flex-1 items-center gap-2 text-sm ${finished ? 'text-muted-foreground line-through' : ''}`}
           >
             <span className='min-w-0'>
-              <RecordLink
-                entity='tasks'
-                record={{ id: toText(task.id), name: toText(task.name) }}
-              />
+              {/* Outside any drawer, where its page is what it opens. */}
+              <RecordDrawerContext.Provider
+                value={titleToPage ? undefined : drawer}
+              >
+                <RecordLink
+                  entity='tasks'
+                  record={{ id: toText(task.id), name: toText(task.name) }}
+                />
+              </RecordDrawerContext.Provider>
             </span>
             {/* The AI preparing it, or its preparation waiting, as a
                 lead's row shows its follow-up. */}

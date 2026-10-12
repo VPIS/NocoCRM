@@ -14,11 +14,18 @@ import { recordTitle } from '../components/crm/lookups.js';
 import { editsAll, fieldLabelKey, toText } from '../components/crm/api.js';
 import {
   Fragment,
+  lazy,
+  Suspense,
   useEffect,
   useRef,
   useState,
   type ReactElement,
+  type ReactNode,
 } from 'react';
+import {
+  RecordDrawerContext,
+  useRecordDrawerState,
+} from '../components/crm/record-drawer.js';
 import { useLocation } from 'react-router';
 import {
   useInfiniteQuery,
@@ -137,6 +144,36 @@ const METRIC_TITLES: Partial<Record<string, string>> = {
   'companies.stale': 'staleCompanies',
   'opportunities.stale': 'staleOpportunities',
 };
+// The records a list opens over itself (the task list's linked records), in
+// the detail page's drawer; its code loads only when a record is first
+// opened, and stays mounted after, so closing animates.
+const RecordDrawer = lazy(() =>
+  import('./crm-detail.js').then((module) => ({
+    default: module.RecordDrawer,
+  })),
+);
+function DrawerHost({ children }: { children: ReactNode }): ReactElement {
+  const drawer = useRecordDrawerState();
+  const [loaded, setLoaded] = useState(false);
+  if (drawer.opened && !loaded) setLoaded(true);
+  return (
+    <RecordDrawerContext.Provider
+      value={{ open: drawer.open, close: drawer.close, inDrawer: false }}
+    >
+      {children}
+      {loaded && (
+        <Suspense fallback={null}>
+          <RecordDrawer
+            target={drawer.opened}
+            open={drawer.open}
+            close={drawer.close}
+          />
+        </Suspense>
+      )}
+    </RecordDrawerContext.Provider>
+  );
+}
+
 export default function CrmListPage(): ReactElement {
   const location = useLocation();
   // The segment after /crm: on the way to a record page or the action
@@ -949,13 +986,16 @@ function EntityList({
         </div>
       )}
       {entity === 'tasks' && view === 'list' ? (
-        // Tasks read as a to-do list, not a table.
-        <TaskList
-          params={params}
-          status={status}
-          tab={taskTab}
-          empty={<Empty action={newButton} />}
-        />
+        // Tasks read as a to-do list, not a table; the records they concern
+        // open in a drawer over it.
+        <DrawerHost>
+          <TaskList
+            params={params}
+            status={status}
+            tab={taskTab}
+            empty={<Empty action={newButton} />}
+          />
+        </DrawerHost>
       ) : query.isLoading ? (
         <Loading />
       ) : view === 'list' ? (
