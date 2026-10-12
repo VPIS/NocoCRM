@@ -43,7 +43,7 @@ export default function InboxPage(): ReactElement {
   if (drawer.opened && !drawerLoaded) setDrawerLoaded(true);
   // Picking one of the CRM's notifications shows its record in the detail
   // pane (inbox-notice-detail.tsx); a phone, whose list and pane take turns,
-  // opens the record's page instead, at the comment's thread (?focus=).
+  // opens the record's page instead, at the comment or reply (?focus=).
   // Records the pane links to open in the drawer over the inbox.
   const selectParams = (entry: InboxEntry, params: URLSearchParams): void => {
     params.delete('open');
@@ -56,7 +56,7 @@ export default function InboxPage(): ReactElement {
     if (entry.notice?.source !== 'crm' || !data.recordId) return;
     if (!ENTITIES.has(data.entity ?? '')) return;
     if (!window.matchMedia('(max-width: 767px)').matches) return;
-    const focus = data.comment?.thread || data.comment?.id;
+    const focus = data.comment?.id || data.comment?.thread;
     const search = focus ? `?focus=${encodeURIComponent(focus)}` : '';
     setTimeout(
       () =>

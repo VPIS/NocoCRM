@@ -14,8 +14,8 @@ const ENTITIES = new Set<string>([
 
 // The inbox's detail pane while one of the CRM's notifications is picked:
 // the record it is about, as an AI suggestion's pane draws its record
-// (RecordPaneFrame), its timeline at the comment's thread for a mention or a
-// reply.
+// (RecordPaneFrame), its timeline at the comment or the reply a mention or a
+// reply notification is about.
 export function CrmNoticeDetail({
   entry,
   onBack,
@@ -29,7 +29,8 @@ export function CrmNoticeDetail({
     comment?: { id?: string; thread?: string } | null;
   };
   if (!data.recordId || !ENTITIES.has(data.entity ?? '')) return null;
-  const focus = data.comment?.thread || data.comment?.id || undefined;
+  // The comment or the reply itself, its thread unfolded around it.
+  const focus = data.comment?.id || data.comment?.thread || undefined;
   return (
     <RecordPaneFrame
       entity={data.entity as Entity}

@@ -2463,6 +2463,7 @@ function CommentThread({
   recordId,
   comment,
   replyingTo,
+  reveal,
   onReply,
   onDone,
   now,
@@ -2473,6 +2474,9 @@ function CommentThread({
   comment: Data;
   // What is being answered: the comment, or one of its replies.
   replyingTo?: string;
+  // A reply the page was sent to (?focus=, a notification): shown, the
+  // replies around it unfolded when it is among the folded ones.
+  reveal?: string;
   onReply: (id: string) => void;
   onDone: () => void;
   now: number;
@@ -2481,10 +2485,13 @@ function CommentThread({
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
   const [editing, setEditing] = useState<string>();
-  const [unfolded, setUnfolded] = useState(false);
   const replies = (
     Array.isArray(comment.replies) ? comment.replies : []
   ) as Data[];
+  const revealAt = replies.findIndex((reply) => toText(reply.id) === reveal);
+  const [unfolded, setUnfolded] = useState(
+    () => revealAt > 0 && revealAt < replies.length - 1,
+  );
   // How many between the first and the last are folded away.
   const folded = unfolded || replies.length <= 3 ? 0 : replies.length - 2;
   const shown = folded ? [replies[0], replies[replies.length - 1]] : replies;
@@ -2962,27 +2969,56 @@ export function HistoryFeed({
   // settle after it first lands (a comment measured whole or to its line,
   // files named, a card opened), which moves it; it is brought back twice
   // more as they do.
-  const loaded = more.records.some((event) => toText(event.id) === focus);
+  // The entry it is, or, for a reply, the comment whose thread holds it.
+  const focusEntry = focus
+    ? more.records.find(
+        (event) =>
+          toText(event.id) === focus ||
+          (Array.isArray(event.replies) &&
+            (event.replies as Data[]).some(
+              (reply) => toText(reply.id) === focus,
+            )),
+      )
+    : undefined;
+  const entryId = focusEntry ? toText(focusEntry.id) : undefined;
+  const loaded = entryId !== undefined;
   useEffect(() => {
-    if (!focus || !loaded) return;
+    if (!focus || !entryId) return;
     // Moved only when it is not already in sight: its first line showing,
     // not under the comment box, in the upper part of the screen. A page
     // already showing it stays still rather than shift by a little.
+    // The entry, or a reply's own message in its thread, which may be
+    // folded until the thread unfolds it (CommentThread's `reveal`).
+    const target = (): HTMLElement | null => {
+      const node = document.getElementById(`feed-${entryId}`);
+      if (!node || focus === entryId) return node;
+      return (
+        node.querySelector<HTMLElement>(
+          `[data-comment="${CSS.escape(focus)}"]`,
+        ) ?? node
+      );
+    };
     const bring = (): void => {
-      const node = document.getElementById(`feed-${focus}`);
+      const node = target();
       if (!node) return;
       const { left, top } = node.getBoundingClientRect();
       const seen =
         top >= 0 &&
         top < window.innerHeight * 0.6 &&
         node.contains(document.elementFromPoint(left + 12, top + 12));
-      if (!seen) node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // A reply into the middle of the view, its thread around it; an
+      // entry to the top, under the comment box.
+      if (!seen)
+        node.scrollIntoView({
+          behavior: 'smooth',
+          block: focus === entryId ? 'start' : 'center',
+        });
     };
     bring();
     // Lit up once as it arrives, whether it moved or was already in sight:
-    // a comment's own message, as a reply's pointer lights it, since its
-    // card's white would cover the entry's; any other entry whole.
-    const node = document.getElementById(`feed-${focus}`);
+    // a comment's or a reply's own message, as a reply's pointer lights it,
+    // since its card's white would cover the entry's; any other entry whole.
+    const node = document.getElementById(`feed-${entryId}`);
     const message = node?.querySelector(
       `[data-comment="${CSS.escape(focus)}"]`,
     );
@@ -2993,7 +3029,7 @@ export function HistoryFeed({
       window.clearTimeout(settled);
       window.clearTimeout(later);
     };
-  }, [focus, loaded, focusAt]);
+  }, [focus, entryId, focusAt]);
   useEffect(() => {
     if (focus && !loaded && more.hasMore && !more.loading) void more.loadMore();
   }, [focus, loaded, more]);
@@ -3494,6 +3530,7 @@ export function HistoryFeed({
                             entity={entity}
                             recordId={id}
                             comment={event}
+                            reveal={focus}
                             replyingTo={replyingTo}
                             onReply={setReplyingTo}
                             onDone={() => setReplyingTo(undefined)}
@@ -3633,7 +3670,7 @@ export function HistoryFeed({
       />
       {/* Sent to an entry, room under the timeline for it to come to the
           top however few entries follow it; there is none otherwise. */}
-      {focus && loaded ? <FocusRoom entryId={`feed-${focus}`} /> : null}
+      {entryId ? <FocusRoom entryId={`feed-${entryId}`} /> : null}
     </>
   );
 }
