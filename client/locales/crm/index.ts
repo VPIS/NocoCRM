@@ -1115,6 +1115,12 @@ const wording = {
   listScope: ['Whose records', '谁的记录'],
   team: ['Team', '团队'],
   search: ['Search records…', '搜索记录…'],
+  // A list page's own filtering, apart from the global search.
+  filterList: ['Filter this list', '筛选列表'],
+  filterIn: ['Filter {{list}}…', '在{{list}}中筛选…'],
+  keywordChip: ['Keyword: {{text}}', '关键词：{{text}}'],
+  clearKeyword: ['Clear the keyword {{text}}', '清除关键词 {{text}}'],
+  matchCount: ['{{count}} records', '共 {{count}} 条'],
   list: ['List', '列表'],
   board: ['Board', '看板'],
   calendar: ['Calendar', '日历'],

@@ -37,7 +37,7 @@ import {
 } from '@tanstack/react-query';
 import {
   Plus,
-  Search,
+  ListFilter,
   Download,
   Upload,
   LayoutList,
@@ -257,6 +257,26 @@ function EntityList({
     direction: 'asc' | 'desc';
   }>();
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // The keyword box; `/` brings it up, as in Linear and GitHub, while ⌘K
+  // stays the global search.
+  const keywordRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey)
+        return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.closest('input,textarea,select,[contenteditable="true"]') ||
+        document.querySelector('[role="dialog"]')
+      )
+        return;
+      event.preventDefault();
+      setFiltersOpen(true);
+      requestAnimationFrame(() => keywordRef.current?.focus());
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
   // A statistic card clicked into a filter: the key names the chip, the ids
   // are what the server restricts the list to.
   // A metric filter: undefined until the reader touches it, null once
@@ -771,14 +791,17 @@ function EntityList({
           </TabsList>
         </Tabs>
       )}
+      {/* Filtering this list, not the global search (⌘K): the keyword
+          among the other conditions, brought up by `/` as well. */}
       <Button
         variant={filtersOpen || filtering ? 'secondary' : 'ghost'}
         size='icon'
-        aria-label={text('search')}
+        aria-label={text('filterList')}
+        title={`${toText(text('filterList'))} · /`}
         aria-expanded={filtersOpen}
         onClick={() => setFiltersOpen((v) => !v)}
       >
-        <Search />
+        <ListFilter />
       </Button>
       {/* Tasks are not imported or exported. */}
       {entity !== 'tasks' && (
@@ -877,16 +900,41 @@ function EntityList({
           </Button>
         </div>
       )}
+      {/* The keyword as a condition of its own, cleared from its chip, and
+          how many records the conditions leave. */}
+      {search ? (
+        <div className='flex flex-wrap items-center gap-2 text-sm'>
+          <Button
+            variant='secondary'
+            size='sm'
+            aria-label={toText(text('clearKeyword', { text: search }))}
+            onClick={() => change(setSearch)('')}
+          >
+            {text('keywordChip', { text: search })}
+            <X className='size-3.5' />
+          </Button>
+          {entity !== 'tasks' && query.data ? (
+            <span className='text-muted-foreground tabular-nums'>
+              {text('matchCount', { count: query.data.meta.total })}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       {/* Filters live under the toolbar and open on demand; they stay open
           whenever one is set so an active filter is never hidden. */}
       {(filtersOpen || filtering) && (
         <div className='flex flex-wrap items-center gap-3'>
           <div className='relative min-w-52 flex-1'>
-            <Search className='absolute top-2 left-3 size-4 text-muted-foreground' />
+            <ListFilter className='absolute top-2 left-3 size-4 text-muted-foreground' />
             <Input
+              ref={keywordRef}
               className='pl-9'
-              aria-label={text('search')}
-              placeholder={text('search')}
+              aria-label={text('filterIn', {
+                list: text(`entities.${toText(entity)}`),
+              })}
+              placeholder={toText(
+                text('filterIn', { list: text(`entities.${toText(entity)}`) }),
+              )}
               value={search}
               onChange={(e) => change(setSearch)(e.target.value)}
             />
