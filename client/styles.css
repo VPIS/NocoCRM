@@ -166,11 +166,15 @@
 @keyframes crm-flash {
   0%,
   65% {
-    background-color: var(--sidebar);
+    background-color: var(--crm-flash-color);
   }
 }
 .crm-flash {
+  --crm-flash-color: color-mix(in oklch, var(--info) 12%, transparent);
   animation: crm-flash 3s ease-out;
+}
+.crm-flash-ai {
+  --crm-flash-color: color-mix(in oklch, var(--ai) 12%, transparent);
 }
 
 /* Every scrollbar, across and down: a thin rounded bar in a faint grey on no

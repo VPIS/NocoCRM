@@ -2981,6 +2981,9 @@ export function HistoryFeed({
       )
     : undefined;
   const entryId = focusEntry ? toText(focusEntry.id) : undefined;
+  // The AI's own work, lit in its tint.
+  const focusTone =
+    toText(focusEntry?.source) === 'ai' ? ('ai' as const) : undefined;
   const loaded = entryId !== undefined;
   useEffect(() => {
     if (!focus || !entryId) return;
@@ -3022,14 +3025,14 @@ export function HistoryFeed({
     const message = node?.querySelector(
       `[data-comment="${CSS.escape(focus)}"]`,
     );
-    if (node) flash([message ?? node]);
+    if (node) flash([message ?? node], focusTone);
     const settled = window.setTimeout(bring, 400);
     const later = window.setTimeout(bring, 1200);
     return () => {
       window.clearTimeout(settled);
       window.clearTimeout(later);
     };
-  }, [focus, entryId, focusAt]);
+  }, [focus, entryId, focusTone, focusAt]);
   useEffect(() => {
     if (focus && !loaded && more.hasMore && !more.loading) void more.loadMore();
   }, [focus, loaded, more]);
@@ -3220,311 +3223,316 @@ export function HistoryFeed({
                               'pb-3'
                         }`}
                       >
+                        {/* A comment's whole message, its line, its text
+                            and its files, as one block, as a reply's is: what
+                            a jump to it lights up. */}
                         <div
                           data-comment={comment ? key : undefined}
-                          className='group/comment relative flex min-h-[26px] items-center gap-3 text-sm'
+                          className={
+                            comment ? '-mx-1 rounded-md px-1' : undefined
+                          }
                         >
-                          {threaded ? <ThreadLine part='below' /> : null}
-                          {/* An entry is one line, never wrapped: what is
+                          <div className='group/comment relative flex min-h-[26px] items-center gap-3 text-sm'>
+                            {threaded ? <ThreadLine part='below' /> : null}
+                            {/* An entry is one line, never wrapped: what is
                               long (a change's values, a comment's excerpt, a
                               verdict) gives way instead, cut where the line
                               ends. */}
-                          {/* Clipped at its end: on a narrow column (a
+                            {/* Clipped at its end: on a narrow column (a
                               drawer's) nothing runs into the time. */}
-                          <span className='flex min-w-0 flex-1 items-center gap-x-1.5 overflow-hidden whitespace-nowrap'>
-                            {/* A comment's author by their initials, as
+                            <span className='flex min-w-0 flex-1 items-center gap-x-1.5 overflow-hidden whitespace-nowrap'>
+                              {/* A comment's author by their initials, as
                                 each reply's under it. */}
-                            {comment ? (
-                              <CommentAvatar
-                                name={
-                                  meta?.users.find(
-                                    (u) => u.id === event.actorId,
-                                  )?.name ?? ''
-                                }
-                                className='mr-0.5'
-                              />
-                            ) : null}
-                            {/* Who: a person, or "AI" for its own work,
-                                in bold. */}
-                            <span className='shrink-0 font-semibold text-foreground'>
-                              {ai
-                                ? text('feed.ai')
-                                : meta?.users.find(
-                                    (u) => u.id === event.actorId,
-                                  )?.name}
-                            </span>
-                            {taskEvent ? (
-                              <TaskEvent
-                                event={event}
-                                open={open}
-                                onToggle={() => toggle(key)}
-                                names={allNames}
-                                fileNames={fileNames}
-                                resultLong={longNotes.has(key)}
-                                onResultLong={(long) => markLong(key, long)}
-                              />
-                            ) : approvalEvent ? (
-                              <ApprovalEvent event={event} />
-                            ) : event.action === 'mail' ? (
-                              <MailEvent event={event} onOpen={onOpenMail} />
-                            ) : (
-                              // Empty for files alone, whose "added" or
-                              // "removed" follows: hidden, so no gap doubles.
-                              // The verb gives way last, only once the values
-                              // have, so the tags after it stay in view on a
-                              // narrow column; clipped, not ellipsed, since a
-                              // squeeze of a fraction of a pixel would
-                              // otherwise end it in an ellipsis.
-                              <span className='min-w-0 shrink-[0.001] overflow-hidden text-clip text-muted-foreground empty:hidden'>
-                                {ai
-                                  ? // While it runs, and if it never finished,
-                                    // the line says so rather than that a
-                                    // suggestion was given.
-                                    text(
-                                      event.aiStatus === 'running'
-                                        ? review
-                                          ? 'feed.reviewing'
-                                          : prep
-                                            ? 'feed.preparing'
-                                            : 'feed.evaluating'
-                                        : event.aiStatus === 'failed'
-                                          ? review
-                                            ? 'feed.reviewFailed'
-                                            : prep
-                                              ? 'feed.prepareFailed'
-                                              : 'feed.evaluationFailed'
-                                          : review
-                                            ? 'feed.reviewed'
-                                            : prep
-                                              ? 'feed.prepared'
-                                              : 'feed.evaluated',
-                                    )
-                                  : // A comment is its text, right after who
-                                    // wrote it, with no word before it.
-                                    filesOnly(event) || comment
-                                    ? ''
-                                    : // A status or stage move reads as any
-                                      // other field's update.
-                                      text(
-                                        `feed.did.${
-                                          moves.has(toText(event.action))
-                                            ? 'updated'
-                                            : toText(event.action)
-                                        }`,
-                                        {
-                                          defaultValue: text(
-                                            `events.${toText(event.action)}`,
-                                          ),
-                                        },
-                                      )}
-                              </span>
-                            )}
-                            {/* A status or stage move, drawn as the
-                                field changes below it are. */}
-                            {event.fromValue &&
-                            statusKey &&
-                            !taskEvent &&
-                            !approvalEvent ? (
-                              // In Chinese the field's name follows the verb
-                              // with no space ("更新状态").
-                              <span
-                                className={`inline-flex items-baseline gap-1.5 ${
-                                  language.startsWith('zh') ? '-ml-1.5' : ''
-                                }`}
-                              >
-                                <span className='text-muted-foreground'>
-                                  {text(fieldLabelKey(entity, statusKey))}
-                                </span>
-                                {optionText(event.fromValue)}
-                                <span aria-hidden>→</span>
-                                {optionText(event.toValue)}
-                              </span>
-                            ) : null}
-                            {ai && event.aiStatus === 'running' ? (
-                              <Spinner className='size-3.5 shrink-0 text-ai' />
-                            ) : review && event.aiStatus !== 'failed' ? (
-                              <ReviewFeedEntry entry={event} />
-                            ) : prep && event.aiStatus !== 'failed' ? (
-                              <PrepFeedEntry entry={event} />
-                            ) : ai && event.aiStatus !== 'failed' ? (
-                              <EvaluationFeedEntry entry={event} />
-                            ) : null}
-                            {/* A creation says only that it happened: the
-                                values it started with are the record's own
-                                first state. */}
-                            {!ai &&
-                              !comment &&
-                              event.action !== 'created' &&
-                              !toText(event.action).startsWith('comment') &&
-                              event.action !== 'aiRevise' &&
-                              event.action !== 'merged' &&
-                              event.action !== 'mail' &&
-                              !taskEvent &&
-                              !approvalEvent && (
-                                <HistoryChanges
-                                  entity={entity}
-                                  record={record}
-                                  changes={shownChanges}
-                                  previous={event.previous}
-                                  movedField={
-                                    event.fromValue ? statusKey : undefined
+                              {comment ? (
+                                <CommentAvatar
+                                  name={
+                                    meta?.users.find(
+                                      (u) => u.id === event.actorId,
+                                    )?.name ?? ''
                                   }
+                                  className='mr-0.5'
+                                />
+                              ) : null}
+                              {/* Who: a person, or "AI" for its own work,
+                                in bold. */}
+                              <span className='shrink-0 font-semibold text-foreground'>
+                                {ai
+                                  ? text('feed.ai')
+                                  : meta?.users.find(
+                                      (u) => u.id === event.actorId,
+                                    )?.name}
+                              </span>
+                              {taskEvent ? (
+                                <TaskEvent
+                                  event={event}
+                                  open={open}
+                                  onToggle={() => toggle(key)}
                                   names={allNames}
                                   fileNames={fileNames}
+                                  resultLong={longNotes.has(key)}
+                                  onResultLong={(long) => markLong(key, long)}
+                                />
+                              ) : approvalEvent ? (
+                                <ApprovalEvent event={event} />
+                              ) : event.action === 'mail' ? (
+                                <MailEvent event={event} onOpen={onOpenMail} />
+                              ) : (
+                                // Empty for files alone, whose "added" or
+                                // "removed" follows: hidden, so no gap doubles.
+                                // The verb gives way last, only once the values
+                                // have, so the tags after it stay in view on a
+                                // narrow column; clipped, not ellipsed, since a
+                                // squeeze of a fraction of a pixel would
+                                // otherwise end it in an ellipsis.
+                                <span className='min-w-0 shrink-[0.001] overflow-hidden text-clip text-muted-foreground empty:hidden'>
+                                  {ai
+                                    ? // While it runs, and if it never finished,
+                                      // the line says so rather than that a
+                                      // suggestion was given.
+                                      text(
+                                        event.aiStatus === 'running'
+                                          ? review
+                                            ? 'feed.reviewing'
+                                            : prep
+                                              ? 'feed.preparing'
+                                              : 'feed.evaluating'
+                                          : event.aiStatus === 'failed'
+                                            ? review
+                                              ? 'feed.reviewFailed'
+                                              : prep
+                                                ? 'feed.prepareFailed'
+                                                : 'feed.evaluationFailed'
+                                            : review
+                                              ? 'feed.reviewed'
+                                              : prep
+                                                ? 'feed.prepared'
+                                                : 'feed.evaluated',
+                                      )
+                                    : // A comment is its text, right after who
+                                      // wrote it, with no word before it.
+                                      filesOnly(event) || comment
+                                      ? ''
+                                      : // A status or stage move reads as any
+                                        // other field's update.
+                                        text(
+                                          `feed.did.${
+                                            moves.has(toText(event.action))
+                                              ? 'updated'
+                                              : toText(event.action)
+                                          }`,
+                                          {
+                                            defaultValue: text(
+                                              `events.${toText(event.action)}`,
+                                            ),
+                                          },
+                                        )}
+                                </span>
+                              )}
+                              {/* A status or stage move, drawn as the
+                                field changes below it are. */}
+                              {event.fromValue &&
+                              statusKey &&
+                              !taskEvent &&
+                              !approvalEvent ? (
+                                // In Chinese the field's name follows the verb
+                                // with no space ("更新状态").
+                                <span
+                                  className={`inline-flex items-baseline gap-1.5 ${
+                                    language.startsWith('zh') ? '-ml-1.5' : ''
+                                  }`}
+                                >
+                                  <span className='text-muted-foreground'>
+                                    {text(fieldLabelKey(entity, statusKey))}
+                                  </span>
+                                  {optionText(event.fromValue)}
+                                  <span aria-hidden>→</span>
+                                  {optionText(event.toValue)}
+                                </span>
+                              ) : null}
+                              {ai && event.aiStatus === 'running' ? (
+                                <Spinner className='size-3.5 shrink-0 text-ai' />
+                              ) : review && event.aiStatus !== 'failed' ? (
+                                <ReviewFeedEntry entry={event} />
+                              ) : prep && event.aiStatus !== 'failed' ? (
+                                <PrepFeedEntry entry={event} />
+                              ) : ai && event.aiStatus !== 'failed' ? (
+                                <EvaluationFeedEntry entry={event} />
+                              ) : null}
+                              {/* A creation says only that it happened: the
+                                values it started with are the record's own
+                                first state. */}
+                              {!ai &&
+                                !comment &&
+                                event.action !== 'created' &&
+                                !toText(event.action).startsWith('comment') &&
+                                event.action !== 'aiRevise' &&
+                                event.action !== 'merged' &&
+                                event.action !== 'mail' &&
+                                !taskEvent &&
+                                !approvalEvent && (
+                                  <HistoryChanges
+                                    entity={entity}
+                                    record={record}
+                                    changes={shownChanges}
+                                    previous={event.previous}
+                                    movedField={
+                                      event.fromValue ? statusKey : undefined
+                                    }
+                                    names={allNames}
+                                    fileNames={fileNames}
+                                    open={open}
+                                    onToggle={() => toggle(key)}
+                                  />
+                                )}
+                              {/* What the person asked the AI to change, in
+                                their words, cut where the line ends. */}
+                              {event.action === 'merged' ? (
+                                <MergedLead changes={event.changes} />
+                              ) : null}
+                              {/* A comment that fits reads on its line right
+                                after who wrote it; one of several lines, or
+                                longer than the line, reads whole below it,
+                                as Clarify shows a comment. */}
+                              {comment && commentGone(event) ? (
+                                <span className='text-muted-foreground'>
+                                  {text('comments.deleted')}
+                                </span>
+                              ) : comment ? (
+                                <CommentExcerpt
+                                  value={commentText(event)}
+                                  mentions={
+                                    (event.changes as Data | undefined)
+                                      ?.mentions
+                                  }
+                                  long={longNotes.has(key)}
+                                  onLong={(long) => markLong(key, long)}
+                                />
+                              ) : null}
+                              {event.action === 'aiRevise' ? (
+                                <span className='min-w-0 truncate'>
+                                  「{commentText(event).replace(/\s+/g, ' ')}」
+                                </span>
+                              ) : null}
+                              {/* The AI's part in a person's change, last on the
+                                line: proposed
+                                in the chat or an evaluation, or, for a lead,
+                                organised from pasted text. */}
+                              {event.source === 'assistant' && (
+                                <Badge variant='ai'>
+                                  {text('feed.aiProposed')}
+                                </Badge>
+                              )}
+                              {event.source === 'capture' && (
+                                <Badge variant='ai'>
+                                  {text('feed.aiCaptured')}
+                                </Badge>
+                              )}
+                              {/* An AI card opens from its line (not while
+                                it runs: there is nothing to open). */}
+                              {ai && event.aiStatus !== 'running' && (
+                                <FoldToggle
                                   open={open}
                                   onToggle={() => toggle(key)}
                                 />
                               )}
-                            {/* What the person asked the AI to change, in
-                                their words, cut where the line ends. */}
-                            {event.action === 'merged' ? (
-                              <MergedLead changes={event.changes} />
-                            ) : null}
-                            {/* A comment that fits reads on its line right
-                                after who wrote it; one of several lines, or
-                                longer than the line, reads whole below it,
-                                as Clarify shows a comment. */}
-                            {comment && commentGone(event) ? (
-                              <span className='text-muted-foreground'>
-                                {text('comments.deleted')}
-                              </span>
-                            ) : comment ? (
-                              <CommentExcerpt
-                                value={commentText(event)}
-                                mentions={
-                                  (event.changes as Data | undefined)?.mentions
-                                }
-                                long={longNotes.has(key)}
-                                onLong={(long) => markLong(key, long)}
-                              />
-                            ) : null}
-                            {event.action === 'aiRevise' ? (
-                              <span className='min-w-0 truncate'>
-                                「{commentText(event).replace(/\s+/g, ' ')}」
-                              </span>
-                            ) : null}
-                            {/* The AI's part in a person's change, last on the
-                                line: proposed
-                                in the chat or an evaluation, or, for a lead,
-                                organised from pasted text. */}
-                            {event.source === 'assistant' && (
-                              <Badge variant='ai'>
-                                {text('feed.aiProposed')}
-                              </Badge>
-                            )}
-                            {event.source === 'capture' && (
-                              <Badge variant='ai'>
-                                {text('feed.aiCaptured')}
-                              </Badge>
-                            )}
-                            {/* An AI card opens from its line (not while
-                                it runs: there is nothing to open). */}
-                            {ai && event.aiStatus !== 'running' && (
-                              <FoldToggle
-                                open={open}
-                                onToggle={() => toggle(key)}
-                              />
-                            )}
-                          </span>
-                          {/* Reply for anyone; its author's edit and delete,
+                            </span>
+                            {/* Reply for anyone; its author's edit and delete,
                               on hover. */}
-                          {comment ? (
-                            <CommentActions
-                              id={key}
-                              onReply={() => setReplyingTo(key)}
-                              onEdit={
-                                event.actorId === meta?.userId &&
-                                !commentGone(event)
-                                  ? () => setEditingNote(key)
-                                  : undefined
-                              }
-                            />
-                          ) : null}
-                          <time
-                            dateTime={toText(event.createdAt)}
-                            // How long ago, the full time on hover.
-                            title={localDate(
-                              event.createdAt,
-                              language,
-                              timeZone,
-                            )}
-                            // On the entry's first line, however far the
-                            // line unfolds below it.
-                            className='shrink-0 self-start text-xs leading-[26px] text-muted-foreground/80 tabular-nums'
-                          >
-                            {/* An edited comment says so right before its
-                                time, the edit's time on hover. */}
-                            {comment && event.editedAt ? (
-                              <span
-                                title={localDate(
-                                  event.editedAt,
-                                  language,
-                                  timeZone,
-                                )}
-                              >
-                                {text('comments.edited')} ·{' '}
-                              </span>
+                            {comment ? (
+                              <CommentActions
+                                id={key}
+                                onReply={() => setReplyingTo(key)}
+                                onEdit={
+                                  event.actorId === meta?.userId &&
+                                  !commentGone(event)
+                                    ? () => setEditingNote(key)
+                                    : undefined
+                                }
+                              />
                             ) : null}
-                            {relativeTime(
-                              event.createdAt,
-                              language,
-                              now,
-                              text('justNow'),
-                            )}
-                          </time>
-                        </div>
-                        {closingText ? (
-                          <div className='mt-0.5 text-sm'>
-                            <FoldingText value={closingText} />
-                          </div>
-                        ) : null}
-                        {/* A task's result too long for its line, whole
-                            below it as a comment's text is. */}
-                        {taskEvent &&
-                        longNotes.has(key) &&
-                        toText((event.task as Data | undefined)?.result) ? (
-                          <div className='mt-0.5 text-sm'>
-                            <FoldingText
-                              value={toText((event.task as Data).result)}
-                            />
-                          </div>
-                        ) : null}
-                        {comment && editingNote === key ? (
-                          <CommentEditor
-                            comment={event}
-                            onDone={() => setEditingNote(undefined)}
-                          />
-                        ) : comment &&
-                          longNotes.has(key) &&
-                          !commentGone(event) ? (
-                          // Too long for its line, whole under who wrote it,
-                          // in line with the replies' text.
-                          <div
-                            data-comment={key}
-                            className='relative pt-0.5 pl-8 text-sm'
-                          >
-                            {threaded ? <ThreadLine /> : null}
-                            {/* As the original message: five lines fading
-                                out, a click unfolding them. */}
-                            <FoldingText
-                              value={markdownMentions(
-                                commentText(event),
-                                (event.changes as Data | undefined)?.mentions,
-                                meta?.users ?? [],
+                            <time
+                              dateTime={toText(event.createdAt)}
+                              // How long ago, the full time on hover.
+                              title={localDate(
+                                event.createdAt,
+                                language,
+                                timeZone,
                               )}
+                              // On the entry's first line, however far the
+                              // line unfolds below it.
+                              className='shrink-0 self-start text-xs leading-[26px] text-muted-foreground/80 tabular-nums'
+                            >
+                              {/* An edited comment says so right before its
+                                time, the edit's time on hover. */}
+                              {comment && event.editedAt ? (
+                                <span
+                                  title={localDate(
+                                    event.editedAt,
+                                    language,
+                                    timeZone,
+                                  )}
+                                >
+                                  {text('comments.edited')} ·{' '}
+                                </span>
+                              ) : null}
+                              {relativeTime(
+                                event.createdAt,
+                                language,
+                                now,
+                                text('justNow'),
+                              )}
+                            </time>
+                          </div>
+                          {closingText ? (
+                            <div className='mt-0.5 text-sm'>
+                              <FoldingText value={closingText} />
+                            </div>
+                          ) : null}
+                          {/* A task's result too long for its line, whole
+                            below it as a comment's text is. */}
+                          {taskEvent &&
+                          longNotes.has(key) &&
+                          toText((event.task as Data | undefined)?.result) ? (
+                            <div className='mt-0.5 text-sm'>
+                              <FoldingText
+                                value={toText((event.task as Data).result)}
+                              />
+                            </div>
+                          ) : null}
+                          {comment && editingNote === key ? (
+                            <CommentEditor
+                              comment={event}
+                              onDone={() => setEditingNote(undefined)}
                             />
-                          </div>
-                        ) : null}
-                        {/* Its files, under its text, in line with it. */}
-                        {comment &&
-                        editingNote !== key &&
-                        !commentGone(event) &&
-                        commentFilesOf(event).length ? (
-                          <div data-comment={key} className='relative pl-8'>
-                            {threaded ? <ThreadLine /> : null}
-                            <CommentFiles ids={commentFilesOf(event)} />
-                          </div>
-                        ) : null}
+                          ) : comment &&
+                            longNotes.has(key) &&
+                            !commentGone(event) ? (
+                            // Too long for its line, whole under who wrote it,
+                            // in line with the replies' text.
+                            <div className='relative pt-0.5 pl-8 text-sm'>
+                              {threaded ? <ThreadLine /> : null}
+                              {/* As the original message: five lines fading
+                                out, a click unfolding them. */}
+                              <FoldingText
+                                value={markdownMentions(
+                                  commentText(event),
+                                  (event.changes as Data | undefined)?.mentions,
+                                  meta?.users ?? [],
+                                )}
+                              />
+                            </div>
+                          ) : null}
+                          {/* Its files, under its text, in line with it. */}
+                          {comment &&
+                          editingNote !== key &&
+                          !commentGone(event) &&
+                          commentFilesOf(event).length ? (
+                            <div className='relative pl-8'>
+                              {threaded ? <ThreadLine /> : null}
+                              <CommentFiles ids={commentFilesOf(event)} />
+                            </div>
+                          ) : null}
+                        </div>
                         {comment ? (
                           <CommentThread
                             entity={entity}
