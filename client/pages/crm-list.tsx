@@ -923,7 +923,8 @@ function EntityList({
       {/* Filters live under the toolbar and open on demand; they stay open
           whenever one is set so an active filter is never hidden. */}
       {(filtersOpen || filtering) && (
-        <div className='flex flex-wrap items-center gap-3'>
+        // The fields on the card's white, set off from the page's grey.
+        <div className='flex flex-wrap items-center gap-3 [&_[data-slot=input]]:bg-card [&_[data-slot=select-trigger]]:bg-card'>
           <div className='relative min-w-52 flex-1'>
             <ListFilter className='absolute top-2 left-3 size-4 text-muted-foreground' />
             <Input
