@@ -562,7 +562,8 @@ function EntityList({
       className={`rounded-lg ${toText(
         large
           ? 'border border-border bg-card p-3 text-sm shadow-xs'
-          : 'bg-muted p-2 text-xs',
+          : // On the menu's own grey, in the white of the month's grid.
+            'bg-sidebar p-2 text-xs',
       )} ${
         // Done or cancelled: struck through and faded, marked by its kind,
         // so what is still to do stands out on the day.
