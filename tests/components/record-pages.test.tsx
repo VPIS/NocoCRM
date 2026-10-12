@@ -349,7 +349,7 @@ describe('the approval page', () => {
   it('gives the approver the decision and the marker, created and updated among its details', () => {
     renderPage();
     expect(screen.getByRole('button', { name: /通过/ })).toBeTruthy();
-    expect(screen.getByText('待你审批')).toBeTruthy();
+    expect(screen.getByText('待我审批')).toBeTruthy();
     // When it was created and last changed close its details; the rest of
     // its times are the timeline's.
     for (const time of ['创建时间', '更新时间'])
@@ -412,7 +412,7 @@ describe('the approval page', () => {
   it('shows the applicant no marker', () => {
     state.userId = 'applicant';
     renderPage();
-    expect(screen.queryByText('待你审批')).toBeNull();
+    expect(screen.queryByText('待我审批')).toBeNull();
   });
 
   it('tells the decision and its comment in the timeline', () => {

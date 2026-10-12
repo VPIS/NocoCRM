@@ -169,6 +169,9 @@ function filterShape(entity: Entity): Record<string, z.ZodType> {
     ...(entity === 'opportunities'
       ? { contactId: id('With this contact among its people.') }
       : {}),
+    ...(entity === 'approvals'
+      ? { involvedId: id('Asked for or decided by this user.') }
+      : {}),
     ...(entity === 'contacts'
       ? {
           // Empty is every contact: the list page sends its filters

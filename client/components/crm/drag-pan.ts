@@ -6,7 +6,7 @@ import { useCallback, useRef, type PointerEvent } from 'react';
 // Cards keep their own drag (to another column), and a column's own
 // scrolling, up and down, is untouched.
 const SKIP =
-  'a, button, input, textarea, select, label, [role="button"], [draggable="true"], [contenteditable="true"]';
+  'a, button, input, textarea, select, label, [role="button"], [draggable="true"], [contenteditable="true"], [data-board-card]';
 
 export function useDragPan(): {
   onPointerDown: (event: PointerEvent<HTMLElement>) => void;

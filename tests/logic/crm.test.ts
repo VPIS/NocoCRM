@@ -1185,6 +1185,17 @@ describe('CRM API security and domain rules', () => {
       approverId: 'manager',
     });
     await service.approvalAction(actor('rep'), approval.id, 'submit');
+    // Mine is the approvals I asked for or decide.
+    const involving = async (involvedId: string) =>
+      (
+        await service.list(actor('admin'), 'approvals', {
+          involvedId,
+          pageSize: 500,
+        })
+      ).data.map((r) => r.id);
+    expect(await involving('rep')).toContain(approval.id);
+    expect(await involving('manager')).toContain(approval.id);
+    expect(await involving('admin')).not.toContain(approval.id);
     await expect(
       service.save(
         actor('rep'),

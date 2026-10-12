@@ -1110,7 +1110,6 @@ const wording = {
   // A task I own or take part in.
   involved: ['Mine', '我的'],
   // An approval the reader decides.
-  approving: ['To decide', '我审批的'],
   // The header's control choosing whose records a list page shows.
   listScope: ['Whose records', '谁的记录'],
   team: ['Team', '团队'],
@@ -1475,7 +1474,7 @@ const wording = {
   staleCompanies: ['Quiet companies', '公司久未联系'],
   amount: ['Amount', '金额'],
   count: ['Count', '数量'],
-  pendingApprovals: ['Waiting for your approval', '待你审批'],
+  pendingApprovals: ['Waiting for my approval', '待我审批'],
   pendingApprovalsTeam: ['Pending approvals', '待审批'],
   risks: ['Needs attention', '需要关注'],
   funnel: ['Opportunity funnel', '商机漏斗'],
@@ -1860,7 +1859,7 @@ const wording = {
   onThisOpportunity: ['On this opportunity', '参与此商机'],
   otherCompanyContacts: ['Other contacts at the company', '公司的其他联系人'],
   addToOpportunity: ['Add', '加入'],
-  yourDecision: ['Waiting for you', '待你审批'],
+  yourDecision: ['Waiting for me', '待我审批'],
   youApprove: ['You are the approver', '你是审批人'],
   joinOpportunityTitle: [
     'Add {{name}} to this opportunity',

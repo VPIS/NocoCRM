@@ -65,7 +65,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from '../components/ui/table.js';
@@ -78,7 +77,6 @@ import {
   type ListData,
   type Data,
   useCrmQuery,
-  money,
   localTime,
 } from '../components/crm/api.js';
 import {
@@ -121,14 +119,15 @@ function shiftMonth(month: string, by: number): string {
 
 // The choices of whose records a list page shows (the header's segmented
 // control); objects not listed have none.
-type Scope = 'all' | 'mine' | 'involved' | 'approving';
+type Scope = 'all' | 'mine' | 'involved';
 const scopes: Partial<Record<string, readonly Scope[]>> = {
   leads: ['all', 'mine'],
   opportunities: ['all', 'mine'],
   companies: ['all', 'mine'],
   contacts: ['all', 'mine'],
-  approvals: ['all', 'mine', 'approving'],
-  // A task is mine whether I own it or take part in it.
+  // An approval is mine whether I asked for it or decide it, a task
+  // whether I own it or take part in it.
+  approvals: ['all', 'involved'],
   tasks: ['all', 'involved'],
 };
 
@@ -235,12 +234,13 @@ function EntityList({
   const [source, setSource] = useState('');
   const [employed, setEmployed] = useState('');
   const [topic, setTopic] = useState('');
-  // Whose records: everyone's or the ones I own, and for tasks also the
-  // ones I take part in, for approvals the ones I decide.
-  // A task list opens on the reader's own (owned or taken part in);
-  // every other list on everyone's.
+  // Whose records: everyone's or the ones I own; for tasks also the ones
+  // I take part in, for approvals the ones I decide.
+  // The task and approval lists open on the reader's own (a task owned
+  // or taken part in, an approval asked for or decided); every other list
+  // on everyone's.
   const [scope, setScope] = useState<Scope>(
-    entity === 'tasks' ? 'involved' : 'all',
+    entity === 'tasks' || entity === 'approvals' ? 'involved' : 'all',
   );
   const [approverId, setApproverId] = useState('');
   // A task's: one of its participants.
@@ -451,7 +451,7 @@ function EntityList({
     source,
     employed,
     topic,
-    approverId: whose === 'approving' ? toText(meta?.userId) : approverId,
+    approverId,
     participantId: entity === 'tasks' ? participantId : '',
     involvedId: whose === 'involved' ? toText(meta?.userId) : '',
     page: toText(page),
@@ -636,24 +636,15 @@ function EntityList({
   // A lead's name cell carries "name / company", so the company column would
   // repeat it.
   const columns =
-    definition?.columns
-      .filter(
-        (key) =>
-          read &&
-          (read.fields === '*' || read.fields.includes(key)) &&
-          !(entity === 'leads' && key === 'company'),
-      )
-      // An approval is judged against the deal's size, so the amount of the
-      // opportunity it belongs to follows that column.
-      .flatMap((key) =>
-        entity === 'approvals' && key === 'opportunityId'
-          ? [key, 'opportunityAmount']
-          : [key],
-      ) ?? [];
+    definition?.columns.filter(
+      (key) =>
+        read &&
+        (read.fields === '*' || read.fields.includes(key)) &&
+        !(entity === 'leads' && key === 'company'),
+    ) ?? [];
   // A header click sorts by its column: numbers and dates start from the
   // largest and latest, the rest from A; a second click reverses it and a
-  // third returns to the default order. The opportunity's amount beside an
-  // approval is not a field of the approval, so it does not sort.
+  // third returns to the default order.
   const firstDirection = (key: string): 'asc' | 'desc' => {
     const type = definition?.fields.find((field) => field.key === key)?.type;
     return type === 'number' ||
@@ -674,10 +665,6 @@ function EntityList({
     );
     setPage(1);
   };
-  const opportunityOf = (
-    record: CrmRecord,
-  ): { amount: number; currency: string } | undefined =>
-    query.data?.meta.opportunities?.[toText(record.opportunityId ?? '')];
   const newButton = (
     <>
       {writable && (
@@ -756,7 +743,7 @@ function EntityList({
         </div>
       )}
       {/* Whose records: everyone's or the ones I own, and the tasks I take
-          part in or the approvals I decide, for every view alike. */}
+          part in or the approvals I ask for or decide, for every view alike. */}
       {scopes[entity] && (
         <Tabs
           value={whose}
@@ -1084,11 +1071,7 @@ function EntityList({
                         key === 'name' && entity === 'leads'
                           ? text('leadTitle')
                           : text(fieldLabelKey(entity, toText(key)));
-                      return key === 'opportunityAmount' ? (
-                        <TableHead className={HEAD} key={key}>
-                          {title}
-                        </TableHead>
-                      ) : (
+                      return (
                         <SortableHead
                           className={HEAD}
                           key={key}
@@ -1145,21 +1128,6 @@ function EntityList({
                                   review={entity === 'approvals'}
                                 />
                               </span>
-                            ) : key === 'opportunityAmount' ? (
-                              (() => {
-                                const deal = opportunityOf(record);
-                                return deal?.amount ? (
-                                  <span className='tabular-nums'>
-                                    {money(
-                                      deal.amount,
-                                      toText(deal.currency),
-                                      language,
-                                    )}
-                                  </span>
-                                ) : (
-                                  '—'
-                                );
-                              })()
                             ) : entity === 'approvals' && key === 'topic' ? (
                               record[key] ? (
                                 <KindTag value={record[key]} />
@@ -1262,8 +1230,10 @@ function EntityList({
                 <Card
                   key={record.id}
                   // Framed as the task list's card: a faint border, not the
-                  // primitive's ring, and the lightest shadow.
-                  className={`gap-0 border border-border py-4 shadow-xs ring-0 transition-[opacity,box-shadow,background-color] duration-700 ${toText(
+                  // primitive's ring, and the lightest shadow; under the
+                  // pointer it takes the hover grey and a firmer shadow, and
+                  // its empty space opens the record as a list row's does.
+                  className={`cursor-pointer gap-0 border border-border py-4 shadow-xs ring-0 transition-[opacity,box-shadow,background-color] duration-700 hover:bg-hover hover:shadow-sm hover:duration-150 ${toText(
                     dragging === record.id ? 'opacity-40' : '',
                   )} ${toText(
                     landed === record.id
@@ -1273,9 +1243,14 @@ function EntityList({
                     record.status !== 'converted' &&
                       (editsAll(meta, entity) ||
                         record.ownerId === meta?.userId)
-                      ? 'cursor-grab active:cursor-grabbing'
+                      ? 'active:cursor-grabbing'
                       : '',
                   )}`}
+                  data-board-card=''
+                  onClick={openOnRowClick(
+                    `/crm/${entity}/${toText(record.id)}`,
+                    (path) => void navigate(path),
+                  )}
                   draggable={
                     record.status !== 'converted' &&
                     (editsAll(meta, entity) || record.ownerId === meta?.userId)

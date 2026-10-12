@@ -572,6 +572,13 @@ export class CrmService {
         ]),
       );
     }
+    // An approval is mine whether I asked for it or decide it.
+    if (options.involvedId && entity === 'approvals') {
+      const id = options.involvedId;
+      select = select.where((eb) =>
+        eb.or([eb('ownerId', '=', id), eb('approverId', '=', id)]),
+      );
+    }
     if (options.ids !== undefined) {
       const ids = options.ids.split(',').filter(Boolean);
       select = ids.length
