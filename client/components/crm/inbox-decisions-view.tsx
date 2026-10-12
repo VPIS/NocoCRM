@@ -249,6 +249,9 @@ export function DecisionDetail({
         <Button
           variant='ghost'
           size='sm'
+          // Pulled out by its own padding, so its words end where the
+          // content's right edge does below.
+          className='-mr-2.5'
           nativeButton={false}
           render={
             <Link
