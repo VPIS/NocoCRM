@@ -1,6 +1,7 @@
 import { CheckCircle2Icon, MoreHorizontalIcon } from 'lucide-react';
 import { createElement, type KeyboardEvent, type ReactElement } from 'react';
 
+import { Badge } from '#components/ui/badge';
 import { Button } from '#components/ui/button';
 import {
   ContextMenu,
@@ -162,6 +163,10 @@ function ItemCard({
             'animate-in duration-200 fade-in slide-in-from-top-1 motion-reduce:animate-none',
         )}
       >
+        {/* Application change: laid out as the AI suggestions' cards
+            (inbox-decisions-view.tsx): no icon, the bar at the card's edge
+            marking what is unread, then two lines, the kind as a grey tag,
+            the title and the time, then the sentence. */}
         <span
           aria-hidden='true'
           className={cn(
@@ -170,36 +175,42 @@ function ItemCard({
               ? 'bg-primary'
               : waiting
                 ? 'bg-amber-500'
-                : 'bg-transparent',
+                : unread
+                  ? 'bg-primary/70'
+                  : 'bg-transparent',
           )}
         />
-        <span className='mt-0.5 flex shrink-0'>
-          <InboxTypeIcon entry={entry} renderer={renderer} />
-        </span>
         <button
           type='button'
           aria-current={selected ? 'true' : undefined}
           // Stretched over the whole card, so a click anywhere on it selects the item.
-          className="block min-w-0 flex-1 cursor-pointer space-y-1 text-left after:absolute after:inset-0 after:rounded-lg after:content-[''] focus-visible:outline-none"
+          className="grid min-w-0 flex-1 cursor-pointer gap-1 text-left after:absolute after:inset-0 after:rounded-lg after:content-[''] focus-visible:outline-none"
           onClick={() => onSelect(entry)}
           onKeyDown={onKeyDown}
         >
-          <span className='flex items-center gap-1.5 text-xs text-muted-foreground'>
-            {notice?.subject?.label ? (
-              <span className='shrink-0 font-mono'>{notice.subject.label}</span>
-            ) : null}
-            <span className='truncate'>{wording.label(entry)}</span>
+          <span className='flex min-w-0 items-baseline gap-1.5'>
+            <Badge variant='muted' className='shrink-0 self-center'>
+              {wording.label(entry)}
+            </Badge>
+            <span
+              className={cn(
+                'min-w-0 truncate text-sm group-has-focus-visible:underline',
+                unread ? 'font-semibold' : 'font-medium',
+              )}
+            >
+              {title}
+              {unread ? (
+                <span className='sr-only'>
+                  {t('inbox.unread', { defaultValue: 'Unread' })}
+                </span>
+              ) : null}
+            </span>
             {notice && notice.count > 1 ? (
-              <span className='shrink-0 tabular-nums'>
+              <span className='shrink-0 text-xs text-muted-foreground tabular-nums'>
                 {t('inbox.count', {
                   count: notice.count,
                   defaultValue: '×{{count}}',
                 })}
-              </span>
-            ) : null}
-            {settled ? (
-              <span className='shrink-0'>
-                {t('inbox.resolved', { defaultValue: 'Handled' })}
               </span>
             ) : null}
             {/* The latest notice's time: a merged item (×N) is sent anew, replacing the previous one. */}
@@ -207,38 +218,28 @@ function ItemCard({
                 while the card is hovered or its menu open, rather than a
                 column of its own at the card's right. */}
             <time
-              className='ml-auto shrink-0 tabular-nums group-has-focus-visible:invisible group-hover:invisible group-has-data-popup-open:invisible'
+              className='ml-auto shrink-0 text-xs text-muted-foreground tabular-nums group-has-focus-visible:invisible group-hover:invisible group-has-data-popup-open:invisible'
               dateTime={item.createdAt}
               title={new Date(item.createdAt).toLocaleString(language)}
             >
               {relativeTime(item.createdAt, language)}
             </time>
           </span>
-          <span
-            className={cn(
-              'flex items-center gap-1.5 text-sm group-has-focus-visible:underline',
-              // Application change: a read title in the AI suggestions' weight.
-              unread ? 'font-semibold' : 'font-medium',
-            )}
-          >
-            {unread ? (
-              <span className='size-1.5 shrink-0 rounded-full bg-primary'>
-                <span className='sr-only'>
-                  {t('inbox.unread', { defaultValue: 'Unread' })}
-                </span>
-              </span>
-            ) : null}
-            {/* Application change: the sentence follows the title on its
-                line, muted, as the AI suggestions' cards read. */}
-            <span className='min-w-0 truncate'>
-              {title}
-              {sentence ? (
-                <span className='ml-1.5 font-normal text-muted-foreground'>
-                  {sentence}
-                </span>
+          {sentence || settled || notice?.subject?.label ? (
+            <span className='line-clamp-1 text-xs text-muted-foreground'>
+              {settled ? (
+                <>
+                  <Badge variant='success'>
+                    {t('inbox.resolved', { defaultValue: 'Handled' })}
+                  </Badge>{' '}
+                </>
               ) : null}
+              {notice?.subject?.label ? (
+                <span className='font-mono'>{notice.subject.label} </span>
+              ) : null}
+              {sentence}
             </span>
-          </span>
+          ) : null}
         </button>
         <DropdownMenu>
           <DropdownMenuTrigger
