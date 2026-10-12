@@ -1,3 +1,4 @@
+import { useDragPan } from '../components/crm/drag-pan.js';
 import { AiStateTag } from '../components/crm/ai-state-tag.js';
 import {
   isEndOfDay,
@@ -296,6 +297,8 @@ function EntityList({
   const [moving, setMoving] = useState(false);
   // The card being dragged, dimmed in its column while it is in the air.
   const [dragging, setDragging] = useState<string>();
+  // The board moved sideways by dragging its empty space.
+  const boardPan = useDragPan();
   // The card that just landed in a column, marked for a moment so the eye
   // finds it among the others; the mark clears on its own.
   const [landed, setLanded] = useState<string>();
@@ -1106,7 +1109,14 @@ function EntityList({
           </>
         )
       ) : view === 'board' ? (
-        <div className='flex min-h-0 flex-1 gap-4 overflow-x-auto pb-2'>
+        // Moved sideways by its bar, which always shows (scroll-shown), or
+        // by holding its empty space and dragging (useDragPan), as a mouse
+        // without a sideways wheel needs on a board wider than the page.
+        <div
+          className='scroll-shown flex min-h-0 flex-1 cursor-grab gap-4 overflow-x-auto pb-2 data-[panning]:cursor-grabbing data-[panning]:select-none'
+          {...boardPan}
+          onPointerCancel={boardPan.onPointerUp}
+        >
           {definition?.statuses.map((stage) => (
             <BoardColumn
               key={stage}

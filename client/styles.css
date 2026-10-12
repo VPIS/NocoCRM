@@ -222,6 +222,39 @@
   }
 }
 
+/* A scroller whose bar always shows, thicker, to be dragged: the boards',
+   wider than the page, which a mouse without a sideways wheel moves only by
+   their bar. Plain rules beside the ones above rather than a utility, which
+   their unlayered rules would outrank. */
+.scroll-shown::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll-shown::-webkit-scrollbar-thumb {
+  background-color: color-mix(
+    in oklab,
+    var(--muted-foreground) 25%,
+    transparent
+  );
+}
+.scroll-shown::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(
+    in oklab,
+    var(--muted-foreground) 40%,
+    transparent
+  );
+}
+@supports not selector(::-webkit-scrollbar) {
+  .scroll-shown {
+    scrollbar-color: color-mix(
+        in oklab,
+        var(--muted-foreground) 25%,
+        transparent
+      )
+      transparent;
+  }
+}
+
 /* Named shadows normally compile to literal values. Arbitrary-value utilities
    preserve the runtime token and Tailwind's ring/shadow composition. */
 @utility shadow-2xs {
