@@ -41,7 +41,7 @@ import {
 import { OutcomeBox } from './outcome.js';
 import { useMailSetup } from './mail.js';
 import { EmailStep } from './email-step.js';
-import { statusDot } from './status-dot.js';
+import { AiStatusWord } from './ai-status-word.js';
 import { aiStateWords } from './ai-state-words.js';
 import type { FollowUpRequest } from './follow-up-request.js';
 import { Choice } from './form.js';
@@ -355,12 +355,7 @@ export function EvaluationStatus({
           <span className='min-w-0 truncate font-medium'>
             {text(live ? aiStateWords.followUp.running : 'evaluation.start')}
           </span>
-          {live ? null : (
-            <span
-              aria-hidden
-              className={`size-1.5 shrink-0 rounded-full ${statusDot(entry.status)}`}
-            />
-          )}
+          {live ? null : <AiStatusWord status={entry.status} />}
         </TooltipTrigger>
         <TooltipContent
           side='bottom'

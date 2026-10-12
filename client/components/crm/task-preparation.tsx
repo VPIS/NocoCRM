@@ -7,7 +7,7 @@ import { Textarea } from '../ui/textarea.js';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip.js';
 import { ErrorNotice } from './common.js';
 import { Row } from './lead-evaluation.js';
-import { statusDot } from './status-dot.js';
+import { AiStatusWord } from './ai-status-word.js';
 import { aiStateWords } from './ai-state-words.js';
 import { doesTask } from '../../../server/providers/crm/task-participants.js';
 import {
@@ -444,12 +444,7 @@ export function PrepStatus({
               <span className='min-w-0 truncate font-medium'>
                 {text(live ? aiStateWords.prep.running : 'taskPrep.ask')}
               </span>
-              {live ? null : (
-                <span
-                  aria-hidden
-                  className={`size-1.5 shrink-0 rounded-full ${statusDot(toText(entry.status))}`}
-                />
-              )}
+              {live ? null : <AiStatusWord status={toText(entry.status)} />}
             </TooltipTrigger>
             <TooltipContent
               side='bottom'

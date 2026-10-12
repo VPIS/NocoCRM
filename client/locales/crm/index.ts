@@ -788,6 +788,18 @@ const wording = {
     ],
     empty: ['Nothing here yet.', '还没有记录。'],
   },
+  // Where an AI suggestion stands, on the chips atop a record's page
+  // (ai-status-word.tsx).
+  aiChip: {
+    status: {
+      pending: ['Waiting', '待处理'],
+      accepted: ['Accepted', '已采纳'],
+      dismissed: ['Ignored', '已忽略'],
+      superseded: ['Replaced', '已替代'],
+      failed: ['Failed', '失败'],
+      done: ['Handled', '已处理'],
+    },
+  },
   evaluation: {
     title: ['AI follow-up', 'AI 跟进建议'],
     waiting: ['AI follow-up waiting for you', 'AI 跟进建议待处理'],
