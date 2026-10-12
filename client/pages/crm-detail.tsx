@@ -2205,21 +2205,24 @@ function MailEvent({
     mail.fromCustomer && writer
       ? toText(text('feed.mail.lastFrom', { name: writer }))
       : '';
-  // On a narrow column the subject keeps the line: the count and who wrote
-  // last give way first, and the whole line is in the hover title.
+  // One line that ends in an ellipsis where the column cuts it, the subject
+  // first and the count and who wrote last after it, muted; the whole line
+  // is in the hover title. Each part cut by itself ended the line in
+  // fragments ("4.. 最.") instead.
   return (
     <>
       <span className='shrink-0 text-muted-foreground'>
         {text('feed.mail.exchanged')}
       </span>
       <span
-        className='min-w-[5rem] truncate'
+        className='min-w-0 truncate'
         title={[subject, count, last].filter(Boolean).join(' · ')}
       >
         {own ? (
           <button
             type='button'
-            className='underline-offset-2 hover:underline'
+            // Inline, so the line's ellipsis can fall inside the subject.
+            className='inline underline-offset-2 hover:underline'
             onClick={() => onOpen(toText(event.sourceKey))}
           >
             {subject}
@@ -2227,15 +2230,11 @@ function MailEvent({
         ) : (
           subject
         )}
+        <span className='ml-2 text-muted-foreground'>{count}</span>
+        {last ? (
+          <span className='ml-2 text-muted-foreground'>{last}</span>
+        ) : null}
       </span>
-      <span className='min-w-0 shrink-[4] truncate text-muted-foreground'>
-        {count}
-      </span>
-      {last ? (
-        <span className='min-w-0 shrink-[8] truncate text-muted-foreground'>
-          {last}
-        </span>
-      ) : null}
     </>
   );
 }
