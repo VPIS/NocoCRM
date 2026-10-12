@@ -389,6 +389,11 @@
 [data-sidebar='menu-sub-button']:not([data-active]) {
   color: color-mix(in oklch, var(--sidebar-foreground) 70%, var(--sidebar));
 }
+/* A section's label (Records, Integrations…) lighter still than the
+   entries under it, so it reads as a heading over them, not as one of them. */
+[data-sidebar='group-label'] {
+  color: color-mix(in oklch, var(--sidebar-foreground) 45%, var(--sidebar));
+}
 
 /* The Agents plugin's pages in the CRM's look (components/crm/plugin-page.tsx
    wraps them): the plugin draws its own copies of the registry primitives,
