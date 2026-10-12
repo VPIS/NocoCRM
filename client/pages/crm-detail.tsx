@@ -1056,7 +1056,16 @@ export function DetailColumns({
                 <DetailBack entity={entity} />
                 <div className='grid gap-2'>
                   <div className='flex items-start gap-2'>
-                    <div className='min-w-0 flex-1'>{heading}</div>
+                    {/* Scrolled down with the intro, a long heading
+                        keeps one line, cut with an ellipsis, so the
+                        content gets the room; at the top it is whole. */}
+                    <div
+                      className={`min-w-0 flex-1 ${
+                        introAway ? '@3xl:line-clamp-1' : ''
+                      }`}
+                    >
+                      {heading}
+                    </div>
                     {/* Not in the inbox's pane (bare), which handles the
                         AI's card and opens the full page for the rest. */}
                     {more && !bare ? (
