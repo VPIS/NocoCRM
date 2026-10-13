@@ -89,11 +89,12 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   /* The menu as the template draws it: on the cards' white, the current
-     entry on the hover grey in the primary, a hovered one on the same grey
-     in the menu's words. */
+     entry on a faint tint of the primary (8% of it over the menu's ground,
+     as the template draws it) in the primary, a hovered one on the hover
+     grey in the menu's words. */
   --sidebar: var(--card);
   --sidebar-foreground: var(--card-foreground);
-  --sidebar-primary: var(--hover);
+  --sidebar-primary: color-mix(in srgb, var(--primary) 8%, var(--sidebar));
   --sidebar-primary-foreground: var(--primary);
   --sidebar-accent: var(--hover);
   --sidebar-accent-foreground: var(--foreground);
@@ -132,7 +133,7 @@
   --chart-5: oklch(0.645 0.246 16.439);
   --sidebar: var(--card);
   --sidebar-foreground: var(--card-foreground);
-  --sidebar-primary: var(--hover);
+  --sidebar-primary: color-mix(in srgb, var(--primary) 8%, var(--sidebar));
   --sidebar-primary-foreground: var(--primary);
   --sidebar-accent: var(--hover);
   --sidebar-accent-foreground: var(--foreground);

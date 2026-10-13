@@ -89,8 +89,8 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  /* What a hovered button, row or card takes, and the menu's current and
-     hovered entries: one light grey for whatever is picked out; --muted
+  /* What a hovered button, row or card takes, and the menu's hovered
+     entries: one light grey for whatever is picked out; --muted
      stays the grey of tags and tiles. Inherited by every preset. */
   --hover: rgb(247 247 248);
   /* Under way, beside the template's --status-success and --status-warning
@@ -98,11 +98,12 @@
      near black, so it keeps a blue of its own until the primary has a hue. */
   --status-info: oklch(0.52 0.15 250);
   /* The menu as the template draws it: on the cards' white, the current
-     entry on the hover grey in the primary, a hovered one on the same grey
-     in the menu's words. */
+     entry on a faint tint of the primary (8% of it over the menu's ground,
+     as the template draws it) in the primary, a hovered one on the hover
+     grey in the menu's words. */
   --sidebar: var(--card);
   --sidebar-foreground: var(--card-foreground);
-  --sidebar-primary: var(--hover);
+  --sidebar-primary: color-mix(in srgb, var(--primary) 8%, var(--sidebar));
   --sidebar-primary-foreground: var(--primary);
   --sidebar-accent: var(--hover);
   --sidebar-accent-foreground: var(--foreground);
@@ -146,7 +147,7 @@
   --status-info: oklch(0.74 0.13 250);
   --sidebar: var(--card);
   --sidebar-foreground: var(--card-foreground);
-  --sidebar-primary: var(--hover);
+  --sidebar-primary: color-mix(in srgb, var(--primary) 8%, var(--sidebar));
   --sidebar-primary-foreground: var(--primary);
   --sidebar-accent: var(--hover);
   --sidebar-accent-foreground: var(--foreground);
