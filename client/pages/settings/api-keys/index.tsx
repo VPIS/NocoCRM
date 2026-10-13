@@ -466,7 +466,7 @@ export default function ApiKeysPage(): ReactElement {
             />
           ) : null}
           <DialogFooter>
-            <Button onClick={() => setRotated(undefined)}>
+            <Button variant='contrast' onClick={() => setRotated(undefined)}>
               {text('common.done')}
             </Button>
           </DialogFooter>

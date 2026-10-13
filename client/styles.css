@@ -530,6 +530,25 @@ label:has(> .sr-only:focus-visible),
   > [data-slot='tabs-trigger']::after {
   bottom: -1px;
 }
+/* Their main buttons black, as the CRM's own Agent team and settings pages
+   draw theirs (the button's `contrast` variant), in the page and in the
+   dialogs it opens while it is shown (portalled outside the wrapper), never
+   in the assistant's panel (`data-agents-chat`). Matched by the primary
+   button's class, the plugin's copy of the primitive carrying no variant
+   attribute. */
+.crm-plugin-page [data-slot='button'].bg-primary,
+:root:has(.crm-plugin-page)
+  :is([role='dialog'], [role='alertdialog'])
+  [data-slot='button'].bg-primary:not([data-agents-chat] *) {
+  background-color: var(--foreground);
+  color: var(--background);
+}
+.crm-plugin-page [data-slot='button'].bg-primary:hover,
+:root:has(.crm-plugin-page)
+  :is([role='dialog'], [role='alertdialog'])
+  [data-slot='button'].bg-primary:not([data-agents-chat] *):hover {
+  background-color: color-mix(in oklch, var(--foreground) 85%, transparent);
+}
 /* The usage chart's first series in the primary colour, as the reports
    page's bars are, rather than the palette's orange. */
 .crm-plugin-page {

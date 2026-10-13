@@ -197,6 +197,7 @@ function SettingsForm({
           </span>
         )}
         <Button
+          variant='contrast'
           disabled={!changed || saving !== undefined}
           onClick={() => {
             void (async () => {
@@ -411,6 +412,7 @@ function SettingsForm({
             )}
             <div className='flex flex-wrap gap-2'>
               <Button
+                variant='contrast'
                 disabled={busy || demo.present}
                 onClick={() => setDemoAction('populate')}
               >
