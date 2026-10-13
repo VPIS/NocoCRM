@@ -2507,7 +2507,7 @@ function CommentThread({
   now: number;
   timeZone: string;
 }): ReactElement | null {
-  const { text, language } = useCrmText();
+  const { text } = useCrmText();
   const { data: meta } = useMetadata();
   const [editing, setEditing] = useState<string>();
   const replies = (
@@ -2584,33 +2584,37 @@ function CommentThread({
               >
                 <div className='flex min-h-[26px] items-center gap-2 text-sm'>
                   <CommentAvatar name={name(reply.actorId)} />
-                  {/* Who wrote it, and whom it answers: the comment's
-                      author, or the reply's above it. */}
-                  <span className='min-w-0 flex-1 truncate'>
-                    <span className='font-semibold'>{name(reply.actorId)}</span>{' '}
-                    {/* Points out the message it answers. */}
-                    <button
-                      type='button'
-                      className='text-muted-foreground hover:text-foreground hover:underline'
-                      onClick={() =>
-                        point(toText(reply.replyToId) || commentId)
-                      }
-                    >
-                      {text('comments.replyTo', {
-                        name: name(
-                          (
-                            replies.find(
-                              (other) =>
-                                toText(other.id) === toText(reply.replyToId),
-                            ) ?? comment
-                          ).actorId,
-                        ),
-                      })}
-                    </button>
+                  {/* Who wrote it, whom it answers (the comment's author,
+                      or the reply's above it), and when. */}
+                  <span className='flex min-w-0 flex-1 items-center gap-2 whitespace-nowrap'>
+                    <span className='min-w-0 truncate'>
+                      <span className='font-semibold'>
+                        {name(reply.actorId)}
+                      </span>{' '}
+                      {/* Points out the message it answers. */}
+                      <button
+                        type='button'
+                        className='text-muted-foreground hover:text-foreground hover:underline'
+                        onClick={() =>
+                          point(toText(reply.replyToId) || commentId)
+                        }
+                      >
+                        {text('comments.replyTo', {
+                          name: name(
+                            (
+                              replies.find(
+                                (other) =>
+                                  toText(other.id) === toText(reply.replyToId),
+                              ) ?? comment
+                            ).actorId,
+                          ),
+                        })}
+                      </button>
+                    </span>
+                    <CommentTime entry={reply} now={now} timeZone={timeZone} />
                   </span>
                   <CommentActions
                     id={replyId}
-                    reply
                     onReply={() => onReply(replyId)}
                     onEdit={
                       reply.actorId === meta?.userId && !commentGone(reply)
@@ -2618,21 +2622,6 @@ function CommentThread({
                         : undefined
                     }
                   />
-                  <time
-                    dateTime={toText(reply.createdAt)}
-                    title={localDate(reply.createdAt, language, timeZone)}
-                    className='shrink-0 text-xs text-muted-foreground/80 tabular-nums'
-                  >
-                    {reply.editedAt && !commentGone(reply)
-                      ? `${toText(text('comments.edited'))} · `
-                      : ''}
-                    {relativeTime(
-                      reply.createdAt,
-                      language,
-                      now,
-                      text('justNow'),
-                    )}
-                  </time>
                 </div>
                 {editing === replyId ? (
                   <CommentEditor
@@ -3320,6 +3309,15 @@ export function HistoryFeed({
                                       (u) => u.id === event.actorId,
                                     )?.name}
                               </span>
+                              {/* A comment's time follows its author, its text
+                                below, as the UI Library's comment reads. */}
+                              {comment ? (
+                                <CommentTime
+                                  entry={event}
+                                  now={now}
+                                  timeZone={timeZone}
+                                />
+                              ) : null}
                               {taskEvent ? (
                                 <TaskEvent
                                   event={event}
@@ -3447,25 +3445,6 @@ export function HistoryFeed({
                               {event.action === 'merged' ? (
                                 <MergedLead changes={event.changes} />
                               ) : null}
-                              {/* A comment that fits reads on its line right
-                                after who wrote it; one of several lines, or
-                                longer than the line, reads whole below it,
-                                as Clarify shows a comment. */}
-                              {comment && commentGone(event) ? (
-                                <span className='text-muted-foreground'>
-                                  {text('comments.deleted')}
-                                </span>
-                              ) : comment ? (
-                                <CommentExcerpt
-                                  value={commentText(event)}
-                                  mentions={
-                                    (event.changes as Data | undefined)
-                                      ?.mentions
-                                  }
-                                  long={longNotes.has(key)}
-                                  onLong={(long) => markLong(key, long)}
-                                />
-                              ) : null}
                               {event.action === 'aiRevise' ? (
                                 <span className='min-w-0 truncate'>
                                   「{commentText(event).replace(/\s+/g, ' ')}」
@@ -3494,8 +3473,8 @@ export function HistoryFeed({
                                 />
                               )}
                             </span>
-                            {/* Reply for anyone; its author's edit and delete,
-                              on hover. */}
+                            {/* Reply for anyone; its author's edit and delete
+                              behind "…". */}
                             {comment ? (
                               <CommentActions
                                 id={key}
@@ -3508,38 +3487,27 @@ export function HistoryFeed({
                                 }
                               />
                             ) : null}
-                            <time
-                              dateTime={toText(event.createdAt)}
-                              // How long ago, the full time on hover.
-                              title={localDate(
-                                event.createdAt,
-                                language,
-                                timeZone,
-                              )}
-                              // On the entry's first line, however far the
-                              // line unfolds below it.
-                              className='shrink-0 self-start text-xs leading-[26px] text-muted-foreground/80 tabular-nums'
-                            >
-                              {/* An edited comment says so right before its
-                                time, the edit's time on hover. */}
-                              {comment && event.editedAt ? (
-                                <span
-                                  title={localDate(
-                                    event.editedAt,
-                                    language,
-                                    timeZone,
-                                  )}
-                                >
-                                  {text('comments.edited')} ·{' '}
-                                </span>
-                              ) : null}
-                              {relativeTime(
-                                event.createdAt,
-                                language,
-                                now,
-                                text('justNow'),
-                              )}
-                            </time>
+                            {comment ? null : (
+                              <time
+                                dateTime={toText(event.createdAt)}
+                                // How long ago, the full time on hover.
+                                title={localDate(
+                                  event.createdAt,
+                                  language,
+                                  timeZone,
+                                )}
+                                // On the entry's first line, however far the
+                                // line unfolds below it.
+                                className='shrink-0 self-start text-xs leading-[26px] text-muted-foreground/80 tabular-nums'
+                              >
+                                {relativeTime(
+                                  event.createdAt,
+                                  language,
+                                  now,
+                                  text('justNow'),
+                                )}
+                              </time>
+                            )}
                           </div>
                           {closingText ? (
                             <div className='mt-0.5 text-sm'>
@@ -3562,11 +3530,14 @@ export function HistoryFeed({
                               comment={event}
                               onDone={() => setEditingNote(undefined)}
                             />
-                          ) : comment &&
-                            longNotes.has(key) &&
-                            !commentGone(event) ? (
-                            // Too long for its line, whole under who wrote it,
-                            // in line with the replies' text.
+                          ) : comment && commentGone(event) ? (
+                            <div className='relative pt-0.5 pl-8 text-sm text-muted-foreground'>
+                              {threaded ? <ThreadLine /> : null}
+                              {text('comments.deleted')}
+                            </div>
+                          ) : comment && commentText(event) ? (
+                            // Under who wrote it, in line with the replies'
+                            // text.
                             <div className='relative pt-0.5 pl-8 text-sm'>
                               {threaded ? <ThreadLine /> : null}
                               {/* As the original message: five lines fading
@@ -3934,10 +3905,10 @@ function CommentComposer({
   );
 }
 
-// A comment's text on its entry's line. It tells the timeline whether it is
-// long (several lines, or wider than the line), which then shows it whole
-// below and keeps this in place, unseen, to measure the line again as it
-// widens or narrows.
+// A completed task's result on its entry's line. It tells the timeline
+// whether it is long (several lines, or wider than the line), which then
+// shows it whole below and keeps this in place, unseen, to measure the line
+// again as it widens or narrows.
 function CommentExcerpt({
   value,
   long,
@@ -3979,14 +3950,46 @@ function CommentExcerpt({
   );
 }
 
-// A comment's author's edit and delete, on the entry's line while it is
-// hovered or focused, centred on its first line (26px, as the time is);
-// delete asks once more.
+// When a comment or a reply was written, right after its author's name as
+// in the UI Library's comment header, how long ago with the full time on
+// hover, and whether it was edited since.
+function CommentTime({
+  entry,
+  now,
+  timeZone,
+}: {
+  entry: { createdAt?: unknown; editedAt?: unknown; changes?: unknown };
+  now: number;
+  timeZone: string;
+}): ReactElement {
+  const { text, language } = useCrmText();
+  return (
+    <>
+      <time
+        dateTime={toText(entry.createdAt)}
+        title={localDate(entry.createdAt, language, timeZone)}
+        className='shrink-0 text-xs text-muted-foreground tabular-nums'
+      >
+        {relativeTime(entry.createdAt, language, now, text('justNow'))}
+      </time>
+      {entry.editedAt && !commentGone(entry) ? (
+        <span
+          className='shrink-0 text-xs text-muted-foreground'
+          title={localDate(entry.editedAt, language, timeZone)}
+        >
+          {text('comments.edited')}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+// Reply, and its author's edit and delete behind "…", at the end of a
+// comment's or a reply's line; delete asks once more.
 function CommentActions({
   id,
   onEdit,
   onReply,
-  reply = false,
 }: {
   id: string;
   // Its author's edit and delete; absent for anyone else, and for a deleted
@@ -3994,8 +3997,6 @@ function CommentActions({
   onEdit?: () => void;
   // Answering it, which anyone who reads the record may.
   onReply?: () => void;
-  // In a thread, shown on the reply's own hover rather than the comment's.
-  reply?: boolean;
 }): ReactElement {
   const { text } = useCrmText();
   const api = useCrmApi();
@@ -4003,67 +4004,96 @@ function CommentActions({
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
+  // At the line's end, as the UI Library's comment header: Reply as words,
+  // the author's edit and delete behind "…".
   return (
-    <span
-      className={`flex h-[26px] shrink-0 items-center gap-0.5 self-start transition-opacity focus-within:opacity-100 ${
-        reply
-          ? 'group-hover/reply:opacity-100'
-          : 'group-hover/comment:opacity-100'
-      } ${confirming ? 'opacity-100' : 'opacity-0'}`}
-    >
+    <span className='ml-auto flex h-[26px] shrink-0 items-center gap-0.5 self-start'>
       {onReply ? (
         <Button
-          size='icon-xs'
+          size='xs'
           variant='ghost'
-          aria-label={text('comments.reply')}
-          title={text('comments.reply')}
-          disabled={busy}
+          className='text-muted-foreground'
           onClick={onReply}
         >
-          <Reply />
+          <Reply data-icon='inline-start' />
+          {text('comments.reply')}
         </Button>
       ) : null}
       {onEdit ? (
-        <Button
-          size='icon-xs'
-          variant='ghost'
-          aria-label={text('edit')}
-          title={text('edit')}
-          disabled={busy}
-          onClick={onEdit}
-        >
-          <PencilLine />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label={text('moreActions')}
+            className={buttonVariants({
+              size: 'icon-xs',
+              variant: 'ghost',
+              className: 'text-muted-foreground',
+            })}
+          >
+            <Ellipsis />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align='end' className='w-max min-w-32'>
+            <DropdownMenuItem onClick={onEdit}>
+              <PencilLine />
+              {text('edit')}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant='destructive'
+              onClick={() => setConfirming(true)}
+            >
+              <Trash2 />
+              {text('delete')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ) : null}
-      {onEdit ? (
-        <Button
-          size={confirming ? 'xs' : 'icon-xs'}
-          variant={confirming ? 'destructive' : 'ghost'}
-          aria-label={text(confirming ? 'comments.confirmDelete' : 'delete')}
-          title={text('delete')}
-          disabled={busy}
-          onClick={() => {
-            if (!confirming) {
-              setConfirming(true);
-              return;
+      {confirming ? (
+        <Dialog
+          open
+          onOpenChange={(open) => {
+            if (!open && !busy) {
+              setConfirming(false);
+              setError(undefined);
             }
-            setBusy(true);
-            setError(undefined);
-            api(`comments/${toText(id)}`, 'DELETE')
-              .then(() => refresh())
-              .catch(setError)
-              .finally(() => {
-                setBusy(false);
-                setConfirming(false);
-              });
           }}
-          onBlur={() => setConfirming(false)}
         >
-          <Trash2 />
-          {confirming ? text('comments.confirmDelete') : null}
-        </Button>
+          <DialogContent showCloseButton={false}>
+            <DialogHeader>
+              <DialogTitle>{text('comments.deleteTitle')}</DialogTitle>
+              <DialogDescription>
+                {text('comments.deleteHint')}
+              </DialogDescription>
+            </DialogHeader>
+            <ErrorNotice error={error} />
+            <DialogFooter>
+              <Button
+                variant='outline'
+                disabled={busy}
+                onClick={() => setConfirming(false)}
+              >
+                {text('cancel')}
+              </Button>
+              <Button
+                variant='destructive'
+                disabled={busy}
+                onClick={() => {
+                  setBusy(true);
+                  setError(undefined);
+                  void api(`comments/${toText(id)}`, 'DELETE')
+                    .then(() => {
+                      setConfirming(false);
+                      return refresh();
+                    })
+                    .catch(setError)
+                    .finally(() => setBusy(false));
+                }}
+              >
+                {busy ? <Spinner data-icon='inline-start' /> : null}
+                {text('delete')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       ) : null}
-      {error ? <ErrorNotice error={error} /> : null}
     </span>
   );
 }

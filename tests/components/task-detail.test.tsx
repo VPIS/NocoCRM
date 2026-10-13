@@ -304,20 +304,23 @@ describe('the task page', () => {
       comment,
     ];
     renderPage();
-    // No word before a comment on its line; a comment of several lines reads
-    // whole below it, as Clarify shows a comment, and its edits are not
+    // No word before a comment on its line; its text reads whole below it,
+    // as the UI Library's comment thread shows one, and its edits are not
     // entries.
     expect(screen.queryByText('评论：')).toBeNull();
-    // (The line keeps its one-line text unseen, to measure.)
-    expect(
-      screen
-        .getAllByText(/需要准备报价单/)
-        .filter((node) => !node.closest('[aria-hidden="true"]')),
-    ).toHaveLength(1);
-    expect(screen.getByText(/已编辑/)).toBeTruthy();
+    expect(screen.getAllByText(/需要准备报价单/)).toHaveLength(1);
+    expect(screen.getByText('已编辑')).toBeTruthy();
     expect(screen.queryByText('编辑了评论')).toBeNull();
-    // Its author changes it in place, from the line's edit button.
-    await userEvent.click(screen.getByRole('button', { name: '编辑' }));
+    // Its author changes it in place, from the line's "…" menu.
+    const line = document.querySelector<HTMLElement>(
+      '[data-comment="comment-1"]',
+    );
+    await userEvent.click(
+      within(line as HTMLElement).getByRole('button', { name: '更多…' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: '编辑' }),
+    );
     expect(
       (
         screen

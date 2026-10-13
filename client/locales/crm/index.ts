@@ -312,7 +312,12 @@ const wording = {
       '回车发送 · Shift + 回车换行',
     ],
     edited: ['Edited', '已编辑'],
-    confirmDelete: ['Delete it?', '确认删除'],
+    // Deleting one, asked once more.
+    deleteTitle: ['Delete this comment?', '删除这条评论？'],
+    deleteHint: [
+      'A comment with replies keeps its place, marked as deleted.',
+      '有回复的评论会保留位置，显示为已删除。',
+    ],
     // Replies under a comment, in its thread.
     reply: ['Reply', '回复'],
     // A long thread's folded middle.
