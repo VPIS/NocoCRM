@@ -8,6 +8,7 @@ import {
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import {
+  daysWithin,
   jsonIn,
   openSession,
   readSkill,
@@ -151,14 +152,9 @@ const verdictShape = z.object({
       subject: z
         .string()
         .describe('What to do this time, written as a task subject'),
-      inDays: z
-        .number()
-        .int()
-        .min(0)
-        .max(30)
-        .describe(
-          'In how many days to do it: first contact with an A lead the same day (0), with a B lead within 2 days; after that, as agreed',
-        ),
+      inDays: daysWithin(0, 30).describe(
+        'In how many days to do it: first contact with an A lead the same day (0), with a B lead within 2 days; after that, as agreed',
+      ),
       task: z
         .string()
         .nullable()
@@ -205,11 +201,7 @@ const verdictShape = z.object({
     .nullable()
     .default(null)
     .describe('The opportunity to open when converting; null otherwise'),
-  reviewInDays: z
-    .number()
-    .int()
-    .min(1)
-    .max(365)
+  reviewInDays: daysWithin(1, 365)
     .nullable()
     .default(null)
     .describe('In how many days to review when nurturing; null otherwise'),

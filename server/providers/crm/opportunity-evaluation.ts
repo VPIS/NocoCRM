@@ -8,6 +8,7 @@ import {
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import {
+  daysWithin,
   jsonIn,
   openSession,
   readSkill,
@@ -173,12 +174,7 @@ function verdictShape(options: { pause: string[]; lost: string[] }) {
         subject: z
           .string()
           .describe('What to do this time, written as the task subject'),
-        inDays: z
-          .number()
-          .int()
-          .min(0)
-          .max(30)
-          .describe('In how many days to do it'),
+        inDays: daysWithin(0, 30).describe('In how many days to do it'),
         task: z
           .string()
           .nullable()
@@ -236,11 +232,7 @@ function verdictShape(options: { pause: string[]; lost: string[] }) {
       .nullable()
       .default(null)
       .describe('The reason when pausing; null otherwise'),
-    resumeInDays: z
-      .number()
-      .int()
-      .min(1)
-      .max(365)
+    resumeInDays: daysWithin(1, 365)
       .nullable()
       .default(null)
       .describe(
@@ -251,11 +243,7 @@ function verdictShape(options: { pause: string[]; lost: string[] }) {
       .nullable()
       .default(null)
       .describe('The reason when losing; null otherwise'),
-    revisitInDays: z
-      .number()
-      .int()
-      .min(1)
-      .max(730)
+    revisitInDays: daysWithin(1, 730)
       .nullable()
       .default(null)
       .describe(

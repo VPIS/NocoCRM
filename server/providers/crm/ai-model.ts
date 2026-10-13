@@ -334,6 +334,20 @@ export async function openSession(
 }
 
 // A zod shape as the JSON Schema a prompt shows the model.
+// A number of days a reply gives, brought within [min, max] and rounded
+// before it is checked, so a model that writes 45 where at most 30 is
+// asked (as one answering without reasoning does) loses that much rather
+// than the whole card; the JSON Schema the model is shown keeps the bounds.
+export function daysWithin(min: number, max: number) {
+  return z.preprocess(
+    (value) =>
+      typeof value === 'number' && Number.isFinite(value)
+        ? Math.min(max, Math.max(min, Math.round(value)))
+        : value,
+    z.number().int().min(min).max(max),
+  );
+}
+
 export function shapeOf(shape: ZodType): string {
   try {
     return JSON.stringify(z.toJSONSchema(shape, { unrepresentable: 'any' }));

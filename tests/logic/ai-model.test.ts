@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
   crmModel,
+  daysWithin,
   modelFailure,
   openSession,
   readSkill,
@@ -292,6 +293,19 @@ describe('a background turn', () => {
       .catch((error: unknown) => error);
     expect(failure).toMatchObject({ name: 'ModelError', code: 'aborted' });
     expect(runFailure(failure)).toBe('timedOut');
+  });
+});
+
+describe('daysWithin', () => {
+  it('brings a day count within its bounds before checking it, and shows the model the bounds', () => {
+    const shape = z.object({ inDays: daysWithin(0, 30) });
+    expect(shape.parse({ inDays: 45 })).toEqual({ inDays: 30 });
+    expect(shape.parse({ inDays: -2 })).toEqual({ inDays: 0 });
+    expect(shape.parse({ inDays: 2.4 })).toEqual({ inDays: 2 });
+    expect(shape.safeParse({ inDays: 'soon' }).success).toBe(false);
+    expect(z.toJSONSchema(shape)).toMatchObject({
+      properties: { inDays: { type: 'integer', minimum: 0, maximum: 30 } },
+    });
   });
 });
 
