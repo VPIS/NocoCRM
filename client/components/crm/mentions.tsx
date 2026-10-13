@@ -16,9 +16,9 @@ export function mentionsIn(
   });
 }
 
-// How a mentioned colleague reads in a comment: in the theme's info colour,
-// as a chat app marks an @, on no fill of its own.
-export const MENTION_CLASS = 'font-medium text-info';
+// How a mentioned colleague reads in a comment: in the primary purple, as a
+// chat app marks an @, on no fill of its own.
+export const MENTION_CLASS = 'font-medium text-primary';
 
 // A comment's text with the colleagues it mentions picked out: each "@Name"
 // as a mention, as the pieces of a line.

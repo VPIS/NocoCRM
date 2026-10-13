@@ -62,7 +62,7 @@ function marked(text: string, names: readonly string[]): ReactNode[] {
         key={`m${String(start)}`}
         // Bold by a stroke rather than the weight, which would widen the
         // name and move the text off the box's caret.
-        className='text-info [-webkit-text-stroke:0.35px_currentColor]'
+        className='text-primary [-webkit-text-stroke:0.35px_currentColor]'
       >
         {part}
       </span>

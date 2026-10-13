@@ -110,7 +110,7 @@ describe('MentionTextarea', () => {
     expect(screen.queryByRole('listbox')).toBeNull();
     // The layer under the box draws the mention, in its colour, where its
     // text lies.
-    const mark = document.querySelector('[aria-hidden] span.text-info');
+    const mark = document.querySelector('[aria-hidden] span.text-primary');
     expect(mark?.textContent).toBe('@Wang Fang');
     await userEvent.type(box, 'and @li');
     await userEvent.click(screen.getByRole('option', { name: 'Li Ming' }));
