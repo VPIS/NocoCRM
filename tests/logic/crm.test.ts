@@ -4718,13 +4718,7 @@ describe('CRM opportunity follow-up', () => {
               term: '3 月底上线',
               beyondStandard: true,
               approval: null,
-            },
-          ],
-          approvals: [
-            {
-              topic: 'commitment',
-              name: '3 月底上线重新申请',
-              description: '补充里程碑后重新提交',
+              why: '补充里程碑后重新提交',
             },
           ],
         });
@@ -4750,8 +4744,12 @@ describe('CRM opportunity follow-up', () => {
         toText(opportunity.id),
         '实施里程碑：11 月需求、1 月上线测试、3 月底华东上线',
       );
-      expect((await proposed())?.approvals?.map((a) => a.name)).toEqual([
-        '3 月底上线重新申请',
+      expect((await proposed())?.approvals).toEqual([
+        {
+          topic: 'commitment',
+          name: '3 月底上线',
+          description: '补充里程碑后重新提交',
+        },
       ]);
     } finally {
       enabled.mockRestore();
@@ -4853,6 +4851,7 @@ describe('CRM opportunity follow-up', () => {
           term: '源码托管，违约金上限 5%',
           beyondStandard: true,
           approval: null,
+          why: '客户接受源码托管',
         },
         {
           topic: 'commitment',
@@ -4868,13 +4867,6 @@ describe('CRM opportunity follow-up', () => {
         },
       ],
       dealApprovals,
-      [
-        {
-          topic: 'contractTerms',
-          name: '源码托管条款',
-          description: '客户接受源码托管',
-        },
-      ],
       '。超出审批标准。',
     );
     expect(terms.map((t) => t.status)).toEqual([
@@ -4886,16 +4878,37 @@ describe('CRM opportunity follow-up', () => {
     ]);
     expect(terms[0].approval).toBe('一期8折优惠申请');
     expect(terms[1].approval).toBe('3-3-4付款账期申请');
-    // The model's own for the contract terms, one added for the commitment
-    // never asked for, none for the rejected payment terms.
+    // One for each term needing approval, under the term's words and the
+    // model's why (or the standard wording), none for the rejected payment
+    // terms with nothing new since.
     expect(approvals).toEqual([
-      expect.objectContaining({ topic: 'contractTerms', name: '源码托管条款' }),
+      {
+        topic: 'contractTerms',
+        name: '源码托管，违约金上限 5%',
+        description: '客户接受源码托管',
+      },
       {
         topic: 'commitment',
         name: '3 月底上线',
         description: '3 月底上线。超出审批标准。',
       },
     ]);
+    // Something new since the payment terms were rejected: asked again.
+    expect(
+      checkTerms(
+        [
+          {
+            topic: 'paymentTerms',
+            term: '4-3-3，尾款验收后 60 天',
+            beyondStandard: true,
+            approval: '3-3-4付款账期申请',
+          },
+        ],
+        dealApprovals,
+        '',
+        new Set(['paymentTerms']),
+      ).approvals.map((a) => a.name),
+    ).toEqual(['4-3-3，尾款验收后 60 天']);
     expect(holdsBack).toBe(true);
     // Left unlinked, a term of a kind whose latest approval was rejected
     // reads as rejected, not as never asked for.
@@ -4917,7 +4930,6 @@ describe('CRM opportunity follow-up', () => {
             submittedAt: '2026-10-03T07:46:00.000Z',
           },
         ],
-        [],
         '',
       ).terms,
     ).toEqual([
@@ -4954,7 +4966,6 @@ describe('CRM opportunity follow-up', () => {
             submittedAt: '2026-10-03T08:04:00.000Z',
           },
         ],
-        [],
         '',
       ),
     ).toMatchObject({ terms: [{ status: 'approved' }], holdsBack: false });
@@ -4970,7 +4981,6 @@ describe('CRM opportunity follow-up', () => {
           },
         ],
         dealApprovals,
-        [],
         '',
       ).holdsBack,
     ).toBe(false);
@@ -4988,11 +4998,13 @@ describe('CRM opportunity follow-up', () => {
         ...advance,
         stage: 'contract',
         updates: [],
-        approvals: [
+        terms: [
           {
             topic: 'paymentTerms',
-            name: '尾款验收后 60 天',
-            description: '标准账期 30 天',
+            term: '尾款验收后 60 天',
+            beyondStandard: true,
+            approval: null,
+            why: '标准账期 30 天',
           },
         ],
       });
@@ -5078,21 +5090,27 @@ describe('CRM opportunity follow-up', () => {
         ...advance,
         stage: 'negotiation',
         updates: [],
-        approvals: [
+        terms: [
           {
             topic: 'discount',
-            name: '一期 8 折',
-            description: '客户要 8 折，标准折扣不超过 10%（A1）',
+            term: '一期 8 折',
+            beyondStandard: true,
+            approval: null,
+            why: '客户要 8 折，标准折扣不超过 10%（A1）',
           },
           {
             topic: 'paymentTerms',
-            name: '尾款验收后 90 天',
-            description: '标准账期 30 天',
+            term: '尾款验收后 90 天',
+            beyondStandard: true,
+            approval: '尾款 90 天',
+            why: '标准账期 30 天',
           },
           {
             topic: 'commitment',
-            name: '3 月 15 日前上线',
-            description: '要写进合同，延期按天扣款',
+            term: '3 月 15 日前上线',
+            beyondStandard: true,
+            approval: null,
+            why: '要写进合同，延期按天扣款',
           },
         ],
       });
