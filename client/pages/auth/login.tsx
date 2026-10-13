@@ -36,8 +36,6 @@ export default function LoginPage(): ReactElement {
           {
             content: (
               <PasswordLoginForm
-                // The template's taller fields and button (1.0.0-beta.64).
-                className='[&_[data-slot=input]]:h-12 [&_[data-slot=input-group]]:h-12 [&_button[type=submit]]:h-12'
                 error={login.error?.message}
                 footer={
                   signUpAvailable ? (
