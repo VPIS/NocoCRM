@@ -2,20 +2,23 @@ import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { agentsToken } from '@nocobase/app-plugin-agents/server/tokens';
+import { idGeneratorToken } from '@nocobase/app-server/id-generator';
 import { databaseManagerToken } from '@nocobase/db';
 import type { ServiceResolver } from '@nocobase/service-provider';
 import {
   BACKGROUND_MARKER,
   BACKGROUND_SOURCE,
 } from '../crm-agents/background.js';
+import { generateText, type LanguageModelUsage } from 'ai';
 import { z, type ZodType } from 'zod';
 import { TEXT_LIMIT } from './limits.js';
 import { CrmError, toText } from './schema.js';
 
 // The CRM's own model calls (migration step 1): the follow-ups, the reviews,
 // the captures, the merge proposals and the feedback write-ups ask the
-// Agents plugin's model gateway, which keeps the keys, records the use and
-// prices it. The Background AI agent (crm-agents/background.ts) is how an
+// Agents plugin's model gateway's language models, which keep the keys,
+// with their reasoning turned off (generateQuietly), the use recorded in
+// the plugin's usage table. The Background AI agent (crm-agents/background.ts) is how an
 // administrator configures the work: its first model is the one asked and
 // its instructions open the system prompt; without it (archived, deleted,
 // or listing no model) the people's default chat agent's first model, else
@@ -131,10 +134,130 @@ export interface ModelSession {
 // failed.
 export const RUN_TURN_MS = 8 * 60_000;
 
+// How a background run settles what the material leaves open, in every
+// run whatever the agent's instructions say. A reasoning model given
+// material that contradicts itself (an approved term and a mail naming
+// another) deliberated without end: a deal's follow-up thought for minutes
+// and gave no answer within the output limit or the turn's time.
+const DECIDING = [
+  'Decide once and move on:',
+  '- When the material contradicts itself, go by the newest source, name the contradiction among the risks, and do not try to reconcile it further.',
+  '- When a judgement is close (a confidence, whether a value is contradicted, whether a term is covered), take the more cautious reading at once: medium confidence, no update, the term needing approval.',
+  '- Weigh each point once; never return to a point already decided. Keep your reasoning short and give the answer.',
+].join('\n');
+
+// One turn of a background run, asked with the model's reasoning turned
+// off. @temporary(nocobase-official): the gateway's `generate` cannot turn
+// it off, and a reasoning model (Qwen, DeepSeek) then thought for minutes
+// over a deal's follow-up, past the turn's limit or its output limit,
+// giving no answer; so the turn asks the gateway's language model itself
+// (`reasoning: 'none'`, which each provider maps to its own switch) and
+// records the use as the gateway would, until the gateway takes a
+// reasoning option. A model that refuses the setting (one that cannot
+// answer without its reasoning) is asked again as it is.
+async function generateQuietly(
+  container: ServiceResolver,
+  request: {
+    model: ModelRef;
+    system: string;
+    prompt: string;
+    signal?: AbortSignal;
+  },
+): Promise<string> {
+  const { model, system, prompt, signal } = request;
+  const languageModel = await container
+    .resolve(agentsToken)
+    .online.gateway.languageModel(model);
+  const ask = (quiet: boolean) =>
+    generateText({
+      model: languageModel,
+      system,
+      prompt,
+      maxOutputTokens: 16_000,
+      maxRetries: 2,
+      ...(quiet ? { reasoning: 'none' as const } : {}),
+      ...(signal ? { abortSignal: signal } : {}),
+    });
+  let result: Awaited<ReturnType<typeof ask>>;
+  try {
+    result = await ask(true).catch((error: unknown) => {
+      if (!signal?.aborted && statusOf(error) === 400) return ask(false);
+      throw error;
+    });
+  } catch (error) {
+    throw asModelError(error, signal);
+  }
+  await recordUse(container, model, result.totalUsage).catch(() => undefined);
+  return result.text;
+}
+
+// An HTTP status a provider answered with, when the error carries one.
+function statusOf(error: unknown): number | undefined {
+  const status = (error as { statusCode?: unknown } | null)?.statusCode;
+  return typeof status === 'number' ? status : undefined;
+}
+
+// A failed call as the gateway's `ModelError` would describe it, which
+// modelFailure and runFailure read by name and code: stopped by the
+// signal (the turn's limit, or the application stopping), refused for its
+// key, or the provider's own failure in its words.
+function asModelError(error: unknown, signal?: AbortSignal): Error {
+  if (error instanceof Error && error.name === 'ModelError') return error;
+  const status = statusOf(error);
+  const code = signal?.aborted
+    ? 'aborted'
+    : status === 401 || status === 403
+      ? 'auth'
+      : 'provider';
+  return Object.assign(
+    new Error(
+      code === 'aborted'
+        ? 'The call was stopped.'
+        : error instanceof Error
+          ? error.message
+          : String(error),
+      { cause: error },
+    ),
+    { name: 'ModelError', code, status: status ?? null },
+  );
+}
+
+// A turn's use in the Agents plugin's usage table, as the gateway records a
+// `generate` (purpose `text`, the background source), so its usage page
+// still lists the background work. @temporary(nocobase-official), with
+// generateQuietly.
+async function recordUse(
+  container: ServiceResolver,
+  model: ModelRef,
+  usage: LanguageModelUsage,
+): Promise<void> {
+  if (!container.has(databaseManagerToken) || !container.has(idGeneratorToken))
+    return;
+  const count = (value: number | undefined) =>
+    Number.isFinite(value) && (value ?? 0) > 0 ? Math.round(value ?? 0) : 0;
+  await container
+    .resolve(databaseManagerToken)
+    .query()
+    .insertInto('agModelUsage')
+    .values({
+      id: container.resolve(idGeneratorToken).generate(),
+      purpose: 'text',
+      source: AI_SOURCE,
+      modelService: model.modelService,
+      model: model.model.slice(0, 200),
+      inputTokens: count(usage.inputTokens),
+      outputTokens: count(usage.outputTokens),
+      units: 1,
+      createdAt: new Date().toISOString(),
+    })
+    .execute();
+}
+
 // A run of turns with the CRM's model, its system prompt the current time
 // in the CRM's time zone (dates such as "next Tuesday" in what it reads are
-// reckoned from it), the Background AI agent's instructions and the
-// deployment's business guidance (guidance.ts); null when there is no
+// reckoned from it), the Background AI agent's instructions, how to settle
+// what the material leaves open (DECIDING) and the deployment's business
+// guidance (guidance.ts); null when there is no
 // model to ask.
 export async function openSession(
   container: ServiceResolver,
@@ -156,11 +279,11 @@ export async function openSession(
   const system = [
     `The current time is ${now} (${timeZone}).`,
     instructions,
+    DECIDING,
     guidance,
   ]
     .filter(Boolean)
     .join('\n\n');
-  const gateway = container.resolve(agentsToken).online.gateway;
   const turns: { role: 'user' | 'assistant'; text: string }[] = [];
   const ask = async (content: string, signal?: AbortSignal) => {
     turns.push({ role: 'user', text: content });
@@ -175,12 +298,10 @@ export async function openSession(
                 `${turn.role === 'user' ? 'User' : 'Assistant'}:\n${turn.text}`,
             )
             .join('\n\n')}\n\nUser:\n${content}`;
-    const { text } = await gateway.generate({
+    const text = await generateQuietly(container, {
       model,
       system,
       prompt,
-      maxOutputTokens: 16_000,
-      source: AI_SOURCE,
       ...(signal ? { signal } : {}),
     });
     turns.push({ role: 'assistant', text });

@@ -10,16 +10,12 @@ import {
   readSkill,
   runFailure,
 } from '../../server/providers/crm/ai-model.js';
+import { languageModelOf, type ModelCall } from '../setup/model-fake.js';
 
 // The CRM's background AI on the Agents plugin's model gateway: which model
 // it asks, how a run of turns reads, and how a failure reads.
 
-interface Call {
-  model: unknown;
-  system?: string;
-  prompt: string;
-  source: string;
-}
+type Call = ModelCall;
 
 const gatewayWith = (
   options: {
@@ -51,10 +47,11 @@ const gatewayWith = (
               ? { modelService: 'qwen', model: 'qwen-max' }
               : options.defaultModel,
         }),
-        generate: async (call: Call) => {
-          calls.push(call);
-          return { text: replies.shift() ?? '' };
-        },
+        languageModel: async (model: unknown) =>
+          languageModelOf(model, async (call) => {
+            calls.push(call);
+            return replies.shift() ?? '';
+          }),
       },
     },
   } as unknown as ReturnType<typeof container.resolve<typeof agentsToken>>);
@@ -108,9 +105,10 @@ describe("the CRM's model", () => {
     expect(answer).toEqual({ grade: 'A' });
     expect(calls).toHaveLength(2);
     // Recorded as the Background AI's use.
+    // The model the work follows, its reasoning turned off.
     expect(calls[0]).toMatchObject({
       model: { modelService: 'qwen', model: 'qwen-max' },
-      source: 'Background AI',
+      reasoning: 'none',
     });
     // Told the time where the CRM works, and the business guidance.
     expect(calls[0].system).toContain('(Asia/Shanghai)');
@@ -174,8 +172,10 @@ describe("the CRM's model", () => {
     });
     await session!.ask('Hello');
     expect(calls[0].model).toEqual({ modelService: 'openai', model: 'mini' });
+    // The agent's instructions, then how to settle what the material leaves
+    // open, then the guidance.
     expect(calls[0].system).toMatch(
-      /UTC\)\.\n\nWork for the CRM\.\n\n# Company$/u,
+      /UTC\)\.\n\nWork for the CRM\.\n\nDecide once and move on:\n[^]*\n\n# Company$/u,
     );
     expect(calls[0].system).not.toContain('Chat instructions.');
     // Archived: the work follows the assistant's model, without those
@@ -231,6 +231,67 @@ describe("the CRM's model", () => {
       }),
     };
     expect(await readSkill(container, 'lead-follow-up')).toBe('# Edited');
+  });
+});
+
+describe('a background turn', () => {
+  const containerWith = (answer: (call: ModelCall) => Promise<string>) => {
+    const calls: ModelCall[] = [];
+    const container = new ServiceContainer();
+    container.instance(agentsToken, {
+      chat: { settings: async () => ({ defaultAgentId: null }) },
+      agents: { get: async () => Promise.reject(new Error('none')) },
+      online: {
+        gateway: {
+          catalog: async () => ({
+            services: [],
+            defaultModel: { modelService: 'qwen', model: 'qwen-flash' },
+          }),
+          languageModel: async (model: unknown) =>
+            languageModelOf(model, async (call) => {
+              calls.push(call);
+              return answer(call);
+            }),
+        },
+      },
+    } as unknown as ReturnType<typeof container.resolve<typeof agentsToken>>);
+    return { container, calls };
+  };
+
+  it('asks a model that refuses to turn its reasoning off again as it is', async () => {
+    const { container, calls } = containerWith(async (call) => {
+      if (call.reasoning === 'none')
+        throw Object.assign(new Error('reasoning cannot be disabled'), {
+          statusCode: 400,
+        });
+      return 'ok';
+    });
+    const session = await openSession(container, {
+      timeZone: 'UTC',
+      guidance: '',
+    });
+    expect(await session!.ask('Hello')).toBe('ok');
+    expect(calls.map((call) => call.reasoning ?? 'default')).toEqual([
+      'none',
+      'default',
+    ]);
+  });
+
+  it('reports a turn its limit stopped as a stopped call, which reads as timed out', async () => {
+    const limit = new AbortController();
+    const { container } = containerWith(async () => {
+      limit.abort();
+      throw new Error('This operation was aborted');
+    });
+    const session = await openSession(container, {
+      timeZone: 'UTC',
+      guidance: '',
+    });
+    const failure = await session!
+      .ask('Hello', limit.signal)
+      .catch((error: unknown) => error);
+    expect(failure).toMatchObject({ name: 'ModelError', code: 'aborted' });
+    expect(runFailure(failure)).toBe('timedOut');
   });
 });
 
