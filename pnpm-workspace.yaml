@@ -323,6 +323,12 @@ minimumReleaseAgeExclude:
   - '@nocobase/app-plugin-mail@1.0.0-beta.13'
   - '@nocobase/app-server@2.0.0-beta.5'
   - '@nocobase/app-skills@0.1.0-beta.34'
+  - '@nocobase/app-plugin-authentication@2.0.0-beta.8'
+  - '@nocobase/app-plugin-notification-providers@0.2.0-beta.12'
+  - '@nocobase/app-server@2.0.0-beta.6'
+  - '@nocobase/app-skills@0.1.0-beta.35'
+  - '@nocobase/lifecycle@0.1.0-beta.2'
+  - '@nocobase/mailer@0.1.0-beta.0'
 
 # One SQLite binding for the whole tree: the NocoBase packages accept 12 or 13,
 # and loading two builds of the native addon in one process crashes it.
