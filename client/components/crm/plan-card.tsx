@@ -126,7 +126,7 @@ export function PlanCard({
                 view: 'chat',
               })
             }
-            className='inline-flex items-center gap-1 hover:text-primary hover:underline'
+            className='inline-flex items-center gap-1 underline-offset-4 hover:underline'
           >
             <MessagesSquare className='size-3.5' aria-hidden />
             {text('plans.fromConversation')}

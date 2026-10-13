@@ -121,7 +121,7 @@ function CompanyCrumb({
   const link = useRecordLink('companies', id);
   return (
     <Link
-      className='box-decoration-clone px-2 hover:text-primary hover:underline'
+      className='box-decoration-clone px-2 underline-offset-4 hover:underline'
       {...link}
     >
       {name}

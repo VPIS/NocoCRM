@@ -305,7 +305,7 @@ export default function ReportsPage(): ReactElement {
                 <CardHeader className='flex flex-row items-center justify-between'>
                   <CardTitle className='text-base'>{text('funnel')}</CardTitle>
                   <Link
-                    className='text-xs text-muted-foreground hover:text-primary'
+                    className='text-xs text-muted-foreground underline-offset-4 hover:underline'
                     to='/crm/opportunities'
                   >
                     {text('more')} ↗

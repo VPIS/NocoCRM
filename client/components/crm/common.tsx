@@ -300,7 +300,7 @@ export function Metric({
 // A link to a record by its name. Long names never wrap into the layout
 // around them: they are cut with an ellipsis after one line (two where a card
 // has the room, the board), and the full name shows on hover. Under the
-// pointer it takes the primary colour, without an underline.
+// pointer it is underlined in its own colour, as the UI Library's links are.
 export function RecordLink({
   entity,
   record,
@@ -315,13 +315,16 @@ export function RecordLink({
   const link = useRecordLink(entity, toText(record.id));
   if (lines === 'all')
     return (
-      <Link className='font-medium break-words hover:text-primary' {...link}>
+      <Link
+        className='font-medium break-words underline-offset-4 hover:underline'
+        {...link}
+      >
         {record.name}
       </Link>
     );
   return lines === 1 ? (
     <Link
-      className='inline-block max-w-full min-w-0 truncate align-bottom font-medium hover:text-primary'
+      className='inline-block max-w-full min-w-0 truncate align-bottom font-medium underline-offset-4 hover:underline'
       title={record.name}
       {...link}
     >
@@ -330,7 +333,7 @@ export function RecordLink({
   ) : (
     <Link
       // No `block`: it would override the clamp's own display.
-      className='line-clamp-2 max-w-full font-medium break-words hover:text-primary'
+      className='line-clamp-2 max-w-full font-medium break-words underline-offset-4 hover:underline'
       title={record.name}
       {...link}
     >
