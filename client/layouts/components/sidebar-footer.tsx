@@ -98,13 +98,13 @@ export function AppSidebarFooter(): ReactElement {
               {brandLink} keeps it reliable.
             </Trans>
           </p>
-          {/* Application change: the version alone, the application's name
-              being in the brand above; the name stays in the tooltip. */}
+          {/* Application change: the application's name before its
+              version ("NocoCRM v1.0.0-beta.34"). */}
           <p
             className='mt-1 truncate text-muted-foreground'
             title={`${templateName} ${versionLabel}`}
           >
-            {versionLabel}
+            {templateName} {versionLabel}
           </p>
         </div>
       </div>
