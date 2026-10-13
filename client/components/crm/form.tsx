@@ -1340,6 +1340,7 @@ export function RecordForm({
                   {andThen && (
                     <Button
                       type='submit'
+                      variant='contrast'
                       disabled={busy || !complete || !input.approverId}
                       title={
                         input.approverId

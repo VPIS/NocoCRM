@@ -94,7 +94,11 @@ export function ApprovalActions({
           </Button>
         )}
         {canSubmit && (
-          <Button size='sm' onClick={() => setDecision('submit')}>
+          <Button
+            size='sm'
+            variant='contrast'
+            onClick={() => setDecision('submit')}
+          >
             <Send />
             {text('submit')}
           </Button>
@@ -102,7 +106,7 @@ export function ApprovalActions({
         {canWithdraw && (
           <Button
             size='sm'
-            variant='outline'
+            variant='contrast'
             onClick={() => setDecision('withdraw')}
           >
             <Undo2 />
@@ -111,7 +115,11 @@ export function ApprovalActions({
         )}
         {canDecide && (
           <>
-            <Button size='sm' onClick={() => setDecision('approve')}>
+            <Button
+              size='sm'
+              variant='contrast'
+              onClick={() => setDecision('approve')}
+            >
               <ShieldCheck />
               {text('approve')}
             </Button>
