@@ -48,6 +48,12 @@ import {
 } from '../components/crm/api.js';
 import { DEFAULT_TIME_ZONE } from '../../server/providers/crm/zone-time.js';
 
+// The agents' switches black when on, as the buttons that commit are (the
+// button's `contrast` variant), rather than the primary purple; the thumb
+// takes the ground's colour so it still shows in dark mode.
+const BLACK_SWITCH =
+  'data-checked:bg-foreground dark:**:data-[slot=switch-thumb]:data-checked:bg-background';
+
 // The CRM's four agents (server/providers/crm/agents.ts) on one page, Auto
 // follow-up in the menu, a tab each: what the agent does, when it runs (each
 // trigger switched on or off by an administrator), how its runs fared over
@@ -224,6 +230,7 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
             <label className='flex items-center gap-2 text-sm'>
               {text('agents.runsOnItsOwn')}
               <Switch
+                className={BLACK_SWITCH}
                 checked={enabled}
                 disabled={!admin || saving}
                 onCheckedChange={(on) => void save({ enabled: on })}
@@ -258,6 +265,7 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
                     </p>
                   </div>
                   <Switch
+                    className={BLACK_SWITCH}
                     checked={data.switches.triggers[trigger] !== false}
                     disabled={!admin || saving || !enabled}
                     onCheckedChange={(on) =>

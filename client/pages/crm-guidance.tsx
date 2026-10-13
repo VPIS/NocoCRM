@@ -70,7 +70,11 @@ function GuidanceForm({ settings }: { settings: CrmSettings }): ReactElement {
         title={text('guidance')}
         description={text('guidanceHint')}
         actions={
-          <Button disabled={busy} onClick={() => void save()}>
+          <Button
+            variant='contrast'
+            disabled={busy}
+            onClick={() => void save()}
+          >
             {busy ? text('saving') : text('save')}
           </Button>
         }
