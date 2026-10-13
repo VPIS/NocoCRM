@@ -2470,6 +2470,21 @@ async function deleteRecords(
       await q.deleteFrom('crmHistory').where('recordId', 'in', all).execute();
       await q.deleteFrom('crmOutbox').where('recordId', 'in', all).execute();
     }
+    // The approvals' lifecycle log (server/lifecycles/approvals.ts) goes
+    // with them.
+    const approvals = byEntity.get('approvals') ?? [];
+    if (approvals.length) {
+      await q
+        .deleteFrom('lifecycleEffectRuns')
+        .where('lifecycle', '=', 'approvals')
+        .where('recordId', 'in', approvals)
+        .execute();
+      await q
+        .deleteFrom('lifecycleTransitions')
+        .where('lifecycle', '=', 'approvals')
+        .where('recordId', 'in', approvals)
+        .execute();
+    }
     for (const [entity, table] of [
       ['tasks', 'crmTasks'],
       ['approvals', 'crmApprovals'],

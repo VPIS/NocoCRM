@@ -61,6 +61,10 @@ export interface Actor {
   // messages a change queues); set by CrmService.mutate on the prepared
   // actor, absent when a caller runs its own transaction.
   after?: (callback: () => Promise<void>) => void;
+  // The transaction CrmService.mutate opened, as its callback received it
+  // (a `@nocobase/db` connection): what a record lifecycle's transition
+  // joins (CrmService.approvalAction), so it commits with the rest.
+  transaction?: unknown;
   // Set when the change was proposed by the AI and confirmed by this user
   // (the assistant's write tools, an accepted evaluation), or, for a lead,
   // organised by the AI from pasted text and checked by this user (the

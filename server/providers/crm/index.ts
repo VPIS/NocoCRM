@@ -72,6 +72,7 @@ import {
 } from './task-preparation.js';
 import { userRoleScopeRegistryToken } from '@nocobase/app-plugin-users/server/tokens';
 import { aiAvailable } from './ai-model.js';
+import { lifecycleRuntimeToken } from '../lifecycles.js';
 
 // The Channel the CRM's notifications go through: the in-app inbox, named
 // `inbox` in the notification configuration (`notification.channels.inbox`
@@ -98,6 +99,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
         new CrmService(
           this.app.container.resolve(databaseManagerToken),
           this.app.container.resolve(authorizationToken),
+          this.app.container.resolve(lifecycleRuntimeToken),
         ),
     );
     // Changes an agent proposes, carried out once a person confirms them

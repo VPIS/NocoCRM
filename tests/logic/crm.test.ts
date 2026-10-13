@@ -1263,6 +1263,106 @@ describe('CRM API security and domain rules', () => {
     expect(outbox.map((row) => toText(row.event))).toContain('approved');
   });
 
+  // An approval moves by its lifecycle (server/lifecycles/approvals.ts):
+  // created and moved through the runtime, each step logged with the
+  // version it left the approval at, and an edit leaving its state alone.
+  it('moves an approval by its lifecycle, withdrawn and submitted again', async () => {
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Lifecycle company',
+    });
+    const opportunity = await service.save(actor('rep'), 'opportunities', {
+      name: 'Lifecycle deal',
+      companyId: company.id,
+    });
+    const approval = await service.save(actor('rep'), 'approvals', {
+      name: 'Payment terms',
+      opportunityId: opportunity.id,
+      topic: 'paymentTerms',
+      approverId: 'manager',
+    });
+    const id = toText(approval.id);
+    const stored = () =>
+      database
+        .query()
+        .selectFrom('crmApprovals')
+        .select(['status', 'lifecycleVersion', 'statusChangedAt'])
+        .where('id', '=', id)
+        .executeTakeFirstOrThrow();
+    expect(await stored()).toMatchObject({
+      status: 'draft',
+      lifecycleVersion: 1,
+    });
+    expect((await stored()).statusChangedAt).toBeTruthy();
+    // An edit of the draft changes no state and moves no version.
+    await service.save(actor('rep'), 'approvals', { name: 'Net 60' }, id);
+    expect(await stored()).toMatchObject({
+      status: 'draft',
+      lifecycleVersion: 1,
+    });
+    await service.approvalAction(actor('rep'), id, 'submit');
+    await service.approvalAction(actor('rep'), id, 'withdraw');
+    // Withdrawn, it is the applicant's to change and submit again.
+    await service.save(actor('rep'), 'approvals', { name: 'Net 45' }, id);
+    const again = await service.approvalAction(actor('rep'), id, 'submit');
+    expect(again).toMatchObject({ status: 'pending', name: 'Net 45' });
+    await service.approvalAction(actor('manager'), id, 'reject', 'Too long');
+    expect(await stored()).toMatchObject({
+      status: 'rejected',
+      lifecycleVersion: 5,
+    });
+    const log = await database
+      .query()
+      .selectFrom('lifecycleTransitions')
+      .select(['transition', 'from', 'to', 'actorId', 'version'])
+      .where('lifecycle', '=', 'approvals')
+      .where('recordId', '=', id)
+      .orderBy('version')
+      .execute();
+    expect(log.map((entry) => entry.transition)).toEqual([
+      '$create',
+      'submit',
+      'withdraw',
+      'submit',
+      'reject',
+    ]);
+    expect(log.at(-1)).toMatchObject({
+      from: 'pending',
+      to: 'rejected',
+      actorId: 'manager',
+      version: 5,
+    });
+    // An approval from before the lifecycle (version 0, no creation in the
+    // log, as the migration leaves it) moves on like any other.
+    const older = await service.save(actor('rep'), 'approvals', {
+      name: 'Raised before',
+      opportunityId: opportunity.id,
+      topic: 'discount',
+      approverId: 'manager',
+    });
+    await database
+      .query()
+      .updateTable('crmApprovals')
+      .set({ lifecycleVersion: 0 })
+      .where('id', '=', toText(older.id))
+      .execute();
+    await database
+      .query()
+      .deleteFrom('lifecycleTransitions')
+      .where('recordId', '=', toText(older.id))
+      .execute();
+    expect(
+      (await service.approvalAction(actor('rep'), toText(older.id), 'submit'))
+        .status,
+    ).toBe('pending');
+    // The runtime refuses what the CRM's own checks would have caught, in
+    // the CRM's terms, had a caller gone around them.
+    await expect(
+      service.lifecycles.fire('approvals', id, 'submit', {
+        actor: { id: 'rep' },
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_STATE' });
+  });
+
   it('refuses an approval for an opportunity the applicant may not edit', async () => {
     const company = await service.save(actor('manager'), 'companies', {
       name: 'Manager company',

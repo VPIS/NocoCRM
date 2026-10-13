@@ -21,6 +21,9 @@ import {
 import { asEntity, toText } from './schema.js';
 import { isCountry, isSubdivision, subdivisionCode } from './geography.js';
 import { randomUUID } from 'node:crypto';
+import { LifecycleError, type LifecycleRuntime } from '@nocobase/lifecycle';
+import { APPROVAL_LIFECYCLE } from '../../lifecycles/approvals.js';
+import { createLifecycleRuntime } from '../lifecycles.js';
 import { readEntry } from './ai-entries.js';
 import type {
   DatabaseManager,
@@ -179,10 +182,17 @@ const TOLD = ['dueAt', 'ownerId'];
 const TOLD_STATUSES = ['completed', 'cancelled'];
 
 export class CrmService {
+  // The record lifecycles' runtime the approvals move by
+  // (server/providers/lifecycles.ts); one over the same database when none
+  // is given, as in tests.
+  public readonly lifecycles: LifecycleRuntime;
   constructor(
     public readonly database: DatabaseManager,
     public readonly authz: AppAuthorization,
-  ) {}
+    lifecycles?: LifecycleRuntime,
+  ) {
+    this.lifecycles = lifecycles ?? createLifecycleRuntime(database);
+  }
   async settings(
     query: QueryAdapter = this.database.query(),
   ): Promise<CrmSettings> {
@@ -314,9 +324,10 @@ export class CrmService {
     prepared.after = (callback) => {
       afterCommit.push(callback);
     };
-    const result = await this.database.transaction(({ query }) =>
-      fn(prepared, query),
-    );
+    const result = await this.database.transaction((connection) => {
+      prepared.transaction = connection;
+      return fn(prepared, connection.query);
+    });
     for (const callback of afterCommit) await callback();
     return result;
   }
@@ -1734,6 +1745,11 @@ export class CrmService {
         .filter((key) => input[key] !== undefined)
         .map((key) => [key, input[key]]),
     );
+    // An approval's status is its lifecycle's alone
+    // (server/lifecycles/approvals.ts): an edit leaves it as it is, and a
+    // new approval is created through the runtime, which starts it as a
+    // draft and logs its creation.
+    if (entity === 'approvals') delete values.status;
     if (id) {
       const result = await tx
         .updateTable(definitions[entity].table)
@@ -1743,6 +1759,17 @@ export class CrmService {
         .where((eb) => compileFilter(eb, access.scope))
         .execute();
       if (!result.updatedCount) throw new CrmError('conflict', 409);
+    } else if (entity === 'approvals') {
+      if (!actor.transaction)
+        throw new Error('An approval is created only within CrmService.mutate.');
+      await this.lifecycles
+        .create(APPROVAL_LIFECYCLE, values, {
+          actor: { id: actor.id },
+          transaction: actor.transaction,
+        })
+        .catch((error: unknown) => {
+          throw lifecycleRefusal(error);
+        });
     } else
       await tx
         .insertInto(definitions[entity].table)
@@ -2571,23 +2598,21 @@ export class CrmService {
         throw new CrmError('forbidden', 403);
       status = action === 'approve' ? 'approved' : 'rejected';
     }
-    const changes = {
-      status,
-      updatedAt: now,
-      ...(action === 'submit'
-        ? { submittedAt: now, decisionComment: null, decidedAt: null }
-        : ['approve', 'reject'].includes(action)
-          ? { decisionComment: comment.slice(0, 10000), decidedAt: now }
-          : {}),
-    };
-    const result = await tx
-      .updateTable('crmApprovals')
-      .set(changes)
-      .where('id', '=', id)
-      .where('status', '=', record.status)
-      .where('updatedAt', '=', record.updatedAt)
-      .execute();
-    if (!result.updatedCount) throw new CrmError('conflict', 409);
+    // The state moves by the approvals' lifecycle (server/lifecycles/
+    // approvals.ts), in this transaction: it writes the status with the
+    // dates and comment the transition sets, logs the transition, and
+    // refuses one the approval was moved past meanwhile.
+    if (!actor.transaction)
+      throw new Error('An approval moves only within CrmService.mutate.');
+    try {
+      await this.lifecycles.fire(APPROVAL_LIFECYCLE, id, action, {
+        actor: { id: actor.id },
+        input: ['approve', 'reject'].includes(action) ? { comment } : {},
+        transaction: actor.transaction,
+      });
+    } catch (error) {
+      throw lifecycleRefusal(error);
+    }
     // A decision's comment is told on its entry in the timeline, where the
     // approval page shows it.
     const decisionComment = ['approve', 'reject'].includes(action)
@@ -2850,4 +2875,24 @@ export function array(value: unknown): unknown[] {
     }
   }
   return [];
+}
+
+// A transition the approvals' lifecycle refused, in the CRM's own terms, as
+// the checks before it answer: a guard's refusal by the code it gives (an
+// applicant's lock, an approver's place, the approver to choose), a state
+// the approval has left as locked, a concurrent change as a conflict.
+// CrmService.approvalAction checks first, so these are what slipped past.
+function lifecycleRefusal(error: unknown): unknown {
+  if (!(error instanceof LifecycleError)) return error;
+  const code = error.blockers[0]?.code;
+  if (error.code === 'GUARD_REJECTED')
+    return code === 'required'
+      ? new CrmError('required', 400, 'approverId')
+      : code === 'approvalLocked'
+        ? new CrmError('approvalLocked', 409)
+        : new CrmError('forbidden', 403);
+  if (error.code === 'INVALID_STATE') return new CrmError('approvalLocked', 409);
+  if (error.code === 'CONFLICT') return new CrmError('conflict', 409);
+  if (error.code === 'RECORD_NOT_FOUND') return new CrmError('notFound', 404);
+  return error;
 }
