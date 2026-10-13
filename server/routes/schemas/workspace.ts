@@ -1,3 +1,4 @@
+import type { LifecycleDescription } from '@nocobase/lifecycle';
 import { z } from 'zod';
 import type { AgentSwitches } from '../../providers/crm/agents.js';
 import { AGENDA_PAGE } from '../../providers/crm/dashboard.js';
@@ -118,6 +119,52 @@ export const Workspace = z
     }),
   })
   .meta({ ref: 'CrmWorkspace' });
+
+// The approvals' lifecycle as the library describes it
+// (server/lifecycles/approvals.ts): its states, which are final, and the
+// transitions between them, which the settings' approval process page draws.
+const names = z.array(z.string());
+// A definition's own notes, kept as JSON.
+const meta = z.record(z.string(), z.json());
+export const ApprovalLifecycleView: z.ZodType<LifecycleDescription> = z
+  .object({
+    name: z.string(),
+    initial: z.string(),
+    initialStates: names,
+    states: names,
+    stateInfo: z.array(
+      z.object({
+        name: z.string(),
+        title: z.string(),
+        final: z.boolean(),
+        meta,
+      }),
+    ),
+    transitions: z.array(
+      z.object({
+        name: z.string(),
+        title: z.string(),
+        from: names,
+        to: names,
+        effects: names,
+        accept: names,
+        manual: z.boolean(),
+        meta,
+      }),
+    ),
+    continuations: z.array(
+      z.object({
+        effect: z.string(),
+        onSuccess: z.string().optional(),
+        onFailure: z.string().optional(),
+      }),
+    ),
+    onEnter: z.record(z.string(), names),
+    triggers: z.array(
+      z.object({ name: z.string(), transition: z.string(), when: names }),
+    ),
+  })
+  .meta({ ref: 'CrmApprovalLifecycle' });
 
 const DemoAccount = z.object({
   username: z.string(),

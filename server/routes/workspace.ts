@@ -97,18 +97,21 @@ import {
   Subdivision,
   SubdivisionQuery,
   SystemSettings,
+  ApprovalLifecycleView,
   UpdateSystemSettingsInput,
   UploadedAttachment,
   UploadQuery,
   Workspace,
 } from './schemas/workspace.js';
 import type { DatabaseAuthorizationConditions } from '@nocobase/app-plugin-authorization/server';
+import { APPROVAL_LIFECYCLE } from '../lifecycles/approvals.js';
 
 // The paths these routes own, which the guard (context.ts) is installed on.
 export const WORKSPACE_PATHS = [
   'workspace',
   'systemSettings',
   'demoData',
+  'approvalLifecycle',
   'geography',
   'search',
   'dashboard',
@@ -301,6 +304,26 @@ export function registerWorkspaceRoutes(
 
   // The demo dataset (demo.ts): whether one is imported, importing it and
   // removing it, for whoever may manage the settings.
+  router.get(
+    '/approvalLifecycle',
+    describeRoute({
+      tags: ['Approvals'],
+      summary: 'Describe the approval process',
+      operationId: 'getApprovalLifecycle',
+      description: `The approvals' lifecycle: their states, which of them end a request, and the transitions between them, as the settings' approval process page draws it. ${settingsOnly}`,
+      responses: {
+        '200': dataResponse(ApprovalLifecycleView),
+        ...apiErrorResponses,
+      },
+    }),
+    async (c) => {
+      if (!(await capability(c.get('actor'), 'manage', 'settings')))
+        throw new CrmError('forbidden', 403);
+      return c.json({
+        data: service.lifecycles.describe(APPROVAL_LIFECYCLE),
+      });
+    },
+  );
   const demoResponses = {
     '200': dataResponse(DemoDataStatus),
     ...apiErrorResponses,

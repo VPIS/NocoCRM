@@ -32,6 +32,15 @@ const enUS = {
   app: { ...systemEnUS.app, title: 'NocoCRM' },
   // The sign-in page's right side (client/pages/auth/activity-panel.tsx):
   // one customer's way from a lead to a closed deal. Sample content.
+  // The UI Library's flow diagram (client/components/flow-diagram.tsx), which
+  // the approval process page draws with.
+  flowDiagram: {
+    empty: 'No states to display.',
+    loading: 'Laying out the diagram…',
+    failed: 'Unable to lay out this diagram.',
+    nodeHelp: 'Press Enter or Space to select a state.',
+    edgeHelp: 'Press Enter or Space to select a transition.',
+  },
   loginActivity: {
     heading: 'From the first lead to the signed deal.',
     description:

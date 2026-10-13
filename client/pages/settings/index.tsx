@@ -7,6 +7,7 @@ import {
   Settings2,
   ShieldUser,
   UsersRound,
+  Workflow,
   type LucideIcon,
 } from 'lucide-react';
 import { PageFrameContext } from '../../components/page-frame.js';
@@ -29,6 +30,11 @@ interface Tab {
 }
 const TABS: readonly Tab[] = [
   { path: 'crm', label: 'navigation.general', icon: Settings2 },
+  {
+    path: 'approval-flow',
+    label: 'navigation.approvalFlow',
+    icon: Workflow,
+  },
   { path: 'users', label: 'navigation.users', icon: UsersRound },
   {
     path: 'permission-sets',
@@ -50,6 +56,10 @@ export default function SettingsPage(): ReactElement {
   // everyone's own.
   const access: Record<string, ReturnType<typeof useCan>> = {
     crm: useCan({
+      resource: { type: 'settings', id: 'crm' },
+      action: 'manage',
+    }),
+    'approval-flow': useCan({
       resource: { type: 'settings', id: 'crm' },
       action: 'manage',
     }),

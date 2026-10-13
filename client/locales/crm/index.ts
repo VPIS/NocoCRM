@@ -2187,12 +2187,49 @@ const wording = {
     guidance: ['Business guidance', '业务指导'],
     // The first tab of Settings (pages/settings/index.tsx).
     general: ['General', '通用'],
+    // How an approval moves (pages/settings/approval-flow.tsx).
+    approvalFlow: ['Approval process', '审批流程'],
     agentList: ['Agents', 'Agent'],
     models: ['Models', '模型'],
     skills: ['Skills', '技能'],
     usage: ['Usage', '用量'],
   },
   admin: adminWording,
+  // Settings → Approval process (pages/settings/approval-flow.tsx): the
+  // approvals' lifecycle, read only.
+  approvalFlow: {
+    title: ['Approval process', '审批流程'],
+    description: [
+      'The states an approval goes through, from a draft to a decision, and who takes each step. The process is set in the product and shown here as it runs.',
+      '一个审批从草稿到决定要经过的状态，以及每一步由谁来做。流程由产品内置，这里只展示它实际怎么运行。',
+    ],
+    diagram: ['Approval process diagram', '审批流程图'],
+    end: ['End', '结束'],
+    steps: ['Steps', '每一步'],
+    and: [' and ', '和'],
+    who: {
+      submit: [
+        'The applicant, once an approver (a sales manager) is chosen. A withdrawn request can be changed and submitted again.',
+        '申请人，选好审批人（销售经理）后才能提交。撤回的申请可以修改后再次提交。',
+      ],
+      withdraw: [
+        'The applicant, while the request awaits a decision.',
+        '申请人，在审批人做决定之前。',
+      ],
+      approve: [
+        'The chosen approver, who is never the applicant.',
+        '指定的审批人，不能是申请人本人。',
+      ],
+      reject: [
+        'The chosen approver, who is never the applicant.',
+        '指定的审批人，不能是申请人本人。',
+      ],
+    },
+    final: [
+      '{{states}} end a request: to ask again, raise a new approval.',
+      '{{states}}之后申请就结束了，要再申请需新建一条审批。',
+    ],
+  },
   entities: {
     leads: ['Leads', '线索'],
     companies: ['Companies', '公司'],

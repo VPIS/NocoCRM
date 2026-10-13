@@ -369,6 +369,17 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         },
         componentLoader: () => import('./pages/crm-settings.js'),
       },
+      {
+        // How an approval moves, read only; the administrators', as the
+        // General tab is.
+        name: 'settings-approval-flow',
+        path: 'approval-flow',
+        authz: {
+          resource: { type: 'settings', id: 'crm' },
+          action: 'manage',
+        },
+        componentLoader: () => import('./pages/settings/approval-flow.js'),
+      },
       // The administration pages the plugins left to the application in
       // template 1.0.0-beta.60 (client/pages/settings/): each route checks
       // what the plugin's own API checks.

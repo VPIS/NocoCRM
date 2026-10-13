@@ -24,6 +24,13 @@ const zhCN: AppResource = {
   'navigation.brandHome': 'NocoCRM 首页',
   'navigation.brandApps': 'NocoBase 应用',
   app: { ...systemZhCN.app, title: 'NocoCRM' },
+  flowDiagram: {
+    empty: '没有可显示的状态。',
+    loading: '正在排布流程图…',
+    failed: '无法排布这个流程图。',
+    nodeHelp: '按回车或空格选中一个状态。',
+    edgeHelp: '按回车或空格选中一个转换。',
+  },
   loginActivity: {
     heading: '从一条线索，到一笔成交。',
     description:
