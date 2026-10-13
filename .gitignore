@@ -13,7 +13,9 @@ coverage/
 
 # Local application state.
 /storage/*
-/.agents/
+# Skills synchronized by `pnpm nocobase skills sync`; `.agents/rules/` is the application's own guidance and is committed.
+/.agents/*
+!/.agents/rules/
 /.agent-annotations/
 /.nocobase/
 *.log
