@@ -139,8 +139,8 @@ const METRIC_TITLES: Partial<Record<string, string>> = {
   'companies.stale': 'staleCompanies',
   'opportunities.stale': 'staleOpportunities',
 };
-// The records a list opens over itself (the task list's linked records), in
-// the detail page's drawer; its code loads only when a record is first
+// The records a list opens over itself (those its rows, cards and tasks link
+// to, never the row's own), in the detail page's drawer; its code loads only when a record is first
 // opened, and stays mounted after, so closing animates.
 const RecordDrawer = lazy(() =>
   import('./crm-detail.js').then((module) => ({
@@ -1058,110 +1058,124 @@ function EntityList({
           <Empty action={newButton} />
         ) : (
           <>
-            {/* A list's table in the template's frame, as the task list's is. */}
-            <div className='overflow-hidden rounded-lg border'>
-              <Table>
-                {/* A quiet header: small muted words on the hover grey. */}
-                <TableHeader>
-                  <TableRow className='border-border hover:bg-transparent'>
-                    {columns.map((key) => {
-                      const title =
-                        key === 'name' && entity === 'leads'
-                          ? text('leadTitle')
-                          : text(fieldLabelKey(entity, toText(key)));
-                      return (
-                        <SortableHead
-                          className={HEAD}
-                          key={key}
-                          title={title}
-                          direction={sort?.key === key && sort.direction}
-                          onClick={() => sortBy(key)}
-                        />
-                      );
-                    })}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {query.data.data.map((record) => (
-                    <Fragment key={record.id}>
-                      {/* Ruled as the card is framed. */}
-                      {/* Its empty space opens the record too. */}
-                      <TableRow
-                        className='cursor-pointer border-border'
-                        onClick={openOnRowClick(
-                          `/crm/${entity}/${toText(record.id)}`,
-                          (path) => void navigate(path),
-                        )}
-                      >
-                        {columns.map((key) => (
-                          <TableCell
-                            // Every value, the name included, is cut with an
-                            // ellipsis, so a cell never runs over the next one,
-                            // which on a phone put two columns' text on top of
-                            // each other.
-                            className='max-w-72 truncate'
+            {/* A list's table in the template's frame, as the task list's is;
+                the records its rows link to open in a drawer over it. */}
+            <DrawerHost>
+              <div className='overflow-hidden rounded-lg border'>
+                <Table>
+                  {/* A quiet header: small muted words on the hover grey. */}
+                  <TableHeader>
+                    <TableRow className='border-border hover:bg-transparent'>
+                      {columns.map((key) => {
+                        const title =
+                          key === 'name' && entity === 'leads'
+                            ? text('leadTitle')
+                            : text(fieldLabelKey(entity, toText(key)));
+                        return (
+                          <SortableHead
+                            className={HEAD}
                             key={key}
-                          >
-                            {key === 'name' ? (
-                              <span className='flex min-w-0 flex-col items-start gap-1'>
-                                <RecordLink
-                                  entity={entity}
-                                  record={{
-                                    id: record.id,
-                                    // A contact's company is its own column
-                                    // here, so the link is the bare name.
-                                    name:
-                                      entity === 'contacts'
-                                        ? toText(record.name)
-                                        : recordTitle(entity, record, lookup),
-                                  }}
-                                />
-                                {/* Under the name: the AI at work on the
+                            title={title}
+                            direction={sort?.key === key && sort.direction}
+                            onClick={() => sortBy(key)}
+                          />
+                        );
+                      })}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {query.data.data.map((record) => (
+                      <Fragment key={record.id}>
+                        {/* Ruled as the card is framed. */}
+                        {/* Its empty space opens the record too. */}
+                        <TableRow
+                          className='cursor-pointer border-border'
+                          onClick={openOnRowClick(
+                            `/crm/${entity}/${toText(record.id)}`,
+                            (path) => void navigate(path),
+                          )}
+                        >
+                          {columns.map((key) => (
+                            <TableCell
+                              // Every value, the name included, is cut with an
+                              // ellipsis, so a cell never runs over the next one,
+                              // which on a phone put two columns' text on top of
+                              // each other.
+                              className='max-w-72 truncate'
+                              key={key}
+                            >
+                              {key === 'name' ? (
+                                <span className='flex min-w-0 flex-col items-start gap-1'>
+                                  {/* The row's own record: its page, outside
+                                    the drawer the records it links to open
+                                    in. */}
+                                  <RecordDrawerContext.Provider
+                                    value={undefined}
+                                  >
+                                    <RecordLink
+                                      entity={entity}
+                                      record={{
+                                        id: record.id,
+                                        // A contact's company is its own column
+                                        // here, so the link is the bare name.
+                                        name:
+                                          entity === 'contacts'
+                                            ? toText(record.name)
+                                            : recordTitle(
+                                                entity,
+                                                record,
+                                                lookup,
+                                              ),
+                                      }}
+                                    />
+                                  </RecordDrawerContext.Provider>
+                                  {/* Under the name: the AI at work on the
                                   row, or its suggestion waiting, as on
                                   the board. */}
-                                <AiRowMark
-                                  state={
-                                    query.data.meta.ai?.[toText(record.id)]
-                                  }
-                                  review={entity === 'approvals'}
-                                />
-                              </span>
-                            ) : entity === 'approvals' && key === 'topic' ? (
-                              record[key] ? (
-                                <KindTag value={record[key]} />
+                                  <AiRowMark
+                                    state={
+                                      query.data.meta.ai?.[toText(record.id)]
+                                    }
+                                    review={entity === 'approvals'}
+                                  />
+                                </span>
+                              ) : entity === 'approvals' && key === 'topic' ? (
+                                record[key] ? (
+                                  <KindTag value={record[key]} />
+                                ) : (
+                                  '—'
+                                )
+                              ) : key === 'status' &&
+                                entity === 'approvals' &&
+                                record.status === 'pending' &&
+                                record.approverId === meta?.userId ? (
+                                // The reader's own queue, marked as on the page.
+                                <span className='flex flex-wrap items-center gap-2'>
+                                  <Status value={record.status} />
+                                  <Badge>{text('yourDecision')}</Badge>
+                                </span>
                               ) : (
-                                '—'
-                              )
-                            ) : key === 'status' &&
-                              entity === 'approvals' &&
-                              record.status === 'pending' &&
-                              record.approverId === meta?.userId ? (
-                              // The reader's own queue, marked as on the page.
-                              <span className='flex flex-wrap items-center gap-2'>
-                                <Status value={record.status} />
-                                <Badge>{text('yourDecision')}</Badge>
-                              </span>
-                            ) : (
-                              <Value
-                                record={record}
-                                field={
-                                  definition.fields.find(
-                                    (f) => f.key === key,
-                                  ) ?? {
-                                    key,
+                                <Value
+                                  record={record}
+                                  field={
+                                    definition.fields.find(
+                                      (f) => f.key === key,
+                                    ) ?? {
+                                      key,
+                                    }
                                   }
-                                }
-                                lookup={lookup}
-                              />
-                            )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    </Fragment>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                                  lookup={lookup}
+                                />
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </Fragment>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </DrawerHost>
             <div className='flex items-center justify-between text-sm text-muted-foreground'>
               <span>
                 {text('page', {
@@ -1195,137 +1209,146 @@ function EntityList({
         // Moved sideways by its bar, which always shows (scroll-shown), or
         // by holding its empty space and dragging (useDragPan), as a mouse
         // without a sideways wheel needs on a board wider than the page.
-        <div
-          className='scroll-shown -mx-1 -mt-1 flex min-h-0 flex-1 cursor-grab gap-3 overflow-x-auto px-1 pt-1 pb-2 data-[panning]:cursor-grabbing data-[panning]:select-none'
-          {...boardPan}
-          onPointerCancel={boardPan.onPointerUp}
-        >
-          {definition?.statuses.map((stage) => (
-            <BoardColumn
-              key={stage}
-              entity={entity}
-              stage={stage}
-              params={columnParams}
-              droppable={stage !== 'converted'}
-              onDrop={(dragged) => {
-                // The card is about to be re-rendered in another column, so
-                // its own dragend never reaches the element that started the
-                // drag; the drop is where the dimming ends.
-                setDragging(undefined);
-                if (
-                  dragged.status === 'converted' ||
-                  dragged[definition.statusField!] === stage ||
-                  !(editsAll(meta, entity) || dragged.ownerId === meta?.userId)
-                )
-                  return;
-                // Dragging is the whole gesture: the status changes on drop.
-                // A closing status that must carry a reason asks for it first.
-                if (reasonFor(entity, stage))
-                  setInvalidating({ record: dragged, stage });
-                else void move(dragged, { [definition.statusField!]: stage });
-              }}
-              renderCard={(record, titles, ai) => (
-                <Card
-                  key={record.id}
-                  // Framed as the UI Library kanban's card: rounded-lg, a
-                  // faint ring and the lightest shadow, its spacing 3 units;
-                  // under the pointer it lifts as the template's cards do, on
-                  // the hover grey with a firmer shadow, and its empty space
-                  // opens the record as a list row's does.
-                  className={`cursor-pointer gap-0 rounded-lg shadow-xs ring-1 ring-foreground/5 dark:ring-border [--card-spacing:--spacing(3)] transition-[opacity,translate,box-shadow,background-color] duration-700 hover:-translate-y-0.5 hover:bg-hover hover:shadow-md hover:duration-150 motion-reduce:hover:translate-y-0 ${toText(
-                    dragging === record.id ? 'opacity-40' : '',
-                  )} ${toText(
-                    landed === record.id
-                      ? 'bg-primary/15 ring-2 ring-primary/60'
-                      : '',
-                  )} ${toText(
-                    record.status !== 'converted' &&
+        // The records its cards link to open in a drawer over it.
+        <DrawerHost>
+          <div
+            className='scroll-shown -mx-1 -mt-1 flex min-h-0 flex-1 cursor-grab gap-3 overflow-x-auto px-1 pt-1 pb-2 data-[panning]:cursor-grabbing data-[panning]:select-none'
+            {...boardPan}
+            onPointerCancel={boardPan.onPointerUp}
+          >
+            {definition?.statuses.map((stage) => (
+              <BoardColumn
+                key={stage}
+                entity={entity}
+                stage={stage}
+                params={columnParams}
+                droppable={stage !== 'converted'}
+                onDrop={(dragged) => {
+                  // The card is about to be re-rendered in another column, so
+                  // its own dragend never reaches the element that started the
+                  // drag; the drop is where the dimming ends.
+                  setDragging(undefined);
+                  if (
+                    dragged.status === 'converted' ||
+                    dragged[definition.statusField!] === stage ||
+                    !(
+                      editsAll(meta, entity) || dragged.ownerId === meta?.userId
+                    )
+                  )
+                    return;
+                  // Dragging is the whole gesture: the status changes on drop.
+                  // A closing status that must carry a reason asks for it first.
+                  if (reasonFor(entity, stage))
+                    setInvalidating({ record: dragged, stage });
+                  else void move(dragged, { [definition.statusField!]: stage });
+                }}
+                renderCard={(record, titles, ai) => (
+                  <Card
+                    key={record.id}
+                    // Framed as the UI Library kanban's card: rounded-lg, a
+                    // faint ring and the lightest shadow, its spacing 3 units;
+                    // under the pointer it lifts as the template's cards do, on
+                    // the hover grey with a firmer shadow, and its empty space
+                    // opens the record as a list row's does.
+                    className={`cursor-pointer gap-0 rounded-lg shadow-xs ring-1 ring-foreground/5 dark:ring-border [--card-spacing:--spacing(3)] transition-[opacity,translate,box-shadow,background-color] duration-700 hover:-translate-y-0.5 hover:bg-hover hover:shadow-md hover:duration-150 motion-reduce:hover:translate-y-0 ${toText(
+                      dragging === record.id ? 'opacity-40' : '',
+                    )} ${toText(
+                      landed === record.id
+                        ? 'bg-primary/15 ring-2 ring-primary/60'
+                        : '',
+                    )} ${toText(
+                      record.status !== 'converted' &&
+                        (editsAll(meta, entity) ||
+                          record.ownerId === meta?.userId)
+                        ? 'active:cursor-grabbing'
+                        : '',
+                    )}`}
+                    data-board-card=''
+                    onClick={openOnRowClick(
+                      `/crm/${entity}/${toText(record.id)}`,
+                      (path) => void navigate(path),
+                    )}
+                    draggable={
+                      record.status !== 'converted' &&
                       (editsAll(meta, entity) ||
                         record.ownerId === meta?.userId)
-                      ? 'active:cursor-grabbing'
-                      : '',
-                  )}`}
-                  data-board-card=''
-                  onClick={openOnRowClick(
-                    `/crm/${entity}/${toText(record.id)}`,
-                    (path) => void navigate(path),
-                  )}
-                  draggable={
-                    record.status !== 'converted' &&
-                    (editsAll(meta, entity) || record.ownerId === meta?.userId)
-                  }
-                  onDragEnd={() => setDragging(undefined)}
-                  // The card carries what the drop needs, since the target
-                  // column does not hold the source column's records.
-                  onDragStart={(e) => {
-                    e.dataTransfer.effectAllowed = 'move';
-                    setDragging(toText(record.id));
-                    e.dataTransfer.setData(
-                      'application/json',
-                      JSON.stringify({
-                        id: record.id,
-                        name: record.name,
-                        company: record.company,
-                        ownerId: record.ownerId,
-                        status: record.status,
-                        [definition.statusField!]:
-                          record[definition.statusField!],
-                      }),
-                    );
-                  }}
-                >
-                  <CardContent className='space-y-1.5 px-4'>
-                    <RecordLink
-                      entity={entity}
-                      record={{
-                        id: record.id,
-                        name: recordTitle(entity, record, titles),
-                      }}
-                      lines={2}
-                    />
-                    {/* The AI at work on the lead, or its verdict waiting
+                    }
+                    onDragEnd={() => setDragging(undefined)}
+                    // The card carries what the drop needs, since the target
+                    // column does not hold the source column's records.
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = 'move';
+                      setDragging(toText(record.id));
+                      e.dataTransfer.setData(
+                        'application/json',
+                        JSON.stringify({
+                          id: record.id,
+                          name: record.name,
+                          company: record.company,
+                          ownerId: record.ownerId,
+                          status: record.status,
+                          [definition.statusField!]:
+                            record[definition.statusField!],
+                        }),
+                      );
+                    }}
+                  >
+                    <CardContent className='space-y-1.5 px-4'>
+                      {/* The card's own record: its page. */}
+                      <RecordDrawerContext.Provider value={undefined}>
+                        <RecordLink
+                          entity={entity}
+                          record={{
+                            id: record.id,
+                            name: recordTitle(entity, record, titles),
+                          }}
+                          lines={2}
+                        />
+                      </RecordDrawerContext.Provider>
+                      {/* The AI at work on the lead, or its verdict waiting
                         on a decision (on the lead's page and Waiting on me). */}
-                    <AiStateTag state={ai} work='followUp' />
-                    <div className='space-y-0.5 text-sm text-muted-foreground'>
-                      {/* One particular a line, each led by its field's icon
+                      <AiStateTag state={ai} work='followUp' />
+                      <div className='space-y-0.5 text-sm text-muted-foreground'>
+                        {/* One particular a line, each led by its field's icon
                           on the detail pages, so the card reads without
                           headings. */}
-                      <p className='flex items-center gap-1.5'>
-                        <UserRound className='size-3.5 shrink-0' />
-                        <span className='truncate'>
-                          {
-                            meta?.users.find((u) => u.id === record.ownerId)
-                              ?.name
-                          }
-                        </span>
-                      </p>
-                      {entity === 'companies' && Boolean(record.industry) && (
                         <p className='flex items-center gap-1.5'>
-                          <Factory className='size-3.5 shrink-0' />
+                          <UserRound className='size-3.5 shrink-0' />
                           <span className='truncate'>
-                            <Value
-                              record={record}
-                              field={{ key: 'industry', type: 'select' }}
-                            />
+                            {
+                              meta?.users.find((u) => u.id === record.ownerId)
+                                ?.name
+                            }
                           </span>
                         </p>
-                      )}
-                      {/* When it last changed, under the detail pages'
+                        {entity === 'companies' && Boolean(record.industry) && (
+                          <p className='flex items-center gap-1.5'>
+                            <Factory className='size-3.5 shrink-0' />
+                            <span className='truncate'>
+                              <Value
+                                record={record}
+                                field={{ key: 'industry', type: 'select' }}
+                              />
+                            </span>
+                          </p>
+                        )}
+                        {/* When it last changed, under the detail pages'
                           icon for it. */}
-                      <p className='flex items-center gap-1.5 tabular-nums'>
-                        <CalendarClock className='size-3.5 shrink-0' />
-                        <Value
-                          record={record}
-                          field={{ key: 'updatedAt', type: 'datetime' }}
-                        />
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            />
-          ))}
-        </div>
+                        <p className='flex items-center gap-1.5 tabular-nums'>
+                          <CalendarClock className='size-3.5 shrink-0' />
+                          <Value
+                            record={record}
+                            field={{ key: 'updatedAt', type: 'datetime' }}
+                          />
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              />
+            ))}
+          </div>
+        </DrawerHost>
       ) : (
         <section className='space-y-4'>
           {/* The month grid needs about 110px a day, which a phone or a tablet
