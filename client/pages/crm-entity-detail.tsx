@@ -1083,7 +1083,11 @@ export default function EntityDetail({
               its record followed up anew), in one step. */}
           {currentStatus === 'open' && editable && (
             <>
-              <Button size='sm' onClick={() => setRecording(true)}>
+              <Button
+                size='sm'
+                variant='contrast'
+                onClick={() => setRecording(true)}
+              >
                 <Check />
                 {text('completeTask')}
               </Button>
