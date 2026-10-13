@@ -1,4 +1,5 @@
 import { PageContainer } from '../components/page-container.js';
+import { BLACK_SWITCH } from '../components/crm/black-switch.js';
 import { PageHeader } from '../components/page-header.js';
 import { toText } from '../components/crm/api.js';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
@@ -340,6 +341,7 @@ function SettingsForm({
                       </p>
                     </div>
                     <Switch
+                      className={BLACK_SWITCH}
                       checked={settings[key] !== false}
                       onCheckedChange={(on) => set(key, on)}
                       aria-label={toText(text(`notifications.${key}`))}

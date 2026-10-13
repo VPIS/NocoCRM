@@ -1,4 +1,5 @@
 import { useState, type ReactElement } from 'react';
+import { BLACK_SWITCH } from '../components/crm/black-switch.js';
 import { useCan } from '@nocobase/app-plugin-authorization/client';
 import { Link, useLocation } from 'react-router';
 import {
@@ -47,12 +48,6 @@ import {
   type Data,
 } from '../components/crm/api.js';
 import { DEFAULT_TIME_ZONE } from '../../server/providers/crm/zone-time.js';
-
-// The agents' switches black when on, as the buttons that commit are (the
-// button's `contrast` variant), rather than the primary purple; the thumb
-// takes the ground's colour so it still shows in dark mode.
-const BLACK_SWITCH =
-  'data-checked:bg-foreground dark:**:data-[slot=switch-thumb]:data-checked:bg-background';
 
 // The CRM's four agents (server/providers/crm/agents.ts) on one page, Auto
 // follow-up in the menu, a tab each: what the agent does, when it runs (each
