@@ -1,5 +1,5 @@
 import { format, type Locale } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, XIcon } from 'lucide-react';
 import { useState, type ReactElement, type ReactNode } from 'react';
 import { cn } from 'cn';
 import { Button } from './ui/button.js';
@@ -29,6 +29,10 @@ export interface DatePickerProps {
   readonly onOpenChange?: (open: boolean) => void;
   // Open from the start (an inline editor, opened by a double-click).
   readonly defaultOpen?: boolean;
+  // With it, a date that is set offers to clear it under the calendar, which
+  // closes it as a pick does; leave it out where a date is required.
+  readonly onClear?: () => void;
+  readonly clearLabel?: string;
 }
 
 export function DatePicker({
@@ -45,6 +49,8 @@ export function DatePicker({
   aside,
   onOpenChange,
   defaultOpen = false,
+  onClear,
+  clearLabel,
 }: DatePickerProps): ReactElement {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -75,21 +81,41 @@ export function DatePicker({
         <CalendarIcon />
         {value ? (display ?? format(value, 'yyyy-MM-dd')) : placeholder}
       </PopoverTrigger>
-      <PopoverContent className='w-auto flex-row gap-0 p-0' align='start'>
-        <Calendar
-          mode='single'
-          selected={value}
-          defaultMonth={value}
-          locale={locale}
-          onSelect={(date) => {
-            onChange(date);
-            if (!aside) {
-              setOpen(false);
-              onOpenChange?.(false);
-            }
-          }}
-        />
-        {aside}
+      <PopoverContent className='w-auto gap-0 p-0' align='start'>
+        <div className='flex'>
+          <Calendar
+            mode='single'
+            selected={value}
+            defaultMonth={value}
+            locale={locale}
+            onSelect={(date) => {
+              onChange(date);
+              if (!aside) {
+                setOpen(false);
+                onOpenChange?.(false);
+              }
+            }}
+          />
+          {aside}
+        </div>
+        {onClear && value ? (
+          <div className='border-t p-2'>
+            <Button
+              type='button'
+              variant='ghost'
+              size='sm'
+              className='w-full'
+              onClick={() => {
+                onClear();
+                setOpen(false);
+                onOpenChange?.(false);
+              }}
+            >
+              <XIcon data-icon='inline-start' />
+              {clearLabel}
+            </Button>
+          </div>
+        ) : null}
       </PopoverContent>
     </Popover>
   );

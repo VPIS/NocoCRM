@@ -180,7 +180,7 @@ export function LocationField({
         side='left'
         align='start'
         sideOffset={8}
-        className='w-80 gap-3 p-3 [&_:focus-visible]:border-ring/50! [&_:focus-visible]:ring-2! [&_:focus-visible]:ring-ring/10!'
+        className='w-80 gap-3 p-3 [&_:focus-visible]:border-ring/50! [&_:focus-visible]:ring-2! [&_:focus-visible]:ring-ring/20!'
         initialFocus={searchRef}
       >
         {/* A province or a country found by name fills both. */}

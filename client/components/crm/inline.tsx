@@ -550,6 +550,17 @@ export function InlineField({
             draftRef.current = picked ? format(picked, 'yyyy-MM-dd') : '';
             setDraft(draftRef.current);
           }}
+          // A date the record may leave empty is cleared under the calendar,
+          // saved as the calendar closes, as a pick is.
+          onClear={
+            field.required
+              ? undefined
+              : () => {
+                  draftRef.current = '';
+                  setDraft('');
+                }
+          }
+          clearLabel={toText(text('clearDate'))}
           onOpenChange={(open) => {
             popupOpenRef.current = open;
             if (!open) void save(draftRef.current);

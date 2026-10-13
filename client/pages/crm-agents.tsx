@@ -114,10 +114,10 @@ export default function AgentsPage(): ReactElement {
             extra:
               count > 0 ? (
                 <span
-                  className='inline-flex items-center gap-1 text-xs text-ai tabular-nums'
+                  className='inline-flex items-center gap-1 text-xs text-primary tabular-nums'
                   title={text('agents.runningHint', { count })}
                 >
-                  <span className='size-1.5 animate-pulse rounded-full bg-ai' />
+                  <span className='size-1.5 animate-pulse rounded-full bg-primary' />
                   {count}
                 </span>
               ) : off ? (

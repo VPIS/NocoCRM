@@ -124,7 +124,7 @@ export function OutcomeBox({
               type='button'
               size='sm'
               variant='ghost'
-              className='h-7 gap-1.5 rounded-lg bg-ai/10 px-2.5 font-medium text-ai hover:bg-ai/15 hover:text-ai dark:bg-ai/20'
+              className='h-7 gap-1.5 rounded-lg bg-primary/10 px-2.5 font-medium text-primary hover:bg-primary/15 hover:text-primary dark:bg-primary/20'
               disabled={disabled || organising || !value.trim()}
               onClick={organise}
             >
@@ -173,7 +173,7 @@ export function OutcomeBox({
             type='button'
             size='sm'
             variant='ghost'
-            className='ml-auto h-7 gap-1.5 rounded-lg bg-ai/10 px-2.5 font-medium text-ai hover:bg-ai/15 hover:text-ai dark:bg-ai/20'
+            className='ml-auto h-7 gap-1.5 rounded-lg bg-primary/10 px-2.5 font-medium text-primary hover:bg-primary/15 hover:text-primary dark:bg-primary/20'
             disabled={disabled || organising || !value.trim()}
             onClick={organise}
           >

@@ -102,11 +102,9 @@ import { TaskList } from '../components/crm/task-list.js';
 
 // A calendar cell lists this many before asking to show the rest.
 const CALENDAR_DAY_LIMIT = 5;
-// A list's column header: muted, on a band of its own, as tall as a row:
-// header and cells share one height (a minimum: a row with the AI's tag
-// under its name grows) and padding.
-const HEAD =
-  'h-11 px-3 py-2.5 text-sm font-medium text-muted-foreground first:pl-4 last:pr-4';
+// A list's column header; its band, height and padding are every table's
+// (client/styles.css), as the template draws them.
+const HEAD = 'text-sm';
 
 // "2026-09" ± n months, staying in the yyyy-mm shape the calendar keys on.
 function shiftMonth(month: string, by: number): string {
@@ -587,11 +585,11 @@ function EntityList({
       key={r.id}
       // The whole card opens the task: its link stretched over it, and it
       // shades under the pointer.
-      className={`relative cursor-pointer rounded-lg transition-colors [&_a]:after:absolute [&_a]:after:inset-0 [&_a]:after:content-[''] ${toText(
+      className={`relative cursor-pointer rounded-lg [&_a]:after:absolute [&_a]:after:inset-0 [&_a]:after:content-[''] ${toText(
         large
-          ? 'border border-border bg-card p-3 text-sm shadow-xs hover:bg-hover'
-          : // On the menu's own grey, in the white of the month's grid.
-            'bg-sidebar p-2 text-xs hover:bg-sidebar-accent',
+          ? 'border border-border bg-card p-3 text-sm shadow-xs transition-[translate,box-shadow,background-color] duration-200 ease-out hover:-translate-y-0.5 hover:bg-hover hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0'
+          : // On the hover grey, in the white of the month's grid.
+            'bg-hover p-2 text-xs transition-colors hover:bg-muted',
       )} ${
         // Done or cancelled: struck through and faded, marked by its kind,
         // so what is still to do stands out on the day.
@@ -1059,11 +1057,11 @@ function EntityList({
           <Empty action={newButton} />
         ) : (
           <>
-            {/* Framed as the task list's card is. */}
-            <div className='overflow-hidden rounded-xl border border-border bg-card shadow-xs'>
+            {/* A list's table in the template's frame, as the task list's is. */}
+            <div className='overflow-hidden rounded-lg border'>
               <Table>
-                {/* A quiet header: small muted words on the menu's ground. */}
-                <TableHeader className='bg-sidebar'>
+                {/* A quiet header: small muted words on the hover grey. */}
+                <TableHeader>
                   <TableRow className='border-border hover:bg-transparent'>
                     {columns.map((key) => {
                       const title =
@@ -1100,7 +1098,7 @@ function EntityList({
                             // ellipsis, so a cell never runs over the next one,
                             // which on a phone put two columns' text on top of
                             // each other.
-                            className='h-11 max-w-72 truncate px-3 py-2.5 first:pl-4 last:pr-4'
+                            className='max-w-72 truncate'
                             key={key}
                           >
                             {key === 'name' ? (
@@ -1197,7 +1195,7 @@ function EntityList({
         // by holding its empty space and dragging (useDragPan), as a mouse
         // without a sideways wheel needs on a board wider than the page.
         <div
-          className='scroll-shown flex min-h-0 flex-1 cursor-grab gap-4 overflow-x-auto pb-2 data-[panning]:cursor-grabbing data-[panning]:select-none'
+          className='scroll-shown -mx-1 -mt-1 flex min-h-0 flex-1 cursor-grab gap-3 overflow-x-auto px-1 pt-1 pb-2 data-[panning]:cursor-grabbing data-[panning]:select-none'
           {...boardPan}
           onPointerCancel={boardPan.onPointerUp}
         >
@@ -1228,11 +1226,12 @@ function EntityList({
               renderCard={(record, titles, ai) => (
                 <Card
                   key={record.id}
-                  // Framed as the task list's card: a faint border, not the
-                  // primitive's ring, and the lightest shadow; under the
-                  // pointer it takes the hover grey and a firmer shadow, and
-                  // its empty space opens the record as a list row's does.
-                  className={`cursor-pointer gap-0 border border-border py-4 shadow-xs ring-0 transition-[opacity,box-shadow,background-color] duration-700 hover:bg-hover hover:shadow-sm hover:duration-150 ${toText(
+                  // Framed as the UI Library kanban's card: rounded-lg, a
+                  // faint ring and the lightest shadow, its spacing 3 units;
+                  // under the pointer it lifts as the template's cards do, on
+                  // the hover grey with a firmer shadow, and its empty space
+                  // opens the record as a list row's does.
+                  className={`cursor-pointer gap-0 rounded-lg shadow-xs ring-1 ring-foreground/5 dark:ring-border [--card-spacing:--spacing(3)] transition-[opacity,translate,box-shadow,background-color] duration-700 hover:-translate-y-0.5 hover:bg-hover hover:shadow-md hover:duration-150 motion-reduce:hover:translate-y-0 ${toText(
                     dragging === record.id ? 'opacity-40' : '',
                   )} ${toText(
                     landed === record.id
@@ -1483,10 +1482,10 @@ function EntityList({
           <div className='hidden gap-px overflow-hidden rounded-xl border border-border bg-border shadow-xs lg:grid lg:grid-cols-7'>
             {Array.from({ length: 7 }, (_, i) => (
               // The weekdays as a list's header reads: small muted words on
-              // the menu's ground.
+              // the hover grey.
               <div
                 key={i + 1}
-                className='hidden bg-sidebar px-3 py-2 text-sm font-medium text-muted-foreground lg:block'
+                className='hidden bg-hover px-3 py-2 text-sm font-medium text-muted-foreground lg:block'
               >
                 {new Intl.DateTimeFormat(language, {
                   weekday: 'short',
@@ -1732,14 +1731,15 @@ function BoardColumn({
     // The columns share the board's width, so a wide screen shows the board
     // whole with roomier cards; each keeps at least its former width (the
     // board scrolls sideways when they do not fit) and at most 24rem. A
-    // column has no border of its own, only its tint; the dashed line shows
-    // only while a card is held over it, the border kept transparent
-    // otherwise so the column does not shift when it appears.
+    // column has no border of its own, only its tint; a card held over it
+    // marks it as a focused field is marked (as the UI Library kanban does),
+    // a half-strength line of the ring colour and a faint halo, drawn as a
+    // shadow so the column does not shift when it appears.
     <section
-      className={`flex max-w-sm min-w-72 flex-1 basis-0 flex-col rounded-xl border p-3 transition-colors ${toText(
+      className={`flex max-w-sm min-w-72 flex-1 basis-0 flex-col rounded-xl bg-muted/70 p-3 transition-shadow dark:bg-muted/40 dark:ring-1 dark:ring-border ${toText(
         over
-          ? 'border-dashed border-muted-foreground/40 bg-muted'
-          : 'border-transparent bg-muted',
+          ? 'shadow-[0_0_0_1px_color-mix(in_oklch,var(--ring)_50%,transparent),0_0_0_3px_color-mix(in_oklch,var(--ring)_20%,transparent)]'
+          : '',
       )}`}
       // A non-droppable column (converted, reached only through the
       // conversion flow) never calls preventDefault, so the cursor says no
@@ -1777,7 +1777,7 @@ function BoardColumn({
       {/* The cards scroll inside the column; the padding keeps a landed
           card's ring from being clipped at the edges, and lets the last card
           scroll above the assistant's dock (pb-24). */}
-      <div className='-m-1 min-h-0 flex-1 space-y-3 overflow-y-auto p-1 pb-24'>
+      <div className='-m-1 min-h-0 flex-1 space-y-2 overflow-y-auto p-1 pb-24'>
         {items.map((record) =>
           renderCard(record, titles, ai[toText(record.id)]),
         )}

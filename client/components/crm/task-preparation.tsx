@@ -143,7 +143,7 @@ export function PrepPanel({
   return (
     <section
       // On the card's own white, waiting or decided.
-      className={`@container grid grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border p-4 text-sm shadow-xs [&_:is(input,textarea):focus-visible]:border-ring/50! [&_:is(input,textarea):focus-visible]:ring-2! [&_:is(input,textarea):focus-visible]:ring-ring/10! bg-card`}
+      className={`@container grid grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border p-4 text-sm shadow-xs [&_:is(input,textarea):focus-visible]:border-ring/50! [&_:is(input,textarea):focus-visible]:ring-2! [&_:is(input,textarea):focus-visible]:ring-ring/20! bg-card`}
     >
       {/* The heading and who decided it; in the timeline, whose line names
           it, what started it instead, the card otherwise opening on its
@@ -160,7 +160,7 @@ export function PrepPanel({
           ) : null
         ) : (
           <>
-            <Sparkles className='size-4 shrink-0 text-ai' />
+            <Sparkles className='size-4 shrink-0 text-primary' />
             <span className='shrink-0 font-medium'>{text('taskPrep.ask')}</span>
           </>
         )}
@@ -292,7 +292,7 @@ export function PrepPanel({
               <Button
                 type='submit'
                 size='sm'
-                className='shrink-0 bg-ai text-ai-foreground hover:bg-ai/90'
+                className='shrink-0 bg-primary text-primary-foreground hover:bg-primary/90'
                 disabled={Boolean(busy) || !instruction.trim()}
               >
                 {busy === 'revise' ? <Spinner /> : <Sparkles />}
@@ -332,7 +332,7 @@ export function PrepPanel({
                     render={
                       <Button
                         size='sm'
-                        className='bg-ai text-ai-foreground hover:bg-ai/90'
+                        className='bg-primary text-primary-foreground hover:bg-primary/90'
                         disabled={Boolean(busy)}
                         onClick={() => decide('accept')}
                       />
@@ -419,7 +419,7 @@ export function PrepStatus({
     <div className='flex flex-wrap items-center gap-1'>
       {entry ? (
         <div
-          className={`inline-flex h-7 max-w-full items-center rounded-lg border text-sm border-transparent bg-ai/10 dark:bg-ai/20 ${live ? 'text-ai' : ''}`}
+          className={`inline-flex h-7 max-w-full items-center rounded-lg border text-sm border-transparent bg-primary/10 dark:bg-primary/20 ${live ? 'text-primary' : ''}`}
         >
           <Tooltip>
             <TooltipTrigger
@@ -432,16 +432,16 @@ export function PrepStatus({
                     .join(' · ')}
                   className={`flex h-full min-w-0 items-center gap-1.5 rounded-l-lg px-2 transition-colors ${
                     again ? '' : 'rounded-r-lg'
-                  } hover:bg-ai/15`}
+                  } hover:bg-primary/15`}
                 />
               }
             >
               {entry.status === 'running' ? (
-                <Spinner className='size-3.5 text-ai' />
+                <Spinner className='size-3.5 text-primary' />
               ) : (
-                <Sparkles className='size-3.5 text-ai' />
+                <Sparkles className='size-3.5 text-primary' />
               )}
-              <span className='min-w-0 truncate font-medium text-ai'>
+              <span className='min-w-0 truncate font-medium text-primary'>
                 {text(live ? aiStateWords.prep.running : 'taskPrep.ask')}
               </span>
               {live ? null : <AiStatusWord status={toText(entry.status)} />}
@@ -463,7 +463,7 @@ export function PrepStatus({
           </Tooltip>
           {again ? (
             <>
-              <span aria-hidden className='h-3.5 w-px shrink-0 bg-ai/20' />
+              <span aria-hidden className='h-3.5 w-px shrink-0 bg-primary/20' />
               <Tooltip>
                 <TooltipTrigger
                   render={
@@ -472,7 +472,7 @@ export function PrepStatus({
                       disabled={busy}
                       onClick={ask}
                       aria-label={toText(text('taskPrep.again'))}
-                      className='flex h-full shrink-0 items-center gap-1 rounded-r-lg px-2 font-medium text-ai transition-colors hover:bg-ai/10 disabled:opacity-50'
+                      className='flex h-full shrink-0 items-center gap-1 rounded-r-lg px-2 font-medium text-primary transition-colors hover:bg-primary/10 disabled:opacity-50'
                     />
                   }
                 >
@@ -490,7 +490,7 @@ export function PrepStatus({
         // Shaped as a lead's first follow-up button (EvaluateButton).
         <button
           type='button'
-          className='inline-flex h-7 items-center gap-1.5 rounded-lg bg-ai/10 px-2.5 font-sans text-sm font-medium tracking-normal text-ai transition-colors hover:bg-ai/15 disabled:opacity-60 dark:bg-ai/20'
+          className='inline-flex h-7 items-center gap-1.5 rounded-lg bg-primary/10 px-2.5 font-sans text-sm font-medium tracking-normal text-primary transition-colors hover:bg-primary/15 disabled:opacity-60 dark:bg-primary/20'
           disabled={busy}
           onClick={ask}
         >

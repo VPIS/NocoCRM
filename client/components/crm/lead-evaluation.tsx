@@ -323,7 +323,7 @@ export function EvaluationStatus({
   // in their type size.
   return (
     <div
-      className={`${wide ? 'flex w-full' : 'inline-flex max-w-full'} h-7 items-center rounded-lg border font-sans text-sm font-normal tracking-normal border-transparent bg-ai/10 dark:bg-ai/20 ${live ? 'text-ai' : ''}`}
+      className={`${wide ? 'flex w-full' : 'inline-flex max-w-full'} h-7 items-center rounded-lg border font-sans text-sm font-normal tracking-normal border-transparent bg-primary/10 dark:bg-primary/20 ${live ? 'text-primary' : ''}`}
     >
       {/* The chip says only whose it is and where it stands; its hover
           says what it concluded, why, and where it stands in words. */}
@@ -343,16 +343,16 @@ export function EvaluationStatus({
               // Small, as the filter beside it.
               className={`flex h-full min-w-0 items-center gap-1.5 rounded-l-lg px-2 transition-colors ${
                 again ? '' : 'rounded-r-lg'
-              } hover:bg-ai/15 ${wide ? 'flex-1' : ''}`}
+              } hover:bg-primary/15 ${wide ? 'flex-1' : ''}`}
             />
           }
         >
           {entry.status === 'running' ? (
-            <Spinner className='size-3.5 text-ai' />
+            <Spinner className='size-3.5 text-primary' />
           ) : (
-            <Sparkles className='size-3.5 text-ai' />
+            <Sparkles className='size-3.5 text-primary' />
           )}
-          <span className='min-w-0 truncate font-medium text-ai'>
+          <span className='min-w-0 truncate font-medium text-primary'>
             {text(live ? aiStateWords.followUp.running : 'evaluation.start')}
           </span>
           {live ? null : <AiStatusWord status={entry.status} />}
@@ -377,7 +377,7 @@ export function EvaluationStatus({
       {/* Following it up again, after where it stands. */}
       {again ? (
         <>
-          <span aria-hidden className='h-3.5 w-px shrink-0 bg-ai/20' />
+          <span aria-hidden className='h-3.5 w-px shrink-0 bg-primary/20' />
           {/* Following it up again, in a word, its full name on hover. */}
           <Tooltip>
             <TooltipTrigger
@@ -387,7 +387,7 @@ export function EvaluationStatus({
                   disabled={request.busy}
                   onClick={request.ask}
                   aria-label={toText(text('evaluation.askAgain'))}
-                  className='flex h-full shrink-0 items-center gap-1 rounded-r-lg px-2 font-medium text-ai transition-colors hover:bg-ai/10 disabled:opacity-50'
+                  className='flex h-full shrink-0 items-center gap-1 rounded-r-lg px-2 font-medium text-primary transition-colors hover:bg-primary/10 disabled:opacity-50'
                 />
               }
             >
@@ -420,7 +420,7 @@ export function EvaluateButton({
   return (
     <button
       type='button'
-      className='inline-flex h-7 items-center gap-1.5 rounded-lg bg-ai/10 px-2.5 font-sans text-sm font-medium tracking-normal text-ai transition-colors hover:bg-ai/15 disabled:opacity-60 dark:bg-ai/20'
+      className='inline-flex h-7 items-center gap-1.5 rounded-lg bg-primary/10 px-2.5 font-sans text-sm font-medium tracking-normal text-primary transition-colors hover:bg-primary/15 disabled:opacity-60 dark:bg-primary/20'
       disabled={request.busy}
       onClick={request.ask}
     >
@@ -733,7 +733,7 @@ export function VerdictPanel({
     <section
       // On the card's own white, waiting or decided. Its fields show focus
       // as lightly as the inline editor does.
-      className={`@container grid grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border p-4 text-sm shadow-xs [&_:is(input,textarea,[role=combobox]):focus-visible]:border-ring/50! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-2! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-ring/10! bg-card`}
+      className={`@container grid grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border p-4 text-sm shadow-xs [&_:is(input,textarea,[role=combobox]):focus-visible]:border-ring/50! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-2! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-ring/20! bg-card`}
     >
       {/* The heading, with asking and deciding at its top right; on a card
           too narrow for both (a phone), they take a row of their own under
@@ -751,7 +751,7 @@ export function VerdictPanel({
           ) : null
         ) : (
           <>
-            <Sparkles className='size-4 shrink-0 text-ai' />
+            <Sparkles className='size-4 shrink-0 text-primary' />
             {heading ?? (
               <span className='shrink-0 font-medium'>
                 {text('evaluation.title')}
@@ -986,7 +986,7 @@ export function VerdictPanel({
                     size='sm'
                     // As tall as the card's other buttons, and the box
                     // beside it while that is one line.
-                    className='shrink-0 bg-ai text-ai-foreground hover:bg-ai/90'
+                    className='shrink-0 bg-primary text-primary-foreground hover:bg-primary/90'
                     disabled={Boolean(busy) || !instruction.trim()}
                   >
                     {busy === 'revise' ? <Spinner /> : <Sparkles />}
@@ -1030,7 +1030,7 @@ export function VerdictPanel({
                     render={
                       <Button
                         size='sm'
-                        className='bg-ai text-ai-foreground hover:bg-ai/90'
+                        className='bg-primary text-primary-foreground hover:bg-primary/90'
                         disabled={
                           Boolean(busy) ||
                           (reporting && !toText(plan.outcome).trim())
@@ -1128,7 +1128,7 @@ export function VerdictPanel({
               {text('cancel')}
             </Button>
             <Button
-              className='bg-ai text-ai-foreground hover:bg-ai/90'
+              className='bg-primary text-primary-foreground hover:bg-primary/90'
               disabled={busy === 'accept'}
               onClick={() =>
                 void decide('accept').then(() => setConfirmingApprovals(false))
@@ -1786,7 +1786,7 @@ function Findings({
             variant='outline'
             // Plainly a button on the card's tint: the AI's colour on its
             // border and text, on the card's white.
-            className='-my-1 ml-auto border-ai/40 bg-card font-medium text-ai hover:bg-ai/10 hover:text-ai'
+            className='-my-1 ml-auto border-primary/40 bg-card font-medium text-primary hover:bg-primary/10 hover:text-primary'
             disabled={busy || chosen.length === 0}
             onClick={() => {
               setBusy(true);

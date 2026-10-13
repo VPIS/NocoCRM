@@ -126,7 +126,7 @@ export function TableSkeleton({
     <div
       role='status'
       aria-label={text('common.loading')}
-      className='overflow-hidden rounded-lg border border-border bg-card'
+      className='overflow-hidden rounded-lg border'
     >
       {Array.from({ length: rows }, (_, row) => (
         <div

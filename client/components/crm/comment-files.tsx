@@ -57,17 +57,17 @@ const KINDS: {
   {
     test: (_ext, type) => type.startsWith('image/'),
     icon: FileImage,
-    tone: 'bg-ai/10 text-ai',
+    tone: 'bg-primary/10 text-primary',
   },
   {
     test: (_ext, type) => type.startsWith('video/'),
     icon: FileVideo,
-    tone: 'bg-ai/10 text-ai',
+    tone: 'bg-primary/10 text-primary',
   },
   {
     test: (_ext, type) => type.startsWith('audio/'),
     icon: FileMusic,
-    tone: 'bg-ai/10 text-ai',
+    tone: 'bg-primary/10 text-primary',
   },
   {
     test: (ext) => ['zip', 'rar', '7z', 'tar', 'gz'].includes(ext),

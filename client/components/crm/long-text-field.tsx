@@ -121,7 +121,7 @@ export function LongTextField({
         sideOffset={8}
         // An empty one opens on its editor, which takes the keys.
         initialFocus={blank ? editorRef : true}
-        className='max-h-[min(36rem,70vh)] w-[28rem] max-w-[calc(100vw-2rem)] gap-2 overflow-y-auto p-4 [&_:focus-visible]:border-ring/50! [&_:focus-visible]:ring-2! [&_:focus-visible]:ring-ring/10!'
+        className='max-h-[min(36rem,70vh)] w-[28rem] max-w-[calc(100vw-2rem)] gap-2 overflow-y-auto p-4 [&_:focus-visible]:border-ring/50! [&_:focus-visible]:ring-2! [&_:focus-visible]:ring-ring/20!'
       >
         <span className='truncate text-xs font-medium text-muted-foreground'>
           {label}

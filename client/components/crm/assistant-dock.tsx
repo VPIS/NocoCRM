@@ -158,7 +158,7 @@ export function AssistantDock(): ReactElement | null {
                   size='icon-lg'
                   aria-label={unavailable ?? toText(text('dock.open'))}
                   disabled={Boolean(unavailable)}
-                  className='pointer-events-auto rounded-full bg-ai text-ai-foreground shadow-lg hover:bg-ai/90'
+                  className='pointer-events-auto rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90'
                   // A new conversation with the record pinned, nothing
                   // sent: the person writes in the panel.
                   onClick={() =>
@@ -250,7 +250,7 @@ export function AssistantDock(): ReactElement | null {
                           onMouseDown={(event) => event.preventDefault()}
                           onClick={() => send(question)}
                         >
-                          <Sparkles className='text-ai' />
+                          <Sparkles className='text-primary' />
                           <span className='truncate'>{question}</span>
                         </Button>
                       </li>

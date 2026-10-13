@@ -151,8 +151,8 @@ describe('a plan card', () => {
       screen.getByRole('checkbox', { name: '保留第 2 步' }),
     );
     const button = screen.getByRole('button', { name: '执行 1 项改动' });
-    // In the AI's colour, as the assistant's confirmation cards were.
-    expect(button.className).toContain('bg-ai');
+    // In the primary, as the assistant's confirmation cards were.
+    expect(button.className).toContain('bg-primary');
     await userEvent.click(button);
     await waitFor(() =>
       expect(state.api).toHaveBeenCalledWith('plans/p1/execute', 'POST', {

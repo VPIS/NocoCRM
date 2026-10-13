@@ -160,7 +160,7 @@ function ItemCard({
           'group relative flex items-start gap-3 rounded-lg border border-transparent -mx-[calc(--spacing(3)+1px)] p-3 transition-[background-color,border-color,opacity] duration-200',
           // Application change: the selected card without a border, on the
           // menu's own grey, the list being white.
-          selected ? 'bg-sidebar' : 'hover:bg-hover',
+          selected ? 'bg-hover' : 'hover:bg-hover',
           settled && 'opacity-55',
           fresh &&
             'animate-in duration-200 fade-in slide-in-from-top-1 motion-reduce:animate-none',

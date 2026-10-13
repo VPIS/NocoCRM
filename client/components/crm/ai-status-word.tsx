@@ -13,7 +13,7 @@ export function AiStatusWord({
   return (
     <span
       className={`shrink-0 ${
-        status === 'failed' ? 'text-destructive' : 'text-ai/70'
+        status === 'failed' ? 'text-destructive' : 'text-primary/70'
       }`}
     >
       {text(`aiChip.status.${status}`, {

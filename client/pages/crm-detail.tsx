@@ -2771,7 +2771,7 @@ function ReplyBox({
             value={draft}
             maxLength={LONG_TEXT_LIMIT}
             rows={1}
-            className='max-h-[50vh] min-h-9 resize-none pr-10 text-sm py-[calc((--spacing(9)-1lh-2px)/2)] bg-card shadow-xs border-border focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 data-dropping:border-ring data-dropping:ring-2 data-dropping:ring-ring/20 dark:bg-card'
+            className='max-h-[50vh] min-h-9 resize-none pr-10 text-sm py-[calc((--spacing(9)-1lh-2px)/2)] bg-card shadow-xs border-border focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/20 data-dropping:border-ring data-dropping:ring-2 data-dropping:ring-ring/20 dark:bg-card'
             onChange={setDraft}
             mentions={mentions}
             onMentionsChange={setMentions}
@@ -3244,7 +3244,7 @@ export function HistoryFeed({
                       <div className='flex w-5 shrink-0 flex-col items-center'>
                         <span className='flex h-[26px] items-center justify-center'>
                           <Icon
-                            className={`size-3.5 ${ai ? 'text-ai' : 'text-muted-foreground'}`}
+                            className={`size-3.5 ${ai ? 'text-primary' : 'text-muted-foreground'}`}
                           />
                         </span>
                         {index < events.length - 1 && (
@@ -3396,7 +3396,7 @@ export function HistoryFeed({
                                 </span>
                               ) : null}
                               {ai && event.aiStatus === 'running' ? (
-                                <Spinner className='size-3.5 shrink-0 text-ai' />
+                                <Spinner className='size-3.5 shrink-0 text-primary' />
                               ) : review && event.aiStatus !== 'failed' ? (
                                 <ReviewFeedEntry entry={event} />
                               ) : prep && event.aiStatus !== 'failed' ? (
@@ -3870,7 +3870,7 @@ function CommentComposer({
             // height. White with the card's faint border and shadow, and a
             // soft ring when focused rather than the primitive's grey one.
             rows={1}
-            className='max-h-[50vh] min-h-10 resize-none pr-10 text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 data-dropping:border-ring data-dropping:ring-2 data-dropping:ring-ring/20 dark:bg-card'
+            className='max-h-[50vh] min-h-10 resize-none pr-10 text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/20 data-dropping:border-ring data-dropping:ring-2 data-dropping:ring-ring/20 dark:bg-card'
             onChange={setDraft}
             onKeyDown={(event) => {
               if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
@@ -4076,7 +4076,7 @@ function CommentEditor({
         aria-label={text('comments.label')}
         value={draft}
         maxLength={LONG_TEXT_LIMIT}
-        className='max-h-[50vh] min-h-10 resize-none text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 data-dropping:border-ring data-dropping:ring-2 data-dropping:ring-ring/20 dark:bg-card'
+        className='max-h-[50vh] min-h-10 resize-none text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/20 data-dropping:border-ring data-dropping:ring-2 data-dropping:ring-ring/20 dark:bg-card'
         onChange={setDraft}
         mentions={mentions}
         onMentionsChange={setMentions}

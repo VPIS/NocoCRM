@@ -47,7 +47,7 @@ export function SearchAnswer({
   return (
     <div className='flex max-h-[min(70svh,40rem)] flex-col'>
       <div className='flex items-start gap-2 border-b border-border px-4 py-3'>
-        <Sparkles className='mt-0.5 size-4 shrink-0 text-ai' />
+        <Sparkles className='mt-0.5 size-4 shrink-0 text-primary' />
         <p className='min-w-0 flex-1 text-sm font-medium break-words'>
           {question}
         </p>
@@ -85,7 +85,7 @@ export function SearchAnswer({
         </Button>
         <Button
           size='sm'
-          className='bg-ai text-ai-foreground hover:bg-ai/90'
+          className='bg-primary text-primary-foreground hover:bg-primary/90'
           disabled={!conversationId || Boolean(error)}
           onClick={onContinue}
         >

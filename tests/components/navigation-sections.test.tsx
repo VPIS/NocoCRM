@@ -13,12 +13,11 @@ import {
   AppSidebar,
   AppSidebarProvider,
 } from '../../client/layouts/components/app-sidebar.js';
-import { NavigationBadgesContext } from '../../client/layouts/components/navigation-badges.js';
 import { NavigationMenu } from '../../client/layouts/components/navigation-menu.js';
 
-// The application changes to the template's menu: menu-only groups drawn as
-// headed sections (`sections`), and a count beside an entry from
-// NavigationBadgesContext, as the CRM's Waiting on me shows.
+// Menu-only groups drawn as headed sections (`sections`, which the CRM's
+// layout turns on), and a count beside an entry from the menu's `badges`, as
+// the CRM's Waiting on me shows.
 const runtime = await createTestI18nRuntime({ strict: false });
 
 function I18n({ children }: { readonly children: ReactNode }) {
@@ -54,14 +53,13 @@ function shell(badges: Readonly<Record<string, number>>) {
     <MemoryRouter>
       <AppSidebarProvider>
         <AppSidebar label='Navigation'>
-          <NavigationBadgesContext value={badges}>
-            <NavigationMenu
-              items={items}
-              label='Menu'
-              selectedKey={undefined}
-              sections
-            />
-          </NavigationBadgesContext>
+          <NavigationMenu
+            items={items}
+            label='Menu'
+            selectedKey={undefined}
+            sections
+            badges={badges}
+          />
         </AppSidebar>
       </AppSidebarProvider>
     </MemoryRouter>
@@ -90,16 +88,12 @@ it('draws a menu-only group as a heading over entries that are always shown', ()
 
 it('shows a count beside the entry it belongs to, and none at zero', () => {
   const { rerender } = render(shell({ decisions: 3 }), { wrapper: I18n });
-  // The link reads the count to a screen reader; the badge beside it is drawn for the eye.
-  expect(screen.getByRole('link', { name: /^decisions/u }).textContent).toBe(
-    'decisions · 3',
-  );
+  // The link is named with the count; the badge beside it is drawn for the eye.
+  expect(screen.getByRole('link', { name: 'decisions · 3' })).toBeVisible();
   expect(screen.getByText('3')).toHaveAttribute('aria-hidden');
   rerender(shell({ decisions: 120 }));
   expect(screen.getByText('99+')).toBeInTheDocument();
   rerender(shell({ decisions: 0 }));
-  expect(screen.getByRole('link', { name: /^decisions/u }).textContent).toBe(
-    'decisions',
-  );
+  expect(screen.getByRole('link', { name: 'decisions' })).toBeVisible();
   expect(screen.queryByText('99+')).not.toBeInTheDocument();
 });

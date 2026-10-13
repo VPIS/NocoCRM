@@ -1714,6 +1714,7 @@ const wording = {
   searchRecords: ['Type to search', '输入关键字搜索'],
   noMatches: ['No matching records', '没有匹配的记录'],
   clearChoice: ['Clear', '清除选择'],
+  clearDate: ['Clear', '清除'],
   demoData: ['Demo data', '演示数据'],
   demoDescription: [
     'A dataset of NocoBase selling its own licences and services to fictional customers, in Chinese or in English: leads, companies, contacts, opportunities, tasks and approvals, and mail in demo mailboxes, dated relative to the day it is imported. Importing creates the demo companies below when they do not exist; the password is the username followed by 123.',

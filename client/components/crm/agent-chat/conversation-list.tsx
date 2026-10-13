@@ -154,7 +154,7 @@ export function ConversationList({
                           />
                         </span>
                         {unread ? (
-                          <span className='size-2 shrink-0 rounded-full bg-ai'>
+                          <span className='size-2 shrink-0 rounded-full bg-primary'>
                             <span className='sr-only'>
                               {text('agentChat.unread')}
                             </span>

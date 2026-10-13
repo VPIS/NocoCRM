@@ -21,7 +21,7 @@ const badgeVariants = cva(
           'hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50',
         link: 'text-primary underline-offset-4 hover:underline',
         // Application variant: something the assistant is waiting on.
-        ai: 'bg-ai/10 text-ai dark:bg-ai/20',
+        ai: 'bg-primary/10 text-primary dark:bg-primary/20',
         // Application variant: what kind of thing a row is (a task's
         // type, an approval's topic) rather than where it stands. A tint of
         // the text colour rather than the muted surface, which is also the

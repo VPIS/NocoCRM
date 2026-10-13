@@ -81,11 +81,13 @@ export default function InboxPage(): ReactElement {
             refocus();
         }}
       >
+        {/* No line under the heading, as the CRM's list pages have none. */}
         <InboxBlock
           key={key}
           registry={registry}
           source={crmInboxSource}
           selectParams={selectParams}
+          description=''
         />
       </div>
       {drawerLoaded && (

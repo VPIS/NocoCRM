@@ -92,7 +92,7 @@ export function AskComposer({
             size='icon-sm'
             aria-label={sendLabel}
             disabled={!draft.canSend}
-            className='rounded-full bg-ai text-ai-foreground hover:bg-ai/90 hover:text-ai-foreground disabled:bg-muted disabled:text-muted-foreground'
+            className='rounded-full bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground disabled:bg-muted disabled:text-muted-foreground'
             onClick={() => draft.send()}
           />
         }
@@ -138,7 +138,7 @@ export function AskComposer({
         ) : null}
         {expanded ? null : (
           <InputGroupAddon className='pl-4'>
-            <Sparkles className='text-ai' />
+            <Sparkles className='text-primary' />
           </InputGroupAddon>
         )}
         <InputGroupTextarea

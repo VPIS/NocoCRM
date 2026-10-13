@@ -111,7 +111,7 @@ export function LeadDuplicates({
     // theirs; its fill a faint wash of the warning colour over the card's.
     // Each duplicate reads as one sentence: what it shares with this lead,
     // the lead, and the way to merge it.
-    <div className='rounded-xl border border-border bg-[color-mix(in_oklab,var(--warning)_7%,var(--card))] px-2 py-3 shadow-xs'>
+    <div className='rounded-xl border border-border bg-[color-mix(in_oklab,var(--status-warning)_7%,var(--card))] px-2 py-3 shadow-xs'>
       <h3 className='flex items-center gap-1.5 px-2 pb-1.5 text-sm font-medium'>
         <TriangleAlert className='size-4 text-warning' aria-hidden />
         {text('merge.notice')}
@@ -285,8 +285,8 @@ export function MergeDialog({
     return (
       <div className='space-y-3'>
         {data.ai && data.reason ? (
-          <p className='flex items-start gap-1.5 rounded-md bg-ai/5 px-3 py-2 text-sm'>
-            <Sparkles className='mt-0.5 size-3.5 shrink-0 text-ai' />
+          <p className='flex items-start gap-1.5 rounded-md bg-primary/5 px-3 py-2 text-sm'>
+            <Sparkles className='mt-0.5 size-3.5 shrink-0 text-primary' />
             {data.reason}
           </p>
         ) : null}
@@ -398,7 +398,7 @@ export function MergeDialog({
                 })}
                 {why ? (
                   <p className='col-start-2 col-end-4 px-2 pt-1 text-xs text-muted-foreground'>
-                    <Sparkles className='mr-1 inline size-3 text-ai' />
+                    <Sparkles className='mr-1 inline size-3 text-primary' />
                     {why}
                   </p>
                 ) : null}
@@ -457,7 +457,7 @@ export function MergeDialog({
         <ErrorNotice error={error ?? proposal.error} />
         {proposal.isLoading ? (
           <div className='flex items-center gap-2 py-8 text-sm text-muted-foreground'>
-            <Spinner className='size-4 text-ai' />
+            <Spinner className='size-4 text-primary' />
             {text(meta?.assistant ? 'merge.thinking' : 'merge.comparing')}
           </div>
         ) : (

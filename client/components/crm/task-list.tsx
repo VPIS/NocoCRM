@@ -486,8 +486,7 @@ function dueGroups(
   );
 }
 
-const HEAD =
-  'h-11 px-3 py-2.5 text-sm font-medium text-muted-foreground first:pl-4 last:pr-4';
+const HEAD = 'text-sm';
 
 // The groups folded away, kept in this browser; a blocked or cleared
 // storage only means every group shows again.
@@ -508,7 +507,7 @@ function readFoldedGroups(): Set<DueGroup> {
     return new Set(FOLDED_FIRST);
   }
 }
-const CELL = 'h-11 truncate px-3 py-2.5 first:pl-4 last:pr-4';
+const CELL = 'truncate';
 
 function TaskTable({
   pages,
@@ -577,9 +576,9 @@ function TaskTable({
       : undefined;
   return (
     <div className='grid gap-3'>
-      <div className='overflow-hidden rounded-xl border border-border bg-card shadow-xs'>
+      <div className='overflow-hidden rounded-lg border'>
         <Table className='min-w-[48rem] table-fixed'>
-          <TableHeader className='bg-sidebar'>
+          <TableHeader>
             <TableRow className='border-border hover:bg-transparent'>
               <TableHead className={HEAD}>{text('fields.taskName')}</TableHead>
               <TableHead className={`${HEAD} w-64`}>

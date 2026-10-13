@@ -355,7 +355,7 @@ export function OpportunityCaptureDialog({
                 {text('cancel')}
               </Button>
               <Button
-                className='bg-ai text-ai-foreground hover:bg-ai/90'
+                className='bg-primary text-primary-foreground hover:bg-primary/90'
                 disabled={Boolean(busy) || !pasted.trim()}
                 onClick={() => void organise()}
               >
@@ -376,9 +376,9 @@ export function OpportunityCaptureDialog({
                   review={deal.uncertain}
                   changed={changed}
                   notice={(unfilled) => (
-                    <div className='grid gap-1 rounded-lg bg-ai/10 p-3 text-sm'>
+                    <div className='grid gap-1 rounded-lg bg-primary/10 p-3 text-sm'>
                       <p className='flex gap-2'>
-                        <Sparkles className='mt-0.5 size-4 shrink-0 text-ai' />
+                        <Sparkles className='mt-0.5 size-4 shrink-0 text-primary' />
                         <span>
                           {text('leadCapture.filledNotice')}
                           {unfilled.length > 0 && (
@@ -460,7 +460,7 @@ export function OpportunityCaptureDialog({
                       <Button
                         size='sm'
                         variant='outline'
-                        className='shrink-0 text-ai hover:text-ai'
+                        className='shrink-0 text-primary hover:text-primary'
                         disabled={Boolean(busy)}
                         onClick={() => void organise()}
                       >
@@ -472,7 +472,7 @@ export function OpportunityCaptureDialog({
                 </div>
                 <div className='grid gap-2 border-t pt-3'>
                   <h3 className='flex items-center gap-1.5 text-sm font-medium'>
-                    <Sparkles className='size-4 text-ai' />
+                    <Sparkles className='size-4 text-primary' />
                     {text('leadCapture.adjustTitle')}
                   </h3>
                   <AdjustTurns turns={turns} />
@@ -497,7 +497,7 @@ export function OpportunityCaptureDialog({
                   />
                   <Button
                     size='sm'
-                    className='justify-self-end bg-ai text-ai-foreground hover:bg-ai/90'
+                    className='justify-self-end bg-primary text-primary-foreground hover:bg-primary/90'
                     disabled={Boolean(busy) || !instruction.trim()}
                     onClick={() => void adjust()}
                   >

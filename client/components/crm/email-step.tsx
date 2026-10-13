@@ -264,7 +264,7 @@ export function EmailStep({
     };
   });
   const field =
-    'w-full rounded-md border bg-background px-2 py-1 text-sm outline-none focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/10 disabled:opacity-60';
+    'w-full rounded-md border bg-background px-2 py-1 text-sm outline-none focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/20 disabled:opacity-60';
   // Decided, or the reader may not act: the draft as written.
   if (!editable)
     return (
@@ -287,7 +287,7 @@ export function EmailStep({
       <Button
         size='xs'
         variant='outline'
-        className='border-ai/40 bg-card font-medium text-ai hover:bg-ai/10 hover:text-ai'
+        className='border-primary/40 bg-card font-medium text-primary hover:bg-primary/10 hover:text-primary'
         disabled={busy || !ready}
         onClick={() => void send()}
       >

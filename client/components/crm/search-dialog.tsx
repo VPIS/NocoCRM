@@ -330,7 +330,7 @@ function SearchPanel({ search }: { search: GlobalSearch }): ReactElement {
         {assistantOn && typed && (
           <CommandGroup className='sticky -bottom-1 -mx-1 -mb-1 border-t border-border bg-popover p-1'>
             <CommandItem value='ask' disabled={!aiReady} onSelect={ask}>
-              <Sparkles className='text-ai' />
+              <Sparkles className='text-primary' />
               <span className='truncate'>
                 {text('globalSearch.askAbout', { text: typed })}
               </span>

@@ -14,10 +14,11 @@ import {
 import { Link } from 'react-router';
 import { useRecordDrawer, useRecordLink } from './record-drawer.js';
 import { Markdown } from './markdown.js';
-import { Inbox, LoaderCircle, type LucideIcon } from 'lucide-react';
+import { Inbox, type LucideIcon } from 'lucide-react';
 import { Card, CardContent } from '../ui/card.js';
 import { Badge } from '../ui/badge.js';
 import { Alert, AlertDescription } from '../ui/alert.js';
+import { Loading as AppLoading } from '../loading.js';
 import {
   useCrmText,
   errorCode,
@@ -125,17 +126,10 @@ export function CrmFrame({
   );
 }
 
+/** The template's loading, the brand mark over its label, in the CRM's words. */
 export function Loading(): ReactElement {
   const { text } = useCrmText();
-  return (
-    <div
-      role='status'
-      className='flex items-center justify-center gap-2 p-12 text-muted-foreground'
-    >
-      <LoaderCircle className='size-5 animate-spin' />
-      {text('loading')}
-    </div>
-  );
+  return <AppLoading className='p-12' label={text('loading')} />;
 }
 export function ErrorNotice({
   error,

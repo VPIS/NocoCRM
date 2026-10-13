@@ -2226,7 +2226,7 @@ function PrimaryStar({
   if (!canStar)
     return contact.primary ? (
       <Star
-        className='m-1 size-3.5 fill-ai text-ai'
+        className='m-1 size-3.5 fill-primary text-primary'
         aria-label={text('companyPrimary')}
       >
         <title>{text('companyPrimary')}</title>
@@ -2239,11 +2239,13 @@ function PrimaryStar({
         title={text(contact.primary ? 'companyPrimary' : 'setPrimary')}
         aria-label={text(contact.primary ? 'unsetPrimary' : 'setPrimary')}
         aria-pressed={Boolean(contact.primary)}
-        className='rounded-sm p-1 text-muted-foreground/50 transition-colors hover:text-ai'
+        className='rounded-sm p-1 text-muted-foreground/50 transition-colors hover:text-primary'
         onClick={() => setAsking(true)}
       >
         <Star
-          className={contact.primary ? 'size-3.5 fill-ai text-ai' : 'size-3.5'}
+          className={
+            contact.primary ? 'size-3.5 fill-primary text-primary' : 'size-3.5'
+          }
         />
       </button>
       {asking && (

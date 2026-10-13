@@ -162,7 +162,7 @@ export function ReviewPanel({
   return (
     <section
       // On the card's own white, waiting or decided, as every AI card.
-      className={`@container grid grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border p-4 text-sm shadow-xs [&_:is(input,textarea,[role=combobox]):focus-visible]:border-ring/50! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-2! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-ring/10! bg-card`}
+      className={`@container grid grid-cols-[minmax(0,1fr)] gap-3 rounded-xl border border-border p-4 text-sm shadow-xs [&_:is(input,textarea,[role=combobox]):focus-visible]:border-ring/50! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-2! [&_:is(input,textarea,[role=combobox]):focus-visible]:ring-ring/20! bg-card`}
     >
       {/* The heading, and who decided it or what became of it; in the
           timeline, whose line names it, only the latter, and nothing while
@@ -170,7 +170,7 @@ export function ReviewPanel({
       <div className='flex flex-wrap items-center gap-2 empty:hidden'>
         {inFeed ? null : (
           <>
-            <Sparkles className='size-4 shrink-0 text-ai' />
+            <Sparkles className='size-4 shrink-0 text-primary' />
             <span className='shrink-0 font-medium'>
               {text('approvalReview.title')}
             </span>
@@ -328,7 +328,7 @@ export function ReviewPanel({
               <Button
                 type='submit'
                 size='sm'
-                className='shrink-0 bg-ai text-ai-foreground hover:bg-ai/90'
+                className='shrink-0 bg-primary text-primary-foreground hover:bg-primary/90'
                 disabled={Boolean(busy) || !instruction.trim()}
               >
                 {busy === 'revise' ? <Spinner /> : <Sparkles />}
@@ -372,7 +372,7 @@ export function ReviewPanel({
                     render={
                       <Button
                         size='sm'
-                        className='bg-ai text-ai-foreground hover:bg-ai/90'
+                        className='bg-primary text-primary-foreground hover:bg-primary/90'
                         disabled={Boolean(busy)}
                         onClick={() => decide(leans)}
                       />
@@ -513,7 +513,7 @@ export function ReviewStatus({
           then asking again; before the first review, a button asks. */}
       {entry ? (
         <div
-          className={`${wide ? 'flex min-w-0 flex-1' : 'inline-flex max-w-full'} h-7 items-center rounded-lg border text-sm border-transparent bg-ai/10 dark:bg-ai/20 ${live ? 'text-ai' : ''}`}
+          className={`${wide ? 'flex min-w-0 flex-1' : 'inline-flex max-w-full'} h-7 items-center rounded-lg border text-sm border-transparent bg-primary/10 dark:bg-primary/20 ${live ? 'text-primary' : ''}`}
         >
           {/* Only whose it is and where it stands; its hover says what it
               recommends, why, and where it stands in words. */}
@@ -536,16 +536,16 @@ export function ReviewStatus({
                     .join(' · ')}
                   className={`flex h-full min-w-0 items-center gap-1.5 rounded-l-lg px-2 transition-colors ${
                     again ? '' : 'rounded-r-lg'
-                  } hover:bg-ai/15 ${wide ? 'flex-1' : ''}`}
+                  } hover:bg-primary/15 ${wide ? 'flex-1' : ''}`}
                 />
               }
             >
               {entry.status === 'running' ? (
-                <Spinner className='size-3.5 text-ai' />
+                <Spinner className='size-3.5 text-primary' />
               ) : (
-                <Sparkles className='size-3.5 text-ai' />
+                <Sparkles className='size-3.5 text-primary' />
               )}
-              <span className='min-w-0 truncate font-medium text-ai'>
+              <span className='min-w-0 truncate font-medium text-primary'>
                 {text(
                   live ? aiStateWords.review.running : 'approvalReview.ask',
                 )}
@@ -577,7 +577,7 @@ export function ReviewStatus({
           </Tooltip>
           {again ? (
             <>
-              <span aria-hidden className='h-3.5 w-px shrink-0 bg-ai/20' />
+              <span aria-hidden className='h-3.5 w-px shrink-0 bg-primary/20' />
               <Tooltip>
                 <TooltipTrigger
                   render={
@@ -586,7 +586,7 @@ export function ReviewStatus({
                       disabled={busy}
                       onClick={ask}
                       aria-label={toText(text('approvalReview.again'))}
-                      className='flex h-full shrink-0 items-center gap-1 rounded-r-lg px-2 font-medium text-ai transition-colors hover:bg-ai/10 disabled:opacity-50'
+                      className='flex h-full shrink-0 items-center gap-1 rounded-r-lg px-2 font-medium text-primary transition-colors hover:bg-primary/10 disabled:opacity-50'
                     />
                   }
                 >
@@ -605,7 +605,7 @@ export function ReviewStatus({
         // as the chip it gives way to: on the AI's tint, led by its mark.
         <button
           type='button'
-          className='inline-flex h-7 items-center gap-1.5 rounded-lg bg-ai/10 px-2.5 font-sans text-sm font-medium tracking-normal text-ai transition-colors hover:bg-ai/15 disabled:opacity-60 dark:bg-ai/20'
+          className='inline-flex h-7 items-center gap-1.5 rounded-lg bg-primary/10 px-2.5 font-sans text-sm font-medium tracking-normal text-primary transition-colors hover:bg-primary/15 disabled:opacity-60 dark:bg-primary/20'
           disabled={busy}
           onClick={ask}
         >

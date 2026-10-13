@@ -88,9 +88,9 @@ export function DecisionList({
           data-decision-item=''
           onClick={() => onSelect(entry.id)}
           className={`relative -mx-[calc(--spacing(3)+1px)] flex w-[calc(100%+--spacing(6)+2px)] items-start gap-3 rounded-lg border p-3 text-left transition-[background-color,border-color] ${
-            // On the list's white: the selected one on the menu's own grey.
+            // On the list's white: the selected one on the hover grey.
             selected
-              ? 'border-transparent bg-sidebar'
+              ? 'border-transparent bg-hover'
               : 'border-transparent hover:bg-hover'
           } ${decided ? 'opacity-55' : ''}`}
         >
@@ -100,7 +100,11 @@ export function DecisionList({
           <span
             aria-hidden
             className={`absolute top-3 bottom-3 -left-px w-0.5 rounded-full ${
-              selected ? 'bg-primary' : decided ? 'bg-transparent' : 'bg-ai'
+              selected
+                ? 'bg-primary'
+                : decided
+                  ? 'bg-transparent'
+                  : 'bg-primary'
             }`}
           />
           {/* Two lines: what it is about (its kind's tag, then its record)

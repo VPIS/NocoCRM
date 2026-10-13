@@ -82,7 +82,7 @@ function StartingItem({
     <>
       <Icon
         aria-hidden
-        className={`size-3.5 shrink-0 ${evaluation ? 'text-ai' : 'text-muted-foreground'}`}
+        className={`size-3.5 shrink-0 ${evaluation ? 'text-primary' : 'text-muted-foreground'}`}
       />
       <span className='shrink-0 text-muted-foreground'>{label}</span>
       <span className='min-w-0 truncate font-medium text-foreground'>

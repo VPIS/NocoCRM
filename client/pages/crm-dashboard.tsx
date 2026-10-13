@@ -219,12 +219,11 @@ export default function DashboardPage(): ReactElement {
   );
 }
 
-// One thing that may need attention: its icon on a grey tile, its title with
-// the rule under it, and the count on the right, all aligned to the card's
-// top, so cards whose rule takes two lines line up with their neighbours.
-// Something waiting turns only the count amber, a zero stays grey: amber is a
-// small signal beside the AI's purple, never a block of colour. A click opens
-// the list behind the count.
+// One thing that may need attention: its icon on a purple tile, its title
+// with the rule under it, and the count on the right, all aligned to the
+// card's top, so cards whose rule takes two lines line up with their
+// neighbours. Something waiting draws its count in the text colour, a zero
+// stays grey. A click opens the list behind the count.
 function AttentionCard({
   title,
   note,
@@ -243,9 +242,9 @@ function AttentionCard({
     <button
       type='button'
       onClick={onClick}
-      className='flex min-w-0 items-start gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left shadow-xs transition-colors hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
+      className='group flex min-w-0 items-start gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left shadow-xs transition-[translate,box-shadow,background-color] duration-200 ease-out hover:-translate-y-0.5 hover:bg-hover hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
     >
-      <span className='grid size-9 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground'>
+      <span className='grid size-9 shrink-0 place-items-center rounded-lg bg-primary/5 text-primary ring-1 ring-transparent transition-[background-color,box-shadow] duration-200 ease-out group-hover:bg-primary/10 group-hover:ring-border motion-reduce:transition-none'>
         <Icon className='size-4' aria-hidden />
       </span>
       <span className='min-w-0 flex-1'>
@@ -258,7 +257,7 @@ function AttentionCard({
       </span>
       <span
         className={`shrink-0 text-2xl leading-9 font-semibold tabular-nums ${
-          waiting ? 'text-warning' : 'text-muted-foreground/70'
+          waiting ? 'text-foreground' : 'text-muted-foreground/70'
         }`}
       >
         {count}

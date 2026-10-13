@@ -201,7 +201,7 @@ export default function ReportsPage(): ReactElement {
             disabled={readiness.state !== 'ready'}
             onClick={analyze}
           >
-            <Sparkles className='text-ai' />
+            <Sparkles className='text-primary' />
             {text('dock.q.home.analyze')}
           </Button>
         ) : undefined

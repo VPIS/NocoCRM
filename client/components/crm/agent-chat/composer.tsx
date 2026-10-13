@@ -177,7 +177,7 @@ export function Composer({
           a plain border rather than its AI colours, the send button alone in
           the AI's colour as there: what is attached, the question, then
           along its foot the paperclip, the model and the send button. */}
-      <InputGroup className='rounded-xl bg-card shadow-[0_6px_22px_-12px_rgb(0_0_0/0.18)] has-disabled:bg-card has-disabled:opacity-100 has-[[data-slot=input-group-control]:focus-visible]:border-ring/50 has-[[data-slot=input-group-control]:focus-visible]:ring-2 has-[[data-slot=input-group-control]:focus-visible]:ring-ring/10 dark:bg-card dark:has-disabled:bg-card'>
+      <InputGroup className='rounded-xl bg-card shadow-[0_6px_22px_-12px_rgb(0_0_0/0.18)] has-disabled:bg-card has-disabled:opacity-100 has-[[data-slot=input-group-control]:focus-visible]:border-ring/50 has-[[data-slot=input-group-control]:focus-visible]:ring-2 has-[[data-slot=input-group-control]:focus-visible]:ring-ring/20 dark:bg-card dark:has-disabled:bg-card'>
         {pinned.length || files.files.length ? (
           <InputGroupAddon align='block-start' className='px-4 pt-3'>
             <ul className='flex flex-wrap gap-1.5'>
@@ -295,7 +295,7 @@ export function Composer({
             size='icon-sm'
             aria-label={text('agentChat.send')}
             disabled={!canSend}
-            className='rounded-full bg-ai text-ai-foreground hover:bg-ai/90 hover:text-ai-foreground disabled:bg-muted disabled:text-muted-foreground'
+            className='rounded-full bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground disabled:bg-muted disabled:text-muted-foreground'
             onClick={submit}
           >
             <ArrowUp />

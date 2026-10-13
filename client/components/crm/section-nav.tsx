@@ -54,8 +54,11 @@ export function SectionNav({
     >
       {/* Drawn as the application's tabs (LinkTabs, a record page's):
           underlined on a thin rule, the one being read in the foreground
-          over a 2px line of it, the others muted until hovered. */}
-      <div className='flex gap-x-5 overflow-x-auto border-b border-border'>
+          over a 2px line of it, the others muted until hovered. The row
+          scrolls sideways, which clips whatever leaves its box, so the rule
+          is drawn inside it as an inset shadow and each link's line sits on
+          it rather than over a border below. */}
+      <div className='flex gap-x-5 overflow-x-auto shadow-[inset_0_-1px_0_var(--border)]'>
         {sections.map((section) => (
           <a
             key={section.id}
@@ -68,7 +71,7 @@ export function SectionNav({
                 .getElementById(section.id)
                 ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }}
-            className={`-mb-px inline-flex h-10 shrink-0 items-center gap-1.5 border-b-2 text-sm font-medium whitespace-nowrap transition-colors ${
+            className={`inline-flex h-10 shrink-0 items-center gap-1.5 border-b-2 text-sm font-medium whitespace-nowrap transition-colors ${
               active === section.id
                 ? 'border-foreground text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'

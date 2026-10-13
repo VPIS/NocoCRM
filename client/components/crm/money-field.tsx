@@ -139,7 +139,7 @@ export function MoneyField({
         align='start'
         sideOffset={8}
         initialFocus={amountRef}
-        className='w-80 gap-3 p-3 [&_:focus-visible]:border-ring/50! [&_:focus-visible]:ring-2! [&_:focus-visible]:ring-ring/10!'
+        className='w-80 gap-3 p-3 [&_:focus-visible]:border-ring/50! [&_:focus-visible]:ring-2! [&_:focus-visible]:ring-ring/20!'
       >
         <div className='grid grid-cols-[8rem_minmax(0,1fr)] gap-2'>
           <div className='grid gap-1.5'>

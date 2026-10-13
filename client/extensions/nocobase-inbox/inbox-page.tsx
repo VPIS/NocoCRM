@@ -18,13 +18,9 @@ import {
 } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 
+import { PageHeader } from '#components/page-header';
 import { Button } from '#components/ui/button';
 import { Spinner } from '#components/ui/spinner';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '#components/ui/tooltip';
 import { cn } from 'cn';
 
 import type { InboxAction } from './inbox-actions.js';
@@ -76,7 +72,7 @@ export interface InboxPageProps {
   readonly registry?: InboxRegistry;
   /** The page title; `inbox.title` when left out. */
   readonly title?: ReactNode;
-  /** Unused: the page draws no heading (an application change). */
+  /** The sentence under the title; `inbox.description` when left out. */
   readonly description?: ReactNode;
   /** What the detail pane shows before its read, delete and open buttons, such as an "Ask agent" button. */
   readonly detailToolbar?: (input: InboxDetailToolbarInput) => ReactNode;
@@ -159,6 +155,7 @@ export function InboxPage({
 function InboxPageContent({
   source = defaultInboxSource,
   title,
+  description,
   detailToolbar,
   listFooter,
   selectParams,
@@ -426,12 +423,31 @@ function InboxPageContent({
 
   return (
     <div className='flex h-full min-h-0 flex-col'>
-      {/* Application change: no heading over the list and the pane; the
-          layout's breadcrumb names the page, and the views' tabs lead it.
-          The title stays for screen readers. */}
-      <h1 className='sr-only'>
-        {title ?? t('inbox.title', { defaultValue: 'Inbox' })}
-      </h1>
+      <div className='shrink-0 border-b px-6 py-5 md:px-8'>
+        {/* Application change: the refresh spinner beside the title rather
+            than as the header's actions, which on a phone take a row of
+            their own under it, a gap even while empty. */}
+        <PageHeader
+          title={
+            <span className='inline-flex items-center gap-3'>
+              {title ?? t('inbox.title', { defaultValue: 'Inbox' })}
+              {(pages.isFetching || notices.isFetching || waiting.isFetching) &&
+              pages.data ? (
+                <Spinner
+                  className='size-4 text-muted-foreground'
+                  aria-label={t('inbox.loading', { defaultValue: 'Loading' })}
+                />
+              ) : null}
+            </span>
+          }
+          description={
+            description ??
+            t('inbox.description', {
+              defaultValue: 'Notifications and requests sent to you.',
+            })
+          }
+        />
+      </div>
       <div className='flex min-h-0 flex-1'>
         <div
           className={cn(
@@ -489,32 +505,29 @@ function InboxPageContent({
             collections={listCollections}
             footer={listFooter}
             // Application change: "Mark all as read" acts on notifications
-            // only, so it ends the tabs' row while their tab is open and
-            // something is unread, an icon with its name on hover, rather
-            // than a row of its own atop the list or the page's header.
-            tabsEnd={
-              view === 'all' && unreadShown > 0 ? (
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <Button
-                        variant='ghost'
-                        size='icon-sm'
-                        className='-mr-1.5 text-muted-foreground'
-                        aria-label={t('inbox.readAll', {
-                          defaultValue: 'Mark all as read',
-                        })}
-                        disabled={readAll.isPending}
-                        onClick={() => readAll.mutate()}
-                      />
-                    }
+            // only, so it heads their tab's list, at its left, rather than
+            // sitting in the page's header for every tab.
+            head={
+              view === 'all' ? (
+                // As far under the tabs' rule as the first item's title is under it.
+                <div className='flex shrink-0 justify-start pt-1.5'>
+                  <Button
+                    variant='ghost'
+                    size='xs'
+                    // Its icon on the line the items' titles start at: back by
+                    // the button's own padding and border.
+                    className='-ml-[calc(--spacing(1.5)+1px)]'
+                    disabled={readAll.isPending || unreadShown === 0}
+                    onClick={() => readAll.mutate()}
                   >
-                    {readAll.isPending ? <Spinner /> : <CheckCheckIcon />}
-                  </TooltipTrigger>
-                  <TooltipContent side='bottom'>
+                    {readAll.isPending ? (
+                      <Spinner data-icon='inline-start' />
+                    ) : (
+                      <CheckCheckIcon data-icon='inline-start' />
+                    )}
                     {t('inbox.readAll', { defaultValue: 'Mark all as read' })}
-                  </TooltipContent>
-                </Tooltip>
+                  </Button>
+                </div>
               ) : undefined
             }
             idPrefix={idPrefix}

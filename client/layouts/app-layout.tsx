@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import type { AppClientRegisteredRoute } from '@nocobase/app-client/plugins';
 import { Outlet, useLocation } from 'react-router';
 
+import { BrandWatermark } from '#components/brand-watermark';
 import { Breadcrumbs } from '#components/breadcrumbs';
 
 import { RouteTreeProvider } from '../routing/route-context.js';
@@ -15,14 +16,14 @@ import {
   AppSidebarProvider,
   AppSidebarToggle,
 } from './components/app-sidebar.js';
-import { NavigationMenu } from './components/navigation-menu.js';
-// Application changes: the counts beside "Inbox", "Approvals" and "Mailbox"
-// (navigation-badges.ts, waiting-count.ts, mail-unread.ts) and the banner
-// offering the demo dataset.
 import {
-  NavigationBadgesContext,
+  NavigationMenu,
   type NavigationBadge,
-} from './components/navigation-badges.js';
+} from './components/navigation-menu.js';
+// Application changes: what the counts beside "Inbox", "Approvals",
+// "Mailbox" and "Auto follow-up" read (waiting-count.ts, mail-unread.ts),
+// passed to the template's menu in its `badges`, and the banner offering the
+// demo dataset.
 import {
   useApprovalsToDecide,
   useInboxCount,
@@ -55,11 +56,11 @@ export function AppLayout({ routes }: AppLayoutProps): ReactElement {
 
   const { t } = useTranslation();
   const { items: menuItems, denied } = useRouteNavigation(routes);
-  const selectedKey = selectedNavigationId(
-    routes,
-    useLocation().pathname,
-    denied,
-  );
+  const { pathname } = useLocation();
+  const selectedKey = selectedNavigationId(routes, pathname, denied);
+  // Application change: the template's brand tint and watermark on the
+  // overview alone; the record pages keep a plain ground.
+  const brandSurface = pathname === '/';
   const navigationLabel = t('navigation.label', {
     defaultValue: 'Application navigation',
   });
@@ -102,25 +103,22 @@ export function AppLayout({ routes }: AppLayoutProps): ReactElement {
             footer={<AppSidebarFooter />}
           >
             {/* Application change: the CRM's menu-only groups are headed sections (navigation-menu.tsx). */}
-            <NavigationBadgesContext
-              value={{
+            <NavigationMenu
+              items={menuItems}
+              label={navigationLabel}
+              selectedKey={selectedKey}
+              sections
+              // Application change: in the collapsed sidebar, Search under
+              // the overview, which opens the global search's dialog
+              // (search-dialog.tsx); expanded, it sits beside the brand.
+              after={{ home: <SearchNavButton /> }}
+              badges={{
                 inbox,
                 'crm-approvals': toDecide,
                 ...runningBadges,
                 'crm-mail': unreadMail,
               }}
-            >
-              <NavigationMenu
-                items={menuItems}
-                label={navigationLabel}
-                selectedKey={selectedKey}
-                sections
-                // Application change: in the collapsed sidebar, Search under
-                // the overview, which opens the global search's dialog
-                // (search-dialog.tsx); expanded, it sits beside the brand.
-                after={{ home: <SearchNavButton /> }}
-              />
-            </NavigationBadgesContext>
+            />
           </AppSidebar>
           {/* Application change: crm-page-main lets the assistant panel push header and page aside (styles.css). */}
           <div className='crm-page-main flex min-w-0 flex-1 flex-col'>
@@ -142,7 +140,16 @@ export function AppLayout({ routes }: AppLayoutProps): ReactElement {
             {/* Application change: the global search's dialog, which ⌘K or
                 the menu's Search opens (search-dialog.tsx). */}
             <GlobalSearchDialog />
-            <main className='relative min-w-0 flex-1 overflow-hidden'>
+            <main
+              className={
+                brandSurface
+                  ? 'app-brand-surface relative isolate min-w-0 flex-1 overflow-hidden'
+                  : 'relative min-w-0 flex-1 overflow-hidden'
+              }
+            >
+              {brandSurface ? (
+                <BrandWatermark className='-z-10 text-primary' />
+              ) : null}
               {/* main only positions; the page scrolls in here, so a child page layer laid over main is neither
             moved by the page's scrolling nor stretched by its height. */}
               <div className='h-full overflow-y-auto'>

@@ -25,7 +25,7 @@ export function DiscussButton({
       variant='ghost'
       // Its icon in line with the card's text above: pulled out by its own
       // padding.
-      className='-ml-2.5 text-ai hover:bg-ai/10 hover:text-ai'
+      className='-ml-2.5 text-primary hover:bg-primary/10 hover:text-primary'
       onClick={() => discuss(pins)}
     >
       <Sparkles />

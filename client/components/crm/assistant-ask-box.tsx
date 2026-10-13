@@ -83,7 +83,7 @@ export function AssistantAskBox(): ReactElement | null {
                     draft.send(toText(text(prompt ?? `dock.q.${key}`)))
                   }
                 >
-                  <Sparkles className='text-ai' />
+                  <Sparkles className='text-primary' />
                   {label}
                 </Button>
               </li>

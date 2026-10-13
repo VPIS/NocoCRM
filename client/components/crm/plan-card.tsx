@@ -191,7 +191,7 @@ export function PlanCard({
             </Button>
             <Button
               size='sm'
-              className='bg-ai text-ai-foreground hover:bg-ai/90'
+              className='bg-primary text-primary-foreground hover:bg-primary/90'
               disabled={Boolean(busy) || kept === 0}
               onClick={() => run('execute')}
             >

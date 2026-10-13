@@ -2,6 +2,8 @@ import { useTranslation } from '@nocobase/i18n/client';
 import { ChevronRight } from 'lucide-react';
 import {
   Fragment,
+  createContext,
+  useContext,
   useRef,
   useState,
   type ReactElement,
@@ -39,12 +41,37 @@ import {
   routeKey,
   type RouteNavigationItem,
 } from '../../routing/route-navigation.js';
-import { useNavigationBadge } from './navigation-badges.js';
 
 // The selected entry uses the theme's `--sidebar-primary` pair (`theme.md`), where shadcn's menu buttons use the
 // hover color; the class is passed in, the primitive stays unchanged.
 const SELECTED =
   'data-active:bg-sidebar-primary data-active:text-sidebar-primary-foreground data-active:hover:bg-sidebar-primary data-active:hover:text-sidebar-primary-foreground';
+
+/**
+ * A count beside a menu entry. A number is what waits on the viewer, such as unread messages or requests to decide;
+ * `live` is work under way, such as runs in progress, with `hint` as its words for the tooltip and screen readers. Zero
+ * shows nothing.
+ */
+export type NavigationBadge =
+  | number
+  | { readonly count: number; readonly live: true; readonly hint: string };
+
+/** Counts keyed by the route name of the entry they stand beside. */
+export type NavigationBadges = Readonly<Record<string, NavigationBadge>>;
+
+const NavigationBadgesContext = createContext<NavigationBadges>({});
+
+function useNavigationBadge(item: RouteNavigationItem): {
+  readonly count: number;
+  readonly live: boolean;
+  readonly text: string;
+} {
+  const badge = useContext(NavigationBadgesContext)[item.route.name];
+  if (typeof badge === 'object')
+    return { count: badge.count, live: true, text: badge.hint };
+  const count = badge ?? 0;
+  return { count, live: false, text: String(count) };
+}
 
 /**
  * A permission-filtered route tree as the sidebar's menu, drawn with shadcn's Sidebar primitives. Groups and parents
@@ -57,6 +84,7 @@ export function NavigationMenu({
   selectedKey,
   sections = false,
   after,
+  badges = {},
 }: {
   readonly items: readonly RouteNavigationItem[];
   readonly label: string;
@@ -75,6 +103,11 @@ export function NavigationMenu({
   // which opens a dialog rather than a page, so no route's `navigation` can
   // express it (client/components/crm/search-dialog.tsx).
   readonly after?: Readonly<Record<string, ReactNode>>;
+  /**
+   * Counts beside entries, keyed by route name, for a page entry that is not a sub-menu's: a top-level entry or a
+   * section's. They change while the page is open, so the layout passes them rather than the route declaring them.
+   */
+  readonly badges?: NavigationBadges;
 }): ReactElement {
   const isSection = (item: RouteNavigationItem): boolean =>
     sections && item.children.length > 0 && !item.route.componentLoader;
@@ -87,30 +120,32 @@ export function NavigationMenu({
     else runs.push([item]);
   }
   return (
-    <nav aria-label={label}>
-      {runs.map((run) =>
-        Array.isArray(run) ? (
-          <SidebarGroup key={routeKey(run[0].route)}>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {run.map((item) => (
-                  <Fragment key={routeKey(item.route)}>
-                    <NavigationItem item={item} selectedKey={selectedKey} />
-                    {after?.[item.route.name]}
-                  </Fragment>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ) : (
-          <NavigationSection
-            key={routeKey(run.route)}
-            item={run}
-            selectedKey={selectedKey}
-          />
-        ),
-      )}
-    </nav>
+    <NavigationBadgesContext value={badges}>
+      <nav aria-label={label}>
+        {runs.map((run) =>
+          Array.isArray(run) ? (
+            <SidebarGroup key={routeKey(run[0].route)}>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {run.map((item) => (
+                    <Fragment key={routeKey(item.route)}>
+                      <NavigationItem item={item} selectedKey={selectedKey} />
+                      {after?.[item.route.name]}
+                    </Fragment>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ) : (
+            <NavigationSection
+              key={routeKey(run.route)}
+              item={run}
+              selectedKey={selectedKey}
+            />
+          ),
+        )}
+      </nav>
+    </NavigationBadgesContext>
   );
 }
 
@@ -178,14 +213,8 @@ function NavigationItem({
   const isSelected = routeKey(item.route) === selectedKey;
   const children = item.children;
   const disclosure = useDisclosure(item, selectedKey);
-  // Application change: a count beside the entry, keyed by route name
-  // (navigation-badges.ts), such as the CRM's Waiting on me.
-  const {
-    count: badge,
-    live,
-    hint: badgeHint,
-  } = useNavigationBadge(item.route.name);
-  const badgeText = badgeHint ?? String(badge);
+  const badge = useNavigationBadge(item);
+  const counted = badge.count > 0 ? `${label} · ${badge.text}` : null;
   const tooltip = inPopover
     ? undefined
     : { children: label, role: 'tooltip', sideOffset: 8 };
@@ -217,51 +246,21 @@ function NavigationItem({
         <SidebarMenuButton
           render={link}
           isActive={isSelected}
+          // A counted entry is named with its count, as its tooltip shows it.
+          aria-label={counted ?? undefined}
           tooltip={
-            tooltip && badge > 0
-              ? { ...tooltip, children: `${label} · ${badgeText}` }
-              : tooltip
+            tooltip && counted ? { ...tooltip, children: counted } : tooltip
           }
           className={SELECTED}
         >
           {Icon ? <Icon /> : null}
-          <span>
-            {label}
-            {badge > 0 && <span className='sr-only'>{` · ${badgeText}`}</span>}
-          </span>
+          <span>{label}</span>
         </SidebarMenuButton>
-        {badge > 0 && (
-          <>
-            <SidebarMenuBadge
-              aria-hidden
-              title={live ? badgeText : undefined}
-              // A count on a round ground of its own (an application change
-              // to the template's bare figures); work going on in the AI's
-              // tint.
-              className={`rounded-full px-1.5 ${
-                live
-                  ? 'gap-1 bg-ai/10 text-ai dark:bg-ai/20'
-                  : 'bg-foreground/8 dark:bg-foreground/15'
-              }`}
-            >
-              {/* Work going on: a pulsing dot in the AI's colour. */}
-              {live && (
-                <span className='size-1.5 animate-pulse rounded-full bg-ai motion-reduce:animate-none' />
-              )}
-              {badge > 99 ? '99+' : badge}
-            </SidebarMenuBadge>
-            {/* In the icon mode the badge hides; a dot on the icon's corner keeps the count noticed. */}
-            {state === 'collapsed' && !isMobile && (
-              <span
-                aria-hidden
-                className={`pointer-events-none absolute top-1 right-1 size-2 rounded-full ${
-                  live
-                    ? 'animate-pulse bg-ai motion-reduce:animate-none'
-                    : 'bg-primary'
-                }`}
-              />
-            )}
-          </>
+        {badge.count > 0 && (
+          <EntryBadge
+            {...badge}
+            dot={state === 'collapsed' && !isMobile && !inPopover}
+          />
         )}
       </SidebarMenuItem>
     );
@@ -311,6 +310,50 @@ function NavigationItem({
         </SidebarMenuSub>
       </CollapsibleContent>
     </Collapsible>
+  );
+}
+
+/**
+ * An entry's count at the row's end, on a round ground of its own; work under way in the primary color behind a
+ * pulsing dot. The primitive hides it in the icon mode, where a dot on the icon's corner keeps it noticed and the
+ * tooltip carries the count. The words are the entry's, so this is hidden from screen readers.
+ */
+function EntryBadge({
+  count,
+  live,
+  text,
+  dot,
+}: {
+  readonly count: number;
+  readonly live: boolean;
+  readonly text: string;
+  readonly dot: boolean;
+}): ReactElement {
+  const pulse = 'animate-pulse motion-reduce:animate-none';
+  return (
+    <>
+      <SidebarMenuBadge
+        aria-hidden
+        title={live ? text : undefined}
+        className={
+          live
+            ? 'gap-1 rounded-full bg-primary/10 px-1.5 text-primary dark:bg-primary/20'
+            : 'rounded-full bg-foreground/8 px-1.5 dark:bg-foreground/15'
+        }
+      >
+        {live && (
+          <span className={`size-1.5 rounded-full bg-primary ${pulse}`} />
+        )}
+        {count > 99 ? '99+' : count}
+      </SidebarMenuBadge>
+      {dot && (
+        <span
+          aria-hidden
+          data-slot='navigation-badge-dot'
+          className={`pointer-events-none absolute top-1 right-1 size-2 rounded-full bg-primary ${live ? pulse : ''}`}
+        />
+      )}
+    </>
   );
 }
 
