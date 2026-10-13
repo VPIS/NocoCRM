@@ -30,6 +30,79 @@ const enUS = {
   'navigation.brandHome': 'NocoCRM home',
   'navigation.brandApps': 'NocoBase applications',
   app: { ...systemEnUS.app, title: 'NocoCRM' },
+  // The sign-in page's right side (client/pages/auth/activity-panel.tsx):
+  // one customer's way from a lead to a closed deal. Sample content.
+  loginActivity: {
+    heading: 'From the first lead to the signed deal.',
+    description:
+      'Your AI sales team follows up every lead and opportunity, prepares every meeting and every approval, and you make the call.',
+    phases: { lead: 'Lead', deal: 'Opportunity', won: 'Closed' },
+    participants: {
+      rep: 'Sophie Bennett',
+      leadAgent: 'AI lead follow-up',
+      prepAgent: 'AI task preparation',
+      dealAgent: 'AI opportunity follow-up',
+      approvalAgent: 'AI approval review',
+      manager: 'Daniel Brooks',
+      customer: 'Emma Walsh',
+    },
+    capabilities: {
+      capture: 'AI capture',
+      followUp: 'AI follow-up',
+      pipeline: 'Pipeline',
+      prep: 'Task preparation',
+      mail: 'Mail',
+      approval: 'Approvals',
+    },
+    timeline: 'Timeline',
+    lead: {
+      kind: 'Lead',
+      title: 'Emma Walsh / Northwind Logistics',
+      need: 'Fleet dispatch, 200 trucks · from an email',
+      grade: 'Grade A',
+    },
+    deal: {
+      kind: 'Opportunity',
+      title: 'Fleet dispatch platform (Enterprise)',
+      company: 'Northwind Logistics',
+      amount: '$48,000',
+      owner: 'Sophie Bennett',
+      won: 'Won',
+    },
+    leadStatuses: { new: 'New', working: 'Working', converted: 'Converted' },
+    stages: {
+      qualification: 'Qualification',
+      proposal: 'Proposal',
+      negotiation: 'Negotiation',
+      won: 'Won',
+    },
+    steps: {
+      captured: { who: 'AI', what: 'organised the lead out of an email' },
+      leadFollowUp: {
+        who: 'AI follow-up',
+        what: 'grade A, call today at 3 pm',
+      },
+      converted: {
+        who: 'Sophie Bennett',
+        what: 'converted the lead into an opportunity',
+      },
+      prepared: {
+        who: 'AI',
+        what: "prepared tomorrow's demo on their own routes",
+      },
+      replied: {
+        who: 'Emma Walsh',
+        what: 'could we pay 60 days after the invoice?',
+      },
+      dealFollowUp: {
+        who: 'AI follow-up',
+        what: 'on to negotiation; 60 days needs approval',
+      },
+      reviewed: { who: 'AI review', what: 'approve on conditions' },
+      approved: { who: 'Daniel Brooks', what: 'approved the 60-day terms' },
+      won: { who: 'Sophie Bennett', what: 'the signed contract is back' },
+    },
+  },
   navigation: { ...systemEnUS.navigation, home: 'Overview' },
 };
 
