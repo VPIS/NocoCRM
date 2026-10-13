@@ -9,6 +9,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: 'bg-primary text-primary-foreground hover:bg-primary/80',
+        // Application change: a main action in the foreground's black, for the
+        // buttons that stand beside the AI's purple (a lead's Convert).
+        contrast: 'bg-foreground text-background hover:bg-foreground/85',
         outline:
           'border-border bg-background hover:bg-hover hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50',
         secondary:

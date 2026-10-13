@@ -570,7 +570,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
     <>
       <EvaluateButton request={followUp} />
       {editable && (
-        <Button size='sm' onClick={() => setConvert(true)}>
+        <Button size='sm' variant='contrast' onClick={() => setConvert(true)}>
           <ArrowRightLeft />
           {text('convertShort')}
         </Button>
