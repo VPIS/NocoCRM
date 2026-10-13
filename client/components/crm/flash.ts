@@ -1,8 +1,8 @@
 // Lights up what a jump lands on (a timeline entry a link or a notification
 // names, the message a reply answers, a mail conversation) for a few
 // seconds, then lets it fade (`.crm-flash` in client/styles.css), so the
-// eye finds it where the page moved to: in the AI's tint for the AI's work
-// (a follow-up's card), in the info blue for anything else.
+// eye finds it where the page moved to: a faint purple, the primary's, a
+// little deeper for the AI's work (a follow-up's card).
 export function flash(nodes: Iterable<Element>, tone?: 'ai'): void {
   for (const node of nodes) {
     node.classList.remove('crm-flash', 'crm-flash-ai');
