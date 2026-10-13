@@ -29,11 +29,11 @@ export const enMail: DemoContent['mail'] = {
     messages: [
       {
         from: 'other',
-        body: 'Hi {{owner}},\n\nOur legal team reviewed the contract and has two changes, to clause 7 on data ownership and clause 9 on payment milestones. Could you confirm them?\n\n{{customer}}\n{{company}}',
+        body: 'Hi {{owner}},\n\nOur legal team reviewed the contract and has two changes, to clause 7 on data ownership and to the wording of clause 12 on acceptance criteria. Could you confirm them?\n\n{{customer}}\n{{company}}',
       },
       {
         from: 'owner',
-        body: 'Hi {{customer}},\n\nThe data ownership change is fine. Moving payment to 30 days after acceptance needs an internal approval; I will submit it today and come back to you tomorrow.\n\n{{owner}}',
+        body: 'Hi {{customer}},\n\nBoth changes are fine: they adjust the wording only and touch neither the price nor the payment terms, so they need no internal approval on our side. I will send the updated contract tomorrow.\n\n{{owner}}',
       },
       {
         from: 'other',
@@ -41,7 +41,7 @@ export const enMail: DemoContent['mail'] = {
       },
       {
         from: 'owner',
-        body: 'Hi {{customer}},\n\nThe payment change is approved. I will send the updated contract shortly; once you confirm it we can arrange signing.\n\n{{owner}}',
+        body: 'Hi {{customer}},\n\nThe updated contract is in your inbox, with both changes made as your legal team asked; once you confirm it we can arrange signing.\n\n{{owner}}',
       },
     ],
   },
@@ -603,7 +603,7 @@ export const enMail: DemoContent['mail'] = {
       },
       {
         from: 'other',
-        body: '{{owner}},\n\nDone. The contract terms with {{company}} are mostly settled and the payment milestone approval has gone through; we expect to sign by month end.\n\n{{colleague}}',
+        body: '{{owner}},\n\nDone. The contract terms with {{company}} are mostly settled and the changes from their legal team are made; we expect to sign by month end.\n\n{{colleague}}',
       },
     ],
   },

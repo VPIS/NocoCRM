@@ -29,11 +29,11 @@ export const zhMail: DemoContent['mail'] = {
     messages: [
       {
         from: 'other',
-        body: '{{owner}}您好，\n\n法务看过合同，对第 7 条数据归属和第 9 条付款节点有两点修改意见，修订版已放在附件说明里，请您确认。\n\n{{customer}}\n{{company}}',
+        body: '{{owner}}您好，\n\n法务看过合同，对第 7 条数据归属和第 12 条验收标准的写法有两点修改意见，修订版已放在附件说明里，请您确认。\n\n{{customer}}\n{{company}}',
       },
       {
         from: 'owner',
-        body: '{{customer}}您好，\n\n数据归属的修改没问题。付款节点改为“验收后 30 天”需要我们内部审批，我今天提交，明天给您结果。\n\n{{owner}}',
+        body: '{{customer}}您好，\n\n两处修改都没问题，只是措辞上的调整，不涉及价格和付款，我们这边不需要另行审批。更新后的合同我明天发您。\n\n{{owner}}',
       },
       {
         from: 'other',
@@ -41,7 +41,7 @@ export const zhMail: DemoContent['mail'] = {
       },
       {
         from: 'owner',
-        body: '{{customer}}您好，\n\n付款节点的修改已经批下来了，更新后的合同稍后发您，确认无误就可以安排盖章。\n\n{{owner}}',
+        body: '{{customer}}您好，\n\n更新后的合同已经发到您邮箱，两处修改都按法务的意见改好了，确认无误就可以安排盖章。\n\n{{owner}}',
       },
     ],
   },
@@ -603,7 +603,7 @@ export const zhMail: DemoContent['mail'] = {
       },
       {
         from: 'other',
-        body: '{{owner}}，\n\n已更新。{{company}}的合同条款基本谈妥，付款节点的审批已经通过，预计月底能签。\n\n{{colleague}}',
+        body: '{{owner}}，\n\n已更新。{{company}}的合同条款基本谈妥，客户法务的修改意见也处理完了，预计月底能签。\n\n{{colleague}}',
       },
     ],
   },
