@@ -2253,14 +2253,23 @@ function MailEvent({
         title={[subject, count, last].filter(Boolean).join(' · ')}
       >
         {own ? (
-          <button
-            type='button'
-            // Inline, so the line's ellipsis can fall inside the subject.
-            className='inline underline-offset-2 hover:underline'
+          // A span acting as the button, not a <button>: Chrome lays a button
+          // out as one atomic box even when told to be inline, so a line cut
+          // inside the subject was clipped with no ellipsis.
+          <span
+            role='button'
+            tabIndex={0}
+            className='cursor-pointer underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none'
             onClick={() => onOpen(toText(event.sourceKey))}
+            onKeyDown={(keyEvent) => {
+              if (keyEvent.key === 'Enter' || keyEvent.key === ' ') {
+                keyEvent.preventDefault();
+                onOpen(toText(event.sourceKey));
+              }
+            }}
           >
             {subject}
-          </button>
+          </span>
         ) : (
           subject
         )}
