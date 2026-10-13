@@ -9,6 +9,7 @@ import {
   BACKGROUND_SOURCE,
 } from '../crm-agents/background.js';
 import { z, type ZodType } from 'zod';
+import { TEXT_LIMIT } from './limits.js';
 import { CrmError, toText } from './schema.js';
 
 // The CRM's own model calls (migration step 1): the follow-ups, the reviews,
@@ -272,6 +273,20 @@ export function jsonIn(content: unknown): unknown {
     }
   }
   return undefined;
+}
+
+// What a background run that failed records as its card's error: `timedOut`
+// when the model did not answer within the turn's limit (`RUN_TURN_MS`),
+// which the gateway reports as a stopped call (the application stopping is
+// handed back before this), otherwise the provider's words.
+export function runFailure(error: unknown): string {
+  if (
+    error instanceof Error &&
+    error.name === 'ModelError' &&
+    (error as Error & { code?: unknown }).code === 'aborted'
+  )
+    return 'timedOut';
+  return error instanceof Error ? error.message.slice(0, TEXT_LIMIT) : 'failed';
 }
 
 // A model call that failed, as the CRM's error: no usable model (no

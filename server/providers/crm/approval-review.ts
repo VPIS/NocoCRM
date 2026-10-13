@@ -15,7 +15,13 @@ import {
   topicNames,
 } from '../../locales/crm-ai/approval-review.js';
 import { pick } from '../../locales/crm-ai/index.js';
-import { jsonIn, openSession, readSkill, RUN_TURN_MS } from './ai-model.js';
+import {
+  jsonIn,
+  openSession,
+  readSkill,
+  RUN_TURN_MS,
+  runFailure,
+} from './ai-model.js';
 import { settingsGuidance } from './guidance.js';
 import { EVALUATION, readEntry, type EvaluationEntry } from './ai-entries.js';
 import type { Actor } from './authorization.js';
@@ -640,10 +646,7 @@ export class ApprovalReviewer {
       await this.finish(id, 'failed', {
         kind: EVALUATION,
         ...(asked ? carried(asked) : {}),
-        error:
-          error instanceof Error
-            ? error.message.slice(0, TEXT_LIMIT)
-            : 'failed',
+        error: runFailure(error),
       });
     }
   }

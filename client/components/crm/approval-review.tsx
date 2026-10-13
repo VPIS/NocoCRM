@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { AiFailure } from './ai-failure.js';
 import { Check, Sparkles, X } from 'lucide-react';
 import { Badge } from '../ui/badge.js';
 import { Button } from '../ui/button.js';
@@ -237,7 +238,10 @@ export function ReviewPanel({
         </p>
       )}
       {entry.status === 'failed' && (
-        <p className='text-muted-foreground'>{text('approvalReview.failed')}</p>
+        <AiFailure
+          message={toText(text('approvalReview.failed'))}
+          error={entry.ai.error}
+        />
       )}
       {/* The conclusion leads as a sentence, as on the follow-up's card. */}
       {review && (

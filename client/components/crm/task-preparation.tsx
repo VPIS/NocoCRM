@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { AiFailure } from './ai-failure.js';
 import { Check, Sparkles, X, Zap } from 'lucide-react';
 import { Badge } from '../ui/badge.js';
 import { Button } from '../ui/button.js';
@@ -203,7 +204,10 @@ export function PrepPanel({
         </p>
       )}
       {entry.status === 'failed' && (
-        <p className='text-muted-foreground'>{text('taskPrep.failed')}</p>
+        <AiFailure
+          message={toText(text('taskPrep.failed'))}
+          error={entry.ai.error}
+        />
       )}
       {/* What it is for leads as a sentence, then where things stand. */}
       {prep && (

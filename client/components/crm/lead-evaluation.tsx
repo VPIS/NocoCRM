@@ -7,6 +7,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react';
+import { AiFailure } from './ai-failure.js';
 import {
   CalendarPlus,
   Check,
@@ -808,7 +809,10 @@ export function VerdictPanel({
         </p>
       )}
       {entry.status === 'failed' && (
-        <p className='text-muted-foreground'>{text('evaluation.failed')}</p>
+        <AiFailure
+          message={toText(text('evaluation.failed'))}
+          error={entry.ai.error}
+        />
       )}
       {/* The reason always; the rest while the verdict waits. */}
       {verdict && (

@@ -8,6 +8,7 @@ import {
   modelFailure,
   openSession,
   readSkill,
+  runFailure,
 } from '../../server/providers/crm/ai-model.js';
 
 // The CRM's background AI on the Agents plugin's model gateway: which model
@@ -230,5 +231,24 @@ describe("the CRM's model", () => {
       }),
     };
     expect(await readSkill(container, 'lead-follow-up')).toBe('# Edited');
+  });
+});
+
+describe('runFailure', () => {
+  // The gateway's error, known by its name and code.
+  const modelError = (code: string, message: string): Error =>
+    Object.assign(new Error(message), { name: 'ModelError', code });
+
+  it('records a call the turn limit stopped as timedOut', () => {
+    expect(runFailure(modelError('aborted', 'The call was stopped.'))).toBe(
+      'timedOut',
+    );
+  });
+
+  it("keeps any other failure in the provider's words", () => {
+    expect(runFailure(modelError('provider', 'Bad gateway'))).toBe(
+      'Bad gateway',
+    );
+    expect(runFailure('nope')).toBe('failed');
   });
 });

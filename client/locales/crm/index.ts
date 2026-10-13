@@ -811,6 +811,13 @@ const wording = {
   },
   // Where an AI suggestion stands, on the chips atop a record's page
   // (ai-status-word.tsx).
+  // Why a failed AI card did not finish, after the card's own words.
+  aiFailure: {
+    timedOut: [
+      'The model did not answer within 8 minutes. Put a faster model first on the Background AI agent (Agent team → Agents), then run it again.',
+      '模型 8 分钟内没有答完。可在 Agent 团队 → Agents 中把更快的模型排到“后台 AI”的第一位，再重新运行。',
+    ],
+  },
   aiChip: {
     status: {
       pending: ['Waiting', '待处理'],
