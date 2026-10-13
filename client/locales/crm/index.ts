@@ -299,10 +299,14 @@ const wording = {
   },
   comments: {
     label: ['Comment', '评论'],
-    placeholder: ['Leave a comment, @ someone...', '评论，可 @ 某人...'],
+    // Worded as the UI Library's comment composer.
+    placeholder: [
+      'Leave a comment… Type @ to mention someone',
+      '写评论… 输入 @ 提及同事',
+    ],
     add: ['Add comment', '添加评论'],
     // The comment box's button.
-    post: ['Post', '发布'],
+    post: ['Comment', '评论'],
     shortcut: ['⌘/Ctrl + Enter to add', '⌘/Ctrl + Enter 添加'],
     edited: ['Edited', '已编辑'],
     confirmDelete: ['Delete it?', '确认删除'],
@@ -312,7 +316,10 @@ const wording = {
     moreReplies: ['Show {{count}} more replies', '展开另外 {{count}} 条回复'],
     // After a reply's author: whom it answers.
     replyTo: ['replied to {{name}}', '回复 {{name}}'],
-    replyPlaceholder: ['Reply, @ someone...', '回复，可 @ 某人...'],
+    replyPlaceholder: [
+      'Write a reply… Type @ to mention someone',
+      '写回复… 输入 @ 提及同事',
+    ],
     // A comment deleted while it had replies, its place kept for them.
     deleted: ['This comment was deleted', '此评论已删除'],
     // The comment and reply boxes' paperclip, and its files on their way up.

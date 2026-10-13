@@ -69,6 +69,7 @@ import {
   PencilLine,
   Plus,
   Reply,
+  Send,
   Sparkles,
   SquareCheckBig,
   Trash2,
@@ -2811,6 +2812,7 @@ function ReplyBox({
             disabled={busy || !ready}
             onClick={() => void post()}
           >
+            <Send data-icon='inline-start' />
             {text('comments.reply')}
           </Button>
         </div>
@@ -3907,6 +3909,7 @@ function CommentComposer({
             disabled={busy || !ready}
             onClick={() => void add()}
           >
+            <Send data-icon='inline-start' />
             {text('comments.post')}
           </Button>
         </div>
