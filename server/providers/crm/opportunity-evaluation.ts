@@ -914,6 +914,22 @@ function prompt(input: {
   );
   const json = (value: unknown) =>
     `\`\`\`json\n${JSON.stringify(value, null, 2)}\n\`\`\``;
+  // The mail is the company's people's, so it carries the company's other
+  // deals too: a message whose subject names another of them, and not this
+  // one, is marked as that one's. Unmarked, a model asked to answer without
+  // reasoning took a won deal's "signed contract received" as this deal's.
+  const thisName = toText(opportunity.name);
+  const otherNames = (input.context.otherDeals as Row[])
+    .map((deal) => toText(deal.name))
+    .filter((name) => name && !thisName.includes(name))
+    .sort((x, y) => y.length - x.length);
+  const mail = input.mail?.map((message) => {
+    const subject = toText(message.subject);
+    const other = subject.includes(thisName)
+      ? undefined
+      : otherNames.find((name) => subject.includes(name));
+    return other ? { ...message, concerns: other } : message;
+  });
   return `Following the opportunity follow-up skill below, give a follow-up recommendation that weighs everything this opportunity now holds, and return it in the given structure.
 Everything the skill asks you to look up has already been looked up and is attached below: the opportunity, the company, the contacts and their roles, the tasks, the comments, the owner's mail with the customer, the approvals, the source lead and the company's other opportunities. Do not call any tool; there is no web research. Today is ${input.today}.
 Give enrich as an empty array: the company's particulars come from the web, which is not searched.
@@ -953,7 +969,7 @@ ${OPPORTUNITY_TASK_RULES}
 ${input.comments.length ? json(input.comments) : 'No comments.'}
 
 # Mail with the customer
-${input.mail?.length ? `The owner's mail with the opportunity's contacts in the last six months, newest first; direction fromCustomer is what the customer wrote, toCustomer what the owner sent; text is the message without the earlier messages it quotes.\n${json(input.mail)}` : "No mail with the customer was found in the owner's mailbox."}
+${mail?.length ? `The owner's mail with the opportunity's contacts in the last six months, newest first; direction fromCustomer is what the customer wrote, toCustomer what the owner sent; text is the message without the earlier messages it quotes. A message with concerns is about the company's other opportunity it names, not this one: what it says of a contract, an invoice, a payment or a project is that opportunity's, never this one's evidence; read it only for what it shows of the customer.\n${json(mail)}` : "No mail with the customer was found in the owner's mailbox."}
 
 # Approvals
 ${(input.context.approvals as Row[]).length ? json(input.context.approvals) : 'No approvals.'}
