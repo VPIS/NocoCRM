@@ -307,7 +307,10 @@ const wording = {
     add: ['Add comment', '添加评论'],
     // The comment box's button.
     post: ['Comment', '评论'],
-    shortcut: ['⌘/Ctrl + Enter to add', '⌘/Ctrl + Enter 添加'],
+    shortcut: [
+      'Enter to send · Shift + Enter for a new line',
+      '回车发送 · Shift + 回车换行',
+    ],
     edited: ['Edited', '已编辑'],
     confirmDelete: ['Delete it?', '确认删除'],
     // Replies under a comment, in its thread.

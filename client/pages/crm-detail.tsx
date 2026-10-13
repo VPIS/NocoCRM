@@ -20,6 +20,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type KeyboardEvent,
   type ReactElement,
   type ReactNode,
   type UIEvent,
@@ -2787,7 +2788,7 @@ function ReplyBox({
             onMentionsChange={setMentions}
             {...uploads.dropProps}
             onKeyDown={(event) => {
-              if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+              if (sendsOnEnter(event)) {
                 event.preventDefault();
                 void post();
               } else if (event.key === 'Escape') onDone();
@@ -3807,6 +3808,20 @@ function initials(name: string): string {
     : '?';
 }
 
+// Enter sends a comment or a reply, as the UI Library's comment composer
+// does, and Shift+Enter breaks the line; never while an input method is
+// composing (Enter there confirms the characters), and the mention list,
+// when open, takes Enter first to pick a name.
+function sendsOnEnter(event: KeyboardEvent<HTMLTextAreaElement>): boolean {
+  return (
+    event.key === 'Enter' &&
+    !event.shiftKey &&
+    !event.altKey &&
+    !event.nativeEvent.isComposing &&
+    event.keyCode !== 229
+  );
+}
+
 // The comment box atop a record's timeline. Anyone who may read the record may
 // add a comment, which everyone who may read it sees; Ctrl/⌘+Enter adds it.
 function CommentComposer({
@@ -3884,7 +3899,7 @@ function CommentComposer({
             className='max-h-[50vh] min-h-10 resize-none pr-10 text-sm py-[calc((--spacing(10)-1lh-2px)/2)] bg-card shadow-xs border-border focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/20 data-dropping:border-ring data-dropping:ring-2 data-dropping:ring-ring/20 dark:bg-card'
             onChange={setDraft}
             onKeyDown={(event) => {
-              if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+              if (sendsOnEnter(event)) {
                 event.preventDefault();
                 void add();
               }

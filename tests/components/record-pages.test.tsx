@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
@@ -523,6 +529,29 @@ describe("a comment's thread", () => {
     await userEvent.keyboard('{Control>}{Enter}{/Control}');
     expect(state.api).toHaveBeenCalledWith('companies/rec-1/comments', 'POST', {
       text: '好的',
+      mentions: [],
+      replyTo: 'n1',
+    });
+  });
+
+  it('sends a reply on Enter, but not on Shift+Enter or while an input method composes', async () => {
+    state.history = [comment('n1', 'manager', '客户想看演示')];
+    renderPage();
+    const [answer] = screen.getAllByRole('button', { name: '回复' });
+    await userEvent.click(answer);
+    const box = screen.getByRole('textbox', { name: '回复' });
+    await userEvent.type(box, '好的');
+    fireEvent.keyDown(box, { key: 'Enter', isComposing: true });
+    fireEvent.keyDown(box, { key: 'Enter', keyCode: 229 });
+    await userEvent.keyboard('{Shift>}{Enter}{/Shift}');
+    expect(state.api).not.toHaveBeenCalledWith(
+      'companies/rec-1/comments',
+      'POST',
+      expect.anything(),
+    );
+    await userEvent.keyboard('{Enter}');
+    expect(state.api).toHaveBeenCalledWith('companies/rec-1/comments', 'POST', {
+      text: '好的\n',
       mentions: [],
       replyTo: 'n1',
     });
