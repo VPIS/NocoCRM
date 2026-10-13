@@ -242,7 +242,11 @@ export default function ApiKeysPage(): ReactElement {
         </EmptyHeader>
         {mayCreate ? (
           <EmptyContent>
-            <Button nativeButton={false} render={<Link to={newLink} />}>
+            <Button
+              variant='contrast'
+              nativeButton={false}
+              render={<Link to={newLink} />}
+            >
               <PlusIcon data-icon='inline-start' />
               {text('keys.new')}
             </Button>
@@ -385,7 +389,11 @@ export default function ApiKeysPage(): ReactElement {
           actions={
             <>
               {mayCreate && rows.length > 0 ? (
-                <Button nativeButton={false} render={<Link to={newLink} />}>
+                <Button
+                  variant='contrast'
+                  nativeButton={false}
+                  render={<Link to={newLink} />}
+                >
                   <PlusIcon data-icon='inline-start' />
                   {text('keys.new')}
                 </Button>

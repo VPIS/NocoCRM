@@ -666,6 +666,7 @@ function EntityList({
     <>
       {writable && (
         <Button
+          variant='contrast'
           onClick={() =>
             // A new lead or opportunity starts with the AI while the
             // assistant is on; the form is a tab away.

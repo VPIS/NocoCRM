@@ -108,7 +108,11 @@ export default function AgentChatPage(): ReactElement {
   };
 
   const newButton = (
-    <Button render={<Link to='/crm/agent-chat/new' />} nativeButton={false}>
+    <Button
+      variant='contrast'
+      render={<Link to='/crm/agent-chat/new' />}
+      nativeButton={false}
+    >
       <Plus />
       {text('agentChat.new')}
     </Button>
