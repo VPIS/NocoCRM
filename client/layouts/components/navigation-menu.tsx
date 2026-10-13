@@ -47,6 +47,13 @@ import {
 const SELECTED =
   'data-active:bg-sidebar-primary data-active:text-sidebar-primary-foreground data-active:hover:bg-sidebar-primary data-active:hover:text-sidebar-primary-foreground';
 
+// Application change: an entry's row a little taller than the primitive's
+// `h-8` (30.6px on the compact theme's spacing); the icon mode's square
+// (`size-8!`) still wins when the sidebar is collapsed.
+const ROW = 'h-8.5';
+// The badge (`h-5`) centred on that row: (8.5 - 5) / 2 spacing from its top.
+const BADGE_TOP = 'peer-data-[size=default]/menu-button:top-1.75';
+
 /**
  * A count beside a menu entry. A number is what waits on the viewer, such as unread messages or requests to decide;
  * `live` is work under way, such as runs in progress, with `hint` as its words for the tooltip and screen readers. Zero
@@ -126,7 +133,7 @@ export function NavigationMenu({
           Array.isArray(run) ? (
             <SidebarGroup key={routeKey(run[0].route)}>
               <SidebarGroupContent>
-                <SidebarMenu>
+                <SidebarMenu className={MENU_ROWS}>
                   {run.map((item) => (
                     <Fragment key={routeKey(item.route)}>
                       <NavigationItem item={item} selectedKey={selectedKey} />
@@ -149,6 +156,11 @@ export function NavigationMenu({
   );
 }
 
+// Application change: a little room between the menu's first-level rows,
+// which the sidebar primitive sets flush (`gap-0`), so each entry's hover
+// and current ground stands apart from its neighbour's.
+const MENU_ROWS = 'gap-0.5';
+
 /** A section of the application menu (`sections`): a heading over its entries, always shown. */
 function NavigationSection({
   item,
@@ -162,7 +174,7 @@ function NavigationSection({
     <SidebarGroup aria-label={label}>
       <SidebarGroupLabel>{label}</SidebarGroupLabel>
       <SidebarGroupContent>
-        <SidebarMenu>
+        <SidebarMenu className={MENU_ROWS}>
           {item.children.map((child) => (
             <NavigationItem
               key={routeKey(child.route)}
@@ -251,7 +263,7 @@ function NavigationItem({
           tooltip={
             tooltip && counted ? { ...tooltip, children: counted } : tooltip
           }
-          className={SELECTED}
+          className={`${ROW} ${SELECTED}`}
         >
           {Icon ? <Icon /> : null}
           <span>{label}</span>
@@ -277,7 +289,7 @@ function NavigationItem({
             render={link}
             isActive={isSelected}
             tooltip={tooltip}
-            className={SELECTED}
+            className={`${ROW} ${SELECTED}`}
           >
             {Icon ? <Icon /> : null}
             <span>{label}</span>
@@ -291,7 +303,11 @@ function NavigationItem({
           </SidebarMenuAction>
         </>
       ) : (
-        <SidebarMenuButton render={<CollapsibleTrigger />} tooltip={tooltip}>
+        <SidebarMenuButton
+          render={<CollapsibleTrigger />}
+          tooltip={tooltip}
+          className={ROW}
+        >
           {Icon ? <Icon /> : null}
           <span>{label}</span>
           <ChevronRight className='ml-auto transition-transform group-data-panel-open/menu-button:rotate-90' />
@@ -335,11 +351,13 @@ function EntryBadge({
       <SidebarMenuBadge
         aria-hidden
         title={live ? text : undefined}
-        className={
+        // Centred on the taller row (ROW), where the primitive places it for
+        // `h-8`.
+        className={`${BADGE_TOP} ${
           live
             ? 'gap-1 rounded-full bg-primary/10 px-1.5 text-primary dark:bg-primary/20'
             : 'rounded-full bg-foreground/8 px-1.5 dark:bg-foreground/15'
-        }
+        }`}
       >
         {live && (
           <span className={`size-1.5 rounded-full bg-primary ${pulse}`} />
