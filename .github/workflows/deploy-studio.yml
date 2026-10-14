@@ -48,6 +48,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test --maxWorkers=2 --passWithNoTests=false
       - run: pnpm build --target linux-x64 --node-version 24 --tar
+        env:
+          # The client build outgrows Node's default heap on the runner
+          # (about 2 GB there), which has 8 GB for a private repository.
+          NODE_OPTIONS: --max-old-space-size=6144
       - name: Install nb-studio
         run: npm install --prefix "$RUNNER_TEMP/studio-cli" --ignore-scripts --no-audit --no-fund @nocobase/studio-cli@1.0.0-beta.56
       - name: Deploy or request Studio approval
