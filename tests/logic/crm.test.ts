@@ -6776,17 +6776,26 @@ describe('resolved titles and paged filters', () => {
       companyId: late.id,
       dueAt: '2020-02-01T09:00:00.000Z',
     });
+    // The reader's overdue tasks as the task list counts them. A task an
+    // earlier test left due about now may fall due while the board is
+    // read, so the board's count is between the counts before and after.
+    const overdueNow = async () =>
+      (
+        await service.list(actor('rep'), 'tasks', {
+          status: 'open',
+          involvedId: 'rep',
+          dueTo: new Date().toISOString(),
+          pageSize: 1,
+        })
+      ).total;
+    const before = await overdueNow();
     const board = (await request('/dashboard?scope=mine', 'rep').then((r) =>
       r.json(),
     )) as { data: { overdue: { data: { name: string }[]; total: number } } };
+    const after = await overdueNow();
     expect(board.data.overdue.data).toHaveLength(5);
-    const mine = await service.list(actor('rep'), 'tasks', {
-      status: 'open',
-      involvedId: 'rep',
-      dueTo: new Date().toISOString(),
-      pageSize: 1,
-    });
-    expect(board.data.overdue.total).toBe(mine.total);
+    expect(board.data.overdue.total).toBeGreaterThanOrEqual(before);
+    expect(board.data.overdue.total).toBeLessThanOrEqual(after);
     expect(
       board.data.overdue.data.some((r) => r.name === 'Someone else is late'),
     ).toBe(false);
