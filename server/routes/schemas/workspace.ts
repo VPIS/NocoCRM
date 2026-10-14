@@ -6,6 +6,7 @@ import type { DemoStatus } from '../../providers/crm/demo.js';
 import type { PlaceMatch } from '../../providers/crm/geography.js';
 import { LONG_TEXT_LIMIT } from '../../providers/crm/limits.js';
 import type { CrmSettings } from '../../providers/crm/schema.js';
+import type { ApproverRuleView as ServiceApproverRuleView } from '../../providers/crm/service.js';
 import { JsonObject, PageQuery, TitlesShape } from './common.js';
 import { AiEntry } from './operations.js';
 
@@ -163,8 +164,99 @@ export const ApprovalLifecycleView: z.ZodType<LifecycleDescription> = z
     triggers: z.array(
       z.object({ name: z.string(), transition: z.string(), when: names }),
     ),
+    // What an administrator may set on it: the approver rule.
+    parameterConfiguration: z
+      .object({
+        readMode: z.string(),
+        snapshotTransition: z.string().optional(),
+        groups: z.array(
+          z.object({
+            key: z.string(),
+            title: z.string(),
+            schemaVersion: z.number().int(),
+            fields: z.record(
+              z.string(),
+              z.object({
+                type: z.enum([
+                  'number',
+                  'string',
+                  'boolean',
+                  'object',
+                  'reviewers',
+                ]),
+                title: z.string(),
+                readMode: z.enum(['snapshot', 'live']).optional(),
+                bindings: z
+                  .array(
+                    z.object({
+                      state: z.string().optional(),
+                      transition: z.string().optional(),
+                    }),
+                  )
+                  .optional(),
+                minimum: z.number().optional(),
+                maximum: z.number().optional(),
+              }),
+            ),
+          }),
+        ),
+      })
+      .optional(),
   })
   .meta({ ref: 'CrmApprovalLifecycle' });
+
+// Who may approve (Settings → Approval process): CRM roles and people, any
+// one of which is enough.
+const approverChoice = {
+  roles: z
+    .array(
+      z.enum(['sales-representative', 'sales-manager', 'system-administrator']),
+    )
+    .max(3)
+    .describe('CRM roles whose holders may approve.'),
+  users: z
+    .array(z.string().min(1).max(64))
+    .max(97)
+    .describe('Users who may approve, by id.'),
+};
+export const ApproverRuleView: z.ZodType<ServiceApproverRuleView> = z
+  .object({
+    ...approverChoice,
+    revision: z
+      .number()
+      .int()
+      .describe('The version of the rule; 0 while it is the default.'),
+    updatedById: z
+      .string()
+      .nullable()
+      .describe('Who saved this version; null for the default.'),
+    updatedAt: z.string().nullable().describe('When this version was saved.'),
+    approvers: z
+      .array(z.string())
+      .describe(
+        'The users the rule names now: active and holding the approve capability.',
+      ),
+  })
+  .meta({ ref: 'CrmApproverRule' });
+export const UpdateApproverRuleInput = z
+  .object({
+    ...approverChoice,
+    revision: z
+      .number()
+      .int()
+      .min(0)
+      .describe(
+        'The version the change was made from; a version saved meanwhile is a conflict (409).',
+      ),
+    requestId: z
+      .string()
+      .min(1)
+      .max(100)
+      .describe(
+        'A new id for each save; sent again, the same save is not repeated.',
+      ),
+  })
+  .meta({ ref: 'CrmApproverRuleInput' });
 
 const DemoAccount = z.object({
   username: z.string(),

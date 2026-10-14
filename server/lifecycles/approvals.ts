@@ -1,7 +1,10 @@
 import {
   defineLifecycle,
+  normalizeReviewerSelections,
   type Lifecycle,
   type LifecycleRecord,
+  type ParameterGroup,
+  type ReviewerSelection,
   type TransitionContext,
 } from '@nocobase/lifecycle';
 
@@ -15,10 +18,21 @@ import {
 // The guards are the business rules the transitions keep whoever fires
 // them. Permissions stay with the CRM: CrmService checks, before firing,
 // that the applicant may still edit the deal, that the approver may
-// decide (the `approve` capability) and is an active sales manager, and
-// answers in its own error codes; these guards refuse what slips past.
+// decide (the `approve` capability) and is one the approver rule names,
+// and answers in its own error codes; these guards refuse what slips past.
 // Side effects (the messages, the AI's review, the deal's follow-up) still
 // run on CrmService's after-commit path, with the transitions.
+//
+// Who may be chosen as approver is the approver rule, a parameter an
+// administrator sets on Settings → Approval process: roles and people,
+// each matching on its own. The runtime keeps its versions
+// (server/providers/lifecycles.ts), reads it live, and logs which version
+// each submission ran under. CrmService resolves it into people before its
+// transaction opens (CrmService.users, server/providers/crm/approvers.ts),
+// since who holds a role and a capability is not read inside SQLite's one
+// transaction, and checks the chosen approver against it before a draft is
+// saved or submitted; a request once submitted keeps its approver whatever
+// the rule becomes.
 
 export type ApprovalState =
   'draft' | 'pending' | 'approved' | 'rejected' | 'withdrawn';
@@ -29,13 +43,45 @@ export interface ApprovalRecord extends LifecycleRecord {
   readonly approverId: string | null;
 }
 
+export interface ApprovalParameters {
+  readonly approverRule: readonly ReviewerSelection[];
+}
+
 export interface ApprovalTypes {
   record: ApprovalRecord;
   state: ApprovalState;
+  parameters: ApprovalParameters;
 }
 
 // The name the runtime keys every entry by: never rename it.
 export const APPROVAL_LIFECYCLE = 'approvals';
+
+// What an approver rule may name: a CRM role (`sales-manager`), or a user
+// by id. Each selection is a group of its own, so the rule is their union.
+export const APPROVER_SELECTOR_TYPES = ['role', 'user'] as const;
+
+// Before an administrator sets one: the sales managers, as the CRM always
+// had it.
+export const DEFAULT_APPROVER_RULE: readonly ReviewerSelection[] = [
+  { group: 1, type: 'role', referenceId: 'sales-manager' },
+];
+
+// The configuration group the rule is stored under: never rename its key,
+// and raise `schemaVersion` only with a migration of the stored versions.
+export const approverParameterGroup: ParameterGroup = {
+  key: 'approvers',
+  title: 'Approvers',
+  schemaVersion: 1,
+  fields: {
+    approverRule: {
+      type: 'reviewers',
+      title: 'Who may approve',
+      parse: (value) =>
+        normalizeReviewerSelections(value, APPROVER_SELECTOR_TYPES),
+      bindings: [{ transition: 'submit' }],
+    },
+  },
+};
 
 // The longest decision comment kept, as the CRM's long texts.
 const COMMENT_LIMIT = 10_000;
@@ -73,6 +119,11 @@ export const approvalLifecycle: Lifecycle<ApprovalTypes> =
       { name: 'rejected', final: true },
       'withdrawn',
     ],
+    parameters: { approverRule: DEFAULT_APPROVER_RULE },
+    parameterConfiguration: {
+      readMode: 'live',
+      groups: [approverParameterGroup],
+    },
     transitions: {
       submit: {
         title: 'Submit',

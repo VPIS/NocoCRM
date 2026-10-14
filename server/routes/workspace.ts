@@ -98,6 +98,8 @@ import {
   SubdivisionQuery,
   SystemSettings,
   ApprovalLifecycleView,
+  ApproverRuleView,
+  UpdateApproverRuleInput,
   UpdateSystemSettingsInput,
   UploadedAttachment,
   UploadQuery,
@@ -112,6 +114,7 @@ export const WORKSPACE_PATHS = [
   'systemSettings',
   'demoData',
   'approvalLifecycle',
+  'approverRule',
   'geography',
   'search',
   'dashboard',
@@ -302,8 +305,8 @@ export function registerWorkspaceRoutes(
       }),
   );
 
-  // The demo dataset (demo.ts): whether one is imported, importing it and
-  // removing it, for whoever may manage the settings.
+  // The approval process (Settings → Approval process): how an approval
+  // moves, and who may approve, for whoever may manage the settings.
   router.get(
     '/approvalLifecycle',
     describeRoute({
@@ -324,6 +327,44 @@ export function registerWorkspaceRoutes(
       });
     },
   );
+  router.get(
+    '/approverRule',
+    describeRoute({
+      tags: ['Approvals'],
+      summary: 'Get who may approve',
+      operationId: 'getApproverRule',
+      description: `The approver rule: the roles and the people an applicant may choose as approver, any one of them enough, and the users it names now. ${settingsOnly}`,
+      responses: {
+        '200': dataResponse(ApproverRuleView),
+        ...apiErrorResponses,
+      },
+    }),
+    async (c) =>
+      c.json({ data: await service.approverRuleView(c.get('actor')) }),
+  );
+  router.put(
+    '/approverRule',
+    describeRoute({
+      tags: ['Approvals'],
+      summary: 'Set who may approve',
+      operationId: 'updateApproverRule',
+      description: `Saves a new version of the approver rule. Requests already submitted keep their approver. A rule naming nobody active who holds the approve capability is refused (400 noApprovers); a version saved since \`revision\` is a conflict (409). ${settingsOnly}`,
+      responses: {
+        '200': dataResponse(ApproverRuleView, 'The rule as saved.'),
+        ...apiErrorResponses,
+      },
+    }),
+    apiValidator('json', UpdateApproverRuleInput),
+    async (c) =>
+      c.json({
+        data: await service.saveApproverRule(
+          c.get('actor'),
+          c.req.valid('json'),
+        ),
+      }),
+  );
+  // The demo dataset (demo.ts): whether one is imported, importing it and
+  // removing it, for whoever may manage the settings.
   const demoResponses = {
     '200': dataResponse(DemoDataStatus),
     ...apiErrorResponses,

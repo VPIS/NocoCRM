@@ -21,6 +21,7 @@ import {
   type CrmRecord,
   type Entity,
 } from '../../server/providers/crm/schema.js';
+import { lifecycleParameterStore } from '../../server/providers/lifecycles.js';
 import geographyMigration from '../../database/main/migrations/202609100001_crm_geography_codes.js';
 import phoneMigration from '../../database/main/migrations/202610030001_crm_phone_numbers.js';
 import { normalizePhone } from '../../server/providers/crm/phone.js';
@@ -1361,6 +1362,157 @@ describe('CRM API security and domain rules', () => {
         actor: { id: 'rep' },
       }),
     ).rejects.toMatchObject({ code: 'INVALID_STATE' });
+  });
+
+  // Who may approve is the approvals lifecycle's approver rule, which an
+  // administrator sets (Settings → Approval process): versioned by the
+  // runtime's parameter store, read live, and resolved into the users
+  // offered as approvers, each active and holding the approve capability.
+  it('lets an administrator set who may approve, offering and accepting only whom it names', async () => {
+    const approverIds = async () =>
+      (await service.users(actor('rep')))
+        .filter((u) => u.canApprove)
+        .map((u) => toText(u.id));
+    // The default: the sales managers.
+    expect(await approverIds()).toEqual(['manager']);
+    expect(await service.approverRuleView(actor('admin'))).toMatchObject({
+      roles: ['sales-manager'],
+      users: [],
+      revision: 0,
+      updatedById: null,
+      approvers: ['manager'],
+    });
+    // Settings, so the settings capability: not a sales role's, and not
+    // without a session.
+    expect((await request('/approverRule')).status).toBe(401);
+    expect((await request('/approverRule', 'manager')).status).toBe(403);
+    expect(
+      (
+        await request('/approverRule', 'rep', 'PUT', {
+          roles: ['sales-representative'],
+          users: [],
+          revision: 0,
+          requestId: 'rep-try',
+        })
+      ).status,
+    ).toBe(403);
+    // What is not a role or a user is refused before anything is saved.
+    expect(
+      (
+        await request('/approverRule', 'admin', 'PUT', {
+          roles: ['owner'],
+          users: [],
+          revision: 0,
+          requestId: 'bad-role',
+        })
+      ).status,
+    ).toBe(400);
+    await expect(
+      service.saveApproverRule(actor('admin'), {
+        roles: [],
+        users: ['nobody'],
+        revision: 0,
+        requestId: 'bad-user',
+      }),
+    ).rejects.toMatchObject({ code: 'invalidInput' });
+    // A rule naming only people who may not approve (a salesperson lacks
+    // the capability) would leave no request submittable.
+    await expect(
+      service.saveApproverRule(actor('admin'), {
+        roles: ['sales-representative'],
+        users: ['rep'],
+        revision: 0,
+        requestId: 'reps-only',
+      }),
+    ).rejects.toMatchObject({ code: 'noApprovers', status: 400 });
+
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Approver rule company',
+    });
+    const opportunity = await service.save(actor('rep'), 'opportunities', {
+      name: 'Approver rule deal',
+      companyId: company.id,
+    });
+    // Submitted to the manager under the default rule.
+    const earlier = await service.save(actor('rep'), 'approvals', {
+      name: 'Under the default',
+      opportunityId: opportunity.id,
+      topic: 'discount',
+      approverId: 'manager',
+    });
+    await service.approvalAction(actor('rep'), toText(earlier.id), 'submit');
+    try {
+      const response = await request('/approverRule', 'admin', 'PUT', {
+        roles: [],
+        users: ['admin'],
+        revision: 0,
+        requestId: 'admin-only',
+      });
+      expect(response.status).toBe(200);
+      expect((await response.json()).data).toMatchObject({
+        roles: [],
+        users: ['admin'],
+        revision: 1,
+        updatedById: 'admin',
+        approvers: ['admin'],
+      });
+      expect(await approverIds()).toEqual(['admin']);
+      // Saved again from the version it was made from: a conflict.
+      await expect(
+        service.saveApproverRule(actor('admin'), {
+          roles: ['sales-manager'],
+          users: [],
+          revision: 0,
+          requestId: 'stale',
+        }),
+      ).rejects.toMatchObject({ code: 'conflict', status: 409 });
+      // The manager is no longer offered nor accepted ...
+      await expect(
+        service.save(actor('rep'), 'approvals', {
+          name: 'To the manager',
+          opportunityId: opportunity.id,
+          topic: 'discount',
+          approverId: 'manager',
+        }),
+      ).rejects.toMatchObject({ code: 'invalidApprover' });
+      // ... but a request already submitted to them keeps its approver.
+      expect(
+        (
+          await service.approvalAction(
+            actor('manager'),
+            toText(earlier.id),
+            'approve',
+          )
+        ).status,
+      ).toBe('approved');
+      // A submission under the new rule is logged with the version it ran
+      // under.
+      const later = await service.save(actor('rep'), 'approvals', {
+        name: 'To the administrator',
+        opportunityId: opportunity.id,
+        topic: 'discount',
+        approverId: 'admin',
+      });
+      await service.approvalAction(actor('rep'), toText(later.id), 'submit');
+      const usages = await lifecycleParameterStore(database).listUsage(
+        'crm',
+        'approvals',
+        toText(later.id),
+      );
+      expect(
+        usages.map((usage) => usage.sources.approverRule?.revision),
+      ).toContain(1);
+    } finally {
+      // Back to the default for the tests after this one.
+      const { revision } = await service.approverRuleView(actor('admin'));
+      await service.saveApproverRule(actor('admin'), {
+        roles: ['sales-manager'],
+        users: [],
+        revision,
+        requestId: 'restore',
+      });
+    }
+    expect(await approverIds()).toEqual(['manager']);
   });
 
   it('refuses an approval for an opportunity the applicant may not edit', async () => {

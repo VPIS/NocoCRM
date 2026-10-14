@@ -2187,7 +2187,7 @@ const wording = {
     guidance: ['Business guidance', '业务指导'],
     // The first tab of Settings (pages/settings/index.tsx).
     general: ['General', '通用'],
-    // How an approval moves (pages/settings/approval-flow.tsx).
+    // How an approval moves (pages/settings/approval-flow/).
     approvalFlow: ['Approval process', '审批流程'],
     agentList: ['Agents', 'Agent'],
     models: ['Models', '模型'],
@@ -2195,22 +2195,44 @@ const wording = {
     usage: ['Usage', '用量'],
   },
   admin: adminWording,
-  // Settings → Approval process (pages/settings/approval-flow.tsx): the
+  // Settings → Approval process (pages/settings/approval-flow/): the
   // approvals' lifecycle, read only.
   approvalFlow: {
     title: ['Approval process', '审批流程'],
     description: [
-      'The states an approval goes through, from a draft to a decision, and who takes each step. The process is set in the product and shown here as it runs.',
-      '一个审批从草稿到决定要经过的状态，以及每一步由谁来做。流程由产品内置，这里只展示它实际怎么运行。',
+      'Who may approve, and the states an approval goes through, from a draft to a decision. The states are set in the product; who may approve is yours to set.',
+      '谁可以审批，以及一个审批从草稿到决定要经过的状态。状态由产品内置，谁可以审批由你设置。',
     ],
+    approvers: {
+      title: ['Who may approve', '谁可以审批'],
+      hint: [
+        'An applicant chooses the approver from these roles and people; any one of them is enough. A change applies to the next submissions; requests already submitted keep their approver.',
+        '申请人从这些角色和人员中选择审批人，满足其中一项即可。修改只影响之后的提交，已提交的申请保留原审批人。',
+      ],
+      roles: ['Roles', '角色'],
+      people: ['People', '人员'],
+      now: [
+        'Approvers now: {{names}}. Each must be active and hold the Decide approvals permission.',
+        '当前可选审批人：{{names}}。审批人须为启用状态，并拥有审批权限。',
+      ],
+      nobody: [
+        'Nobody is an approver now: no one named is active and holds the Decide approvals permission.',
+        '当前没有可选审批人：所选的人中没有启用且拥有审批权限的。',
+      ],
+      changed: [
+        'Version {{revision}}, set by {{name}} at {{time}}.',
+        '第 {{revision}} 版，由{{name}}于 {{time}} 设置。',
+      ],
+      default: ['The default: sales managers.', '默认设置：销售经理。'],
+    },
     diagram: ['Approval process diagram', '审批流程图'],
     end: ['End', '结束'],
     steps: ['Steps', '每一步'],
     and: [' and ', '和'],
     who: {
       submit: [
-        'The applicant, once an approver (a sales manager) is chosen. A withdrawn request can be changed and submitted again.',
-        '申请人，选好审批人（销售经理）后才能提交。撤回的申请可以修改后再次提交。',
+        'The applicant, once an approver is chosen from who may approve. A withdrawn request can be changed and submitted again.',
+        '申请人，从可审批的人中选好审批人后才能提交。撤回的申请可以修改后再次提交。',
       ],
       withdraw: [
         'The applicant, while the request awaits a decision.',
@@ -2577,8 +2599,12 @@ const wording = {
       '只能为自己负责的商机发起审批。',
     ],
     invalidApprover: [
-      'Choose an active manager or administrator.',
-      '请选择有效的经理或管理员作为审批人。',
+      'Choose an approver from who may approve, set under Settings → Approval process.',
+      '请从可审批的人中选择审批人（在设置 → 审批流程中配置）。',
+    ],
+    noApprovers: [
+      'Nobody named here is active and holds the Decide approvals permission, so no request could be submitted.',
+      '所选的人中没有启用且拥有审批权限的，这样任何申请都无法提交。',
     ],
     conflict: [
       'This record changed. Refresh and try again.',

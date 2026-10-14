@@ -378,7 +378,8 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
           resource: { type: 'settings', id: 'crm' },
           action: 'manage',
         },
-        componentLoader: () => import('./pages/settings/approval-flow.js'),
+        componentLoader: () =>
+          import('./pages/settings/approval-flow/index.js'),
       },
       // The administration pages the plugins left to the application in
       // template 1.0.0-beta.60 (client/pages/settings/): each route checks

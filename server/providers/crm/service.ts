@@ -21,9 +21,30 @@ import {
 import { asEntity, toText } from './schema.js';
 import { isCountry, isSubdivision, subdivisionCode } from './geography.js';
 import { randomUUID } from 'node:crypto';
-import { LifecycleError, type LifecycleRuntime } from '@nocobase/lifecycle';
-import { APPROVAL_LIFECYCLE } from '../../lifecycles/approvals.js';
-import { createLifecycleRuntime } from '../lifecycles.js';
+import {
+  LifecycleError,
+  ParameterConfigurationError,
+  type JsonValue,
+  type LifecycleParameterStore,
+  type LifecycleRuntime,
+  type ReviewerSelection,
+} from '@nocobase/lifecycle';
+import {
+  APPROVAL_LIFECYCLE,
+  approverParameterGroup,
+  type ApprovalParameters,
+} from '../../lifecycles/approvals.js';
+import {
+  createLifecycleRuntime,
+  LIFECYCLE_PARAMETER_SCOPE,
+  lifecycleParameterStore,
+} from '../lifecycles.js';
+import {
+  approverRule,
+  approverRuleInput,
+  resolveApprovers,
+  type ApproverRuleInput,
+} from './approvers.js';
 import { readEntry } from './ai-entries.js';
 import type {
   DatabaseManager,
@@ -42,6 +63,7 @@ import {
   capability,
   compileFilter,
   conditions,
+  crmActor,
   outputFields,
   requireCapability,
   roleOf,
@@ -120,6 +142,15 @@ export function searchWords(text: string): string[] {
 
 // A detail page's related lists and history come this many at a time.
 export const RELATED_PAGE = 20;
+// Settings → Approval process: the approver rule as roles and people, the
+// version it is at (0 while it is the default), who saved it and when, and
+// the users it names now.
+export interface ApproverRuleView extends ApproverRuleInput {
+  revision: number;
+  updatedById: string | null;
+  updatedAt: string | null;
+  approvers: string[];
+}
 export interface ListResult {
   data: CrmRecord[];
   total: number;
@@ -186,12 +217,16 @@ export class CrmService {
   // (server/providers/lifecycles.ts); one over the same database when none
   // is given, as in tests.
   public readonly lifecycles: LifecycleRuntime;
+  // The versions of what an administrator sets on a lifecycle: the
+  // approver rule.
+  private readonly parameters: LifecycleParameterStore;
   constructor(
     public readonly database: DatabaseManager,
     public readonly authz: AppAuthorization,
     lifecycles?: LifecycleRuntime,
   ) {
     this.lifecycles = lifecycles ?? createLifecycleRuntime(database);
+    this.parameters = lifecycleParameterStore(database);
   }
   async settings(
     query: QueryAdapter = this.database.query(),
@@ -431,29 +466,115 @@ export class CrmService {
           .execute()
       ).map((row) => toText(row.id)),
     );
-    return users.map((user) => {
+    const listed = users.map((user) => {
       // In the roles' own order, whatever order the sets were assigned in.
       const held = new Set(
         assignments
           .filter((a) => a.subject.type === 'user' && a.subject.id === user.id)
           .map((a) => roleOf(a.permissionSet)),
       );
-      const userRoles = roles.filter((role) => held.has(role));
       return {
         id: user.id,
         name: user.name,
         username: user.username ?? null,
         email: user.email,
-        roles: userRoles,
+        roles: roles.filter((role) => held.has(role)),
         // Disabled at the company, on the Users page: such a user cannot
         // sign in, and is not offered as an owner or approver either.
         disabled: disabled.has(toText(user.id)),
-        // An approver is a sales manager. Administrators hold the approve
-        // right for the system's sake, but deciding commercial terms is the
-        // manager's job, so they are not offered and not accepted.
-        canApprove: userRoles.includes('sales-manager'),
       };
     });
+    // An approver is whom the approver rule names (Settings → Approval
+    // process; the sales managers until an administrator sets it), active
+    // and holding the approve capability. Administrators hold it for the
+    // system's sake, but are offered only when the rule names them.
+    const approvers = await this.approvers(listed);
+    return listed.map((user) => ({
+      ...user,
+      canApprove: approvers.has(user.id),
+    }));
+  }
+  // The approver rule as it stands: the administrator's latest version, or
+  // the lifecycle's default.
+  private async currentApproverRule(): Promise<readonly ReviewerSelection[]> {
+    const values = (await this.lifecycles.resolveParameters(
+      APPROVAL_LIFECYCLE,
+      { record: null, purpose: 'preview', transactionHandle: undefined },
+    )) as ApprovalParameters;
+    return values.approverRule;
+  }
+  private async approvers(
+    users: readonly { id: string; roles: string[]; disabled: boolean }[],
+    rule?: readonly ReviewerSelection[],
+  ): Promise<ReadonlySet<string>> {
+    return resolveApprovers(
+      rule ?? (await this.currentApproverRule()),
+      users,
+      (id) => capability(crmActor(this.authz, { id }), 'approve'),
+    );
+  }
+  // Settings → Approval process: who may approve, with the version it is at,
+  // who set it and when, and the people it names now.
+  async approverRuleView(actor: Actor): Promise<ApproverRuleView> {
+    await requireCapability(actor, 'manage', 'settings');
+    const [version, users] = await Promise.all([
+      this.parameters.read(
+        LIFECYCLE_PARAMETER_SCOPE,
+        approverParameterGroup.key,
+      ),
+      this.users(actor),
+    ]);
+    const rule = await this.currentApproverRule();
+    return {
+      ...approverRuleInput(rule),
+      revision: version?.revision ?? 0,
+      updatedById: version?.actorId ?? null,
+      updatedAt: version?.at ?? null,
+      approvers: users.filter((u) => u.canApprove).map((u) => toText(u.id)),
+    };
+  }
+  // A new version of the rule, made from the version the page showed
+  // (`revision`): one saved meanwhile by someone else is a conflict, and a
+  // request sent again under the same id saves nothing twice. A rule naming
+  // nobody who may approve is refused, since no request could then be
+  // submitted.
+  async saveApproverRule(
+    actor: Actor,
+    input: ApproverRuleInput & { revision: number; requestId: string },
+  ): Promise<ApproverRuleView> {
+    await requireCapability(actor, 'manage', 'settings');
+    const users = await this.users(actor);
+    const rule = approverRule(input, new Set(users.map((u) => toText(u.id))));
+    if (
+      !(
+        await this.approvers(
+          users.map((u) => ({
+            id: toText(u.id),
+            roles: u.roles as string[],
+            disabled: u.disabled === true,
+          })),
+          rule,
+        )
+      ).size
+    )
+      throw new CrmError('noApprovers', 400, 'roles');
+    try {
+      await this.parameters.save({
+        scope: LIFECYCLE_PARAMETER_SCOPE,
+        group: approverParameterGroup,
+        values: { approverRule: rule as unknown as JsonValue },
+        expectedRevision: input.revision,
+        requestId: input.requestId,
+        actorId: actor.id,
+        at: new Date().toISOString(),
+      });
+    } catch (error) {
+      if (!(error instanceof ParameterConfigurationError)) throw error;
+      throw error.code === 'CONFIGURATION_INVALID'
+        ? new CrmError('invalidInput', 400, 'roles')
+        : new CrmError('conflict', 409);
+    }
+    return this.approverRuleView({ ...actor, users: undefined });
   }
   // Set by CrmProvider to the lead evaluation (lead-evaluation.ts), for the
   // ways a lead is created one at a time outside the create route: the
@@ -1761,7 +1882,9 @@ export class CrmService {
       if (!result.updatedCount) throw new CrmError('conflict', 409);
     } else if (entity === 'approvals') {
       if (!actor.transaction)
-        throw new Error('An approval is created only within CrmService.mutate.');
+        throw new Error(
+          'An approval is created only within CrmService.mutate.',
+        );
       await this.lifecycles
         .create(APPROVAL_LIFECYCLE, values, {
           actor: { id: actor.id },
@@ -2891,7 +3014,8 @@ function lifecycleRefusal(error: unknown): unknown {
       : code === 'approvalLocked'
         ? new CrmError('approvalLocked', 409)
         : new CrmError('forbidden', 403);
-  if (error.code === 'INVALID_STATE') return new CrmError('approvalLocked', 409);
+  if (error.code === 'INVALID_STATE')
+    return new CrmError('approvalLocked', 409);
   if (error.code === 'CONFLICT') return new CrmError('conflict', 409);
   if (error.code === 'RECORD_NOT_FOUND') return new CrmError('notFound', 404);
   return error;
