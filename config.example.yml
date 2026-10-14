@@ -61,7 +61,9 @@ notification:
     inbox:
       provider: in-app
 
-    # Uncomment and configure independent email Channels.
+    # Uncomment and configure independent email Channels. `system-email` also sends the password reset mail behind
+    # the login page's "Forgot password" link, which shows only once this channel is configured; its password may
+    # come from SMTP_PASSWORD instead (for Gmail, an app password, with host smtp.gmail.com, port 465, secure: true).
     # Values are read as written: ${NAME} is not expanded. To take a secret from the environment instead, map a
     # variable onto its path in env of server/config/notification.ts, such as SMTP_PASSWORD.
     # system-email:
