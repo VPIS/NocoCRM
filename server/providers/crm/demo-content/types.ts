@@ -42,8 +42,11 @@ export type DemoCity =
 export interface DemoCompany {
   // The company's name.
   readonly name: string;
-  // The website's and the email addresses' domain, before .example.
+  // The email addresses' domain, before .example: the demo's people never
+  // get a real company's address.
   readonly domain: string;
+  // The company's real website.
+  readonly website: string;
   readonly description: string;
   // The street address, over two lines.
   readonly address: string;
@@ -304,6 +307,11 @@ export interface DemoProjects {
   // first: what they asked and what it answered, written in as the chat
   // keeps them (demo.ts).
   readonly chats: readonly DemoChat[];
+  // What the AI found on the web about the projects' companies, as their
+  // Signals tabs keep them (company-signals.ts): written straight in, so
+  // the demo shows them without a model. Only real, neutral news a search
+  // found, with its real sources.
+  readonly signals: readonly DemoSignal[];
   // The AI's results, as each card keeps them.
   readonly ai: {
     readonly sfLead: Verdict;
@@ -327,4 +335,18 @@ export interface DemoChat {
     readonly role: 'user' | 'assistant';
     readonly text: string;
   }[];
+}
+
+// A company signal of the demo: a real event a search found, with its real
+// date and sources (never an invented one: these are real companies), how
+// many days before the import it was found, and whether it is still new.
+export interface DemoSignal {
+  readonly company: 'hworld' | 'gac' | 'newHope';
+  readonly type: 'funding' | 'hiring' | 'leadership' | 'business' | 'risk';
+  readonly title: string;
+  readonly summary: string;
+  readonly occurredOn: string;
+  readonly foundDaysAgo: number;
+  readonly status: 'new' | 'seen';
+  readonly sources: readonly { title: string; url: string; site: string }[];
 }

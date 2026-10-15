@@ -54,4 +54,14 @@ export const scheduleTexts = {
     '每天早上为当天还没开始、有具体时间、关联了线索、商机或公司的任务做一次准备：目标、进展、对方的人、近况、要问的问题、要带的材料、风险和要点。结果只有任务负责人和参与人能看到。',
     "Every morning, each task still ahead today that has a time of day and concerns a lead, an opportunity or a company is prepared once: its aim, where things stand, the people on the other side, recent news, the questions to ask, what to bring, the risks and the points to cover. Only the task's owner and participants see it.",
   ],
+  signalTarget: ['客户信号', 'Company signals'],
+  signalTargetDescription: [
+    'AI 联网查看重点客户的新动态：融资、扩张招聘、高管变动、重大业务动态、风险',
+    'The AI looks on the web for what happened to the companies you sell to: funding, hiring, executives, major business news and risks',
+  ],
+  signalTitle: ['客户信号每日检查', 'Daily company signal check'],
+  signalDescription: [
+    '每天早上联网检查有进行中商机或被标记关注的公司，每家每周最多一次，每次最多 20 家。发现的信号带出处记在公司上，并通知公司和商机的负责人。需要配置通义千问。',
+    "Every morning, the companies with an open deal or marked as watched are looked up on the web, each at most once a week and at most 20 a pass. Each signal found is kept on the company with its sources, and its owner and its open deals' owners are told. Needs the Qwen model service.",
+  ],
 } as const satisfies Record<string, Pair>;

@@ -226,7 +226,7 @@ function asModelError(error: unknown, signal?: AbortSignal): Error {
 // `generate` (purpose `text`, the background source), so its usage page
 // still lists the background work. @temporary(nocobase-official), with
 // generateQuietly.
-async function recordUse(
+export async function recordUse(
   container: ServiceResolver,
   model: ModelRef,
   usage: LanguageModelUsage,

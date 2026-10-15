@@ -1718,8 +1718,8 @@ const wording = {
     ],
     notifyRecordChanges: ['Record change notifications', '记录变更通知'],
     notifyRecordChangesHint: [
-      "To the new owner when a record changes hands, and to a task's participants when they are invited or removed or the task is rescheduled or cancelled.",
-      '记录更换负责人时通知新负责人；任务参与人被邀请、移除，或任务改期、取消时通知参与人。',
+      "To the new owner when a record changes hands, to a task's participants when they are invited or removed or the task is rescheduled or cancelled, and to the people selling to a company when the AI finds news about it.",
+      '记录更换负责人时通知新负责人；任务参与人被邀请、移除，或任务改期、取消时通知参与人；AI 发现客户新动态时通知公司和商机的负责人。',
     ],
     notifyComments: ['Comment notifications', '评论通知'],
     notifyCommentsHint: [
@@ -2252,6 +2252,49 @@ const wording = {
       '{{states}}之后申请就结束了，要再申请需新建一条审批。',
     ],
   },
+  // A company's Signals tab and its timeline lines (company-signals.tsx).
+  signals: {
+    tab: ['Signals', '信号'],
+    watchedScope: [
+      'Checked on the web every week, as you watch it.',
+      '已关注，每周联网检查一次。',
+    ],
+    dealScope: [
+      'Checked on the web every week while it has an open deal.',
+      '有进行中的商机，每周联网检查一次。',
+    ],
+    offScope: [
+      'Not checked daily: it has no open deal. Watch it to have it checked.',
+      '没有进行中的商机，不在每日检查中；打开"关注"即可每周检查。',
+    ],
+    checkedAt: ['Last checked {{time}}.', '上次检查：{{time}}。'],
+    watch: ['Watch', '关注'],
+    checkNow: ['Check now', '立即检查'],
+    checking: ['Checking the web…', '正在联网检查…'],
+    unavailable: [
+      'Checking on the web needs the Qwen model service (DASHSCOPE_API_KEY).',
+      '联网检查需要配置通义千问模型服务（DASHSCOPE_API_KEY）。',
+    ],
+    foundSome: ['New signals found: {{count}}.', '发现 {{count}} 条新信号。'],
+    foundNone: ['Nothing new found.', '没有发现新信号。'],
+    empty: [
+      'No signals yet: funding, hiring, new executives, major news and risks found on the web show here, with their sources.',
+      '还没有信号。联网发现的融资、扩张招聘、高管变动、重大动态和风险会显示在这里，并附上出处。',
+    ],
+    types: {
+      funding: ['Funding', '融资'],
+      hiring: ['Hiring', '扩张招聘'],
+      leadership: ['Executives', '高管变动'],
+      business: ['Major news', '重大动态'],
+      risk: ['Risk', '风险'],
+    },
+    new: ['New', '新'],
+    seen: ['Seen', '已看'],
+    dismiss: ['Dismiss', '忽略'],
+    dismissed: ['Dismissed', '已忽略'],
+    feed: ['found news', '发现新动态'],
+    source: ['Source', '出处'],
+  },
   entities: {
     leads: ['Leads', '线索'],
     companies: ['Companies', '公司'],
@@ -2601,6 +2644,14 @@ const wording = {
     invalidApprover: [
       'Choose an approver from who may approve, set under Settings → Approval process.',
       '请从可审批的人中选择审批人（在设置 → 审批流程中配置）。',
+    ],
+    signalsUnavailable: [
+      'Checking a company on the web needs the Qwen model service (DASHSCOPE_API_KEY).',
+      '联网检查公司需要配置通义千问模型服务（DASHSCOPE_API_KEY）。',
+    ],
+    signalsFailed: [
+      'The web search failed. Try again later.',
+      '联网搜索失败，请稍后再试。',
     ],
     noApprovers: [
       'Nobody named here is active and holds the Decide approvals permission, so no request could be submitted.',

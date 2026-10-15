@@ -2217,6 +2217,38 @@ function ApprovalEvent({ event }: { event: Data }): ReactElement {
 // the mailbox owner's name: its subject, how many messages, and, when the
 // customer wrote last, who. The messages stay in the owner's mailbox: the
 // owner opens the conversation on the Mail tab, everyone else reads this line.
+// A company signal the AI found on the web (company-signals.ts): its kind,
+// what happened and its first source, on one line; the Signals tab holds
+// the rest.
+function SignalEvent({ event }: { event: Data }): ReactElement {
+  const { text } = useCrmText();
+  const signal = (event.changes ?? {}) as Data;
+  const source = signal.source as { url?: string; site?: string } | null;
+  return (
+    <span className='flex min-w-0 items-center gap-1.5'>
+      <span className='shrink-0 text-muted-foreground'>
+        {text('signals.feed')}
+      </span>
+      <Badge variant='secondary' className='shrink-0'>
+        {text(`signals.types.${toText(signal.type)}`, {
+          defaultValue: toText(signal.type),
+        })}
+      </Badge>
+      <span className='min-w-0 truncate'>{toText(signal.title)}</span>
+      {source?.url ? (
+        <a
+          href={source.url}
+          target='_blank'
+          rel='noreferrer noopener'
+          className='shrink-0 text-xs text-muted-foreground hover:underline'
+        >
+          {source.site || toText(text('signals.source'))}
+        </a>
+      ) : null}
+    </span>
+  );
+}
+
 function MailEvent({
   event,
   onOpen,
@@ -3303,7 +3335,7 @@ export function HistoryFeed({
                               {/* Who: a person, or "AI" for its own work,
                                 in bold. */}
                               <span className='shrink-0 font-semibold text-foreground'>
-                                {ai
+                                {ai || event.action === 'signal'
                                   ? text('feed.ai')
                                   : meta?.users.find(
                                       (u) => u.id === event.actorId,
@@ -3332,6 +3364,8 @@ export function HistoryFeed({
                                 <ApprovalEvent event={event} />
                               ) : event.action === 'mail' ? (
                                 <MailEvent event={event} onOpen={onOpenMail} />
+                              ) : event.action === 'signal' ? (
+                                <SignalEvent event={event} />
                               ) : (
                                 // Empty for files alone, whose "added" or
                                 // "removed" follows: hidden, so no gap doubles.
@@ -3424,6 +3458,7 @@ export function HistoryFeed({
                                 event.action !== 'aiRevise' &&
                                 event.action !== 'merged' &&
                                 event.action !== 'mail' &&
+                                event.action !== 'signal' &&
                                 !taskEvent &&
                                 !approvalEvent && (
                                   <HistoryChanges

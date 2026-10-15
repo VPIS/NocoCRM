@@ -1241,10 +1241,12 @@ export class CrmService {
             })()
           : // A comment's text is the comment, not a field of the record; an edit
             // entry carries the text as changed, and a person's instruction to
-            // the AI to redo a card (aiRevise) its words, and a mail
-            // conversation (mail-timeline.ts) its summary.
+            // the AI to redo a card (aiRevise) its words, a mail
+            // conversation (mail-timeline.ts) its summary, and a company
+            // signal (company-signals.ts) what was found and where.
             event.action === 'comment' ||
               event.action === 'mail' ||
+              event.action === 'signal' ||
               event.action === 'commentEdited' ||
               event.action === 'aiRevise' ||
               event.action === 'taskDeleted'
@@ -2162,6 +2164,9 @@ export class CrmService {
       .where('id', '=', id)
       .where((eb) => compileFilter(eb, access.scope))
       .execute();
+    // A company's signals (company-signals.ts) are its own: they go with it.
+    if (entity === 'companies')
+      await tx.deleteFrom('crmSignals').where('companyId', '=', id).execute();
     await this.history(tx, actor, entity, id, 'deleted');
   }
   async history(
@@ -2872,6 +2877,22 @@ export class CrmService {
       actorId: actor.id,
       event,
       key: `record-notification:${entity}:${recordId}:${event}:${recipientId}:${toText(record.updatedAt)}`,
+    });
+  }
+  // A company signal (company-signals.ts), to someone who sells to the
+  // company, once per signal and person.
+  async notifySignal(
+    companyId: string,
+    signalId: string,
+    recipientId: string,
+  ): Promise<boolean> {
+    return this.queueMessage('recordChanges', {
+      entity: 'companies',
+      recordId: companyId,
+      recipientId,
+      actorId: 'system',
+      event: 'signal',
+      key: `signal:${signalId}:${recipientId}`,
     });
   }
   // A task about to start, to its owner and each internal participant; the

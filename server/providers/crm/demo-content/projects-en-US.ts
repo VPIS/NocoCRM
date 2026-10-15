@@ -16,6 +16,7 @@ export const enProjects: DemoProjects = {
     company: {
       name: 'H World Group',
       domain: 'h-world',
+      website: 'https://www.hworld.com',
       description:
         "H World Group runs more than ten hotel brands, including Hanting, JI Hotel and Orange, with over 9,000 hotels in China, most of them franchised.\n\nIts IT department plans to bring store inspections, maintenance tickets and franchisee collaboration from three SaaS tools onto one platform of its own:\n\n- **Inspections**: area supervisors check each hotel against its brand standard, photograph issues and follow the fixes;\n- **Maintenance tickets**: a hotel's repair request goes to the nearest contractor automatically and is measured against its deadline;\n- **Franchisee collaboration**: franchisees see their hotels' inspection scores and ticket progress in a portal.\n\nIt must be deployed privately on H World's own cloud as a cluster, keep audit logs for three years, and sign people in through the membership system's identity service. Phase one covers 2,000 hotels in East China, followed by regional waves.",
       address:
@@ -69,6 +70,7 @@ export const enProjects: DemoProjects = {
     company: {
       name: 'GAC Group',
       domain: 'gac',
+      website: 'https://www.gac.com.cn',
       description:
         "GAC Group's digital department leads a dealer collaboration platform for the more than 1,000 dealers of the group's passenger car brands.\n\nLead distribution, vehicle stock transfers and after-sales service tickets each run in a different system today, so dealers log in to several back offices and the group cannot see each dealer's stock and lead conversion as it happens. The platform brings the three together behind one entry point for dealers.\n\nIt must run on a domestic database as a cluster and meet the group's data security rules; the contract is in legal review, paid in 30-40-30 instalments.",
       address:
@@ -108,6 +110,7 @@ export const enProjects: DemoProjects = {
     company: {
       name: 'New Hope Group',
       domain: 'newhope',
+      website: 'https://www.newhopegroup.com',
       description:
         'New Hope Group is an agriculture and food company with many livestock farms and feed mills.\n\nThis year its information centre launched a farm inspection system on NocoBase Professional: the first 12 farms went live within three weeks, the inspection submission rate holds above 90%, and farm managers find it much easier than the paper forms.\n\nBuilding on that, the information centre plans to bring feed mill quality checks and equipment inspections onto the same platform, linking quality data with the farms. Quality requirement interviews are under way and a renewal and expansion proposal is being prepared.',
       address: 'Jinjiang District, Chengdu\nNew Hope Group, Information Centre',
@@ -192,6 +195,39 @@ export const enProjects: DemoProjects = {
         {
           role: 'assistant',
           text: "Yes, and quickly. The AI follow-up graded it **A, follow up**:\n\n- Kevin Liang runs operations digitalisation for 300+ outlets in South China and presents a plan to the regional head next month;\n- he asks for private deployment and single sign-on, both Enterprise strengths;\n- a successful pilot in South China could spread to other regions.\n\nThe AI has drafted a reply proposing a call on Wednesday or Thursday afternoon. Check it in your inbox's AI suggestions and send it from there.",
+        },
+      ],
+    },
+  ],
+  signals: [
+    {
+      company: 'gac',
+      type: 'business',
+      title:
+        'GAC Group plans to buy part of a vehicle joint venture held by FAW through a share issue, a major asset restructuring',
+      summary:
+        'GAC Group signed a letter of intent with China FAW to buy part of the equity FAW holds in a vehicle joint venture by issuing shares and raising matching funds, expected to be a major asset restructuring and a related-party transaction.',
+      occurredOn: '2026-09-14',
+      foundDaysAgo: 2,
+      status: 'new',
+      sources: [
+        {
+          title:
+            'GAC Group announcement: planned share-issue purchase of FAW-held joint venture equity (in Chinese)',
+          url: 'https://baijiahao.baidu.com/s?id=1876315325965744147',
+          site: 'Baidu',
+        },
+        {
+          title:
+            'GAC Group (601238.SH): planned major asset restructuring, A shares suspended from September 14 (in Chinese)',
+          url: 'https://baijiahao.baidu.com/s?id=1876314277796904936',
+          site: 'Baidu',
+        },
+        {
+          title:
+            'Trading suspended this morning, announcement responds (in Chinese)',
+          url: 'https://www.sohu.com/a/1076012420_122014422',
+          site: 'Sohu',
         },
       ],
     },
@@ -480,7 +516,7 @@ export const enProjects: DemoProjects = {
         'Phase one is RMB 280,000 at 18% off: 8 points beyond the 10% limit, RMB 22,400 less. At 10% it would be 252,000, as asked 229,600, at 15% 238,000.',
       reasons: [
         'The customer will publish a manufacturing case study with us after go-live (approval description)',
-        'Three factories and about 200 reporting staff, with room to grow (discovery call)',
+        'About 200 reporting staff in the pilot factories, with room to grow (discovery call)',
         'No evidence of a competing quote so far (opportunity record)',
       ],
       together: null,
@@ -520,7 +556,7 @@ export const enProjects: DemoProjects = {
       asked:
         'An expansion of RMB 45,000, terms extended from the standard 30 days to 60: 30 more days outstanding on RMB 45,000.',
       reasons: [
-        'Brightway Retail is a signed customer that has paid on time (opportunity record)',
+        'Intime Department Store is a signed customer that has paid on time (opportunity record)',
         'A small amount, so the collection risk is limited (opportunity amount)',
       ],
       together: null,

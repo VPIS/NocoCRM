@@ -22,6 +22,7 @@ import {
   Handshake,
   ListChecks,
   Radar,
+  Activity,
   Ellipsis,
   X,
   type LucideIcon,
@@ -31,6 +32,7 @@ import {
   User,
 } from 'lucide-react';
 import { KindTag } from '../components/crm/kind-tag.js';
+import { CompanySignals } from '../components/crm/company-signals.js';
 import { Badge } from '../components/ui/badge.js';
 import { Button, buttonVariants } from '../components/ui/button.js';
 import {
@@ -378,6 +380,11 @@ export default function EntityDetail({
           detail.relatedTotals?.[name] ?? rows(detail.related[name]).length,
         ] as [string, string, number],
     ),
+    // What the AI found on the web that happened to a company
+    // (company-signals.tsx); it counts nothing here, as it loads on its own.
+    ...(entity === 'companies'
+      ? [['signals', 'signals.tab', 0] as [string, string, number]]
+      : []),
     // Attachments last, on every record that has them, and on a contact
     // once its comments carry files. A contact keeps no
     // files of its own; the ones it appears in are read from the task or
@@ -619,6 +626,8 @@ export default function EntityDetail({
             ) : undefined
           }
         />
+      ) : activeTab === 'signals' ? (
+        <CompanySignals companyId={id} />
       ) : activeTab === 'historyTab' ? (
         <HistoryFeed
           entity={entity}
@@ -1005,6 +1014,7 @@ export default function EntityDetail({
     approvals: ListChecks,
     attachments: Paperclip,
     mail: Mail,
+    signals: Activity,
   };
   // The timeline without a count, as on the lead page: its entries only grow.
   const tabBar = (
@@ -1022,7 +1032,7 @@ export default function EntityDetail({
               target={mailTarget}
               record={{ entity, id: toText(record.id) }}
             />
-          ) : name === 'historyTab' ? undefined : (
+          ) : name === 'historyTab' || name === 'signals' ? undefined : (
             count
           ),
       }))}

@@ -13,6 +13,9 @@ const labels: Record<string, [string, string]> = {
   // Someone answered a comment the reader wrote or replied to.
   replied: ['{{entity}} has a new reply', '{{entity}}有新回复'],
   starting: ['Task coming up', '任务时间快到了'],
+  // The AI found news about a company the reader sells to
+  // (company-signals.ts).
+  signal: ['{{entity}} has news', '{{entity}}有新动态'],
   pending: ['Approval requested', '待审批申请'],
   withdrawn: ['Request withdrawn', '审批已撤回'],
   approved: ['Request approved', '审批已通过'],

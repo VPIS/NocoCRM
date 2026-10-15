@@ -1,5 +1,6 @@
 import type { QueryAdapter, Row } from '@nocobase/db';
 import { randomUUID } from 'node:crypto';
+import { eventKey } from './signal-reading.js';
 import type { AppAuthorization } from '@nocobase/app-plugin-authorization/server';
 import { convertLead } from './conversion.js';
 import { CrmError, definitions, object, stages, toText } from './schema.js';
@@ -586,15 +587,19 @@ async function populate(
   // [industry, city, status, source, employees, annual revenue in CNY,
   // as the deals are kept]; the names, domains and descriptions are the
   // language's, and so are the contacts.
+  // Real, well-known companies (Shanghai Electric, Intime, United Family
+  // Healthcare, Digital China, XJTLU, XGIMI, NARI, Guangzhou Restaurant),
+  // their sizes and revenues of the public order of magnitude; what the
+  // demo says happened with them is invented, and kept neutral.
   const companies: [string, DemoCity, string, string, string, number][] = [
-    ['manufacturing', 'shanghai', 'qualified', 'exhibition', '201-500', 380e6],
-    ['retail', 'hangzhou', 'qualified', 'customerReferral', '501-1000', 1.2e9],
-    ['healthcare', 'beijing', 'qualified', 'website', '201-500', 650e6],
-    ['technology', 'shenzhen', 'qualified', 'partner', '51-200', 85e6],
-    ['education', 'suzhou', 'prospect', 'marketing', '51-200', 60e6],
-    ['professionalServices', 'chengdu', 'qualified', 'outbound', '11-50', 18e6],
-    ['energy', 'nanjing', 'inactive', 'search', '201-500', 900e6],
-    ['foodAndBeverage', 'guangzhou', 'qualified', 'partner', '501-1000', 1.5e9],
+    ['manufacturing', 'shanghai', 'qualified', 'exhibition', '5000+', 110e9],
+    ['retail', 'hangzhou', 'qualified', 'customerReferral', '5000+', 8e9],
+    ['healthcare', 'beijing', 'qualified', 'website', '1001-5000', 3e9],
+    ['technology', 'shenzhen', 'qualified', 'partner', '5000+', 120e9],
+    ['education', 'suzhou', 'prospect', 'marketing', '1001-5000', 2e9],
+    ['technology', 'chengdu', 'qualified', 'outbound', '1001-5000', 3.5e9],
+    ['energy', 'nanjing', 'inactive', 'search', '5000+', 50e9],
+    ['foodAndBeverage', 'guangzhou', 'qualified', 'partner', '5000+', 5e9],
   ];
   // [company, amount, stage, close day, business type, created day, last
   // change day, lost reason]; the names are the language's, by index.
@@ -624,7 +629,7 @@ async function populate(
     [3, 50000, 'lost', -148, 'newBusiness', -178, -148, 'price'],
     [1, 36000, 'won', -140, 'newBusiness', -172, -140],
     [2, 50000, 'won', -122, 'newBusiness', -160, -122],
-    [7, 47000, 'lost', -118, 'newBusiness', -150, -118, 'noBudget'],
+    [7, 47000, 'lost', -118, 'newBusiness', -150, -118, 'timing'],
     [4, 50000, 'lost', -112, 'newBusiness', -145, -112, 'timing'],
     [0, 175000, 'won', -95, 'newBusiness', -130, -95],
     [6, 230000, 'won', -88, 'tender', -125, -88],
@@ -633,7 +638,7 @@ async function populate(
     [1, 118000, 'lost', -62, 'newBusiness', -95, -62, 'requirementMismatch'],
     [2, 64000, 'won', -55, 'expansion', -90, -55],
     [7, 150000, 'won', -40, 'newBusiness', -75, -40],
-    [0, 98000, 'lost', -36, 'newBusiness', -70, -36, 'toCompetitor'],
+    [0, 98000, 'lost', -36, 'newBusiness', -70, -36, 'other'],
     // Early-stage deals, so the first board columns carry more than one card.
     [6, 50000, 'qualification', 35, 'newBusiness', -6, -2],
     [6, 35000, 'contact', 55, 'newBusiness', -2, -2],
@@ -699,7 +704,7 @@ async function populate(
           annualRevenue: revenue,
           currency: 'CNY',
           type: i === 3 ? 'partner' : 'direct',
-          website: `https://www.${domain}.example`,
+          website: text.companies[i].website,
           address,
           description,
         },
@@ -740,7 +745,9 @@ async function populate(
         businessType,
         created,
         changed,
-        lostReason = 'toCompetitor',
+        // Built in-house instead (the content's story): a neutral reason for
+        // a real company.
+        lostReason = 'other',
       ],
     ] of deals.entries()) {
       const name = text.deals[d];
@@ -791,7 +798,7 @@ async function populate(
       'companies',
       {
         status: 'churned',
-        churnReason: 'toCompetitor',
+        churnReason: 'businessChange',
       },
       -20,
       toText(companies_[7].id),
@@ -806,11 +813,25 @@ async function populate(
         .set({ updatedAt: at(day) })
         .where('id', '=', companies_[i].id)
         .execute();
-    const leadCities: DemoCity[] = [
-      'shanghai',
-      'beijing',
-      'shenzhen',
-      'hangzhou',
+    // Each lead's real company's industry and city, by index (the content
+    // files name the companies in the same order).
+    const leadPlaces: [string, DemoCity][] = [
+      ['manufacturing', 'shanghai'],
+      ['education', 'suzhou'],
+      ['retail', 'hangzhou'],
+      ['logistics', 'shenzhen'],
+      ['retail', 'shanghai'],
+      ['agriculture', 'chengdu'],
+      ['healthcare', 'beijing'],
+      ['technology', 'beijing'],
+      ['education', 'beijing'],
+      ['manufacturing', 'shenzhen'],
+      ['realEstate', 'shenzhen'],
+      ['professionalServices', 'shanghai'],
+      ['manufacturing', 'suzhou'],
+      ['technology', 'beijing'],
+      ['agriculture', 'beijing'],
+      ['manufacturing', 'shanghai'],
     ];
     for (let i = 0; i < leadSpecs.length; i++) {
       const [status, source, day] = leadSpecs[i];
@@ -832,11 +853,9 @@ async function populate(
             // the content files are chosen to match.
             gender: LEAD_GENDERS[i] ?? 'unknown',
             country: 'CN',
-            state: provinceOf[leadCities[i % 4]],
-            city: text.cities[leadCities[i % 4]],
-            industry: ['manufacturing', 'education', 'retail', 'technology'][
-              i % 4
-            ],
+            state: provinceOf[leadPlaces[i]![1]],
+            city: text.cities[leadPlaces[i]![1]],
+            industry: leadPlaces[i]![0],
             // Half of them say what their company turns over, in CNY.
             ...(i % 2 === 0
               ? {
@@ -1409,7 +1428,7 @@ async function populate(
           source,
           employees: '5000+',
           type: 'direct',
-          website: `https://www.${about.domain}.example`,
+          website: about.website,
           address: about.address,
           description: about.description,
         },
@@ -1978,6 +1997,56 @@ async function populate(
     ...decided(-5, 15),
   });
 
+  // The projects' companies' signals (company-signals.ts), with their
+  // timeline lines, as a check would have left them.
+  for (const signal of project.signals) {
+    const companyId = toText(projects[signal.company].id);
+    const createdAt = at(-signal.foundDaysAgo, 9, 30);
+    const occurredOn = signal.occurredOn;
+    const id = randomUUID();
+    const runId = randomUUID();
+    await query
+      .insertInto('crmSignals')
+      .values({
+        id,
+        companyId,
+        type: signal.type,
+        title: signal.title,
+        summary: signal.summary,
+        occurredOn,
+        sources: JSON.stringify(signal.sources),
+        eventKey: eventKey(signal.type, occurredOn, signal.title),
+        status: signal.status,
+        runId,
+        decidedById: signal.status === 'seen' ? owner.id : null,
+        decidedAt:
+          signal.status === 'seen' ? at(-signal.foundDaysAgo + 1, 10) : null,
+        createdAt,
+        updatedAt: createdAt,
+      })
+      .execute();
+    await query
+      .insertInto('crmHistory')
+      .values({
+        id: runId,
+        entity: 'companies',
+        recordId: companyId,
+        actorId: 'system',
+        action: 'signal',
+        source: 'ai',
+        toValue: signal.type,
+        changes: JSON.stringify({
+          signalId: id,
+          type: signal.type,
+          title: signal.title,
+          occurredOn,
+          source: signal.sources[0] ?? null,
+        }),
+        createdAt,
+      })
+      .execute();
+  }
+
   reached(65);
   setDemoMailLanguage(language);
   // The demo mailboxes: the messages first, which the plugin reads as soon
@@ -2470,6 +2539,13 @@ async function deleteRecords(
       await q.deleteFrom('crmHistory').where('recordId', 'in', all).execute();
       await q.deleteFrom('crmOutbox').where('recordId', 'in', all).execute();
     }
+    // The companies' signals (company-signals.ts) go with them.
+    const companies = byEntity.get('companies') ?? [];
+    if (companies.length)
+      await q
+        .deleteFrom('crmSignals')
+        .where('companyId', 'in', companies)
+        .execute();
     // The approvals' lifecycle log (server/lifecycles/approvals.ts) goes
     // with them.
     const approvals = byEntity.get('approvals') ?? [];

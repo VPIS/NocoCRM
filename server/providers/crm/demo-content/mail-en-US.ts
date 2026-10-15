@@ -105,7 +105,7 @@ export const enMail: DemoContent['mail'] = {
       },
       {
         from: 'other',
-        body: "Hi {{owner}},\n\nThis year's IT budget has been pushed to next quarter, so the project is on hold. I will reach out as soon as it is approved; we still prefer your solution.\n\n{{customer}}\n{{company}}",
+        body: 'Hi {{owner}},\n\nProcurement for this project has moved to the next budget cycle, so it is on hold for now. I will reach out as soon as the new cycle opens; we still prefer your solution.\n\n{{customer}}\n{{company}}',
       },
     ],
   },
@@ -118,7 +118,7 @@ export const enMail: DemoContent['mail'] = {
       },
       {
         from: 'other',
-        body: 'Hi {{owner}},\n\nSure, Thursday or Friday morning works. Mainly we want to move paper approvals and a few spreadsheets online.\n\n{{customer}}\n{{company}}',
+        body: 'Hi {{owner}},\n\nSure, Thursday or Friday morning works. Mainly we want our administrative approvals in one system across our sites.\n\n{{customer}}\n{{company}}',
       },
     ],
   },
@@ -170,15 +170,15 @@ export const enMail: DemoContent['mail'] = {
     messages: [
       {
         from: 'owner',
-        body: "Hi {{customer}},\n\nThanks for your time today. Here is what I took away:\n1. Admissions leads, enrolment and payment should run in one system.\n2. Scheduling checks conflicts by campus, classroom and teacher.\n3. Parent communication stays on your current messaging app for now.\n\nLet me know if I missed anything; I'll prepare the demo environment from this.\n\n{{owner}}",
+        body: "Hi {{customer}},\n\nThanks for your time today. Here is what I took away:\n1. Admissions enquiries, applications and offers should run in one system.\n2. Course scheduling checks conflicts by classroom, teacher and teaching hours.\n3. Notices to students and staff stay on your current channels for now.\n\nLet me know if I missed anything; I'll prepare the demo environment from this.\n\n{{owner}}",
       },
       {
         from: 'other',
-        body: 'Hi {{owner}},\n\nThe notes are right. One more thing: we open two new campuses next year, so permissions should follow the campus, each seeing only its own data.\n\n{{customer}}\n{{company}}',
+        body: 'Hi {{owner}},\n\nThe notes are right. One more thing: permissions should follow the school, so that each school sees only its own programmes and data.\n\n{{customer}}\n{{company}}',
       },
       {
         from: 'owner',
-        body: 'Hi {{customer}},\n\nPer-campus permissions are a matter of roles and data scopes; I will show them in the demo. Would next Tuesday or Wednesday afternoon suit you?\n\n{{owner}}',
+        body: 'Hi {{customer}},\n\nPer-school permissions are a matter of roles and data scopes; I will show them in the demo. Would next Tuesday or Wednesday afternoon suit you?\n\n{{owner}}',
       },
       {
         from: 'other',
@@ -208,7 +208,7 @@ export const enMail: DemoContent['mail'] = {
     messages: [
       {
         from: 'other',
-        body: 'Hi {{owner}},\n\nThank you for your support over the past weeks. The group has decided to standardise on another low-code platform, and the dealer management system will be built there too. Sorry it did not work out this time.\n\n{{customer}}\n{{company}}',
+        body: 'Hi {{owner}},\n\nThank you for your support over the past weeks. The group has decided to build the distributor management system in-house with our own IT team, so we will not go ahead this time.\n\n{{customer}}\n{{company}}',
       },
       {
         from: 'owner',
@@ -216,7 +216,7 @@ export const enMail: DemoContent['mail'] = {
       },
       {
         from: 'other',
-        body: "Mostly that the group already has a framework agreement with them, which makes purchasing simpler. On features, yours was actually more flexible. Let's stay in touch.\n\n{{customer}}",
+        body: "Mostly that our IT team wants the system alongside the others it already maintains. On features, yours was very flexible, and we would be glad to look at you again for an independent project. Let's stay in touch.\n\n{{customer}}",
       },
     ],
   },
@@ -285,11 +285,11 @@ export const enMail: DemoContent['mail'] = {
     messages: [
       {
         from: 'owner',
-        body: 'Hi {{customer}},\n\nThe dealer portal has been live for a month. How is it going: are ordering and statements running smoothly for the dealers? Anything we should improve?\n\n{{owner}}',
+        body: 'Hi {{customer}},\n\nThe distributor portal has been live for a month. How is it going: are ordering and statements running smoothly for the distributors? Anything we should improve?\n\n{{owner}}',
       },
       {
         from: 'other',
-        body: "Hi {{owner}},\n\nGoing well, over 120 dealers use it now. Two small requests: statements exported as PDF, and a dashboard of this month's rebates on the home page.\n\n{{customer}}\n{{company}}",
+        body: "Hi {{owner}},\n\nGoing well, the distributors in the first regions use it every day now. Two small requests: statements exported as PDF, and a dashboard of this month's rebates on the home page.\n\n{{customer}}\n{{company}}",
       },
       {
         from: 'owner',
@@ -302,7 +302,7 @@ export const enMail: DemoContent['mail'] = {
     messages: [
       {
         from: 'other',
-        body: 'Hi {{owner}},\n\nFor the supply chain pilot we have gone with another vendor, mainly because they had a ready supplier portal template and could go live sooner. Thank you for the work you put in.\n\n{{customer}}\n{{company}}',
+        body: 'Hi {{owner}},\n\nFor the supply chain pilot we have decided to build it in-house with our own IT team, alongside systems they already maintain. Thank you for the work you put in.\n\n{{customer}}\n{{company}}',
       },
       {
         from: 'owner',
@@ -328,7 +328,7 @@ export const enMail: DemoContent['mail'] = {
     messages: [
       {
         from: 'other',
-        body: "Hello,\n\nI'm {{customer}} from the safety department at {{company}}; a colleague recommended you. We want a safety training and exam system for 2,000 frontline staff and would like to understand feasibility and rough cost first.\n\n{{customer}}",
+        body: "Hello,\n\nI'm {{customer}} from the safety department at {{company}}; a colleague recommended you. We want a safety training and exam system for our field and project staff and would like to understand feasibility and rough cost first.\n\n{{customer}}",
       },
       {
         from: 'owner',
@@ -358,7 +358,7 @@ export const enMail: DemoContent['mail'] = {
       },
       {
         from: 'other',
-        body: 'Hi {{owner}},\n\nThe questionnaire is filled in and attached. One addition: a nightly sync of admissions data is enough, but the principal wants to see it on his phone too.\n\n{{customer}}\n{{company}}',
+        body: 'Hi {{owner}},\n\nThe questionnaire is filled in and attached. One addition: a nightly sync of admissions data is enough, but the head of admissions wants to see it on the phone too.\n\n{{customer}}\n{{company}}',
       },
       {
         from: 'owner',
@@ -409,11 +409,11 @@ export const enMail: DemoContent['mail'] = {
     messages: [
       {
         from: 'other',
-        body: "Hi {{owner}},\n\nI'm {{customer}} from IT at {{company}}. We'd like to prepare servers for the self-hosted deployment early. What configuration do you recommend? We already run PostgreSQL 14 and a Kubernetes cluster.\n\n{{customer}}",
+        body: "Hi {{owner}},\n\nI'm {{customer}} from IT at {{company}}. We'd like to prepare servers for the self-hosted deployment early. What configuration do you recommend? We can provide PostgreSQL 14 and a Kubernetes cluster for this project.\n\n{{customer}}",
       },
       {
         from: 'owner',
-        body: "Hi {{customer}},\n\nYour current environment works as it is: two application replicas with 4 cores and 8 GB each, and PostgreSQL 14 is fully supported. I'll ask our engineers to send the detailed deployment guide.\n\n{{owner}}",
+        body: "Hi {{customer}},\n\nThat environment works as it is: two application replicas with 4 cores and 8 GB each, and PostgreSQL 14 is fully supported. I'll ask our engineers to send the detailed deployment guide.\n\n{{owner}}",
       },
       {
         from: 'other',
@@ -460,7 +460,7 @@ export const enMail: DemoContent['mail'] = {
     messages: [
       {
         from: 'other',
-        body: 'Hi {{owner}},\n\nThe delivery workspace is working well. One question: we want project managers to see only their own projects, but after we set a data scope on their role they cannot open the project list at all.\n\n{{customer}}\n{{company}}',
+        body: 'Hi {{owner}},\n\nThe delivery workbench is working well. One question: we want project managers to see only their own projects, but after we set a data scope on their role they cannot open the project list at all.\n\n{{customer}}\n{{company}}',
       },
       {
         from: 'owner',
@@ -524,7 +524,7 @@ export const enMail: DemoContent['mail'] = {
       },
       {
         from: 'other',
-        body: "Hi {{owner}},\n\nIt's a bit above what we expected. We're a small team; could we pay in instalments, or start with one year to see how it goes?\n\n{{customer}}\n{{company}}",
+        body: "Hi {{owner}},\n\nIt's a bit above our department budget. We're a small team; could we pay in instalments, or start with one year to see how it goes?\n\n{{customer}}\n{{company}}",
       },
     ],
   },

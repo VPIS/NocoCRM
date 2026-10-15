@@ -72,6 +72,9 @@ import {
 } from './task-preparation.js';
 import { userRoleScopeRegistryToken } from '@nocobase/app-plugin-users/server/tokens';
 import { aiAvailable } from './ai-model.js';
+import { CompanySignals, companySignalsToken } from './company-signals.js';
+import { webSearcher } from './web-research.js';
+import type { CrmAiConfig } from '../../config/ai.js';
 import { lifecycleRuntimeToken } from '../lifecycles.js';
 
 // The Channel the CRM's notifications go through: the in-app inbox, named
@@ -159,6 +162,22 @@ export default class CrmProvider extends ServiceProvider<Application> {
         new TaskPreparer(
           this.app.container.resolve(crmToken),
           this.app.container,
+        ),
+    );
+    // The companies' news looked up on the web (company-signals.ts), with
+    // the configured Qwen service's search.
+    this.app.container.singleton(
+      companySignalsToken,
+      () =>
+        new CompanySignals(
+          this.app.container.resolve(crmToken),
+          () =>
+            webSearcher(
+              this.app.config?.get<CrmAiConfig['llmServices']>(
+                'ai.llmServices',
+              ),
+            ),
+          { container: this.app.container },
         ),
     );
     registerCrmResources(this.app.container.resolve(authorizationToken));
@@ -370,6 +389,40 @@ export default class CrmProvider extends ServiceProvider<Application> {
         description: words.taskDescription,
         schedule: { cron: '0 9 * * *', timezone },
         target: { type: 'app.crm-task-preparation', config: {} },
+      });
+      // The watched companies' news (company-signals.ts), half an hour
+      // after the other checks, one company at a time.
+      scheduler.registerTarget({
+        type: 'app.crm-company-signals',
+        title: words.signalTarget,
+        validate: isObject,
+        describe: async () => ({
+          targetLabel: words.signalTarget,
+          description: words.signalTargetDescription,
+          state: 'ready',
+        }),
+        start: async () => {
+          const pass = await this.app.container
+            .resolve(companySignalsToken)
+            .scan();
+          return {
+            state: 'completed',
+            outcome: 'succeeded',
+            result: {
+              available: pass.available,
+              checked: pass.checked,
+              found: pass.found,
+              failed: pass.failed,
+            },
+          };
+        },
+      });
+      scheduler.defineSchedule({
+        key: 'crm.company-signals',
+        title: words.signalTitle,
+        description: words.signalDescription,
+        schedule: { cron: '30 9 * * *', timezone },
+        target: { type: 'app.crm-company-signals', config: {} },
       });
     }
     // The Users page shows and assigns the CRM's roles through this scope.
@@ -686,7 +739,10 @@ export default class CrmProvider extends ServiceProvider<Application> {
                   ...content,
                   target: {
                     type: 'route',
-                    path: `/crm/${toText(row.entity)}/${toText(row.recordId)}`,
+                    // A company's news opens on its Signals tab.
+                    path: `/crm/${toText(row.entity)}/${toText(row.recordId)}${
+                      row.event === 'signal' ? '/signals' : ''
+                    }`,
                   },
                 },
               },

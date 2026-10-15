@@ -105,7 +105,7 @@ export const zhMail: DemoContent['mail'] = {
       },
       {
         from: 'other',
-        body: '{{owner}}您好，\n\n今年的信息化预算被推迟到下个季度了，项目暂时搁置。预算下来后我第一时间联系您，方案我们还是倾向贵司的。\n\n{{customer}}\n{{company}}',
+        body: '{{owner}}您好，\n\n这类采购统一调整到下一个预算周期安排了，项目暂时搁置。新的周期启动后我第一时间联系您，方案我们还是倾向贵司的。\n\n{{customer}}\n{{company}}',
       },
     ],
   },
@@ -170,19 +170,19 @@ export const zhMail: DemoContent['mail'] = {
     messages: [
       {
         from: 'owner',
-        body: '{{customer}}您好，\n\n感谢今天抽时间沟通，我整理了一下要点：\n1. 招生线索、报名和缴费在一个系统里跑通；\n2. 排课按校区、教室和老师三个维度检查冲突；\n3. 家校沟通先沿用企业微信。\n\n如有遗漏请补充，我据此准备演示环境。\n\n{{owner}}',
+        body: '{{customer}}您好，\n\n感谢今天抽时间沟通，我整理了一下要点：\n1. 招生咨询、报名和录取进度在一个系统里跑通；\n2. 排课按校区、教室和教师三个维度检查冲突；\n3. 面向师生的通知先沿用现有渠道。\n\n如有遗漏请补充，我据此准备演示环境。\n\n{{owner}}',
       },
       {
         from: 'other',
-        body: '{{owner}}您好，\n\n纪要没问题。再补充一点：明年要新开两个校区，系统最好能按校区分权限，各校区只看自己的数据。\n\n{{customer}}\n{{company}}',
+        body: '{{owner}}您好，\n\n纪要没问题。再补充一点：系统最好能按学院分权限，各学院只看自己的数据。\n\n{{customer}}\n{{company}}',
       },
       {
         from: 'owner',
-        body: '{{customer}}您好，\n\n按校区分权限可以直接用角色和数据范围配置，演示时一并展示。下周二或周三下午，您哪天方便？\n\n{{owner}}',
+        body: '{{customer}}您好，\n\n按学院分权限可以直接用角色和数据范围配置，演示时一并展示。下周二或周三下午，您哪天方便？\n\n{{owner}}',
       },
       {
         from: 'other',
-        body: '周三下午两点可以，我叫上教务主任一起。\n\n{{customer}}',
+        body: '周三下午两点可以，我叫上教务部门的同事一起。\n\n{{customer}}',
       },
     ],
   },
@@ -208,7 +208,7 @@ export const zhMail: DemoContent['mail'] = {
     messages: [
       {
         from: 'other',
-        body: '{{owner}}您好，\n\n感谢这段时间的支持。集团最终决定统一采用另一家低代码平台，经销商管理系统也会放在那边做，很遗憾这次没能合作。\n\n{{customer}}\n{{company}}',
+        body: '{{owner}}您好，\n\n感谢这段时间的支持。集团最终决定由自己的 IT 团队自建经销商管理系统，很遗憾这次没能合作。\n\n{{customer}}\n{{company}}',
       },
       {
         from: 'owner',
@@ -216,7 +216,7 @@ export const zhMail: DemoContent['mail'] = {
       },
       {
         from: 'other',
-        body: '主要是集团和那家已经签了框架协议，统一采购更省事。功能上贵司其实更灵活。保持联系。\n\n{{customer}}',
+        body: '主要是集团希望核心的渠道系统由内部团队自己掌握，方便长期迭代。功能上贵司很灵活，以后有独立的项目再找您。保持联系。\n\n{{customer}}',
       },
     ],
   },
@@ -229,7 +229,7 @@ export const zhMail: DemoContent['mail'] = {
       },
       {
         from: 'other',
-        body: '{{owner}}您好，\n\n谢谢。今年我们自己的 IT 团队已经能独立维护系统，管理层决定实施服务暂不续约，软件的升级与技术支持照常保留。以后有新项目再找您。\n\n{{customer}}\n{{company}}',
+        body: '{{owner}}您好，\n\n谢谢。今年我们自己的 IT 团队已经能独立维护系统，部门决定实施服务暂不续约，软件的升级与技术支持照常保留。以后有新项目再找您。\n\n{{customer}}\n{{company}}',
       },
       {
         from: 'owner',
@@ -302,11 +302,11 @@ export const zhMail: DemoContent['mail'] = {
     messages: [
       {
         from: 'other',
-        body: '{{owner}}您好，\n\n供应链试点我们最终选了另一家的方案，主要是他们有现成的供应商门户模板，上线更快。感谢贵司前期的投入。\n\n{{customer}}\n{{company}}',
+        body: '{{owner}}您好，\n\n供应链试点这次我们决定先在现有系统上扩展，暂时不引入新的平台。感谢贵司前期的投入。\n\n{{customer}}\n{{company}}',
       },
       {
         from: 'owner',
-        body: '{{customer}}您好，\n\n谢谢告知，祝试点顺利。生产管理平台这边我们会继续全力配合。\n\n{{owner}}',
+        body: '{{customer}}您好，\n\n谢谢告知，祝试点顺利，以后有需要随时联系。生产管理平台这边我们会继续全力配合。\n\n{{owner}}',
       },
     ],
   },
@@ -358,7 +358,7 @@ export const zhMail: DemoContent['mail'] = {
       },
       {
         from: 'other',
-        body: '{{owner}}您好，\n\n问卷已填好回传。补充一点：招生数据每晚同步一次就够，但校长希望在手机上也能看。\n\n{{customer}}\n{{company}}',
+        body: '{{owner}}您好，\n\n问卷已填好回传。补充一点：招生数据每晚同步一次就够，但招生办的负责人希望在手机上也能看。\n\n{{customer}}\n{{company}}',
       },
       {
         from: 'owner',
@@ -392,7 +392,7 @@ export const zhMail: DemoContent['mail'] = {
       },
       {
         from: 'other',
-        body: '{{owner}}您好，\n\n方案看过了，整体符合预期。实施周期写的是十周，能否压缩到八周？我们希望在年底的供应商大会前上线。\n\n{{customer}}\n{{company}}',
+        body: '{{owner}}您好，\n\n方案看过了，整体符合预期。实施周期写的是十周，能否压缩到八周？我们希望在年底前上线。\n\n{{customer}}\n{{company}}',
       },
       {
         from: 'owner',

@@ -22,6 +22,10 @@ import {
   type Entity,
 } from '../../server/providers/crm/schema.js';
 import { lifecycleParameterStore } from '../../server/providers/lifecycles.js';
+import {
+  CompanySignals,
+  companySignalsToken,
+} from '../../server/providers/crm/company-signals.js';
 import geographyMigration from '../../database/main/migrations/202609100001_crm_geography_codes.js';
 import phoneMigration from '../../database/main/migrations/202610030001_crm_phone_numbers.js';
 import { normalizePhone } from '../../server/providers/crm/phone.js';
@@ -213,6 +217,13 @@ let service: CrmService;
 const passwordResets: string[] = [];
 let folder: string;
 let router: Hono;
+let signals: CompanySignals;
+// What the faked web search answers, and how it was asked.
+const web = {
+  on: true,
+  answers: [] as { text: string; pages: Record<string, unknown>[] }[],
+  calls: [] as { search: boolean }[],
+};
 let plans: CrmPlans;
 const planOutcomes: PlanOutcome[] = [];
 // The Mail plugin as the mail timeline sees it: each user's connected
@@ -555,6 +566,38 @@ beforeAll(async () => {
   } as unknown as ReturnType<
     typeof container.resolve<typeof inAppNotificationStoreToken>
   >);
+  // The company signals with DashScope's search faked: each call answers
+  // the next of `web.answers`, in the native API's shape.
+  signals = new CompanySignals(
+    service,
+    () =>
+      web.on
+        ? { service: 'qwen', model: 'qwen3.8-flash', apiKey: 'key' }
+        : null,
+    {
+      fetch: (async (_url: string, init: { body: string }) => {
+        const body = JSON.parse(init.body) as {
+          parameters: { enable_search: boolean };
+        };
+        web.calls.push({ search: body.parameters.enable_search });
+        const next = web.answers.shift() ?? {
+          text: '{"events":[]}',
+          pages: [],
+        };
+        return new Response(
+          JSON.stringify({
+            output: {
+              choices: [{ message: { content: [{ text: next.text }] } }],
+              search_info: { search_results: next.pages },
+            },
+            usage: { input_tokens: 3000, output_tokens: 300 },
+          }),
+          { status: 200 },
+        );
+      }) as unknown as typeof fetch,
+    },
+  );
+  container.instance(companySignalsToken, signals);
   router = await crmRoutes.createRouter({
     container,
     publicBasePath: '/test',
@@ -1368,6 +1411,200 @@ describe('CRM API security and domain rules', () => {
   // administrator sets (Settings → Approval process): versioned by the
   // runtime's parameter store, read live, and resolved into the users
   // offered as approvers, each active and holding the approve capability.
+  // Company signals (company-signals.ts): a company's news found on the
+  // web, kept with the search's own pages, put on its timeline and told to
+  // the people selling to it; read by who reads the company, decided by who
+  // edits it.
+  it("finds a company's signals on the web, keeping only what its search pages back, once", async () => {
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Signal Co',
+      website: 'https://signal.example.cn',
+    });
+    const companyId = toText(company.id);
+    const day = (ago: number) =>
+      new Date(Date.now() - ago * 86_400_000).toISOString().slice(0, 10);
+    const pages = [
+      {
+        index: 1,
+        title: 'Signal Co raises B',
+        url: 'https://n.example.cn/b',
+        site: 'News',
+      },
+      {
+        index: 2,
+        title: 'Signal Co new CTO',
+        url: 'https://n.example.cn/cto',
+        site: 'News',
+      },
+    ];
+    const events = [
+      {
+        type: 'funding',
+        title: 'Signal Co raised a Series B.',
+        summary: 'Led by Example.',
+        date: day(3),
+        refs: [1],
+      },
+      // No page behind it: dropped.
+      { type: 'hiring', title: 'Hiring 50 people.', date: day(2), refs: [] },
+    ];
+    // Without a deal or the switch, it is not in the daily check.
+    let view = await signals.of(actor('rep'), companyId);
+    expect(view).toMatchObject({
+      available: true,
+      watched: false,
+      inDailyCheck: false,
+      signals: [],
+    });
+    expect(
+      (await signals.due(new Date(), 100)).map((r) => toText(r.id)),
+    ).not.toContain(companyId);
+    view = await signals.watch(actor('rep'), companyId, true);
+    expect(view).toMatchObject({ watched: true, inDailyCheck: true });
+    expect(
+      (await signals.due(new Date(), 100)).map((r) => toText(r.id)),
+    ).toContain(companyId);
+
+    // Checked now: the answer came back as prose, so it is reshaped without
+    // searching, its refs still naming the first answer's pages.
+    web.calls = [];
+    web.answers.push(
+      { text: 'Signal Co raised a Series B [ref_1].', pages },
+      { text: JSON.stringify({ events }), pages: [] },
+    );
+    const { found } = await signals.checkNow(actor('rep'), companyId);
+    expect(web.calls).toEqual([{ search: true }, { search: false }]);
+    expect(found.map((f) => [f.type, f.sources.map((p) => p.url)])).toEqual([
+      ['funding', ['https://n.example.cn/b']],
+    ]);
+    view = await signals.of(actor('other'), companyId).catch(() => view);
+    view = await signals.of(actor('rep'), companyId);
+    expect(view.checkedAt).toBeTruthy();
+    expect(view.signals.map((s) => s.status)).toEqual(['new']);
+    // A line on the company's timeline, from the AI.
+    const line = await database
+      .query()
+      .selectFrom('crmHistory')
+      .selectAll()
+      .where('recordId', '=', companyId)
+      .where('action', '=', 'signal')
+      .executeTakeFirstOrThrow();
+    expect(toText(line.source)).toBe('ai');
+    // Read back whole on the timeline: what was found and where, which are
+    // not the company's fields.
+    const feed = await service.historyOf(actor('rep'), 'companies', companyId);
+    expect(
+      feed.data.find((entry) => entry.action === 'signal')?.changes,
+    ).toMatchObject({
+      type: 'funding',
+      title: 'Signal Co raised a Series B.',
+      source: { url: 'https://n.example.cn/b' },
+    });
+    // Checked daily now, so not due again within the week.
+    expect(
+      (await signals.due(new Date(), 100)).map((r) => toText(r.id)),
+    ).not.toContain(companyId);
+
+    // Found again, worded the same: not kept twice; the known one is named
+    // to the search.
+    web.calls = [];
+    web.answers.push({ text: JSON.stringify({ events }), pages });
+    expect((await signals.checkNow(actor('rep'), companyId)).found).toEqual([]);
+    expect(web.calls).toEqual([{ search: true }]);
+
+    // Dismissed by its editor; a reader who may not edit cannot decide.
+    const signalId = view.signals[0]!.id;
+    expect(
+      (
+        await request(`/signals/${signalId}`, 'rep', 'PATCH', {
+          status: 'dismissed',
+        })
+      ).status,
+    ).toBe(200);
+    expect((await signals.of(actor('rep'), companyId)).signals[0]!.status).toBe(
+      'dismissed',
+    );
+    expect(
+      (await request(`/signals/${signalId}`, 'rep', 'PATCH', { status: 'new' }))
+        .status,
+    ).toBe(400);
+    expect((await request(`/signals/${signalId}`)).status).toBe(401);
+    expect((await request(`/companies/${companyId}/signals`)).status).toBe(401);
+    expect(
+      (await request(`/companies/${companyId}/signals`, 'rep')).status,
+    ).toBe(200);
+
+    // Without a searching service, checking is refused and the daily pass
+    // does nothing.
+    web.on = false;
+    try {
+      expect(
+        (await request(`/companies/${companyId}/signals/check`, 'rep', 'POST'))
+          .status,
+      ).toBe(400);
+      expect(await signals.scan()).toMatchObject({
+        available: false,
+        checked: 0,
+      });
+    } finally {
+      web.on = true;
+    }
+  });
+
+  it("tells a company's signal to its owner and its open deals' owners", async () => {
+    const company = await service.save(actor('manager'), 'companies', {
+      name: 'Told Co',
+    });
+    const companyId = toText(company.id);
+    await service
+      .save(actor('rep'), 'opportunities', {
+        name: 'Told deal',
+        companyId,
+      })
+      .catch(async () =>
+        service.save(actor('manager'), 'opportunities', {
+          name: 'Told deal',
+          companyId,
+          ownerId: 'rep',
+        }),
+      );
+    const day = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    web.answers.push({
+      text: JSON.stringify({
+        events: [
+          {
+            type: 'leadership',
+            title: 'Told Co named a CIO.',
+            date: day,
+            refs: [1],
+          },
+        ],
+      }),
+      pages: [
+        {
+          index: 1,
+          title: 'CIO',
+          url: 'https://n.example.cn/cio',
+          site: 'News',
+        },
+      ],
+    });
+    // In the daily check by its open deal.
+    const due = await signals.due(new Date(), 1000);
+    expect(due.map((r) => toText(r.id))).toContain(companyId);
+    await signals.checkNow(actor('manager'), companyId);
+    const told = await database
+      .query()
+      .selectFrom('crmOutbox')
+      .select(['recipientId', 'event'])
+      .where('recordId', '=', companyId)
+      .execute();
+    expect(told.map((r) => toText(r.event))).toEqual(told.map(() => 'signal'));
+    expect(new Set(told.map((r) => toText(r.recipientId)))).toEqual(
+      new Set(['manager', 'rep']),
+    );
+  });
+
   it('lets an administrator set who may approve, offering and accepting only whom it names', async () => {
     const approverIds = async () =>
       (await service.users(actor('rep')))
@@ -5955,6 +6192,12 @@ describe('demo dataset', () => {
       present: false,
       records: 0,
     });
+    // Signals other tests left, which are not the demo's.
+    const signalsBefore = new Set(
+      (
+        await database.query().selectFrom('crmSignals').select('id').execute()
+      ).map((row) => toText(row.id)),
+    );
     // The metadata tells whoever may import it that none is imported (the
     // pages offer it in a banner), and tells no one else anything.
     const meta = async (id: string) =>
@@ -6160,6 +6403,29 @@ describe('demo dataset', () => {
       expect.arrayContaining(['mentioned', 'replied']),
     );
     expect(told.length).toBeGreaterThanOrEqual(3);
+    // The projects' companies carry signals, with their timeline lines,
+    // written straight in (company-signals.ts).
+    const demoSignals = (
+      await database
+        .query()
+        .selectFrom('crmSignals')
+        .select(['id', 'companyId', 'status', 'runId'])
+        .execute()
+    ).filter((row) => !signalsBefore.has(toText(row.id)));
+    expect(demoSignals.length).toBeGreaterThanOrEqual(1);
+    expect(
+      await database
+        .query()
+        .selectFrom('crmHistory')
+        .select('id')
+        .where('action', '=', 'signal')
+        .where(
+          'id',
+          'in',
+          demoSignals.map((row) => toText(row.runId)),
+        )
+        .execute(),
+    ).toHaveLength(demoSignals.length);
     expect((await request('/demoData/remove', 'rep', 'POST', {})).status).toBe(
       403,
     );
@@ -6305,6 +6571,19 @@ describe('demo dataset', () => {
     ]);
     await service.remove(actor('admin'), 'leads', toText(kept.id));
     expect((await reset.json()).data.present).toBe(false);
+    // The demo companies' signals go with them.
+    expect(
+      await database
+        .query()
+        .selectFrom('crmSignals')
+        .select('id')
+        .where(
+          'companyId',
+          'in',
+          demoSignals.map((row) => toText(row.companyId)),
+        )
+        .execute(),
+    ).toEqual([]);
     // Its mailboxes go with it, removed as their owners; so do their messages.
     expect(demoMail.removed.map((r) => r.accountId).sort()).toEqual(
       demoMail.connected.map((c) => `demo-mailbox-${c.userId}`).sort(),
