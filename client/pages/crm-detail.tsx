@@ -180,7 +180,6 @@ import {
   useRecordMessages,
 } from '../components/crm/mail.js';
 import type { MailTarget } from '../../server/providers/crm/mail-target.js';
-import { linkedinPath } from '../../server/providers/crm/linkedin.js';
 import {
   ReviewFeedEntry,
   ReviewPanel,
@@ -1462,15 +1461,21 @@ export function WebsiteField({
   const url = toText(record[field]);
   const href = linkOf(url);
   // The site by its domain alone, as a person names it, and a LinkedIn
-  // profile or page by what it points at ("in/jane-doe"); the whole address
-  // on hover.
+  // address from its start without the scheme and "www."
+  // ("linkedin.com/in/jane-doe"), its name decoded; the whole address on
+  // hover.
   const host = (() => {
-    if (field === 'linkedin') {
-      const path = linkedinPath(url);
-      if (path) return path;
-    }
     try {
-      return new URL(href ?? '').host.replace(/^www\./, '');
+      const link = new URL(href ?? '');
+      const site = link.host.replace(/^www\./, '');
+      if (field !== 'linkedin') return site;
+      let path = link.pathname.replace(/\/+$/, '');
+      try {
+        path = decodeURIComponent(path);
+      } catch {
+        // A malformed escape is shown as written.
+      }
+      return `${site}${path}`;
     } catch {
       return url;
     }
