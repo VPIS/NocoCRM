@@ -1,10 +1,7 @@
 import { PageContainer } from '../components/page-container.js';
 import { PageHeader } from '../components/page-header.js';
 import { toText } from '../components/crm/api.js';
-import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { useSearchParams } from 'react-router';
-import { useQueryClient } from '@tanstack/react-query';
-import { ApiClientError, useToaster } from '@nocobase/app-client';
+import { useState, type ReactElement } from 'react';
 import { Button } from '../components/ui/button.js';
 import { Input } from '../components/ui/input.js';
 import { Switch } from '../components/ui/switch.js';
@@ -16,21 +13,15 @@ import {
 } from '../components/ui/card.js';
 import { Loading, ErrorNotice } from '../components/crm/common.js';
 import { Choice } from '../components/crm/form.js';
-import { ConfirmDialog } from './crm-detail.js';
 import {
-  localDate,
   useCrmApi,
   useCrmQuery,
-  useCrmScopeKey,
   useCrmText,
   useRefresh,
   type CrmSettings,
-  type Data,
 } from '../components/crm/api.js';
-import type { DemoStatus } from '../components/crm/demo-status.js';
 interface SettingsResponse {
   settings: CrmSettings;
-  demo: DemoStatus;
 }
 // What each card holds and saves.
 const BUSINESS = ['currency', 'timeZone', 'aiLanguage'] as const;
@@ -52,135 +43,32 @@ const REMINDERS = [...REMINDER_DAYS, ...NOTIFICATIONS] as const;
 
 export default function SettingsPage(): ReactElement {
   const settings = useCrmQuery<CrmSettings>('systemSettings');
-  const demo = useCrmQuery<DemoStatus>('demoData');
   const { text } = useCrmText();
-  if (settings.isLoading || demo.isLoading) return <Loading />;
-  if (!settings.data || !demo.data)
+  if (settings.isLoading) return <Loading />;
+  if (!settings.data)
     return (
       <PageContainer>
         <PageHeader title={text('settings')} />
-        <ErrorNotice error={settings.error ?? demo.error} />
+        <ErrorNotice error={settings.error} />
       </PageContainer>
     );
-  return (
-    <SettingsForm initial={{ settings: settings.data, demo: demo.data }} />
-  );
+  return <SettingsForm initial={{ settings: settings.data }} />;
 }
 function SettingsForm({
   initial,
 }: {
   initial: SettingsResponse;
 }): ReactElement {
-  const { text, language } = useCrmText();
+  const { text } = useCrmText();
   const api = useCrmApi();
   const refresh = useRefresh();
   const [settings, setSettings] = useState(initial.settings);
   // What the server holds, which a card's Save is offered against.
   const [stored, setStored] = useState(initial.settings);
   const [error, setError] = useState<unknown>();
-  const [busy, setBusy] = useState(false);
   // The card being saved, and the card saved last.
   const [saving, setSaving] = useState<string>();
   const [saved, setSaved] = useState<string>();
-  // ?section=demoData brings that part into view (the demo banner links
-  // there).
-  const [searchParams] = useSearchParams();
-  const target = searchParams.get('section');
-  useEffect(() => {
-    if (target)
-      document
-        .getElementById(`settings-${target}`)
-        ?.scrollIntoView({ block: 'start' });
-  }, [target]);
-  // The demo dataset: imported and removed from here, never saved with the
-  // settings form. Read from its query rather than kept here: importing or
-  // removing it changes the reader's roles, and the route guards hide and
-  // show the page again while the new permissions load, so this form mounts
-  // anew; its own state would start from what the cache held before. The
-  // answer is written into the cache, and the outcome told in a toast, which
-  // outlives that remount.
-  const demoQuery = useCrmQuery<DemoStatus>('demoData');
-  const demo = demoQuery.data ?? initial.demo;
-  const queryClient = useQueryClient();
-  const scopeKey = useCrmScopeKey();
-  const toaster = useToaster();
-  const [demoAction, setDemoAction] = useState<'populate' | 'reset'>();
-  // The dataset comes in Chinese and in English (the same story, translated);
-  // the reader's interface language is the first choice.
-  const [demoLanguage, setDemoLanguage] = useState(
-    language.startsWith('zh') ? 'zh-CN' : 'en-US',
-  );
-  // A second click on the confirmation, before it closes, starts nothing:
-  // an import takes a while, and a second one beside it would be refused.
-  const demoRunningRef = useRef(false);
-  // How the dataset stands, asked every few seconds until it is as wanted.
-  const waitForDemo = async (
-    present: boolean,
-  ): Promise<DemoStatus | undefined> => {
-    for (let tries = 0; tries < 60; tries += 1) {
-      await new Promise((done) => setTimeout(done, 3000));
-      const status = await api<{ data: DemoStatus }>('demoData')
-        .then((answer) => answer.data)
-        .catch(() => undefined);
-      if (status?.present === present) return status;
-    }
-    return undefined;
-  };
-  const runDemo = async (action: 'populate' | 'reset'): Promise<void> => {
-    if (demoRunningRef.current) return;
-    demoRunningRef.current = true;
-    setBusy(true);
-    setError(undefined);
-    const wanted = action === 'populate';
-    // The outcome, written into what every page reads at once: the card's
-    // query and the workspace's `demoPresent`, which the banner reads, so
-    // neither waits for the refresh after it.
-    const settle = async (answer: DemoStatus): Promise<void> => {
-      queryClient.setQueryData([...scopeKey, 'demoData'], answer);
-      queryClient.setQueryData<Data>([...scopeKey, 'workspace'], (current) =>
-        current ? { ...current, demoPresent: answer.present } : current,
-      );
-      toaster.show({
-        type: 'success',
-        title: text(wanted ? 'demoImported' : 'demoRemoved'),
-      });
-      await refresh();
-    };
-    // Under way at once in what the banner reads, which then follows the
-    // import's progress (demo-banner.tsx).
-    if (wanted)
-      queryClient.setQueryData<DemoStatus>(
-        [...scopeKey, 'demoData'],
-        (current) =>
-          current ? { ...current, importing: { percent: 0 } } : current,
-      );
-    try {
-      await settle(
-        (
-          await api<{ data: DemoStatus }>(
-            wanted ? 'demoData/import' : 'demoData/remove',
-            'POST',
-            wanted ? { language: demoLanguage } : {},
-          )
-        ).data,
-      );
-    } catch (e) {
-      // An import takes long enough for a gateway in front of the server
-      // (a hosted deployment's) to give up on the request while the server
-      // carries on: a timeout or a lost connection is not its failure. The
-      // page then asks how the dataset stands until it is there, for up to
-      // three minutes.
-      const cutOff =
-        !(e instanceof ApiClientError) || [502, 503, 504].includes(e.status);
-      const answer = cutOff ? await waitForDemo(wanted) : undefined;
-      if (answer) await settle(answer);
-      else setError(e);
-    } finally {
-      demoRunningRef.current = false;
-      setBusy(false);
-      setDemoAction(undefined);
-    }
-  };
   const set = (key: keyof CrmSettings, value: unknown): void => {
     setSettings((s) => ({ ...s, [key]: value }));
     setSaved(undefined);
@@ -296,8 +184,8 @@ function SettingsForm({
       />
       <ErrorNotice error={error} />
       {/* One page, its parts one under another: the business defaults and
-          the reminders each saved by their own card's Save; the demo
-          dataset is imported and removed on its own. */}
+          the reminders each saved by their own card's Save. The demo
+          dataset has a tab of its own (settings/demo-data.tsx). */}
       <Card
         id='settings-business'
         className='max-w-4xl scroll-mt-16 border border-border shadow-xs ring-0'
@@ -349,99 +237,6 @@ function SettingsForm({
             </div>
           </div>
           {saveCard('reminders', REMINDERS)}
-        </CardContent>
-      </Card>
-      <Card
-        id='settings-demoData'
-        className='max-w-4xl scroll-mt-16 border border-border shadow-xs ring-0'
-      >
-        <CardHeader>
-          <CardTitle>{text('demoData')}</CardTitle>
-        </CardHeader>
-        <CardContent className='space-y-6'>
-          <>
-            <p className='text-sm text-muted-foreground'>
-              {text('demoDescription')}
-            </p>
-            <ul className='grid gap-1 text-sm sm:grid-cols-2'>
-              {/* The accounts the import will create in the language
-                  picked, or those of the import present. */}
-              {(
-                (!demo.present && demo.accountsByLanguage?.[demoLanguage]) ||
-                demo.accounts
-              ).map((account) => (
-                <li key={account.username} className='flex gap-2'>
-                  <code className='rounded bg-muted px-1.5 py-0.5 text-xs'>
-                    {account.username}
-                  </code>
-                  <span>{account.name}</span>
-                  <span className='text-muted-foreground'>
-                    {text(`options.${account.role}`)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <p className='text-sm'>
-              {demo.present
-                ? text('demoPresent', {
-                    date: localDate(
-                      demo.createdAt,
-                      language,
-                      settings.timeZone,
-                    ),
-                    count: demo.records,
-                  })
-                : text('demoAbsent')}
-            </p>
-            {!demo.present && (
-              <label className='flex items-center gap-3 text-sm'>
-                <span className='shrink-0'>{text('demoLanguage')}</span>
-                <span className='w-40'>
-                  <Choice
-                    label={text('demoLanguage')}
-                    value={demoLanguage}
-                    choices={['zh-CN', 'en-US'].map((v) => ({
-                      value: v,
-                      label: text(`aiLanguages.${v}`),
-                    }))}
-                    onChange={(v) => v && setDemoLanguage(v)}
-                  />
-                </span>
-              </label>
-            )}
-            <div className='flex flex-wrap gap-2'>
-              <Button
-                disabled={busy || demo.present}
-                onClick={() => setDemoAction('populate')}
-              >
-                {text('demoImport')}
-              </Button>
-              <Button
-                variant='outline'
-                disabled={busy || !demo.present}
-                onClick={() => setDemoAction('reset')}
-              >
-                {text('demoReset')}
-              </Button>
-            </div>
-            {demoAction && (
-              <ConfirmDialog
-                title={text(
-                  demoAction === 'populate'
-                    ? 'demoImportTitle'
-                    : 'demoResetTitle',
-                )}
-                description={text(
-                  demoAction === 'populate'
-                    ? 'demoImportHint'
-                    : 'demoResetHint',
-                )}
-                busy={busy}
-                onCancel={() => setDemoAction(undefined)}
-                onConfirm={() => void runDemo(demoAction)}
-              />
-            )}
-          </>
         </CardContent>
       </Card>
     </PageContainer>

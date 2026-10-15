@@ -388,6 +388,18 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         componentLoader: () => import('./pages/crm-settings.js'),
       },
       {
+        // The demo dataset, imported and removed (pages/settings/
+        // demo-data.tsx); the administrators', as the General tab is,
+        // whose last card it was.
+        name: 'settings-demo-data',
+        path: 'demo-data',
+        authz: {
+          resource: { type: 'settings', id: 'crm' },
+          action: 'manage',
+        },
+        componentLoader: () => import('./pages/settings/demo-data.js'),
+      },
+      {
         // How an approval moves, read only; the administrators', as the
         // General tab is.
         name: 'settings-approval-flow',

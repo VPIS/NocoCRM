@@ -90,7 +90,7 @@ export function DemoBanner(): ReactElement | null {
       <p className='min-w-0 flex-1 text-foreground'>{text('demoBanner')}</p>
       {/* A link drawn as a button: it goes to another page. */}
       <Link
-        to='/settings/crm?section=demoData'
+        to='/settings/demo-data'
         className={buttonVariants({ size: 'sm', className: 'shrink-0' })}
       >
         {text('demoBannerAction')}

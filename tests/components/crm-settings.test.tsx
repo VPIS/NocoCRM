@@ -56,6 +56,8 @@ const { default: SettingsPage } =
   await import('../../client/pages/crm-settings.js');
 const { default: GuidancePage } =
   await import('../../client/pages/crm-guidance.js');
+const { default: DemoDataPage } =
+  await import('../../client/pages/settings/demo-data.js');
 
 describe('the settings page', () => {
   it("switches a kind of in-app message off and saves it with the reminders card's settings", async () => {
@@ -139,6 +141,7 @@ describe('the settings page', () => {
   });
 
   it('takes an import a gateway cut off for done once the dataset is there, and hides the banner', async () => {
+    // On the settings' Demo data tab, the General tab's last card once.
     const user = userEvent.setup();
     state.api.mockReset();
     // The import's request is cut off by a gateway; the server finishes it,
@@ -166,8 +169,8 @@ describe('the settings page', () => {
     client.setQueryData(['crm', 'workspace'], { demoPresent: false });
     render(
       <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={['/settings/crm']}>
-          <SettingsPage />
+        <MemoryRouter initialEntries={['/settings/demo-data']}>
+          <DemoDataPage />
         </MemoryRouter>
       </QueryClientProvider>,
     );
@@ -185,4 +188,17 @@ describe('the settings page', () => {
     });
     expect(state.api).toHaveBeenCalledWith('demoData');
   }, 10000);
+});
+
+describe('the General settings tab', () => {
+  it('no longer carries the demo dataset, which has a tab of its own', () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/settings/crm']}>
+          <SettingsPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByRole('button', { name: crmEn.demoImport })).toBeNull();
+  });
 });

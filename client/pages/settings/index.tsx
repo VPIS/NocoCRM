@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router';
 import { useCan } from '@nocobase/app-plugin-authorization/client';
 import {
   CalendarClock,
+  Database,
   KeyRound,
   Settings2,
   ShieldUser,
@@ -47,6 +48,8 @@ const TABS: readonly Tab[] = [
     label: 'navigation.scheduledTasks',
     icon: CalendarClock,
   },
+  // Last: a trial's, rarely opened once the CRM is in use.
+  { path: 'demo-data', label: 'navigation.demoData', icon: Database },
 ];
 
 export default function SettingsPage(): ReactElement {
@@ -56,6 +59,10 @@ export default function SettingsPage(): ReactElement {
   // everyone's own.
   const access: Record<string, ReturnType<typeof useCan>> = {
     crm: useCan({
+      resource: { type: 'settings', id: 'crm' },
+      action: 'manage',
+    }),
+    'demo-data': useCan({
       resource: { type: 'settings', id: 'crm' },
       action: 'manage',
     }),

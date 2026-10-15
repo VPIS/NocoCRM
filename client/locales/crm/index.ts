@@ -2308,6 +2308,7 @@ const wording = {
     // The Agents plugin's pages, in Settings (migration step 2).
     agentsGroup: ['Agent team', 'Agent 团队'],
     // The CRM's four agents on one page (pages/crm-agents.tsx).
+    demoData: ['Demo data', '演示数据'],
     agentWork: ['Agent work', 'Agent 工作'],
     guidance: ['Business guidance', '业务指导'],
     // The first tab of Settings (pages/settings/index.tsx).

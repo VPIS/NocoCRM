@@ -60,7 +60,7 @@ describe('the demo banner', () => {
       screen
         .getByRole('link', { name: crmZh.demoBannerAction })
         .getAttribute('href'),
-    ).toBe('/settings/crm?section=demoData');
+    ).toBe('/settings/demo-data');
   });
 
   it('hides once the demo data is imported, and from those who cannot import', () => {
