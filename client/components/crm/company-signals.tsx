@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { takeSignalFocus } from './signal-focus.js';
+import { focusSignal, takeSignalFocus } from './signal-focus.js';
 import { ChevronRight, ExternalLink, Sparkles, Star } from 'lucide-react';
 import { Spinner } from '../ui/spinner.js';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip.js';
@@ -432,9 +432,18 @@ export function SignalsCard({
                     </Button>
                   )}
                 </div>
-                <p className='line-clamp-3 text-sm leading-relaxed'>
+                {/* Its title opens the whole list at it, with its summary
+                    and sources, as a timeline line does. */}
+                <button
+                  type='button'
+                  onClick={() => {
+                    focusSignal(signal.id);
+                    setDialog(true);
+                  }}
+                  className='line-clamp-3 text-left text-sm leading-relaxed underline-offset-4 hover:underline'
+                >
                   {signal.title}
-                </p>
+                </button>
               </li>
             ))}
           </ul>
@@ -485,7 +494,10 @@ export function LatestSignalRow({
       {latest ? (
         <button
           type='button'
-          onClick={() => setDialog(true)}
+          onClick={() => {
+            focusSignal(latest.id);
+            setDialog(true);
+          }}
           className='block w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-hover'
         >
           <span className='line-clamp-2'>{latest.title}</span>
