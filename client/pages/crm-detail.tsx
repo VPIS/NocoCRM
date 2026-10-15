@@ -116,6 +116,19 @@ import {
   type Field,
   type CrmRecord,
 } from '../components/crm/api.js';
+import { type Work } from '../components/crm/work-agent-name.js';
+import { AgentWords } from '../components/crm/work-agent.js';
+import { focusSignal } from '../components/crm/signal-focus.js';
+import { SignalTypeTag } from '../components/crm/signal-type-tag.js';
+
+// The records whose AI entries an agent of their own writes: a lead's and a
+// deal's follow-ups, an approval's review, a task's preparation.
+const AI_WORKS: readonly Work[] = [
+  'leads',
+  'opportunities',
+  'approvals',
+  'tasks',
+];
 import {
   CrmFrame,
   Loading,
@@ -759,8 +772,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
               >
                 {!converted && Boolean(meta.permissions.tasks.create) && (
                   <Button
-                    size='sm'
-                    variant='outline'
+                    variant='contrast'
                     onClick={() =>
                       setForm({
                         entity: 'tasks',
@@ -2222,29 +2234,28 @@ function ApprovalEvent({ event }: { event: Data }): ReactElement {
 // the rest.
 function SignalEvent({ event }: { event: Data }): ReactElement {
   const { text } = useCrmText();
+  const [, setTab] = useDetailTab();
   const signal = (event.changes ?? {}) as Data;
-  const source = signal.source as { url?: string; site?: string } | null;
   return (
     <span className='flex min-w-0 items-center gap-1.5'>
       <span className='shrink-0 text-muted-foreground'>
         {text('signals.feed')}
       </span>
-      <Badge variant='secondary' className='shrink-0'>
-        {text(`signals.types.${toText(signal.type)}`, {
-          defaultValue: toText(signal.type),
-        })}
-      </Badge>
-      <span className='min-w-0 truncate'>{toText(signal.title)}</span>
-      {source?.url ? (
-        <a
-          href={source.url}
-          target='_blank'
-          rel='noreferrer noopener'
-          className='shrink-0 text-xs text-muted-foreground hover:underline'
-        >
-          {source.site || toText(text('signals.source'))}
-        </a>
-      ) : null}
+      <SignalTypeTag type={toText(signal.type)} className='shrink-0' />
+      {/* Its sources, often several, are on the company's Signals tab:
+          one named here (Baidu) read as if it were the only one. */}
+      {/* Its title opens the company's whole list of signals, with its
+          sources (the address `signals`, which the Signals card opens). */}
+      <button
+        type='button'
+        onClick={() => {
+          focusSignal(toText(signal.signalId));
+          setTab('signals');
+        }}
+        className='min-w-0 truncate text-left underline-offset-4 hover:underline'
+      >
+        {toText(signal.title)}
+      </button>
     </span>
   );
 }
@@ -2873,6 +2884,8 @@ const eventIcons: Record<string, LucideIcon> = {
   converted: ArrowRightLeft,
   deleted: Trash2,
   ai: Sparkles,
+  // A company signal the Company signals agent found: the AI's work too.
+  signal: Sparkles,
   // A comment's entries by what they concern, as files' are: added, edited or
   // removed, all under the comment.
   comment: MessageSquareText,
@@ -3277,7 +3290,7 @@ export function HistoryFeed({
                       <div className='flex w-5 shrink-0 flex-col items-center'>
                         <span className='flex h-[26px] items-center justify-center'>
                           <Icon
-                            className={`size-3.5 ${ai ? 'text-primary' : 'text-muted-foreground'}`}
+                            className={`size-3.5 ${ai || event.action === 'signal' ? 'text-primary' : 'text-muted-foreground'}`}
                           />
                         </span>
                         {index < events.length - 1 && (
@@ -3332,14 +3345,31 @@ export function HistoryFeed({
                                   className='mr-0.5'
                                 />
                               ) : null}
-                              {/* Who: a person, or "AI" for its own work,
-                                in bold. */}
+                              {/* Who: a person, or the agent doing the AI's
+                                own work (as it is named now), else "AI", in
+                                bold. */}
                               <span className='shrink-0 font-semibold text-foreground'>
-                                {ai || event.action === 'signal'
-                                  ? text('feed.ai')
-                                  : meta?.users.find(
-                                      (u) => u.id === event.actorId,
-                                    )?.name}
+                                {event.action === 'signal' ? (
+                                  <AgentWords
+                                    work='signals'
+                                    wordKey='name'
+                                    fallback='feed.ai'
+                                  />
+                                ) : ai ? (
+                                  AI_WORKS.includes(entity as Work) ? (
+                                    <AgentWords
+                                      work={entity as Work}
+                                      wordKey='name'
+                                      fallback='feed.ai'
+                                    />
+                                  ) : (
+                                    text('feed.ai')
+                                  )
+                                ) : (
+                                  meta?.users.find(
+                                    (u) => u.id === event.actorId,
+                                  )?.name
+                                )}
                               </span>
                               {/* A comment's time follows its author, its text
                                 below, as the UI Library's comment reads. */}

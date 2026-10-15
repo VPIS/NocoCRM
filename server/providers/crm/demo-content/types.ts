@@ -341,12 +341,15 @@ export interface DemoChat {
 // date and sources (never an invented one: these are real companies), how
 // many days before the import it was found, and whether it is still new.
 export interface DemoSignal {
-  readonly company: 'hworld' | 'gac' | 'newHope';
+  // A project's company by its key, or one of the other demo companies by
+  // its index in the language's `companies` (demo.ts).
+  readonly company: 'hworld' | 'gac' | 'newHope' | number;
   readonly type: 'funding' | 'hiring' | 'leadership' | 'business' | 'risk';
   readonly title: string;
   readonly summary: string;
   readonly occurredOn: string;
   readonly foundDaysAgo: number;
-  readonly status: 'new' | 'seen';
+  // As found: nobody has dismissed it.
+  readonly status: 'new';
   readonly sources: readonly { title: string; url: string; site: string }[];
 }

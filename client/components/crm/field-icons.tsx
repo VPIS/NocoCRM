@@ -1,12 +1,13 @@
 import {
+  Activity,
   AlignLeft,
   ArrowRightLeft,
   BadgeCheck,
   BriefcaseBusiness,
   Building2,
   CalendarClock,
-  CalendarPlus,
   CalendarDays,
+  CalendarPlus,
   CircleDollarSign,
   CircleDot,
   CircleSlash,
@@ -37,6 +38,8 @@ import { createElement, type ReactElement } from 'react';
 // shows (the menu's icons for a linked lead, deal and company), so a long
 // column of rows is read at a glance; the groups' headings carry none.
 const FIELD_ICONS: Record<string, LucideIcon> = {
+  // A deal's company's latest signal (company-signals.tsx).
+  signals: Activity,
   ownerId: UserRound,
   approverId: UserRoundCheck,
   internalParticipants: UsersRound,

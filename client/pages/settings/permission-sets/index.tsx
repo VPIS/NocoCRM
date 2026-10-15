@@ -224,11 +224,7 @@ export default function PermissionSetsPage(): ReactElement {
           description={text('sets.description')}
           actions={
             sets.data && can('create') ? (
-              <Button
-                variant='contrast'
-                nativeButton={false}
-                render={<Link to={link('new')} />}
-              >
+              <Button nativeButton={false} render={<Link to={link('new')} />}>
                 <PlusIcon data-icon='inline-start' />
                 {text('sets.new')}
               </Button>

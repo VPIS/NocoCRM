@@ -668,6 +668,7 @@ export class TaskPreparer {
       const session = await openSession(this.container, {
         timeZone: settings.timeZone,
         guidance: settingsGuidance(settings),
+        work: 'tasks',
       });
       if (!session) throw new Error('No model to ask');
       const context = await contextOf(

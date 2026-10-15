@@ -13,8 +13,8 @@ import {
 } from '../../server/providers/crm/ai-model.js';
 import { languageModelOf, type ModelCall } from '../setup/model-fake.js';
 
-// The CRM's background AI on the Agents plugin's model gateway: which model
-// it asks, how a run of turns reads, and how a failure reads.
+// The CRM's AI on the Agents plugin's model gateway: which model each work
+// asks, how a run of turns reads, and how a failure reads.
 
 type Call = ModelCall;
 
@@ -69,7 +69,10 @@ describe("the CRM's model", () => {
       ],
     };
     expect(
-      await crmModel(gatewayWith({ defaultAgentId: 'a1', agent }).container),
+      await crmModel(
+        gatewayWith({ defaultAgentId: 'a1', agent }).container,
+        'leads',
+      ),
     ).toEqual({ modelService: 'openai', model: 'gpt' });
     // An archived default agent, or none, leaves the system default.
     expect(
@@ -78,17 +81,18 @@ describe("the CRM's model", () => {
           defaultAgentId: 'a1',
           agent: { ...agent, archivedAt: '2026-10-01T00:00:00Z' },
         }).container,
+        'leads',
       ),
     ).toEqual({ modelService: 'qwen', model: 'qwen-max' });
-    expect(await crmModel(gatewayWith().container)).toEqual({
+    expect(await crmModel(gatewayWith().container, 'leads')).toEqual({
       modelService: 'qwen',
       model: 'qwen-max',
     });
     // No model anywhere, or no Agents plugin: the AI is off.
     expect(
-      await crmModel(gatewayWith({ defaultModel: null }).container),
+      await crmModel(gatewayWith({ defaultModel: null }).container, 'leads'),
     ).toBeNull();
-    expect(await crmModel(new ServiceContainer())).toBeNull();
+    expect(await crmModel(new ServiceContainer(), 'leads')).toBeNull();
   });
 
   it('carries earlier turns into the next, and asks once more for JSON in another shape', async () => {
@@ -98,6 +102,7 @@ describe("the CRM's model", () => {
     const session = await openSession(container, {
       timeZone: 'Asia/Shanghai',
       guidance: '# Company\n- NocoBase',
+      work: 'leads',
     });
     const answer = await session!.askJson(
       'Grade this lead.',
@@ -105,7 +110,6 @@ describe("the CRM's model", () => {
     );
     expect(answer).toEqual({ grade: 'A' });
     expect(calls).toHaveLength(2);
-    // Recorded as the Background AI's use.
     // The model the work follows, its reasoning turned off.
     expect(calls[0]).toMatchObject({
       model: { modelService: 'qwen', model: 'qwen-max' },
@@ -125,41 +129,59 @@ describe("the CRM's model", () => {
     const again = await openSession(failing.container, {
       timeZone: 'UTC',
       guidance: '',
+      work: 'leads',
     });
     expect(
       await again!.askJson('Grade.', z.object({ grade: z.string() })),
     ).toBeNull();
   });
 
-  it('follows the Background AI agent: its first model, its instructions first in the system prompt', async () => {
+  it("follows its work's agent: its first model, its instructions first in the system prompt; else the Background AI before it; else the assistant's model", async () => {
     const { container, calls } = gatewayWith({
       defaultAgentId: 'chat',
-      replies: ['ok'],
+      replies: ['ok', 'ok', 'ok'],
     });
     const agents = container.resolve(agentsToken) as unknown as {
       agents: Record<string, unknown>;
     };
+    const own = {
+      archivedAt: null as string | null,
+      instructions: 'Follow leads up.',
+      modelEntries: [{ modelService: 'openai', model: 'mini' }],
+    };
     const background = {
       archivedAt: null as string | null,
       instructions: 'Work for the CRM.',
-      modelEntries: [{ modelService: 'openai', model: 'mini' }],
+      modelEntries: [{ modelService: 'deepseek', model: 'flash' }],
     };
     agents.agents = {
       get: async (id: string) =>
-        id === 'bg'
-          ? background
-          : {
-              archivedAt: null,
-              instructions: 'Chat instructions.',
-              modelEntries: [{ modelService: 'qwen', model: 'max' }],
-            },
+        id === 'lead-agent'
+          ? own
+          : id === 'bg'
+            ? background
+            : {
+                archivedAt: null,
+                instructions: 'Chat instructions.',
+                modelEntries: [{ modelService: 'qwen', model: 'max' }],
+              },
     };
+    // The markers: the work agents' (the leads' alone here) and the
+    // Background AI's.
+    let id = '';
     const chain = {
       selectFrom: () => chain,
       select: () => chain,
-      where: () => chain,
+      where: (_column: string, _op: string, value: string) => {
+        id = value;
+        return chain;
+      },
       executeTakeFirst: async () => ({
-        value: JSON.stringify({ version: 1, agentId: 'bg' }),
+        value: JSON.stringify(
+          id === 'agents-work-v1'
+            ? { version: 1, agentIds: { leads: 'lead-agent' } }
+            : { version: 1, agentId: 'bg' },
+        ),
       }),
     };
     container.instance(databaseManagerToken, {
@@ -170,27 +192,35 @@ describe("the CRM's model", () => {
     const session = await openSession(container, {
       timeZone: 'UTC',
       guidance: '# Company',
+      work: 'leads',
     });
     await session!.ask('Hello');
     expect(calls[0].model).toEqual({ modelService: 'openai', model: 'mini' });
     // The agent's instructions, then how to settle what the material leaves
     // open, then the guidance.
     expect(calls[0].system).toMatch(
-      /UTC\)\.\n\nWork for the CRM\.\n\nDecide once and move on:\n[^]*\n\n# Company$/u,
+      /UTC\)\.\n\nFollow leads up\.\n\nDecide once and move on:\n[^]*\n\n# Company$/u,
     );
     expect(calls[0].system).not.toContain('Chat instructions.');
-    // Archived: the work follows the assistant's model, without those
-    // instructions.
-    background.archivedAt = '2026-10-10T00:00:00Z';
-    expect(await crmModel(container)).toEqual({
+    // A work without its own agent yet follows the Background AI.
+    expect(await crmModel(container, 'opportunities')).toEqual({
+      modelService: 'deepseek',
+      model: 'flash',
+    });
+    // Both archived: the assistant's model, without those instructions.
+    own.archivedAt = '2026-10-15T00:00:00Z';
+    background.archivedAt = '2026-10-15T00:00:00Z';
+    expect(await crmModel(container, 'leads')).toEqual({
       modelService: 'qwen',
       model: 'max',
     });
     const again = await openSession(container, {
       timeZone: 'UTC',
       guidance: '# Company',
+      work: 'leads',
     });
     await again!.ask('Hello');
+    expect(calls[1].system).not.toContain('Follow leads up.');
     expect(calls[1].system).not.toContain('Work for the CRM.');
   });
 
@@ -199,6 +229,7 @@ describe("the CRM's model", () => {
       await openSession(new ServiceContainer(), {
         timeZone: 'UTC',
         guidance: '',
+        work: 'leads',
       }),
     ).toBeNull();
     const refused = Object.assign(new Error('bad key'), {
@@ -270,6 +301,7 @@ describe('a background turn', () => {
     const session = await openSession(container, {
       timeZone: 'UTC',
       guidance: '',
+      work: 'leads',
     });
     expect(await session!.ask('Hello')).toBe('ok');
     expect(calls.map((call) => call.reasoning ?? 'default')).toEqual([
@@ -287,6 +319,7 @@ describe('a background turn', () => {
     const session = await openSession(container, {
       timeZone: 'UTC',
       guidance: '',
+      work: 'leads',
     });
     const failure = await session!
       .ask('Hello', limit.signal)

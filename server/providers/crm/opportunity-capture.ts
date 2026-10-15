@@ -361,6 +361,7 @@ export async function captureOpportunity(
   const session = await openSession(container, {
     timeZone,
     guidance: settingsGuidance(settings),
+    work: 'opportunities',
   });
   if (!session) throw new CrmError('assistantUnavailable', 409);
   const logger = container

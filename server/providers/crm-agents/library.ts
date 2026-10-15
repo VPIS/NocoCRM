@@ -79,12 +79,16 @@ export async function provisionSkills(
     .where('id', '=', ASSISTANT_MARKER)
     .executeTakeFirst();
   const agentId = agentIdOf(assistant?.value);
-  if (agentId) {
+  // The company signals' method is not the chat's: it cannot search.
+  const forChat = Object.entries(added)
+    .filter(([slug]) => slug !== 'company-signals')
+    .map(([, id]) => id);
+  if (agentId && forChat.length) {
     const target = { scope: 'agent', scopeId: agentId };
     const attached = await agents.skills.attached(target).catch(() => null);
     if (attached)
       await agents.skills.attach(target, [
-        ...new Set([...attached, ...Object.values(added)]),
+        ...new Set([...attached, ...forChat]),
       ]);
   }
   await query

@@ -39,6 +39,7 @@ export async function organiseFeedback(
   const session = await openSession(container, {
     timeZone: settings.timeZone,
     guidance: settingsGuidance(settings),
+    work: 'tasks',
   });
   if (!session) throw new CrmError('assistantUnavailable', 409);
   let text: string;

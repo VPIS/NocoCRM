@@ -136,11 +136,7 @@ export default function MembersTab(): ReactElement {
         </EmptyHeader>
         {mayAssign ? (
           <EmptyContent>
-            <Button
-              variant='contrast'
-              nativeButton={false}
-              render={<Link to={addLink} />}
-            >
+            <Button nativeButton={false} render={<Link to={addLink} />}>
               <UserPlusIcon data-icon='inline-start' />
               {text('sets.members.add')}
             </Button>

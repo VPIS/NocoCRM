@@ -22,7 +22,6 @@ import {
   Handshake,
   ListChecks,
   Radar,
-  Activity,
   Ellipsis,
   X,
   type LucideIcon,
@@ -32,7 +31,12 @@ import {
   User,
 } from 'lucide-react';
 import { KindTag } from '../components/crm/kind-tag.js';
-import { CompanySignals } from '../components/crm/company-signals.js';
+import {
+  LatestSignalRow,
+  SignalsCard,
+  SignalsStatus,
+  WatchButton,
+} from '../components/crm/company-signals.js';
 import { Badge } from '../components/ui/badge.js';
 import { Button, buttonVariants } from '../components/ui/button.js';
 import {
@@ -380,11 +384,6 @@ export default function EntityDetail({
           detail.relatedTotals?.[name] ?? rows(detail.related[name]).length,
         ] as [string, string, number],
     ),
-    // What the AI found on the web that happened to a company
-    // (company-signals.tsx); it counts nothing here, as it loads on its own.
-    ...(entity === 'companies'
-      ? [['signals', 'signals.tab', 0] as [string, string, number]]
-      : []),
     // Attachments last, on every record that has them, and on a contact
     // once its comments carry files. A contact keeps no
     // files of its own; the ones it appears in are read from the task or
@@ -478,6 +477,9 @@ export default function EntityDetail({
           setTab('historyTab');
         }}
       />
+    ) : entity === 'companies' ? (
+      // A company's signals, the Company signals agent's (company-signals.tsx).
+      <SignalsStatus companyId={id} companyName={toText(record.name)} />
     ) : entity === 'tasks' ? (
       // A task's preparation for its owner (task-preparation.tsx).
       <PrepStatus
@@ -535,8 +537,7 @@ export default function EntityDetail({
           >
             {editable && Boolean(meta.permissions.approvals.create) && (
               <Button
-                size='sm'
-                variant='outline'
+                variant='contrast'
                 onClick={() =>
                   setForm({
                     entity: 'approvals',
@@ -577,8 +578,7 @@ export default function EntityDetail({
           >
             {entity !== 'tasks' && Boolean(meta.permissions.tasks.create) && (
               <Button
-                size='sm'
-                variant='outline'
+                variant='contrast'
                 onClick={() =>
                   setForm({
                     entity: 'tasks',
@@ -626,8 +626,6 @@ export default function EntityDetail({
             ) : undefined
           }
         />
-      ) : activeTab === 'signals' ? (
-        <CompanySignals companyId={id} />
       ) : activeTab === 'historyTab' ? (
         <HistoryFeed
           entity={entity}
@@ -1014,7 +1012,6 @@ export default function EntityDetail({
     approvals: ListChecks,
     attachments: Paperclip,
     mail: Mail,
-    signals: Activity,
   };
   // The timeline without a count, as on the lead page: its entries only grow.
   const tabBar = (
@@ -1032,7 +1029,7 @@ export default function EntityDetail({
               target={mailTarget}
               record={{ entity, id: toText(record.id) }}
             />
-          ) : name === 'historyTab' || name === 'signals' ? undefined : (
+          ) : name === 'historyTab' ? undefined : (
             count
           ),
       }))}
@@ -1247,6 +1244,7 @@ export default function EntityDetail({
           <RecordTimes record={record} />
         </InfoGroup>
         <CompanyCard
+          signals
           id={record.companyId ? toText(record.companyId) : undefined}
           picker={
             <InfoRow field='companyId' label={text('fields.companyName')}>
@@ -1262,7 +1260,8 @@ export default function EntityDetail({
   if (entity === 'companies')
     return page(
       headingOf(),
-      actionsOf(null),
+      // Watching it has its signals checked every week.
+      actionsOf(<WatchButton companyId={id} />),
       <>
         {/* Who has it and where it stands (a churned company's reason
             beside its status). */}
@@ -1310,6 +1309,15 @@ export default function EntityDetail({
           {locationRow}
           {convertedRow}
         </InfoGroup>
+        {/* What the AI found on the web that happened to it, under its
+            profile rather than a tab of its own (company-signals.tsx); a
+            signal's notice, which opens /signals, opens the whole list. */}
+        <SignalsCard
+          companyId={id}
+          companyName={toText(record.name)}
+          openAll={tabSlug === 'signals'}
+          onCloseAll={() => setTab('historyTab')}
+        />
       </>,
       descriptionIntro('companyDescriptionPlaceholder'),
     );
@@ -1469,7 +1477,7 @@ function RelatedList({
         })}
       >
         {onCreate && (
-          <Button size='sm' variant='outline' onClick={onCreate}>
+          <Button variant='contrast' onClick={onCreate}>
             <Plus />
             {text('newRecord', { entity: text(`entity.${toText(entity)}`) })}
           </Button>
@@ -1607,8 +1615,12 @@ function CompanyCard({
   picker,
   standing = [],
   title,
+  signals = false,
 }: {
   id?: string;
+  // A deal's: the company's latest signal as a row of its own, the company
+  // page's Signals card being where the rest are.
+  signals?: boolean;
   // Its heading where "Company" is not what the record calls it (a task's
   // linked company).
   title?: string;
@@ -1691,6 +1703,12 @@ function CompanyCard({
           countries={fieldOf('country').options ?? []}
         />
       </InfoRow>
+      {signals && (
+        <LatestSignalRow
+          companyId={toText(company.id)}
+          companyName={toText(company.name)}
+        />
+      )}
       {field('description')}
     </InfoGroup>
   );
@@ -2017,7 +2035,7 @@ function OpportunityContacts({
       <ErrorNotice error={error} />
       <TabHeading scope={text('tabScope.dealContacts')}>
         {onCreate && (
-          <Button size='sm' variant='outline' onClick={onCreate}>
+          <Button variant='contrast' onClick={onCreate}>
             <Plus />
             {text('newRecord', { entity: text('entity.contacts') })}
           </Button>

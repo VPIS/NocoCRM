@@ -449,54 +449,62 @@ const wording = {
   agents: {
     leads: {
       title: ['Lead follow-up', '线索跟进'],
-      description: [
-        'Reads a lead with its tasks, comments and mail, looks the company up on the web when it is new or out of date, and recommends following up, nurturing, converting or closing it as invalid, with a grade and the next step.',
-        '读取线索及其任务、评论和邮件，公司信息缺失或过期时联网调研，给出继续跟进、放入培育、转化或无效的建议，附等级和下一步。',
-      ],
       skill: ['Skill: Follow up a lead', '技能：跟进线索'],
     },
     opportunities: {
       title: ['Opportunity follow-up', '商机跟进'],
-      description: [
-        'Reads a deal with its company, contacts, tasks, comments, approvals and mail, checks its terms against the approval standards, and recommends advancing, keeping at it, pausing or losing it, with the approvals to submit and the next step.',
-        '读取商机及其公司、联系人、任务、评论、审批和邮件，按审批标准核对商务条款，给出推进、继续、暂停或输单的建议，以及需要提交的审批和下一步。',
-      ],
       skill: ['Skill: Follow up an opportunity', '技能：跟进商机'],
     },
     approvals: {
       title: ['Approval review', '审批助手'],
-      description: [
-        'Reviews an approval for its approver: the terms asked for against the standard and their cost, the deal, earlier decisions of the same kind and the risks, with a recommendation and a drafted comment. Only the approver sees it.',
-        '为审批人分析审批申请：申请条件与标准的差距和代价、商机情况、以往同类审批的结果和风险，给出建议和审批意见草稿。只有审批人能看到。',
-      ],
       skill: ['Skill: Review an approval', '技能：审批辅助'],
     },
     tasks: {
       title: ['Task preparation', '任务准备'],
-      description: [
-        "Prepares a task for its owner on the morning of its day: what it should achieve, where things stand from the record's tasks, comments and mail, who is on the other side, the questions to ask, what to bring, the risks and the points to cover. Only the task's owner and participants see it.",
-        '在任务当天早上为负责人做准备：任务要达成什么、从记录的任务、评论和邮件看进展到哪一步、对方都有谁、要问的问题、要带的材料、风险和要点。只有任务负责人和参与人能看到。',
-      ],
       skill: ['Skill: Prepare a task', '技能：任务准备'],
     },
     // The company signals' check (company-signals.ts), its runs the checks.
     signals: {
       title: ['Company signals', '客户信号'],
-      description: [
-        "Looks on the web each morning for what happened lately at the companies with an open deal or marked as watched: funding, hiring at scale, new executives, major news and risks. It keeps each with its sources on the company's Signals tab and tells the people selling to it; one worth acting on starts the company's open deals' follow-ups.",
-        '每天早上联网查看有进行中商机或被标记关注的公司最近发生了什么：融资、扩张招聘、高管变动、重大动态和风险。每条带出处记在公司的"信号"页签上，并通知公司和商机的负责人；值得跟进的会启动这家公司进行中商机的跟进。',
-      ],
       skill: ['Skill: Company signals', '技能：客户信号'],
+      // In the agents' slots (company-signals.ts, overview).
       stats: {
         runs: ['Checks', '检查次数'],
-        accepted: ['Seen', '已看'],
+        accepted: ['Signals found', '发现信号'],
         dismissed: ['Dismissed', '已忽略'],
-        pending: ['New signals', '新信号'],
+        pending: ['Worth acting on', '值得跟进'],
         failed: ['Failed checks', '检查失败'],
-        acceptance: ['Seen rate', '已看率'],
+        acceptance: ['Dismiss rate', '忽略率'],
       },
     },
     duty: ['What it does', '职责'],
+    // The work's agent (crm-agents/work-agents.ts) on its card: the model it
+    // asks first, and the way to its page.
+    model: ['Model: {{model}}', '模型：{{model}}'],
+    defaultModel: ['Model: the default', '模型：系统默认模型'],
+    setUpAgent: ['Set its model and instructions', '设置模型和指令'],
+    // Who runs it and who decides, naming its agent.
+    byAgent: [
+      'Run by {{agent}}. It only suggests: the owner decides in the inbox whether to accept.',
+      '由 {{agent}} 执行；它只提出建议，由负责人在收件箱里决定是否采纳。',
+    ],
+    byAgentTasks: [
+      "Run by {{agent}}. It changes nothing: the task's owner and participants read it on the task and may write it into the description.",
+      '由 {{agent}} 执行；它不改动任何记录，任务负责人和参与人在任务上查看，可以写入任务描述。',
+    ],
+    byAgentSignals: [
+      'Run by {{agent}}. It changes nothing on the company: whoever may edit the company dismisses a signal that is wrong or of no concern, and a dismissed event is not shown again.',
+      '由 {{agent}} 执行；它不改动公司的任何资料，能编辑公司的人可以忽略不准确或不相关的信号，忽略的事件不再出现。',
+    ],
+    // Running it by hand, its button named for it.
+    manualNoteAgent: [
+      'A person can always run {{agent}} on a record, whatever is switched off.',
+      '在记录上点「运行 {{agent}}」随时可以手动发起，不受这些开关影响。',
+    ],
+    manualNoteTasksAgent: [
+      "A task's owner or participant can always run {{agent}} on the task, whatever is switched off.",
+      '任务负责人和参与人在任务上点「运行 {{agent}}」随时可以手动发起，不受这些开关影响。',
+    ],
     // Who runs it and who decides, on every agent's page.
     byAi: [
       'Run by the AI. It only suggests: the owner decides in the inbox whether to accept.',
@@ -509,12 +517,12 @@ const wording = {
     ],
     // The company signals': nothing to accept, its signals are read.
     byAiSignals: [
-      'Run by the AI. It changes nothing on the company: whoever may edit the company marks each signal seen or dismisses it, and a dismissed event is not shown again.',
-      '由 AI 执行；它不改动公司的任何资料，能编辑公司的人把每条信号标为已看或忽略，忽略的事件不再出现。',
+      'Run by the AI. It changes nothing on the company: whoever may edit the company dismisses a signal that is wrong or of no concern, and a dismissed event is not shown again.',
+      '由 AI 执行；它不改动公司的任何资料，能编辑公司的人可以忽略不准确或不相关的信号，忽略的事件不再出现。',
     ],
     manualNoteSignals: [
-      'Whoever may edit a company can always check it on its Signals tab, whatever is switched off. It needs the Qwen model service.',
-      '能编辑公司的人在公司的"信号"页签点「立即检查」随时可以手动发起，不受这些开关影响。需要配置通义千问。',
+      'Whoever may edit a company can always check it with Check now under its name, whatever is switched off. It needs the Qwen model service.',
+      '能编辑公司的人在公司名称下点「立即检查」随时可以手动发起，不受这些开关影响。需要配置通义千问。',
     ],
     manualNoteTasks: [
       "A task's owner or participant can always ask for a preparation on the task, whatever is switched off.",
@@ -532,7 +540,7 @@ const wording = {
     ],
     manualNote: [
       'A person can always ask for a follow-up on a record, whatever is switched off.',
-      '在记录上点「跟进」随时可以手动发起，不受这些开关影响。',
+      '在记录上点「AI 跟进」随时可以手动发起，不受这些开关影响。',
     ],
     triggers: {
       created: {
@@ -570,21 +578,14 @@ const wording = {
       },
       dailySignals: {
         hint: [
-          'Every day at 09:30 in the business time zone ({{zone}}): the companies with an open deal or watched, each at most once a week, at most 20 a day.',
-          '每天 09:30（业务时区 {{zone}}）检查有进行中商机或被关注的公司，每家每周最多一次，每天最多 20 家。',
-        ],
-      },
-      companySignal: {
-        label: ['The company has news', '客户有新动态时'],
-        hint: [
-          'When the company signals find funding, a new executive, major news or a risk at its company (hiring is only told).',
-          '客户信号发现公司有融资、高管变动、重大动态或风险时（扩张招聘只通知）。',
+          "Every day at 08:00 in the business time zone ({{zone}}), before the deals' daily pass: the companies with an open deal or watched, each at most once a week, at most 100 a day.",
+          '每天 08:00（业务时区 {{zone}}）在商机每日巡检之前，检查有进行中商机或被关注的公司，每家每周最多一次，每天最多 100 家。',
         ],
       },
       dailyOpportunities: {
         hint: [
-          'A deal gone quiet, an expected close date near or past, a paused deal due to resume.',
-          '商机停滞、预计成交日期临近或已过、暂停的商机到期恢复。',
+          "A deal gone quiet, an expected close date near or past, a paused deal due to resume, or its company's news since its last follow-up (funding, a new executive, major news or a risk).",
+          '商机停滞、预计成交日期临近或已过、暂停的商机到期恢复，或公司在上次跟进之后有新动态（融资、高管变动、重大动态或风险）。',
         ],
       },
       taskDone: {
@@ -604,8 +605,8 @@ const wording = {
       companyChanged: {
         label: ['The company changes', '公司信息变化时'],
         hint: [
-          'Someone changes its company or website; the AI looks it up again.',
-          '有人修改了公司名称或官网，AI 重新调研。',
+          'Someone changes its company or website; it is followed up again.',
+          '有人修改了公司名称或官网，重新跟进。',
         ],
       },
       merged: {
@@ -860,8 +861,8 @@ const wording = {
   // Why a failed AI card did not finish, after the card's own words.
   aiFailure: {
     timedOut: [
-      'The model did not answer within 8 minutes. Put a faster model first on the Background AI agent (Agent team → Agents), then run it again.',
-      '模型 8 分钟内没有答完。可在 Agent 团队 → Agents 中把更快的模型排到“后台 AI”的第一位，再重新运行。',
+      "The model did not answer within 8 minutes. Put a faster model first on this work's agent (Agent team → Agents, such as Lead follow-up), then run it again.",
+      '模型 8 分钟内没有答完。可在 Agent 团队 → Agents 中把更快的模型排到这项工作对应 Agent（如 Lead follow-up）的第一位，再重新运行。',
     ],
   },
   aiChip: {
@@ -977,12 +978,12 @@ const wording = {
         '14 天没有联系，AI 自动跟进。',
       ],
       nurtureDue: [
-        'Nurture review due: the AI looked the company up again and followed it up.',
-        '培育复查到期，AI 重新调研并跟进。',
+        'Nurture review due: the AI followed it up again.',
+        '培育复查到期，AI 重新跟进。',
       ],
       companyChanged: [
-        'The company changed: the AI looked it up again and followed it up.',
-        '公司信息有变化，AI 重新调研并跟进。',
+        'The company changed: the AI followed it up again.',
+        '公司信息有变化，AI 重新跟进。',
       ],
       taskDone: [
         'A task was done: the AI followed up again.',
@@ -1589,13 +1590,85 @@ const wording = {
   // The preset a CRM agent starts from in the Agents plugin.
   agentPreset: {
     name: ['CRM assistant', 'CRM 助手'],
+    // The assistant agent's own name (server/providers/crm-agents/assistant.ts).
+    agentName: ['Sales Expert', '销售专家'],
     description: [
       'An AI that knows sales: it looks up your leads, deals and customers, reads where they stand and prepares the next step; any change it suggests waits for you to confirm.',
       '懂销售的 AI 助手：查线索、商机和客户，分析进展、准备跟进；要改的内容先列出来，由你确认。',
     ],
   },
+  // The CRM's work agents' descriptions, the same on the Agents page and on
+  // the Agent work page's card (server/providers/crm-agents/
+  // work-agents.ts): what each does, then the other work it does.
+  agentWork: {
+    // Their names, shown in the viewer's language while an administrator
+    // has not renamed them.
+    names: {
+      leads: ['Lead follow-up', '线索跟进'],
+      opportunities: ['Opportunity follow-up', '商机跟进'],
+      approvals: ['Approval review', '审批助手'],
+      tasks: ['Task assistant', '任务助手'],
+      signals: ['Company signals', '客户信号'],
+    },
+    // The agent doing a dialog's AI work, named in it
+    // (components/crm/work-agent.tsx).
+    // The option letting it follow a record up, its name in place of
+    // {{agent}} (components/crm/follow-up-option.tsx, outcome.tsx).
+    followUp: {
+      now: ['Run {{agent}} once created', '创建后运行 {{agent}}'],
+      merged: ['Run {{agent}} once merged', '合并后运行 {{agent}}'],
+      afterTask: ['Run {{agent}} once recorded', '记录后运行 {{agent}}'],
+    },
+    // A record's AI buttons, chips, cards and progress naming the agent
+    // (useAgentWords in components/crm/work-agent-name.ts).
+    words: {
+      name: ['{{agent}}', '{{agent}}'],
+      run: ['Run {{agent}}', '运行 {{agent}}'],
+      rerun: ['Rerun {{agent}}', '重新运行 {{agent}}'],
+      suggestion: ['Suggestion from {{agent}}', '{{agent}} 的建议'],
+      preparation: ['Preparation by {{agent}}', '{{agent}} 的准备'],
+      running: {
+        followUp: [
+          '{{agent}} is reviewing it and preparing a suggestion…',
+          '{{agent}} 正在查看、准备跟进建议…',
+        ],
+        prep: [
+          '{{agent}} is preparing this task…',
+          '{{agent}} 正在为这个任务做准备…',
+        ],
+        review: [
+          '{{agent}} is reviewing the request…',
+          '{{agent}} 正在分析这个申请…',
+        ],
+      },
+    },
+    by: {
+      organise: ['Organised by {{agent}}', '由 {{agent}} 整理'],
+      propose: ['Proposed by {{agent}}', '由 {{agent}} 提出'],
+    },
+    leads: [
+      'Reads a lead with its tasks, comments and mail, and recommends following up, nurturing, converting or closing it as invalid, with a grade and the next step. It also organises pasted text into new leads and proposes how to merge duplicate leads.',
+      '读取线索及其任务、评论和邮件，给出继续跟进、放入培育、转化或无效的建议，附等级和下一步；也负责 AI 整理新线索、提出重复线索的合并方案。',
+    ],
+    opportunities: [
+      'Reads a deal with its company, contacts, tasks, comments, approvals and mail, checks its terms against the approval standards, and recommends advancing, keeping at it, pausing or losing it, with the approvals to submit and the next step. It also organises pasted text into new opportunities.',
+      '读取商机及其公司、联系人、任务、评论、审批和邮件，按审批标准核对商务条款，给出推进、继续、暂停或输单的建议，以及需要提交的审批和下一步；也负责 AI 整理新商机。',
+    ],
+    approvals: [
+      'Reviews an approval for its approver: the terms asked for against the standard and their cost, the deal, earlier decisions of the same kind and the risks, with a recommendation and a drafted comment. Only the approver sees it.',
+      '为审批人分析审批申请：申请条件与标准的差距和代价、商机情况、以往同类审批的结果和风险，给出建议和审批意见草稿。只有审批人能看到。',
+    ],
+    tasks: [
+      "Prepares a task for its owner on the morning of its day: what it should achieve, where things stand from the record's tasks, comments and mail, who is on the other side, the questions to ask, what to bring, the risks and the points to cover. Only the task's owner and participants see it. It also writes up a task's outcome when the task is done.",
+      '在任务当天早上为负责人做准备：任务要达成什么、从记录的任务、评论和邮件看进展到哪一步、对方都有谁、要问的问题、要带的材料、风险和要点。只有任务负责人和参与人能看到。也负责完成任务时整理任务结果。',
+    ],
+    signals: [
+      "Looks on the web each morning for what happened lately at the companies with an open deal or marked as watched: funding, hiring at scale, new executives, major news and risks. It keeps each with its sources on the company's page and tells the people selling to it; the deals' daily pass then follows up the company's open deals for one worth acting on.",
+      '每天早上联网查看有进行中商机或被标记关注的公司最近发生了什么：融资、扩张招聘、高管变动、重大动态和风险。每条带出处记在公司页上，并通知公司和商机的负责人；值得跟进的，由随后的商机每日巡检跟进这家公司进行中的商机。',
+    ],
+  },
   // The agent whose model and instructions the CRM's background work
-  // follows (server/providers/crm-agents/background.ts).
+  // followed before the work agents (server/providers/crm-agents/background.ts).
   agentBackground: {
     description: [
       "The CRM's background work: follow-ups, approval reviews, task preparation and organising text. Its first model and its instructions are what that work uses.",
@@ -1629,7 +1702,7 @@ const wording = {
       home: ['Overview', '工作台'],
       record: ['Record pages', '记录详情页'],
       decisions: ['AI suggestions in the inbox', '收件箱的 AI 建议'],
-      agents: ['Auto follow-up', '自动跟进'],
+      agents: ['Agent work', 'Agent 工作'],
       reports: ['Reports', '报表'],
       agentChat: ['AI conversations', 'AI 对话'],
     },
@@ -1660,7 +1733,7 @@ const wording = {
       '粘贴任何内容：邮件、聊天记录、展会或电话记录。AI 会把每个人整理成一条线索，你核对后再保存。',
     ],
     input: ['Text to organise', '要整理的内容'],
-    organise: ['Organise', '整理'],
+    organise: ['AI organise', 'AI 整理'],
     organising: ['The AI is organising…', 'AI 正在整理…'],
     check: ['Check', '请核对'],
     filledNotice: [
@@ -2233,7 +2306,7 @@ const wording = {
     // The Agents plugin's pages, in Settings (migration step 2).
     agentsGroup: ['Agent team', 'Agent 团队'],
     // The CRM's four agents on one page (pages/crm-agents.tsx).
-    autoFollowUp: ['Auto follow-up', '自动跟进'],
+    agentWork: ['Agent work', 'Agent 工作'],
     guidance: ['Business guidance', '业务指导'],
     // The first tab of Settings (pages/settings/index.tsx).
     general: ['General', '通用'],
@@ -2339,11 +2412,28 @@ const wording = {
       risk: ['Risk', '风险'],
     },
     new: ['New', '新'],
-    seen: ['Seen', '已看'],
     dismiss: ['Dismiss', '忽略'],
     dismissed: ['Dismissed', '已忽略'],
+    restore: ['Restore', '取消忽略'],
     feed: ['found news', '发现新动态'],
-    source: ['Source', '出处'],
+    // The company's Signals card and a deal's company row
+    // (company-signals.tsx): the latest few, the whole list in a dialog.
+    viewAll: ['All signals ({{count}})', '查看全部 {{count}} 条'],
+    latest: ['Latest signal', '最近信号'],
+    inAll: ['{{count}} in all', '共 {{count}} 条'],
+    none: ['None yet', '暂无'],
+    dialogTitle: ['Signals: {{name}}', '信号：{{name}}'],
+    // The chip under the company's title, and its Watch button.
+    newCount: ['{{count}} new', '{{count}} 条新'],
+    watching: ['Watching', '已关注'],
+    watchHint: [
+      'Watch it to have its news checked on the web every week, open deal or not.',
+      '关注后每周联网检查一次这家公司的动态，没有进行中的商机也会检查。',
+    ],
+    watchingHint: [
+      'Watched: its news is checked on the web every week. Click to stop watching.',
+      '已关注：每周联网检查一次这家公司的动态。点击取消关注。',
+    ],
   },
   entities: {
     leads: ['Leads', '线索'],

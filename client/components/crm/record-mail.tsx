@@ -452,8 +452,7 @@ export function RecordMailPanel({
             {terms.length > 0 && scopeLine()}
           </p>
           <Button
-            variant='outline'
-            size='sm'
+            variant='contrast'
             onClick={() => compose({ to: target.addresses.join(', ') }, log)}
           >
             <PenLine />

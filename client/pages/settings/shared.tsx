@@ -241,7 +241,7 @@ export function ConfirmAction({
             {text('common.cancel')}
           </AlertDialogCancel>
           <AlertDialogAction
-            variant={destructive ? 'destructive' : 'contrast'}
+            variant={destructive ? 'destructive' : 'default'}
             disabled={pending || gone}
             onClick={() => void confirm()}
           >
@@ -473,7 +473,6 @@ function FormDialogFooter({
       {blocked ? null : (
         <Button
           type='submit'
-          variant='contrast'
           form={formId}
           disabled={submitting || submitDisabled}
         >

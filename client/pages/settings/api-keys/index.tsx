@@ -242,11 +242,7 @@ export default function ApiKeysPage(): ReactElement {
         </EmptyHeader>
         {mayCreate ? (
           <EmptyContent>
-            <Button
-              variant='contrast'
-              nativeButton={false}
-              render={<Link to={newLink} />}
-            >
+            <Button nativeButton={false} render={<Link to={newLink} />}>
               <PlusIcon data-icon='inline-start' />
               {text('keys.new')}
             </Button>
@@ -389,11 +385,7 @@ export default function ApiKeysPage(): ReactElement {
           actions={
             <>
               {mayCreate && rows.length > 0 ? (
-                <Button
-                  variant='contrast'
-                  nativeButton={false}
-                  render={<Link to={newLink} />}
-                >
+                <Button nativeButton={false} render={<Link to={newLink} />}>
                   <PlusIcon data-icon='inline-start' />
                   {text('keys.new')}
                 </Button>
@@ -466,7 +458,7 @@ export default function ApiKeysPage(): ReactElement {
             />
           ) : null}
           <DialogFooter>
-            <Button variant='contrast' onClick={() => setRotated(undefined)}>
+            <Button onClick={() => setRotated(undefined)}>
               {text('common.done')}
             </Button>
           </DialogFooter>

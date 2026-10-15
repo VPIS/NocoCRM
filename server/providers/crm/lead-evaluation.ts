@@ -69,11 +69,12 @@ import { lang, pick } from '../../locales/crm-ai/index.js';
 // the owner decides. Accepting applies it through CrmService as the person
 // who accepted, recorded as a change the AI proposed (source `assistant`).
 //
-// The run is the CRM assistant's, unattended, as the lead's owner, so it
-// reads what the owner may; the facts it needs from the CRM (the lead, and
-// the companies, contacts, leads and deals it may concern) are gathered here
-// and given to it, with its tools off, and its method is the lead-follow-up
-// skill (ai/skills), company comments included. Runs queue in this process one
+// The run is one model call (crm/ai-model.ts) with the Lead follow-up
+// agent's model and instructions, as the lead's owner, so it reads what the
+// owner may; the facts it needs from the CRM (the lead, and the companies,
+// contacts, leads and deals it may concern) are gathered here and given to
+// it, it searches no web, and its method is the lead-follow-up skill
+// (ai/skills), company comments included. Runs queue in this process one
 // at a time; a restart loses those waiting, and an entry left running is
 // reported as failed after a while, when it can be run again.
 
@@ -85,7 +86,7 @@ const invalidReasons = definitions.leads.fields.find(
   (f) => f.key === 'invalidReason',
 )!.options!;
 
-// The company's particulars the AI may find on the web and offer to fill.
+// The company's particulars the AI may offer to fill.
 const ENRICH_FIELDS = [
   'website',
   'industry',
@@ -98,7 +99,8 @@ const ENRICH_FIELDS = [
 ] as const;
 // What a follow-up may suggest filling or correcting on a lead: the person
 // and how they came, from the lead's message, its tasks and comments, and
-// the company's particulars, from those or from the web.
+// the company's particulars, from those (an earlier card's web findings
+// too, unwrittenFindings).
 const FILL_FIELDS = [
   'name',
   'company',
@@ -1285,6 +1287,7 @@ export class LeadEvaluator {
       const session = await openSession(this.container, {
         timeZone: settings.timeZone,
         guidance: settingsGuidance(settings),
+        work: 'leads',
       });
       if (!session) throw new Error('No model to ask');
       // The verdict: the JSON object the prompt spells out, in the reply.

@@ -84,10 +84,13 @@ export function LocationField({
   );
   const line = (
     <>
-      {region.length ? <span className='block'>{region}</span> : null}
+      {region.length ? (
+        <span className='block leading-relaxed'>{region}</span>
+      ) : null}
       {address ? (
         // As the column's other long texts read: three lines, fading out
-        // while there is more, the whole in the pop-up.
+        // while there is more, the whole in the pop-up; the region line
+        // above at the same height (the introduction's).
         <FadePreview className='whitespace-pre-line text-muted-foreground'>
           {address}
         </FadePreview>

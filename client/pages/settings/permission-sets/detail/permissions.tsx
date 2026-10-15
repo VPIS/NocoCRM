@@ -419,11 +419,7 @@ function GrantsEditor({
             >
               {text('sets.discard')}
             </Button>
-            <Button
-              variant='contrast'
-              disabled={saving || stale}
-              onClick={() => void save()}
-            >
+            <Button disabled={saving || stale} onClick={() => void save()}>
               {saving ? <Spinner data-icon='inline-start' /> : null}
               {text('common.save')}
             </Button>

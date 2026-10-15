@@ -214,16 +214,18 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
           },
         ],
       },
-      // The four agents on one page, a tab each: /crm/agents/<agent> names
-      // the tab (the page draws it, as a record page draws its own;
-      // pages/crm-record-tab.tsx renders nothing), and /crm/agents opens on
-      // the first.
+      // Agent work: the work agents on one page, a tab each, their switches
+      // and their runs, /crm/agent-work/<agent> naming the tab (the page
+      // draws it, as a record page draws its own; pages/crm-record-tab.tsx
+      // renders nothing), and /crm/agent-work opening on the first. Once
+      // Auto follow-up at /crm/agents, which still leads here; its route
+      // and page grant keep the name `crm-agents`, which stored grants name.
       {
         name: 'crm-agents',
-        path: '/crm/agents',
+        path: '/crm/agent-work',
         auth: 'required',
         authz: page('crm-agents'),
-        navigation: { title: 'crm.navigation.autoFollowUp', icon: Workflow },
+        navigation: { title: 'crm.navigation.agentWork', icon: Workflow },
         componentLoader: () => import('./pages/crm-agents.js'),
         children: [
           {
@@ -278,6 +280,22 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         name: 'crm-record-tab',
         path: ':tab',
         componentLoader: () => import('./pages/crm-record-tab.js'),
+      },
+    ],
+  },
+  // Auto follow-up became Agent work: its old addresses lead to the new
+  // ones, whose route checks access.
+  {
+    name: 'crm-agents-redirect',
+    path: '/crm/agents',
+    auth: 'required',
+    authz: 'skip',
+    componentLoader: () => import('./pages/crm-agent-work-redirect.js'),
+    children: [
+      {
+        name: 'crm-agents-redirect-tab',
+        path: ':agent',
+        componentLoader: () => import('./pages/crm-agent-work-redirect.js'),
       },
     ],
   },

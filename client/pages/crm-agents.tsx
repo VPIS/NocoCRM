@@ -1,6 +1,6 @@
 import { useState, type ReactElement } from 'react';
-import { BLACK_SWITCH } from '../components/crm/black-switch.js';
 import { useCan } from '@nocobase/app-plugin-authorization/client';
+import { AgentAvatar } from '@nocobase/app-plugin-agents/client/chat';
 import { Link, useLocation } from 'react-router';
 import {
   Ban,
@@ -48,14 +48,22 @@ import {
   type CrmRecord,
   type Data,
 } from '../components/crm/api.js';
+import { AgentSentence } from '../components/crm/work-agent.js';
+import { useAgentText } from '@nocobase/app-plugin-agents/client/chat';
+import { useWorkAgentNames } from '../components/crm/work-agent-name.js';
 import { DEFAULT_TIME_ZONE } from '../../server/providers/crm/zone-time.js';
 
-// The CRM's four agents (server/providers/crm/agents.ts) on one page, Auto
-// follow-up in the menu, a tab each: what the agent does, when it runs (each
+// The CRM's work agents (server/providers/crm/agents.ts, each its own agent
+// of the Agents plugin, crm-agents/work-agents.ts) on one page, Agent work
+// in the menu (once Auto follow-up), a tab each, named and drawn as the
+// agent (its avatar and its name, the work's title while it has none): the
+// agent,
+// what it does and the model it asks, when it runs (each
 // trigger switched on or off by an administrator), how its runs fared over
 // the last week or month, and its runs, newest first, each opening its
-// record. The tab is the path's last segment (/crm/agents/<agent>, the
-// address the menu's four entries once had), the first when there is none.
+// record, automatic or asked for. The tab is the path's last segment
+// (/crm/agent-work/<agent>; /crm/agents/<agent> before, which leads here),
+// the first when there is none.
 
 // The company signals' check (company-signals.ts) last: its runs are checks
 // of companies, its outcomes signals seen or dismissed.
@@ -102,23 +110,28 @@ export default function AgentsPage(): ReactElement {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
   const running = useRunningAgents();
+  const nameOf = useWorkAgentNames();
   const agent =
-    AGENTS.find((name) => pathname.endsWith(`/agents/${name}`)) ?? 'leads';
+    AGENTS.find((name) => pathname.endsWith(`/agent-work/${name}`)) ?? 'leads';
   return (
-    <CrmFrame title={text('navigation.autoFollowUp')}>
+    <CrmFrame title={text('navigation.agentWork')}>
       {/* An agent with runs under way shows the AI's pulsing dot and their
           count, one switched off says so. */}
       <LinkTabs
         // Close under the heading, past the frame's spacing.
         className='-mt-4'
-        label={text('navigation.autoFollowUp')}
+        label={text('navigation.agentWork')}
         tabs={AGENTS.map((name) => {
           const count = running[name] ?? 0;
           const off = meta?.agents?.[name]?.enabled === false;
+          const agentName = nameOf(name);
           return {
-            to: `/crm/agents/${name}`,
-            label: text(`agents.${name}.title`),
+            to: `/crm/agent-work/${name}`,
+            label: agentName ?? text(`agents.${name}.title`),
             icon: ICONS[name],
+            ...(agentName
+              ? { lead: <AgentAvatar name={agentName} size='xs' /> }
+              : {}),
             selected: name === agent,
             extra:
               count > 0 ? (
@@ -165,6 +178,26 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
     resource: { type: 'page', id: 'skills' },
     action: 'access',
   });
+  // Its agent, whose model and instructions the work follows, opened on the
+  // Agents plugin's page for whoever may open it.
+  const agentId = meta?.workAgents?.[agent];
+  const agentName = useWorkAgentNames()(agent);
+  const agentText = useAgentText();
+  const own = meta?.workAgentNames?.[agent];
+  const model = own?.model;
+  // What it does: its agent's description, as the Agents page shows it (an
+  // administrator's own words once they edit it), else the work's.
+  const description =
+    (own &&
+      agentText.description({
+        description: own.description ?? null,
+        descriptionText: own.descriptionText ?? null,
+      })) ||
+    text(`agentWork.${agent}`);
+  const { can: canAgents } = useCan({
+    resource: { type: 'page', id: 'agents' },
+    action: 'access',
+  });
   const zone = meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
   const save = async (input: Data): Promise<void> => {
     setSaving(true);
@@ -202,37 +235,81 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
             {/* Whether it runs on its own: on or off. "Running" is a run
                 under way, which the tab counts. */}
             <CardTitle className='flex items-center gap-2 text-base'>
-              {text('agents.duty')}
+              {/* The agent doing it, as the Agents page draws it; the work's
+                  duty while it has no agent of its own. */}
+              {agentName ? (
+                <>
+                  <AgentAvatar name={agentName} size='sm' />
+                  {agentName}
+                </>
+              ) : (
+                text('agents.duty')
+              )}
               <Badge variant={enabled ? 'success' : 'muted'}>
                 {text(enabled ? 'agents.enabledTag' : 'agents.off')}
               </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className='space-y-3 text-sm'>
-            <p className='leading-relaxed'>
-              {text(`agents.${agent}.description`)}
-            </p>
+            <p className='leading-relaxed'>{description}</p>
             <p className='text-muted-foreground'>
-              {text(
-                agent === 'tasks'
-                  ? 'agents.byAiTasks'
-                  : signals
-                    ? 'agents.byAiSignals'
-                    : 'agents.byAi',
-              )}
-            </p>
-            <p className='text-xs text-muted-foreground'>
-              {skillId && canSkills ? (
-                <Link
-                  to={`/skills/${encodeURIComponent(skillId)}`}
-                  className='underline-offset-4 hover:text-foreground hover:underline'
-                >
-                  {text(`agents.${agent}.skill`)}
-                </Link>
+              {agentName ? (
+                <AgentSentence
+                  textKey={
+                    agent === 'tasks'
+                      ? 'agents.byAgentTasks'
+                      : signals
+                        ? 'agents.byAgentSignals'
+                        : 'agents.byAgent'
+                  }
+                  name={agentName}
+                  avatar={false}
+                />
               ) : (
-                text(`agents.${agent}.skill`)
+                text(
+                  agent === 'tasks'
+                    ? 'agents.byAiTasks'
+                    : signals
+                      ? 'agents.byAiSignals'
+                      : 'agents.byAi',
+                )
               )}
             </p>
+            {/* The model it asks first, as its Agents page lists it, and
+                its method skill, close together. */}
+            <div className='space-y-1 text-xs text-muted-foreground'>
+              {agentName ? (
+                <p>
+                  {model
+                    ? text('agents.model', {
+                        model: `${model.modelService} · ${model.model}`,
+                      })
+                    : text('agents.defaultModel')}
+                </p>
+              ) : null}
+              <p>
+                {skillId && canSkills ? (
+                  <Link
+                    to={`/skills/${encodeURIComponent(skillId)}`}
+                    className='underline-offset-4 hover:text-foreground hover:underline'
+                  >
+                    {text(`agents.${agent}.skill`)}
+                  </Link>
+                ) : (
+                  text(`agents.${agent}.skill`)
+                )}
+              </p>
+            </div>
+            {agentId && agentName && canAgents ? (
+              <Button
+                variant='outline'
+                size='sm'
+                render={<Link to={`/agents/${encodeURIComponent(agentId)}`} />}
+                nativeButton={false}
+              >
+                {text('agents.setUpAgent')}
+              </Button>
+            ) : null}
           </CardContent>
         </Card>
         <Card className={FRAME}>
@@ -244,7 +321,6 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
             <label className='flex items-center gap-2 text-sm'>
               {text('agents.runsOnItsOwn')}
               <Switch
-                className={BLACK_SWITCH}
                 checked={enabled}
                 disabled={!admin || saving}
                 onCheckedChange={(on) => void save({ enabled: on })}
@@ -281,7 +357,6 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
                     </p>
                   </div>
                   <Switch
-                    className={BLACK_SWITCH}
                     checked={data.switches.triggers[trigger] !== false}
                     disabled={!admin || saving || !enabled}
                     onCheckedChange={(on) =>
@@ -293,13 +368,20 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
               ))}
             </ul>
             <p className='text-xs text-muted-foreground'>
-              {text(
-                agent === 'tasks'
-                  ? 'agents.manualNoteTasks'
-                  : signals
-                    ? 'agents.manualNoteSignals'
-                    : 'agents.manualNote',
-              )}
+              {agentName && !signals
+                ? text(
+                    agent === 'tasks'
+                      ? 'agents.manualNoteTasksAgent'
+                      : 'agents.manualNoteAgent',
+                    { agent: agentName },
+                  )
+                : text(
+                    agent === 'tasks'
+                      ? 'agents.manualNoteTasks'
+                      : signals
+                        ? 'agents.manualNoteSignals'
+                        : 'agents.manualNote',
+                  )}
               {admin ? '' : ` ${text('agents.adminOnly')}`}
             </p>
           </CardContent>

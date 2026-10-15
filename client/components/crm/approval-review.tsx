@@ -19,6 +19,8 @@ import {
   useMetadata,
   useRefresh,
 } from './api.js';
+import { useAgentWords } from './work-agent-name.js';
+import { AgentWords } from './work-agent.js';
 import { LONG_TEXT_LIMIT } from '../../../server/providers/crm/limits.js';
 import { cardPin, recordPin } from './agent-chat/ask.js';
 import { DiscussButton } from './agent-chat/discuss-button.js';
@@ -91,6 +93,7 @@ export function ReviewPanel({
 }): ReactElement | null {
   const { data: meta } = useMetadata();
   const { text, language } = useCrmText();
+  const words = useAgentWords();
   const api = useCrmApi();
   const review = entry.ai.result;
   const [comment, setComment] = useState(review?.comment ?? '');
@@ -173,7 +176,11 @@ export function ReviewPanel({
           <>
             <Sparkles className='size-4 shrink-0 text-primary' />
             <span className='shrink-0 font-medium'>
-              {text('approvalReview.title')}
+              <AgentWords
+                work='approvals'
+                wordKey='suggestion'
+                fallback='approvalReview.title'
+              />
             </span>
             {review && (
               <Badge variant={entry.status === 'pending' ? 'ai' : 'muted'}>
@@ -230,10 +237,14 @@ export function ReviewPanel({
       {entry.status === 'running' && (
         <p className='flex items-center gap-2 text-muted-foreground'>
           <Spinner />
-          {text(
-            entry.ai.instruction
-              ? 'evaluation.revising'
-              : 'approvalReview.running',
+          {entry.ai.instruction ? (
+            text('evaluation.revising')
+          ) : (
+            <AgentWords
+              work='approvals'
+              wordKey='running.review'
+              fallback='approvalReview.running'
+            />
           )}
         </p>
       )}
@@ -351,7 +362,7 @@ export function ReviewPanel({
                   recordPin('approvals', approvalId, approvalName),
                   cardPin(
                     entry.id,
-                    `${text('approvalReview.title')} · ${text(
+                    `${words('approvals', 'suggestion', 'approvalReview.title')} · ${text(
                       `approvalReview.recommendations.${review.recommendation}`,
                     )}`,
                   ),
@@ -463,6 +474,7 @@ export function ReviewStatus({
 }): ReactElement | null {
   const { data: meta } = useMetadata();
   const { text, language } = useCrmText();
+  const words = useAgentWords();
   const api = useCrmApi();
   const refresh = useRefresh();
   const [busy, setBusy] = useState(false);
@@ -528,7 +540,7 @@ export function ReviewStatus({
                   type='button'
                   onClick={() => onOpen(entry.id)}
                   aria-label={[
-                    text('approvalReview.ask'),
+                    words('approvals', 'name', 'approvalReview.ask'),
                     review
                       ? text(
                           `approvalReview.recommendations.${review.recommendation}`,
@@ -550,8 +562,15 @@ export function ReviewStatus({
                 <Sparkles className='size-3.5 text-primary' />
               )}
               <span className='min-w-0 truncate font-medium text-primary'>
-                {text(
-                  live ? aiStateWords.review.running : 'approvalReview.ask',
+                {live ? (
+                  text(aiStateWords.review.running)
+                ) : (
+                  <AgentWords
+                    inButton
+                    work='approvals'
+                    wordKey='name'
+                    fallback='approvalReview.ask'
+                  />
                 )}
               </span>
               {live ? null : <AiStatusWord status={toText(entry.status)} />}
@@ -589,7 +608,11 @@ export function ReviewStatus({
                       type='button'
                       disabled={busy}
                       onClick={ask}
-                      aria-label={toText(text('approvalReview.again'))}
+                      aria-label={words(
+                        'approvals',
+                        'rerun',
+                        'approvalReview.again',
+                      )}
                       className='flex h-full shrink-0 items-center gap-1 rounded-r-lg px-2 font-medium text-primary transition-colors hover:bg-primary/10 disabled:opacity-50'
                     />
                   }
@@ -598,7 +621,12 @@ export function ReviewStatus({
                   {text('evaluation.rerun')}
                 </TooltipTrigger>
                 <TooltipContent side='bottom'>
-                  {text('approvalReview.again')}
+                  <AgentWords
+                    inButton
+                    work='approvals'
+                    wordKey='rerun'
+                    fallback='approvalReview.again'
+                  />
                 </TooltipContent>
               </Tooltip>
             </>
@@ -618,7 +646,12 @@ export function ReviewStatus({
           ) : (
             <Sparkles className='size-3.5' />
           )}
-          {text('approvalReview.ask')}
+          <AgentWords
+            inButton
+            work='approvals'
+            wordKey='run'
+            fallback='approvalReview.ask'
+          />
         </button>
       ) : null}
       <ErrorNotice error={error} />

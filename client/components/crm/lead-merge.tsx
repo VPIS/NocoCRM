@@ -27,6 +27,7 @@ import {
   type Data,
   type Field,
 } from './api.js';
+import { WorkAgentLabel } from './work-agent.js';
 import { DEFAULT_TIME_ZONE } from '../../../server/providers/crm/zone-time.js';
 
 // Leads that repeat this one (the same email, the same phone, or the same
@@ -453,6 +454,7 @@ export function MergeDialog({
           <DialogDescription>
             {text(input ? 'merge.hintUnsaved' : 'merge.hint')}
           </DialogDescription>
+          <WorkAgentLabel work='leads' does='propose' />
         </DialogHeader>
         <ErrorNotice error={error ?? proposal.error} />
         {proposal.isLoading ? (

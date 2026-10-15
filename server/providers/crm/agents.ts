@@ -38,8 +38,6 @@ export const AGENT_TRIGGERS: Record<SwitchedAgent, readonly string[]> = {
     'taskDone',
     'approvalDecided',
     'customerReplied',
-    // A company signal worth acting on (company-signals.ts).
-    'companySignal',
   ],
   approvals: ['submitted'],
   // Today's timed tasks, prepared on the morning of their day.
@@ -56,6 +54,8 @@ const DAILY_SIGNALS = new Set([
   'nurtureDue',
   'closeDue',
   'resumeDue',
+  // The company's news worth acting on, which the deals' daily pass takes.
+  'companySignal',
 ]);
 export const switchOf = (trigger: string): string =>
   DAILY_SIGNALS.has(trigger) ? 'daily' : trigger;

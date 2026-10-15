@@ -11,9 +11,17 @@ import { deliverPlanOutcome } from './plan-news.js';
 import { registerCrmSkill } from './skill.js';
 import { provisionSkills } from './library.js';
 import { SKILLS_DIR } from '../crm/ai-model.js';
-import { provisionBackgroundAgent, renameUsageSource } from './background.js';
+import {
+  nameWorkAgents,
+  provisionWorkAgents,
+  retireBackgroundAgent,
+} from './work-agents.js';
 import { registerContextKinds } from './context.js';
-import { provisionAssistant, renameAssistant } from './assistant.js';
+import {
+  nameAssistant,
+  provisionAssistant,
+  renameAssistant,
+} from './assistant.js';
 import { crmConversationRules } from './rules.js';
 import { databaseManagerToken } from '@nocobase/db';
 import type { CrmSettings } from '../crm/schema.js';
@@ -129,6 +137,7 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
       agents,
       this.app.container.resolve(databaseManagerToken),
     );
+    await nameAssistant(this.app.container.resolve(databaseManagerToken));
     await provisionSkills(
       agents,
       this.app.container.resolve(databaseManagerToken),
@@ -136,10 +145,17 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
       // host may start the application from another root (NocoBase Studio).
       SKILLS_DIR,
     );
-    await provisionBackgroundAgent(
+    // After the skills, which each is given its own of.
+    await provisionWorkAgents(
       agents,
       this.app.container.resolve(databaseManagerToken),
     );
-    await renameUsageSource(this.app.container.resolve(databaseManagerToken));
+    // Those made before their names were translated.
+    await nameWorkAgents(this.app.container.resolve(databaseManagerToken));
+    // The Background AI they replaced, gone with its recorded use.
+    await retireBackgroundAgent(
+      agents,
+      this.app.container.resolve(databaseManagerToken),
+    );
   }
 }

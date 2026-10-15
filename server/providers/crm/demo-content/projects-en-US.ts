@@ -231,6 +231,175 @@ export const enProjects: DemoProjects = {
         },
       ],
     },
+    // The other companies' (by their index in `companies`): 0 Shanghai
+    // Electric, 2 United Family Healthcare, 4 XJTLU, 5 XGIMI, 6 NARI,
+    // 7 Guangzhou Restaurant.
+    {
+      company: 6,
+      type: 'business',
+      title:
+        "NARI wins in State Grid Fujian's fourth public materials tender of 2026",
+      summary:
+        'NARI is one of the 119 winning suppliers of the tender, worth about RMB 240 million in all, covering equipment monitoring systems and smart substation auxiliary systems among others.',
+      occurredOn: '2026-10-14',
+      foundDaysAgo: 1,
+      status: 'new',
+      sources: [
+        {
+          title:
+            "NARI and 118 other suppliers win State Grid Fujian's materials tender (in Chinese)",
+          url: 'https://app.myzaker.com/news/article.php?pk=6acef609b15ec037f525cb68',
+          site: 'ZAKER',
+        },
+      ],
+    },
+    {
+      company: 6,
+      type: 'business',
+      title: 'NARI applies for a patent on data exchange for power systems',
+      summary:
+        'NARI and its subsidiaries applied for a patent on a data exchange method, storage medium and device for power systems, which simplifies the data exchange path.',
+      occurredOn: '2026-10-10',
+      foundDaysAgo: 4,
+      status: 'new',
+      sources: [
+        {
+          title:
+            'NARI applies for a patent on data exchange for power systems (in Chinese)',
+          url: 'https://www.163.com/dy/article/L8T53ED00519QIKK.html',
+          site: 'NetEase',
+        },
+      ],
+    },
+    {
+      company: 0,
+      type: 'risk',
+      title:
+        "A Shanghai Electric subsidiary's major lawsuit closes as withdrawn by the plaintiff",
+      summary:
+        'Shanghai Electric announced that the major lawsuit involving its subsidiary Shanghai Electric Communication Technology has been closed as withdrawn by the plaintiff.',
+      occurredOn: '2026-10-14',
+      foundDaysAgo: 1,
+      status: 'new',
+      sources: [
+        {
+          title:
+            "Shanghai Electric: progress announcement on a subsidiary's major lawsuit (in Chinese)",
+          url: 'http://finance.sina.cn/2026-10-15/detail-inivfmzh1339438.d.html',
+          site: 'Sina Finance',
+        },
+        {
+          title: 'Shanghai Electric Group 601727 (in Chinese)',
+          url: 'https://www.sse.com.cn/assortment/stock/list/info/company/index.shtml?COMPANY_CODE=601727',
+          site: 'Shanghai Stock Exchange',
+        },
+      ],
+    },
+    {
+      company: 5,
+      type: 'business',
+      title:
+        "XGIMI's shareholders approve its 2026 stock option incentive plan",
+      summary:
+        "XGIMI's extraordinary general meeting of 13 October 2026 approved its 2026 stock option incentive plan and the related assessment rules.",
+      occurredOn: '2026-10-13',
+      foundDaysAgo: 2,
+      status: 'new',
+      sources: [
+        {
+          title:
+            "XGIMI publishes its 2026 first extraordinary general meeting's resolutions (in Chinese)",
+          url: 'https://stock.stockstar.com/RB2026101500001570.shtml',
+          site: 'Stockstar',
+        },
+        {
+          title:
+            "XGIMI publishes its 2026 first extraordinary general meeting's resolutions (in Chinese)",
+          url: 'https://m.sohu.com/a/1087843315_115377',
+          site: 'Sohu',
+        },
+      ],
+    },
+    {
+      company: 7,
+      type: 'funding',
+      title:
+        "Guangzhou Restaurant's convertible bond issue passes the Shanghai Stock Exchange's review",
+      summary:
+        "The Shanghai Stock Exchange's listing committee approved Guangzhou Restaurant's application to issue convertible bonds to unspecified investors; the issue still needs the CSRC's registration.",
+      occurredOn: '2026-10-14',
+      foundDaysAgo: 1,
+      status: 'new',
+      sources: [
+        {
+          title:
+            "Guangzhou Restaurant: its convertible bond application passes the Shanghai Stock Exchange's listing committee (in Chinese)",
+          url: 'https://www.sohu.com/a/1087889292_120988533',
+          site: 'Sohu',
+        },
+        {
+          title:
+            "Guangzhou Restaurant discloses the exchange's approval of its convertible bond application (in Chinese)",
+          url: 'https://www.toutiao.com/article/7696535638497215016/',
+          site: 'Toutiao',
+        },
+      ],
+    },
+    {
+      company: 4,
+      type: 'business',
+      title: 'XJTLU holds its first Career Carnival',
+      summary:
+        'XJTLU held its first Career Carnival on 14 October 2026, with nearly 60 universities and nearly 150 companies taking part in further study and campus recruitment.',
+      occurredOn: '2026-10-14',
+      foundDaysAgo: 1,
+      status: 'new',
+      sources: [
+        {
+          title:
+            'Invitation: XJTLU Career Carnival 2026, nearly 60 universities and 150 companies (in Chinese)',
+          url: 'https://www.sohu.com/a/1087291940_121124035',
+          site: 'Sohu',
+        },
+      ],
+    },
+    {
+      company: 4,
+      type: 'business',
+      title:
+        "XJTLU's Technology and Innovation Support Center (TISC) is opened",
+      summary:
+        "China's National Intellectual Property Administration approved XJTLU as a Technology and Innovation Support Center of the second round, and the university joined the opening ceremony of Suzhou's approved centers on 19 September.",
+      occurredOn: '2026-09-19',
+      foundDaysAgo: 6,
+      status: 'new',
+      sources: [
+        {
+          title: "XJTLU's Intellectual Property Information Service Center",
+          url: 'https://ipisc.xjtlu.edu.cn/',
+          site: 'XJTLU',
+        },
+      ],
+    },
+    {
+      company: 2,
+      type: 'business',
+      title:
+        'United Family Healthcare provides the medical service for the 2026 China Open',
+      summary:
+        "United Family Healthcare, the 2026 China Open's appointed medical service provider, completed several weeks of on-site medical support, its second year providing it for the tournament.",
+      occurredOn: '2026-10-11',
+      foundDaysAgo: 3,
+      status: 'new',
+      sources: [
+        {
+          title:
+            'United Family Healthcare supports the 2026 China Open to international standards (in Chinese)',
+          url: 'https://www.cqn.com.cn/cj/content/2026-10/12/content_9175871.htm',
+          site: 'CQN',
+        },
+      ],
+    },
   ],
   ai: {
     sfLead: {

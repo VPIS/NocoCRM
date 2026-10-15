@@ -16,8 +16,8 @@ import { CRM_ASSISTANT_INSTRUCTIONS } from './preset.js';
 // assistant's model picker offered before), and made the
 // system default chat agent when none is set. The marker keeps its id, so an
 // agent an administrator changed, archived or deleted stays as they left it:
-// it is never recreated or rewritten. Its name is Sales Expert in every language
-// (the plugin translates only an application agent's description).
+// it is never recreated or rewritten. Its name is Sales Expert, shown in the
+// viewer's language (nameAssistant), as its description is.
 
 // The stored marker keeps the assistant's first name, the assistant.
 export const ASSISTANT_MARKER = 'agents-noco-v1';
@@ -78,6 +78,56 @@ export async function provisionAssistant(
     })
     .where('id', '=', ASSISTANT_MARKER)
     .execute();
+}
+
+// An agent the CRM made shown by `key` in the viewer's language, while its
+// name is still the English one it was made with: an administrator's rename
+// drops the reference, and the name then shows as they wrote it.
+// @temporary(nocobase-official): the plugin's create always clears
+// `nameText`, which only an application's built-in agents carry, so it is
+// written to the plugin's own table.
+export async function nameAgent(
+  database: DatabaseManager,
+  id: string,
+  name: string,
+  key: string,
+): Promise<void> {
+  await database
+    .query()
+    .updateTable('agAgents')
+    .set({ nameText: JSON.stringify({ key, ns: 'crm' }) })
+    .where('id', '=', id)
+    .where('name', '=', name)
+    .execute()
+    .catch(() => undefined);
+}
+
+// The assistant named in the viewer's language (Sales Expert, 销售专家), at
+// every start, for the one made before it was.
+export async function nameAssistant(database: DatabaseManager): Promise<void> {
+  const row = await database
+    .query()
+    .selectFrom('crmSettings')
+    .select('value')
+    .where('id', '=', ASSISTANT_MARKER)
+    .executeTakeFirst();
+  let agentId: unknown;
+  try {
+    agentId = (
+      (typeof row?.value === 'string' ? JSON.parse(row.value) : row?.value) as {
+        agentId?: unknown;
+      } | null
+    )?.agentId;
+  } catch {
+    return;
+  }
+  if (typeof agentId === 'string' && agentId)
+    await nameAgent(
+      database,
+      agentId,
+      ASSISTANT_NAME,
+      'crm.agentPreset.agentName',
+    );
 }
 
 // Every chat model of the enabled services, in their order, as an agent's

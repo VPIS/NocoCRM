@@ -5,9 +5,8 @@ import {
   type ServiceResolver,
   type ServiceToken,
 } from '@nocobase/service-provider';
-import { readSkill, recordUse } from './ai-model.js';
+import { readSkill, recordUse, sourceOf } from './ai-model.js';
 import { agentOn, agentSwitches, AGENT_TRIGGERS } from './agents.js';
-import { readEntry } from './ai-entries.js';
 import type { Actor } from './authorization.js';
 import { CrmError, toText } from './schema.js';
 import type { CrmService } from './service.js';
@@ -47,8 +46,16 @@ export const CHECK_EVERY_DAYS = 7;
 // The method skill (ai/skills/company-signals).
 export const SIGNALS_SKILL = 'company-signals';
 // The kinds worth a deal's follow-up; hiring is only told.
-const ACTING_TYPES = new Set(['funding', 'leadership', 'business', 'risk']);
+export const ACTING_TYPES: readonly string[] = [
+  'funding',
+  'leadership',
+  'business',
+  'risk',
+];
 const KNOWN_NAMED = 20;
+// `seen` is history: people once marked a signal seen, which only said it
+// was read; now a signal stays as found until someone dismisses it, and is
+// new by when it was found (the client's seven days).
 const STATUSES = ['new', 'seen', 'dismissed'] as const;
 export type SignalStatus = (typeof STATUSES)[number];
 
@@ -74,15 +81,33 @@ export interface CompanySignalsView {
   inDailyCheck: boolean;
   checkedAt: string | null;
   canEdit: boolean;
+  // All of them, those not dismissed, and those new (found in the last
+  // week, not dismissed), whatever the page.
+  total: number;
+  open: number;
+  fresh: number;
+  page: number;
+  pageSize: number;
+  // A page of them: those not dismissed first, the newest events first.
   signals: SignalView[];
 }
+
+// How long a signal reads as new after it was found (the client's isNew).
+export const NEW_FOR_DAYS = 7;
+const DEFAULT_SIGNAL_PAGE = 20;
 
 export interface SignalPass {
   available: boolean;
   checked: number;
   found: number;
   failed: number;
+  // Stopped at its time budget, the companies left for the next pass.
+  stopped: boolean;
 }
+
+// How long the daily pass may run: it starts at 08:00 so its news is in by
+// the deals' daily pass at 09:00; a slow search should not hold it past.
+export const SCAN_BUDGET_MS = 50 * 60_000;
 
 export interface CheckResult {
   found: SignalView[];
@@ -125,33 +150,42 @@ export class CompanySignals {
     private readonly service: CrmService,
     // The search the checks ask, read when asked so a configuration change
     // applies at the next restart without wiring; null when there is none.
-    private readonly searcher: () => WebSearcher | null,
+    private readonly searcher: () =>
+      WebSearcher | null | Promise<WebSearcher | null>,
     private readonly options: {
       container?: ServiceResolver;
       fetch?: typeof fetch;
-      // Starts a deal's follow-up as its owner because of a company signal
-      // (the opportunity evaluator, wired by CrmProvider); true when one
-      // started.
-      followUp?: (dealId: string, ownerId: string) => Promise<boolean>;
     } = {},
   ) {}
 
-  available(): boolean {
-    return this.searcher() !== null;
+  async available(): Promise<boolean> {
+    return (await this.searcher()) !== null;
   }
 
   // A company's signals, newest first, for whoever may read the company.
-  async of(actor: Actor, companyId: string): Promise<CompanySignalsView> {
+  // A page of the company's signals, those not dismissed first and the
+  // newest events first, with how many there are. `until` widens the page
+  // to reach that signal (a timeline line opening the list at it).
+  async of(
+    actor: Actor,
+    companyId: string,
+    options: { page?: number; pageSize?: number; until?: string } = {},
+  ): Promise<CompanySignalsView> {
     // Read for its access check: only who may read the company.
     await this.service.get(actor, 'companies', companyId);
     const query = this.service.database.query();
-    const [rows, stored, open, canEdit] = await Promise.all([
+    const page = Math.max(1, options.page ?? 1);
+    let pageSize = Math.min(
+      100,
+      Math.max(1, options.pageSize ?? DEFAULT_SIGNAL_PAGE),
+    );
+    const [all, stored, openDeal, canEdit] = await Promise.all([
+      // Their order and counts from the light columns alone; the page's
+      // rows are read whole below.
       query
         .selectFrom('crmSignals')
-        .selectAll()
+        .select(['id', 'status', 'occurredOn', 'createdAt'])
         .where('companyId', '=', companyId)
-        .orderBy('occurredOn', 'desc')
-        .orderBy('createdAt', 'desc')
         .execute(),
       query
         .selectFrom('crmCompanies')
@@ -170,15 +204,51 @@ export class CompanySignals {
         .catch(() => false),
     ]);
     const watched = Boolean(stored?.signalsWatched);
+    const dismissed = (row: { status?: unknown }) =>
+      toText(row.status) === 'dismissed';
+    const ordered = [...all].sort(
+      (a, b) =>
+        Number(dismissed(a)) - Number(dismissed(b)) ||
+        toText(b.occurredOn).localeCompare(toText(a.occurredOn)) ||
+        toText(b.createdAt).localeCompare(toText(a.createdAt)) ||
+        toText(b.id).localeCompare(toText(a.id)),
+    );
+    // Wide enough, from the first page, to reach the signal asked for.
+    if (options.until && page === 1) {
+      const at = ordered.findIndex((row) => toText(row.id) === options.until);
+      if (at >= pageSize) pageSize = Math.min(ordered.length, at + 1);
+    }
+    const ids = ordered
+      .slice((page - 1) * pageSize, page * pageSize)
+      .map((row) => toText(row.id));
+    const rows = ids.length
+      ? await query
+          .selectFrom('crmSignals')
+          .selectAll()
+          .where('id', 'in', ids)
+          .execute()
+      : [];
+    const byId = new Map(rows.map((row) => [toText(row.id), row]));
+    const since = Date.now() - NEW_FOR_DAYS * DAY;
+    const open = ordered.filter((row) => !dismissed(row));
     return {
-      available: this.available(),
+      available: await this.available(),
       watched,
-      inDailyCheck: watched || Boolean(open),
+      inDailyCheck: watched || Boolean(openDeal),
       checkedAt: stored?.signalsCheckedAt
         ? toText(stored.signalsCheckedAt)
         : null,
       canEdit,
-      signals: rows.map(view),
+      total: ordered.length,
+      open: open.length,
+      fresh: open.filter((row) => Date.parse(toText(row.createdAt)) >= since)
+        .length,
+      page,
+      pageSize,
+      signals: ids.flatMap((id) => {
+        const row = byId.get(id);
+        return row ? [view(row)] : [];
+      }),
     };
   }
 
@@ -198,14 +268,17 @@ export class CompanySignals {
     return this.of(actor, companyId);
   }
 
-  // Someone who may edit the company marks a signal seen or dismisses it; a
-  // dismissed event is not proposed again.
+  // Someone who may edit the company dismisses a signal, a dismissed event
+  // not proposed again, or undoes that.
   async decide(
     actor: Actor,
     signalId: string,
     status: SignalStatus,
   ): Promise<SignalView> {
-    if (status === 'new' || !STATUSES.includes(status))
+    // Dismissing is the one decision (the event is wrong, not this
+    // company's or of no concern, and is not proposed again); `new` undoes
+    // it, the signal standing as found.
+    if (status !== 'dismissed' && status !== 'new')
       throw new CrmError('invalidInput', 400, 'status');
     const query = this.service.database.query();
     const row = await query
@@ -222,25 +295,24 @@ export class CompanySignals {
       'update',
     );
     const now = new Date().toISOString();
+    // Undone, nobody decided it.
+    const decided =
+      status === 'dismissed'
+        ? { decidedById: actor.id, decidedAt: now }
+        : { decidedById: null, decidedAt: null };
     await query
       .updateTable('crmSignals')
-      .set({ status, decidedById: actor.id, decidedAt: now, updatedAt: now })
+      .set({ status, ...decided, updatedAt: now })
       .where('id', '=', signalId)
       .execute();
-    return view({
-      ...row,
-      status,
-      decidedById: actor.id,
-      decidedAt: now,
-      updatedAt: now,
-    });
+    return view({ ...row, status, ...decided, updatedAt: now });
   }
 
   // Someone who may edit the company has it checked now, whether or not
   // the daily check watches it.
   async checkNow(actor: Actor, companyId: string): Promise<CheckResult> {
     await this.service.get(actor, 'companies', companyId, undefined, 'update');
-    const searcher = this.searcher();
+    const searcher = await this.searcher();
     if (!searcher) throw new CrmError('signalsUnavailable', 409);
     const company = await this.company(companyId);
     if (!company) throw new CrmError('notFound', 404);
@@ -257,18 +329,33 @@ export class CompanySignals {
   }
 
   // The daily pass over the watched companies.
-  async scan(now = new Date(), limit = 20): Promise<SignalPass> {
-    const searcher = this.searcher();
+  // At most 100 companies a day: with each checked once a week, 700 in the
+  // daily check before their weeks stretch; each check is a web search. It
+  // starts no company once `budgetMs` has passed: those left keep their
+  // last check's time, so the next pass takes them first.
+  async scan(
+    now = new Date(),
+    limit = 100,
+    budgetMs = SCAN_BUDGET_MS,
+    clock: () => number = Date.now,
+  ): Promise<SignalPass> {
+    const searcher = await this.searcher();
     const pass: SignalPass = {
       available: Boolean(searcher),
       checked: 0,
       found: 0,
       failed: 0,
+      stopped: false,
     };
+    const started = clock();
     if (!searcher) return pass;
     // Switched off on the Auto follow-up page (agents.ts).
     if (!(await agentOn(this.service, 'signals', 'daily'))) return pass;
     for (const company of await this.due(now, limit)) {
+      if (clock() - started >= budgetMs) {
+        pass.stopped = true;
+        break;
+      }
       pass.checked += 1;
       try {
         pass.found += (
@@ -333,10 +420,12 @@ export class CompanySignals {
     by: { trigger: 'daily' | 'asked'; actorId: string | null },
   ): Promise<CheckResult> {
     const checkId = randomUUID();
+    // `followUps` stays 0: a check starts no follow-up since the deals'
+    // daily pass takes the news (deal-signals.ts); the column keeps what
+    // checks before started.
     const log = (row: {
       status: 'found' | 'nothing' | 'failed';
       found: number;
-      followUps: number;
       error?: string;
     }) =>
       this.service.database
@@ -349,19 +438,18 @@ export class CompanySignals {
           actorId: by.actorId,
           status: row.status,
           found: row.found,
-          followUps: row.followUps,
+          followUps: 0,
           error: row.error ? row.error.slice(0, 500) : null,
           createdAt: now.toISOString(),
         })
         .execute();
-    let result: CheckResult & { followUps: number };
+    let result: CheckResult;
     try {
       result = await this.search(searcher, company, now, checkId);
     } catch (error) {
       await log({
         status: 'failed',
         found: 0,
-        followUps: 0,
         error: error instanceof Error ? error.message : String(error),
       }).catch(() => undefined);
       throw error;
@@ -369,20 +457,19 @@ export class CompanySignals {
     await log({
       status: result.found.length ? 'found' : 'nothing',
       found: result.found.length,
-      followUps: result.followUps,
     });
     return { found: result.found };
   }
 
-  // One company searched: its new signals kept, put on its timeline, told to
-  // the people who sell to it, and the ones worth acting on handed to its
-  // open deals' follow-ups.
+  // One company searched: its new signals kept, put on its timeline and told
+  // to the people who sell to it. The ones worth acting on reach its open
+  // deals through their daily pass (deal-signals.ts), not from here.
   private async search(
     searcher: WebSearcher,
     company: Row,
     now: Date,
     checkId: string,
-  ): Promise<CheckResult & { followUps: number }> {
+  ): Promise<CheckResult> {
     const service = this.service;
     const settings = await service.settings();
     const today = dayIn(now, settings.timeZone);
@@ -432,62 +519,16 @@ export class CompanySignals {
       .set({ signalsCheckedAt: now.toISOString() })
       .where('id', '=', companyId)
       .execute();
-    if (!found.length) return { found, followUps: 0 };
-    await this.tell(company, found);
-    return { found, followUps: await this.followUps(companyId, found) };
-  }
-
-  // A signal worth acting on (all but hiring) starts each open deal's
-  // follow-up as its owner, which reads the company's recent signals
-  // (opportunity-evaluation.ts), unless the deal already has a card waiting
-  // or being worked on, or the trigger is switched off.
-  private async followUps(
-    companyId: string,
-    found: readonly SignalView[],
-  ): Promise<number> {
-    const followUp = this.options.followUp;
-    if (!followUp || !found.some((s) => ACTING_TYPES.has(s.type))) return 0;
-    if (!(await agentOn(this.service, 'opportunities', 'companySignal')))
-      return 0;
-    const query = this.service.database.query();
-    const deals = await query
-      .selectFrom('crmOpportunities')
-      .select(['id', 'ownerId'])
-      .where('companyId', '=', companyId)
-      .where('stage', 'not in', ['won', 'lost', 'paused'])
-      .execute();
-    let started = 0;
-    for (const deal of deals) {
-      if (!deal.ownerId) continue;
-      const busy = (
-        await query
-          .selectFrom('crmHistory')
-          .selectAll()
-          .where('entity', '=', 'opportunities')
-          .where('recordId', '=', toText(deal.id))
-          .where('action', '=', 'ai')
-          .where('aiStatus', 'in', ['pending', 'running'])
-          .execute()
-      ).some((row) => {
-        const status = readEntry(row).status;
-        return status === 'pending' || status === 'running';
-      });
-      if (busy) continue;
-      try {
-        if (await followUp(toText(deal.id), toText(deal.ownerId))) started += 1;
-      } catch {
-        // A deal its owner can no longer read, or closed meanwhile.
-      }
-    }
-    return started;
+    if (found.length) await this.tell(company, found);
+    return { found };
   }
 
   // The Auto follow-up page's tab (agents.ts's agentOverview, for this
   // agent): the switches, the last 7 and 30 days, and the checks of the
   // last 90 days on companies the reader may read, newest first. A check's
-  // runs count as an agent's runs; its signals' seen, dismissed and new as
-  // a card's accepted, dismissed and pending, the acceptance their seen
-  // share of those decided.
+  // runs count as an agent's runs; in a card's slots, its signals found as
+  // accepted, those dismissed, those worth acting on as pending, and the
+  // acceptance the share dismissed.
   async overview(
     actor: Actor,
     options: {
@@ -508,7 +549,7 @@ export class CompanySignals {
       .execute();
     const signals = await query
       .selectFrom('crmSignals')
-      .select(['companyId', 'status', 'createdAt', 'title', 'checkId'])
+      .select(['companyId', 'status', 'type', 'createdAt', 'title', 'checkId'])
       .where('createdAt', '>=', since)
       .execute();
     const ids = [
@@ -530,20 +571,23 @@ export class CompanySignals {
         rows.filter((r) => Date.parse(toText(r.createdAt)) >= from);
       const runs = within(mine);
       const found = within(theirs);
-      const count = (status: string) =>
-        found.filter((s) => s.status === status).length;
-      const accepted = count('seen');
-      const dismissed = count('dismissed');
+      const dismissed = found.filter((s) => s.status === 'dismissed').length;
+      // Worth acting on: what the deals' daily pass follows up.
+      const acting = found.filter((s) =>
+        ACTING_TYPES.includes(toText(s.type)),
+      ).length;
+      // In the page's slots: the checks, the signals found, those
+      // dismissed, those worth acting on, the failed checks, and the share
+      // dismissed (how often it found the wrong thing).
       return {
         runs: runs.length,
-        accepted,
+        accepted: found.length,
         dismissed,
-        pending: count('new'),
+        pending: acting,
         failed: runs.filter((r) => r.status === 'failed').length,
         found: found.length,
-        followUps: runs.reduce((sum, r) => sum + Number(r.followUps ?? 0), 0),
-        acceptance:
-          accepted + dismissed ? accepted / (accepted + dismissed) : null,
+        acting,
+        acceptance: found.length ? dismissed / found.length : null,
       };
     };
     const listed = mine.filter(
@@ -610,6 +654,7 @@ export class CompanySignals {
           inputTokens: answer.usage.inputTokens,
           outputTokens: answer.usage.outputTokens,
         } as Parameters<typeof recordUse>[2],
+        sourceOf('signals'),
       ).catch(() => undefined);
     return answer;
   }

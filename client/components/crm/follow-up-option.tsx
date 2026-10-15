@@ -1,11 +1,23 @@
 import { useId, type ReactElement } from 'react';
 import { Checkbox } from '../ui/checkbox.js';
 import { agentRuns, useCrmText, useMetadata } from './api.js';
+import { AgentSentence } from './work-agent.js';
+import { useWorkAgentName } from './work-agent-name.js';
+
+// Each option's words naming the agent that follows up, used while it has
+// its own: the lead's or the deal's follow-up.
+const AGENT_LABELS: Record<string, string> = {
+  leadFollowUpNow: 'agentWork.followUp.now',
+  dealFollowUpNow: 'agentWork.followUp.now',
+  'merge.followUp': 'agentWork.followUp.merged',
+  'evaluation.followUpAfter': 'agentWork.followUp.afterTask',
+};
 
 // "Let the AI follow up at once", beside the button that creates a lead (the
 // lead form, the review of leads the AI organised) and under the deal a
 // conversion opens (`label`): ticked by default, and left out while the AI
-// employee is off, when no follow-up would run anyway.
+// employee is off, when no follow-up would run anyway. It names the agent
+// following up, "让 线索跟进 立刻跟进", while that agent is there.
 export function FollowUpOption({
   checked,
   onChange,
@@ -28,6 +40,8 @@ export function FollowUpOption({
   const { data: meta } = useMetadata();
   const { text } = useCrmText();
   const id = useId();
+  const agentName = useWorkAgentName(agent);
+  const agentLabel = AGENT_LABELS[label];
   if (!meta?.assistant || !agentRuns(meta, agent, trigger)) return null;
   return (
     <label
@@ -40,7 +54,11 @@ export function FollowUpOption({
         disabled={disabled}
         onCheckedChange={(value) => onChange(value === true)}
       />
-      {text(label)}
+      {agentName && agentLabel ? (
+        <AgentSentence textKey={agentLabel} name={agentName} />
+      ) : (
+        text(label)
+      )}
     </label>
   );
 }

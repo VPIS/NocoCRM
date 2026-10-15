@@ -71,7 +71,7 @@ import {
   taskPreparerToken,
 } from './task-preparation.js';
 import { userRoleScopeRegistryToken } from '@nocobase/app-plugin-users/server/tokens';
-import { aiAvailable } from './ai-model.js';
+import { aiAvailable, crmModel } from './ai-model.js';
 import { CompanySignals, companySignalsToken } from './company-signals.js';
 import { webSearcher } from './web-research.js';
 import type { CrmAiConfig } from '../../config/ai.js';
@@ -171,33 +171,29 @@ export default class CrmProvider extends ServiceProvider<Application> {
       () =>
         new CompanySignals(
           this.app.container.resolve(crmToken),
-          () =>
-            webSearcher(
+          // With the Company signals agent's model when it is a Qwen one
+          // (work-agents.ts), else the configured Qwen service's fast one.
+          async () => {
+            const services =
               this.app.config?.get<CrmAiConfig['llmServices']>(
                 'ai.llmServices',
-              ),
-            ),
-          {
-            container: this.app.container,
-            // A signal worth acting on follows up the company's open deals,
-            // each as its owner, in the language they use.
-            followUp: async (dealId, ownerId) =>
-              Boolean(
-                await this.app.container
-                  .resolve(opportunityEvaluatorToken)
-                  .request(
-                    crmActor(this.app.container.resolve(authorizationToken), {
-                      id: ownerId,
-                      locale: await this.app.container
-                        .resolve(crmToken)
-                        .localeOf(ownerId),
-                    }),
-                    dealId,
-                    undefined,
-                    'companySignal',
-                  ),
-              ),
+              );
+            const fallback = webSearcher(services);
+            const model = await crmModel(this.app.container, 'signals').catch(
+              () => null,
+            );
+            const service = model ? services?.[model.modelService] : undefined;
+            const apiKey = service?.options?.apiKey;
+            return model &&
+              service?.provider === 'dashscope' &&
+              typeof apiKey === 'string' &&
+              apiKey
+              ? { service: model.modelService, model: model.model, apiKey }
+              : fallback;
           },
+          // A signal worth acting on reaches the company's open deals
+          // through their daily pass (deal-signals.ts), not from the check.
+          { container: this.app.container },
         ),
     );
     registerCrmResources(this.app.container.resolve(authorizationToken));
@@ -433,6 +429,8 @@ export default class CrmProvider extends ServiceProvider<Application> {
               checked: pass.checked,
               found: pass.found,
               failed: pass.failed,
+              // Out of time: the rest wait for tomorrow's pass, first.
+              stopped: pass.stopped,
             },
           };
         },
@@ -441,7 +439,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
         key: 'crm.company-signals',
         title: words.signalTitle,
         description: words.signalDescription,
-        schedule: { cron: '30 9 * * *', timezone },
+        schedule: { cron: '0 8 * * *', timezone },
         target: { type: 'app.crm-company-signals', config: {} },
       });
     }
@@ -759,7 +757,9 @@ export default class CrmProvider extends ServiceProvider<Application> {
                   ...content,
                   target: {
                     type: 'route',
-                    // A company's news opens on its Signals tab.
+                    // A company's news opens its page with the whole list of
+                    // its signals (the Signals card's dialog, which /signals
+                    // opens).
                     path: `/crm/${toText(row.entity)}/${toText(row.recordId)}${
                       row.event === 'signal' ? '/signals' : ''
                     }`,

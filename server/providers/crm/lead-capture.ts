@@ -56,10 +56,14 @@ function shapes(owners: readonly string[]) {
     country: text.describe(
       'Country or region, an ISO 3166-1 alpha-2 code such as CN',
     ),
+    // As the text writes them: an English example here had the model
+    // write a Chinese text's city romanised (Hangzhou).
     state: text.describe(
-      'The name of the province, state or municipality, such as Zhejiang Province',
+      'The name of the province, state or municipality, as the text writes it, in its language',
     ),
-    city: text.describe('City'),
+    city: text.describe(
+      'The city, as the text writes it, in its language: never translated or romanised',
+    ),
     address: text.describe('Street address'),
     message: text.describe(
       "This person's enquiry: what the text says about them, kept as close to its own words as possible, never cut down to one line",
@@ -339,6 +343,7 @@ export async function captureLeads(
   const session = await openSession(container, {
     timeZone,
     guidance: settingsGuidance(settings),
+    work: 'leads',
   });
   if (!session) throw new CrmError('assistantUnavailable', 409);
   const logger = container.resolve(loggingToken).getLogger('crm-lead-capture');

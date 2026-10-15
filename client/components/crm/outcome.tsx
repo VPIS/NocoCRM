@@ -28,6 +28,9 @@ import {
   type CrmRecord,
   agentRuns,
 } from './api.js';
+import { FollowUpOption } from './follow-up-option.js';
+import { AgentSentence, WorkAgentLabel } from './work-agent.js';
+import { useWorkAgentName } from './work-agent-name.js';
 
 // What came of a task, as the person tells it, with the AI writing up
 // what they jotted down (headed points: what the other side said, the facts
@@ -42,6 +45,7 @@ export function OutcomeBox({
   disabled,
   followUp,
   onFollowUp,
+  followUpBy = 'leads',
   bare = false,
 }: {
   taskId: string;
@@ -50,6 +54,9 @@ export function OutcomeBox({
   disabled: boolean;
   followUp?: boolean;
   onFollowUp?: (followUp: boolean) => void;
+  // Whose follow-up runs then, named on the option: the lead's or the
+  // deal's agent.
+  followUpBy?: 'leads' | 'opportunities';
   // In a dialog laid out as the new task's: the text with no box, growing
   // with what is written, and its options as chips under it.
   bare?: boolean;
@@ -70,6 +77,22 @@ export function OutcomeBox({
     box.style.height = `${String(Math.min(box.scrollHeight, limit))}px`;
     box.style.overflowY = box.scrollHeight > limit ? 'auto' : 'hidden';
   }, [value, bare]);
+  const followerName = useWorkAgentName(followUpBy);
+  const followUpLabel = followerName ? (
+    <AgentSentence textKey='agentWork.followUp.afterTask' name={followerName} />
+  ) : (
+    text('evaluation.followUpAfter')
+  );
+  // The AI's organising, as the captures' is: its button, and beside it
+  // the agent writing it up (the task assistant).
+  const organiseLabel = (
+    <>
+      {organising ? <Spinner /> : <Sparkles />}
+      {text(
+        organising ? 'evaluation.organising' : 'evaluation.organiseOutcome',
+      )}
+    </>
+  );
   const organise = (): void => {
     setOrganising(true);
     setError(undefined);
@@ -114,7 +137,7 @@ export function OutcomeBox({
                 disabled={disabled}
                 onCheckedChange={(checked) => onFollowUp(checked === true)}
               />
-              {text('evaluation.followUpAfter')}
+              {followUpLabel}
             </label>
           ) : null}
           {meta?.assistant ? (
@@ -128,14 +151,10 @@ export function OutcomeBox({
               disabled={disabled || organising || !value.trim()}
               onClick={organise}
             >
-              {organising ? <Spinner /> : <Sparkles />}
-              {text(
-                organising
-                  ? 'evaluation.organising'
-                  : 'evaluation.organiseOutcome',
-              )}
+              {organiseLabel}
             </Button>
           ) : null}
+          {meta?.assistant ? <WorkAgentLabel work='tasks' /> : null}
         </div>
       </div>
     );
@@ -165,24 +184,22 @@ export function OutcomeBox({
               disabled={disabled}
               onCheckedChange={(checked) => onFollowUp(checked === true)}
             />
-            {text('evaluation.followUpAfter')}
+            {followUpLabel}
           </label>
+        ) : null}
+        {meta?.assistant ? (
+          <WorkAgentLabel work='tasks' className='ml-auto' />
         ) : null}
         {meta?.assistant ? (
           <Button
             type='button'
             size='sm'
             variant='ghost'
-            className='ml-auto h-7 gap-1.5 rounded-lg bg-primary/10 px-2.5 font-medium text-primary hover:bg-primary/15 hover:text-primary dark:bg-primary/20'
+            className='h-7 gap-1.5 rounded-lg bg-primary/10 px-2.5 font-medium text-primary hover:bg-primary/15 hover:text-primary dark:bg-primary/20'
             disabled={disabled || organising || !value.trim()}
             onClick={organise}
           >
-            {organising ? <Spinner /> : <Sparkles />}
-            {text(
-              organising
-                ? 'evaluation.organising'
-                : 'evaluation.organiseOutcome',
-            )}
+            {organiseLabel}
           </Button>
         ) : null}
       </div>
@@ -222,7 +239,9 @@ export function RecordOutcomeDialog({
     >
       {/* Laid out as the new task's dialog: no heading of its own (named
           for screen readers), the task's name leading, what came of it
-          under it with no box, its options as chips, then the buttons. */}
+          under it with no box, the AI's organising under it, then the
+          buttons, with the follow-up's option beside them as the new
+          lead's form has it. */}
       <DialogContent
         showCloseButton={false}
         className='max-h-[90svh] overflow-y-auto sm:max-w-xl'
@@ -243,11 +262,20 @@ export function RecordOutcomeDialog({
           value={outcome}
           onChange={setOutcome}
           disabled={busy}
-          // A follow-up is a deal's or a lead's: offered only for an
-          // task of one.
-          {...(followable ? { followUp, onFollowUp: setFollowUp } : {})}
         />
         <DialogFooter>
+          {/* A follow-up is a deal's or a lead's: offered only for a task
+              of one. */}
+          {task.opportunityId || task.leadId ? (
+            <FollowUpOption
+              checked={followUp}
+              onChange={setFollowUp}
+              disabled={busy}
+              label='evaluation.followUpAfter'
+              agent={task.opportunityId ? 'opportunities' : 'leads'}
+              trigger='taskDone'
+            />
+          ) : null}
           <Button variant='outline' disabled={busy} onClick={onClose}>
             {text('cancel')}
           </Button>

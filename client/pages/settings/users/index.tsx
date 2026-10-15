@@ -569,11 +569,7 @@ export default function UsersPage(): ReactElement {
               </Button>
             ) : null}
             {canCreate ? (
-              <Button
-                variant='contrast'
-                nativeButton={false}
-                render={<Link to={link('new')} />}
-              >
+              <Button nativeButton={false} render={<Link to={link('new')} />}>
                 <PlusIcon data-icon='inline-start' />
                 {text('users.new')}
               </Button>

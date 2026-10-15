@@ -53,6 +53,21 @@ export interface Metadata {
   assistant: boolean;
   // The agent the background work runs on, left out of the chat's agents.
   backgroundAgent?: string | null;
+  // The CRM's work agents' ids, by work (crm-agents/work-agents.ts).
+  workAgents?: Record<string, string>;
+  // Their names as written and the references translating them, by work,
+  // for those not archived: the dialogs doing that work name it.
+  workAgentNames?: Record<
+    string,
+    {
+      name: string;
+      nameText: { key: string; ns: string } | null;
+      description?: string | null;
+      descriptionText?: { key: string; ns: string } | null;
+      // The model it asks first; null when it lists none.
+      model?: { modelService: string; model: string } | null;
+    }
+  >;
   // The library ids of the CRM's method skills, by name, which the agents'
   // pages link to.
   methodSkills?: Record<string, string>;

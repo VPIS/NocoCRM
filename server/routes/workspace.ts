@@ -40,6 +40,10 @@ import { companySignalsToken } from '../providers/crm/company-signals.js';
 import { crmToken } from '../providers/crm/index.js';
 import { jsonValue } from '../providers/crm/values.js';
 import { BACKGROUND_MARKER } from '../providers/crm-agents/background.js';
+import {
+  workAgentIds,
+  workAgentNames,
+} from '../providers/crm-agents/work-agents.js';
 import { SKILLS_MARKER } from '../providers/crm-agents/library.js';
 import { pendingDecisions } from '../providers/crm/lead-evaluation.js';
 import { mailTimelineToken } from '../providers/crm/mail-timeline.js';
@@ -245,6 +249,11 @@ export function registerWorkspaceRoutes(
                 ) as { agentId?: unknown } | null
               )?.agentId ?? '',
             ) || null,
+          // The work agents' ids, by work (work-agents.ts), which the chat
+          // leaves out and the Auto follow-up page links to.
+          workAgents: await workAgentIds(service.database),
+          // Their names, which the dialogs doing their work show.
+          workAgentNames: await workAgentNames(service.database),
           // The library ids of the CRM's method skills, by name (library.ts),
           // so the agents' pages link to each on the Skills page.
           methodSkills: Object.fromEntries(

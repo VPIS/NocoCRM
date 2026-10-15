@@ -1997,10 +1997,15 @@ async function populate(
     ...decided(-5, 15),
   });
 
-  // The projects' companies' signals (company-signals.ts), with their
-  // timeline lines, as a check would have left them.
+  // The companies' signals (company-signals.ts), with their timeline lines,
+  // as a check would have left them: real, neutral events a search found
+  // on them, with their real sources and dates.
   for (const signal of project.signals) {
-    const companyId = toText(projects[signal.company].id);
+    const companyId = toText(
+      typeof signal.company === 'number'
+        ? companies_[signal.company]?.id
+        : projects[signal.company].id,
+    );
     const createdAt = at(-signal.foundDaysAgo, 9, 30);
     const occurredOn = signal.occurredOn;
     const id = randomUUID();
@@ -2018,9 +2023,8 @@ async function populate(
         eventKey: eventKey(signal.type, occurredOn, signal.title),
         status: signal.status,
         runId,
-        decidedById: signal.status === 'seen' ? owner.id : null,
-        decidedAt:
-          signal.status === 'seen' ? at(-signal.foundDaysAgo + 1, 10) : null,
+        decidedById: null,
+        decidedAt: null,
         createdAt,
         updatedAt: createdAt,
       })

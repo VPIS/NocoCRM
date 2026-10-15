@@ -26,6 +26,7 @@ import {
   type CrmRecord,
   type Data,
 } from './api.js';
+import { WorkAgentLabel } from './work-agent.js';
 import { LONG_TEXT_LIMIT } from '../../../server/providers/crm/limits.js';
 
 // "New opportunity" with the AI (server/providers/crm/opportunity-capture.ts),
@@ -322,6 +323,7 @@ export function OpportunityCaptureDialog({
               disabled={Boolean(busy)}
               onSwitch={onForm}
             />
+            <WorkAgentLabel work='opportunities' className='ml-auto' />
           </div>
         </DialogHeader>
         {!deal ? (

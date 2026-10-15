@@ -6,6 +6,8 @@ import type { EvaluationEntry, FollowedEntity } from './lead-evaluation.js';
 // EvaluateMenuItem (lead-evaluation.tsx): whether it may be asked, whether the AI has
 // followed the record up before, and asking.
 export interface FollowUpRequest {
+  // Whose follow-up it asks: the lead's or the deal's.
+  readonly entity: FollowedEntity;
   readonly available: boolean;
   readonly asked: boolean;
   readonly busy: boolean;
@@ -28,6 +30,7 @@ export function useFollowUpRequest(
     Boolean(meta?.assistant) && allowed,
   );
   return {
+    entity,
     available: Boolean(meta?.assistant) && allowed,
     asked: Boolean(entry),
     busy: busy || entry?.status === 'running',

@@ -71,6 +71,15 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => ({
       settings: { timeZone: 'Asia/Shanghai' },
       methodSkills: {},
       agents: { signals: { enabled: true, triggers: { daily: true } } },
+      // Its agent, renamed by an administrator: the tab and the card follow.
+      workAgents: { signals: 'agent-signals' },
+      workAgentNames: {
+        signals: {
+          name: 'Market watch',
+          nameText: null,
+          model: { modelService: 'qwen', model: 'qwen3.8-flash' },
+        },
+      },
     },
   }),
 }));
@@ -98,14 +107,24 @@ const { default: AgentsPage } =
 
 it('shows the company signals as an agent: its checks, the signals read, and each check opening its company', () => {
   render(
-    <MemoryRouter initialEntries={['/crm/agents/signals']}>
+    <MemoryRouter initialEntries={['/crm/agent-work/signals']}>
       <AgentsPage />
     </MemoryRouter>,
   );
-  expect(screen.getAllByText('Company signals').length).toBeGreaterThan(0);
-  expect(screen.getByText(/09:30 in the business time zone/)).toBeTruthy();
+  // Named as its agent, on its tab and its card, with the model it asks.
+  expect(screen.getAllByText('Market watch').length).toBeGreaterThan(1);
+  expect(screen.getByText('Model: qwen · qwen3.8-flash')).toBeTruthy();
+  expect(document.body.textContent).toContain(
+    'Run by Market watch. It changes nothing on the company',
+  );
+  expect(screen.getByText(/08:00 in the business time zone/)).toBeTruthy();
   // The signals' own names for the figures.
-  for (const label of ['Checks', 'Seen', 'New signals', 'Seen rate'])
+  for (const label of [
+    'Checks',
+    'Signals found',
+    'Worth acting on',
+    'Dismiss rate',
+  ])
     expect(screen.getByText(label)).toBeTruthy();
   expect(screen.getByText('50%')).toBeTruthy();
   // A check's outcomes to filter by, and the check opening its company.

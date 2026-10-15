@@ -114,11 +114,34 @@ export const Workspace = z
     agents: AgentSwitchesSchema,
     backgroundAgent: z.string().nullable().meta({
       description:
-        "The id of the agent the CRM's background work runs on, which the chat leaves out of its agents; null before it exists.",
+        "The id of the agent the CRM's background work once ran on (the Background AI, archived once the work agents replace it), which the chat leaves out of its agents; null when there is none.",
     }),
+    workAgents: z.record(z.string(), z.string()).meta({
+      description:
+        "The ids of the CRM's work agents, by work (leads, opportunities, approvals, tasks, signals): each configures its work, and the chat leaves them out of its agents.",
+    }),
+    workAgentNames: z
+      .record(
+        z.string(),
+        z.object({
+          name: z.string(),
+          nameText: z.object({ key: z.string(), ns: z.string() }).nullable(),
+          description: z.string().nullable(),
+          descriptionText: z
+            .object({ key: z.string(), ns: z.string() })
+            .nullable(),
+          model: z
+            .object({ modelService: z.string(), model: z.string() })
+            .nullable(),
+        }),
+      )
+      .meta({
+        description:
+          "The CRM's work agents not archived, by work: the name and description as written and the references translating them, and the model it asks first (null when it lists none), which the CRM names wherever that work is done.",
+      }),
     methodSkills: z.record(z.string(), z.string()).meta({
       description:
-        "The Agents plugin's library ids of the CRM's method skills, by skill name (lead-follow-up, opportunity-follow-up, approval-review, task-preparation).",
+        "The Agents plugin's library ids of the CRM's method skills, by skill name (lead-follow-up, opportunity-follow-up, approval-review, task-preparation, company-signals).",
     }),
   })
   .meta({ ref: 'CrmWorkspace' });

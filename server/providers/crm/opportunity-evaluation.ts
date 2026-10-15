@@ -80,14 +80,11 @@ import {
 // the recommendation is an entry in the deal's activity feed (crmHistory,
 // action `ai`, source `ai`) waiting for a person; accepting applies it
 // through CrmService as the person who accepted, recorded as a change the
-// AI proposed. The run is the CRM assistant's, unattended, as the deal's
-// owner, with its tools off and the opportunity-follow-up skill (ai/skills)
-// as its method. It looks the company up on the web as a lead's follow-up
-// does, only when the company's particulars are empty,
-// when a person changed its name or website since the company was last
-// looked up (by this deal's, another deal's or the converted lead's
-// follow-up), or when that was more than 90 days ago: what it finds is
-// offered on the card for the company's fields. A deal is followed up when
+// AI proposed. The run is one model call (crm/ai-model.ts) with the
+// Opportunity follow-up agent's model and instructions and the
+// opportunity-follow-up skill (ai/skills) as its method. It searches no web:
+// the company's particulars are not looked up, and what the web says about
+// the company comes from its company signals. A deal is followed up when
 // a conversion opens it (unless unticked), when someone asks, and when an
 // outcome recorded on one of its tasks asks for it.
 
@@ -1385,6 +1382,7 @@ export class OpportunityEvaluator {
       const session = await openSession(this.container, {
         timeZone: settings.timeZone,
         guidance: settingsGuidance(settings),
+        work: 'opportunities',
       });
       if (!session) throw new Error('No model to ask');
       // The verdict: the JSON object the prompt spells out, in the reply.

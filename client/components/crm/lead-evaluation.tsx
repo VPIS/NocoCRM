@@ -72,6 +72,8 @@ import {
   useRefresh,
   type CrmRecord,
 } from './api.js';
+import { useAgentWords } from './work-agent-name.js';
+import { AgentWords } from './work-agent.js';
 import { cardPin, recordPin } from './agent-chat/ask.js';
 import { DiscussButton } from './agent-chat/discuss-button.js';
 
@@ -279,6 +281,7 @@ export function EvaluationStatus({
 }): ReactElement | null {
   const { data: meta } = useMetadata();
   const { text, language } = useCrmText();
+  const words = useAgentWords();
   const refresh = useRefresh();
   const label = useVerdictLabel();
   const { data: entry } = useCrmQuery<EvaluationEntry | null>(
@@ -335,7 +338,7 @@ export function EvaluationStatus({
               type='button'
               onClick={() => onOpen(entry.id)}
               aria-label={[
-                text('evaluation.start'),
+                words(entity, 'name', 'evaluation.start'),
                 verdict ? label(verdict) : '',
                 statusLine,
               ]
@@ -354,7 +357,16 @@ export function EvaluationStatus({
             <Sparkles className='size-3.5 text-primary' />
           )}
           <span className='min-w-0 truncate font-medium text-primary'>
-            {text(live ? aiStateWords.followUp.running : 'evaluation.start')}
+            {live ? (
+              text(aiStateWords.followUp.running)
+            ) : (
+              <AgentWords
+                inButton
+                work={entity}
+                wordKey='name'
+                fallback='evaluation.start'
+              />
+            )}
           </span>
           {live ? null : <AiStatusWord status={entry.status} />}
         </TooltipTrigger>
@@ -387,7 +399,7 @@ export function EvaluationStatus({
                   type='button'
                   disabled={request.busy}
                   onClick={request.ask}
-                  aria-label={toText(text('evaluation.askAgain'))}
+                  aria-label={words(entity, 'rerun', 'evaluation.askAgain')}
                   className='flex h-full shrink-0 items-center gap-1 rounded-r-lg px-2 font-medium text-primary transition-colors hover:bg-primary/10 disabled:opacity-50'
                 />
               }
@@ -396,7 +408,12 @@ export function EvaluationStatus({
               {text('evaluation.rerun')}
             </TooltipTrigger>
             <TooltipContent side='bottom'>
-              {text('evaluation.askAgain')}
+              <AgentWords
+                inButton
+                work={entity}
+                wordKey='rerun'
+                fallback='evaluation.askAgain'
+              />
             </TooltipContent>
           </Tooltip>
         </>
@@ -414,7 +431,6 @@ export function EvaluateButton({
 }: {
   request: FollowUpRequest;
 }): ReactElement | null {
-  const { text } = useCrmText();
   if (!request.available || request.asked) return null;
   // Shaped as the suggestion's chip it gives way to (EvaluationStatus): as
   // tall as the small buttons beside it, on the AI's tint, led by its mark.
@@ -430,7 +446,12 @@ export function EvaluateButton({
       ) : (
         <Sparkles className='size-3.5' />
       )}
-      {text('evaluation.start')}
+      <AgentWords
+        inButton
+        work={request.entity}
+        wordKey='run'
+        fallback='evaluation.start'
+      />
     </button>
   );
 }
@@ -469,6 +490,7 @@ export function VerdictPanel({
 }): ReactElement | null {
   const { data: meta } = useMetadata();
   const { text, language } = useCrmText();
+  const words = useAgentWords();
   const api = useCrmApi();
   const label = useVerdictLabel();
   const [busy, setBusy] = useState<string>();
@@ -755,7 +777,11 @@ export function VerdictPanel({
             <Sparkles className='size-4 shrink-0 text-primary' />
             {heading ?? (
               <span className='shrink-0 font-medium'>
-                {text('evaluation.title')}
+                <AgentWords
+                  work={entity}
+                  wordKey='suggestion'
+                  fallback='evaluation.title'
+                />
               </span>
             )}
             {verdict && (
@@ -799,12 +825,16 @@ export function VerdictPanel({
         <p className='flex items-center gap-2 text-muted-foreground'>
           <Spinner />
           {/* Not begun yet: waiting its turn behind other follow-ups. */}
-          {text(
-            !entry.ai.startedAt
-              ? 'evaluation.queued'
-              : entry.ai.instruction
-                ? 'evaluation.revising'
-                : 'evaluation.running',
+          {!entry.ai.startedAt ? (
+            text('evaluation.queued')
+          ) : entry.ai.instruction ? (
+            text('evaluation.revising')
+          ) : (
+            <AgentWords
+              work={entity}
+              wordKey='running.followUp'
+              fallback='evaluation.running'
+            />
           )}
         </p>
       )}
@@ -1013,7 +1043,7 @@ export function VerdictPanel({
                   recordPin(entity, recordId, recordName ?? ''),
                   cardPin(
                     entry.id,
-                    `${text('evaluation.title')} · ${label(verdict)}`,
+                    `${words(entity, 'suggestion', 'evaluation.title')} · ${label(verdict)}`,
                   ),
                 ]}
               />
@@ -1615,6 +1645,7 @@ function PlannedTask({
           disabled={disabled}
           followUp={plan.followUp ?? true}
           onFollowUp={(followUp) => onPlan({ ...plan, followUp })}
+          followUpBy={entity}
         />
       ) : null}
     </div>

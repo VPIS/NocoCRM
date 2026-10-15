@@ -566,6 +566,7 @@ export async function mergeProposal(
     const session = await openSession(container, {
       timeZone: settings.timeZone,
       guidance: settingsGuidance(settings),
+      work: 'leads',
     });
     if (!session) return fallback;
     // A reply without the proposal (it happens now and then) is asked for

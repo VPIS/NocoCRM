@@ -11,6 +11,7 @@ import { companySignalsToken } from '../providers/crm/company-signals.js';
 import type { CrmEnv } from './context.js';
 import {
   CompanySignals,
+  CompanySignalsQuery,
   DecideSignalInput,
   Signal,
   SignalCheck,
@@ -18,7 +19,7 @@ import {
 } from './schemas/signals.js';
 
 // A company's signals (company-signals.ts): read by whoever may read the
-// company; watched, checked at once and marked seen or dismissed by
+// company; watched, checked at once and dismissed by
 // whoever may edit it.
 export function registerSignalRoutes(
   app: Application,
@@ -33,16 +34,21 @@ export function registerSignalRoutes(
       summary: "List a company's signals",
       operationId: 'listCompanySignals',
       description:
-        'Newest first, with whether the company is checked daily and when it was last checked.',
+        'A page of them, those not dismissed first and the newest events first, with how many there are (all, not dismissed, new), whether the company is checked daily and when it was last checked. `until` widens the first page to reach that signal.',
       responses: {
         '200': dataResponse(CompanySignals),
         ...apiErrorResponses,
         '404': apiErrorResponse(404),
       },
     }),
+    apiValidator('query', CompanySignalsQuery),
     async (c) =>
       c.json({
-        data: await signals().of(c.get('actor'), c.req.param('companyId')),
+        data: await signals().of(
+          c.get('actor'),
+          c.req.param('companyId'),
+          c.req.valid('query'),
+        ),
       }),
   );
   router.put(
@@ -96,7 +102,7 @@ export function registerSignalRoutes(
     '/signals/:signalId',
     describeRoute({
       tags,
-      summary: 'Mark a signal seen or dismiss it',
+      summary: 'Dismiss a signal or undo it',
       operationId: 'decideSignal',
       description: 'Needs edit access to its company.',
       responses: {

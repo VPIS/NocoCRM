@@ -21,6 +21,8 @@ import {
   useRefresh,
   type CrmRecord,
 } from './api.js';
+import { useAgentWords } from './work-agent-name.js';
+import { AgentWords } from './work-agent.js';
 import { cardPin, recordPin } from './agent-chat/ask.js';
 import { DiscussButton } from './agent-chat/discuss-button.js';
 import { DEFAULT_TIME_ZONE } from '../../../server/providers/crm/zone-time.js';
@@ -77,6 +79,7 @@ export function PrepPanel({
 }): ReactElement | null {
   const { data: meta } = useMetadata();
   const { text, language } = useCrmText();
+  const words = useAgentWords();
   const api = useCrmApi();
   const prep = entry.ai.result;
   const [busy, setBusy] = useState<'accept' | 'dismiss' | 'revise'>();
@@ -162,7 +165,13 @@ export function PrepPanel({
         ) : (
           <>
             <Sparkles className='size-4 shrink-0 text-primary' />
-            <span className='shrink-0 font-medium'>{text('taskPrep.ask')}</span>
+            <span className='shrink-0 font-medium'>
+              <AgentWords
+                work='tasks'
+                wordKey='preparation'
+                fallback='taskPrep.ask'
+              />
+            </span>
           </>
         )}
         {(entry.status === 'accepted' || entry.status === 'dismissed') && (
@@ -194,12 +203,16 @@ export function PrepPanel({
       {entry.status === 'running' && (
         <p className='flex items-center gap-2 text-muted-foreground'>
           <Spinner />
-          {text(
-            !entry.ai.startedAt
-              ? 'evaluation.queued'
-              : entry.ai.instruction
-                ? 'evaluation.revising'
-                : 'taskPrep.running',
+          {!entry.ai.startedAt ? (
+            text('evaluation.queued')
+          ) : entry.ai.instruction ? (
+            text('evaluation.revising')
+          ) : (
+            <AgentWords
+              work='tasks'
+              wordKey='running.prep'
+              fallback='taskPrep.running'
+            />
           )}
         </p>
       )}
@@ -315,7 +328,7 @@ export function PrepPanel({
                   recordPin('tasks', taskId, toText(task.name)),
                   cardPin(
                     entry.id,
-                    `${toText(text('taskPrep.ask'))} · ${toText(task.name)}`,
+                    `${words('tasks', 'preparation', 'taskPrep.ask')} · ${toText(task.name)}`,
                   ),
                 ]}
               />
@@ -376,6 +389,7 @@ export function PrepStatus({
 }): ReactElement | null {
   const { data: meta } = useMetadata();
   const { text, language } = useCrmText();
+  const words = useAgentWords();
   const api = useCrmApi();
   const refresh = useRefresh();
   const [busy, setBusy] = useState(false);
@@ -431,7 +445,7 @@ export function PrepStatus({
                 <button
                   type='button'
                   onClick={() => onOpen(entry.id)}
-                  aria-label={[text('taskPrep.ask'), standing]
+                  aria-label={[words('tasks', 'name', 'taskPrep.ask'), standing]
                     .filter(Boolean)
                     .join(' · ')}
                   className={`flex h-full min-w-0 items-center gap-1.5 rounded-l-lg px-2 transition-colors ${
@@ -446,7 +460,16 @@ export function PrepStatus({
                 <Sparkles className='size-3.5 text-primary' />
               )}
               <span className='min-w-0 truncate font-medium text-primary'>
-                {text(live ? aiStateWords.prep.running : 'taskPrep.ask')}
+                {live ? (
+                  text(aiStateWords.prep.running)
+                ) : (
+                  <AgentWords
+                    inButton
+                    work='tasks'
+                    wordKey='name'
+                    fallback='taskPrep.ask'
+                  />
+                )}
               </span>
               {live ? null : <AiStatusWord status={toText(entry.status)} />}
             </TooltipTrigger>
@@ -475,7 +498,7 @@ export function PrepStatus({
                       type='button'
                       disabled={busy}
                       onClick={ask}
-                      aria-label={toText(text('taskPrep.again'))}
+                      aria-label={words('tasks', 'rerun', 'taskPrep.again')}
                       className='flex h-full shrink-0 items-center gap-1 rounded-r-lg px-2 font-medium text-primary transition-colors hover:bg-primary/10 disabled:opacity-50'
                     />
                   }
@@ -484,7 +507,12 @@ export function PrepStatus({
                   {text('evaluation.rerun')}
                 </TooltipTrigger>
                 <TooltipContent side='bottom'>
-                  {text('taskPrep.again')}
+                  <AgentWords
+                    inButton
+                    work='tasks'
+                    wordKey='rerun'
+                    fallback='taskPrep.again'
+                  />
                 </TooltipContent>
               </Tooltip>
             </>
@@ -503,7 +531,12 @@ export function PrepStatus({
           ) : (
             <Sparkles className='size-3.5' />
           )}
-          {text('taskPrep.ask')}
+          <AgentWords
+            inButton
+            work='tasks'
+            wordKey='run'
+            fallback='taskPrep.ask'
+          />
         </button>
       )}
       <ErrorNotice error={error} />

@@ -6,11 +6,16 @@ import { lastExchanges } from './exchanges.js';
 import type { CrmService } from './service.js';
 import { agentOn } from './agents.js';
 import { crmActor } from './authorization.js';
+import { ACTING_TYPES } from './company-signals.js';
 
 // The daily look over the open deals for what should have happened and has
 // not, as lead-signals.ts does for leads: a deal gone quiet for fourteen
-// days, a deal whose expected close date is a week off or already past, and
-// a paused deal whose resume date has come. Each starts the deal's
+// days, a deal whose expected close date is a week off or already past, a
+// paused deal whose resume date has come, and an open deal whose company
+// has news worth acting on (company-signals.ts: funding, a new executive,
+// major news or a risk, not dismissed) found since its last follow-up; the
+// signals' own morning check, an hour before, starts no follow-up of its
+// own, so a deal is followed up at most once a day. Each starts the deal's
 // follow-up as its owner, the card saying what started it, so it lands in
 // the owner's Waiting on me. A deal with a card already waiting or being
 // worked on is left alone, the same signal does not start again within a
@@ -29,7 +34,7 @@ export interface DealSignalDays {
 }
 const DEFAULT_DAYS: DealSignalDays = { stale: 14, closing: 7 };
 
-export type DealSignal = 'silent' | 'closeDue' | 'resumeDue';
+export type DealSignal = 'silent' | 'closeDue' | 'resumeDue' | 'companySignal';
 
 export interface DealSignalPass {
   checked: number;
@@ -86,6 +91,7 @@ export async function scanDealSignals(
       'id',
       'stage',
       'ownerId',
+      'companyId',
       'createdAt',
       'expectedCloseAt',
       'resumeAt',
@@ -97,6 +103,25 @@ export async function scanDealSignals(
   if (!deals.length) return pass;
   const ids = deals.map((deal) => toText(deal.id));
   const exchanges = await lastExchanges(query, 'opportunities');
+  // When each company last had news worth acting on.
+  const news = new Map<string, number>();
+  const companyIds = [
+    ...new Set(deals.map((deal) => toText(deal.companyId)).filter(Boolean)),
+  ];
+  for (let i = 0; i < companyIds.length; i += 500)
+    for (const row of await query
+      .selectFrom('crmSignals')
+      .select(['companyId', 'createdAt'])
+      .where('companyId', 'in', companyIds.slice(i, i + 500))
+      .where('status', '!=', 'dismissed')
+      .where('type', 'in', [...ACTING_TYPES])
+      .execute()) {
+      const key = toText(row.companyId);
+      news.set(
+        key,
+        Math.max(news.get(key) ?? 0, Date.parse(toText(row.createdAt))),
+      );
+    }
   const tasks = new Map<string, Row[]>();
   const entries = new Map<string, ReturnType<typeof readEntry>[]>();
   // In chunks, as SQLite caps the parameters of one statement.
@@ -130,17 +155,34 @@ export async function scanDealSignals(
     // there, nothing to add.
     if (own.some((e) => e.status === 'pending' || e.status === 'running'))
       continue;
-    const signal = dealSignal(
-      deal,
-      tasks.get(id) ?? [],
-      now.getTime(),
-      days,
-      exchanges.get(id) ?? 0,
+    // The last follow-up that came to something (one that failed is tried
+    // again).
+    const lastFollowUp = Math.max(
+      0,
+      ...own
+        .filter((e) => e.status !== 'failed')
+        .map((e) => Date.parse(e.createdAt)),
     );
+    // Its own signal first; else its company's news since that follow-up,
+    // for an open deal (a paused one waits for its resume date).
+    const signal =
+      dealSignal(
+        deal,
+        tasks.get(id) ?? [],
+        now.getTime(),
+        days,
+        exchanges.get(id) ?? 0,
+      ) ??
+      (toText(deal.stage) !== 'paused' &&
+      (news.get(toText(deal.companyId)) ?? 0) > lastFollowUp
+        ? 'companySignal'
+        : undefined);
     if (!signal || !deal.ownerId) continue;
     // Once a week per signal, counting only follow-ups that came to
-    // something: one that failed is tried again on the next pass.
+    // something: one that failed is tried again on the next pass. The
+    // company's news needs no such wait: it is news since the last one.
     if (
+      signal !== 'companySignal' &&
       own.some(
         (e) =>
           e.ai.trigger === signal &&

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import CrmProvider from '../../server/providers/crm/index.js';
 import { i18nToken } from '@nocobase/app-server/i18n';
 import { I18nRuntime } from '@nocobase/i18n';
@@ -112,9 +113,17 @@ import {
 import { registerContextKinds } from '../../server/providers/crm-agents/context.js';
 import { defaultSettings } from '../../server/providers/crm/schema.js';
 import { crmConversationRules } from '../../server/providers/crm-agents/rules.js';
-import { provisionAssistant } from '../../server/providers/crm-agents/assistant.js';
+import {
+  nameAssistant,
+  provisionAssistant,
+} from '../../server/providers/crm-agents/assistant.js';
 import { provisionSkills } from '../../server/providers/crm-agents/library.js';
-import { provisionBackgroundAgent } from '../../server/providers/crm-agents/background.js';
+import {
+  nameWorkAgents,
+  provisionWorkAgents,
+  retireBackgroundAgent,
+  workAgentIds,
+} from '../../server/providers/crm-agents/work-agents.js';
 import {
   findApiDocumentSchemaProblems,
   findUndeclaredApiRoutes,
@@ -223,9 +232,6 @@ const web = {
   on: true,
   answers: [] as { text: string; pages: Record<string, unknown>[] }[],
   calls: [] as { search: boolean }[],
-  // The deal follow-ups a signal started, as the opportunity evaluator
-  // would have been asked.
-  followUps: [] as { dealId: string; ownerId: string }[],
 };
 let plans: CrmPlans;
 const planOutcomes: PlanOutcome[] = [];
@@ -598,10 +604,6 @@ beforeAll(async () => {
           { status: 200 },
         );
       }) as unknown as typeof fetch,
-      followUp: async (dealId: string, ownerId: string) => {
-        web.followUps.push({ dealId, ownerId });
-        return true;
-      },
     },
   );
   container.instance(companySignalsToken, signals);
@@ -1422,6 +1424,71 @@ describe('CRM API security and domain rules', () => {
   // web, kept with the search's own pages, put on its timeline and told to
   // the people selling to it; read by who reads the company, decided by who
   // edits it.
+  it("lists a company's signals a page at a time, those dismissed last, and reaches one asked for", async () => {
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Paged Signals Co',
+    });
+    const companyId = toText(company.id);
+    const now = Date.now();
+    // Five, one a day back from today, the newest dismissed; the oldest
+    // found nine days ago, no longer new.
+    const ids: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      const id = randomUUID();
+      ids.push(id);
+      const at = new Date(now - i * 86_400_000).toISOString();
+      await database
+        .query()
+        .insertInto('crmSignals')
+        .values({
+          id,
+          companyId,
+          type: 'business',
+          title: `Event ${String(i)}`,
+          summary: '',
+          occurredOn: at.slice(0, 10),
+          sources: JSON.stringify([]),
+          eventKey: `paged:${String(i)}`,
+          status: i === 0 ? 'dismissed' : 'new',
+          runId: null,
+          decidedById: null,
+          decidedAt: null,
+          createdAt:
+            i === 4 ? new Date(now - 9 * 86_400_000).toISOString() : at,
+          updatedAt: at,
+        })
+        .execute();
+    }
+    const first = await signals.of(actor('rep'), companyId, { pageSize: 2 });
+    expect(first).toMatchObject({ total: 5, open: 4, fresh: 3, page: 1 });
+    // Those not dismissed first, the newest events first.
+    expect(first.signals.map((s) => s.title)).toEqual(['Event 1', 'Event 2']);
+    const third = await signals.of(actor('rep'), companyId, {
+      page: 3,
+      pageSize: 2,
+    });
+    expect(third.signals.map((s) => s.title)).toEqual(['Event 0']);
+    // Opened at one further down: the first page reaches it.
+    const reaching = await signals.of(actor('rep'), companyId, {
+      pageSize: 2,
+      until: ids[4],
+    });
+    expect(reaching.pageSize).toBe(4);
+    expect(reaching.signals.at(-1)?.title).toBe('Event 4');
+    expect(
+      (
+        await request(
+          `/companies/${companyId}/signals?pageSize=2&page=2`,
+          'rep',
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      (await request(`/companies/${companyId}/signals?pageSize=500`, 'rep'))
+        .status,
+    ).toBe(400);
+  });
+
   it("finds a company's signals on the web, keeping only what its search pages back, once", async () => {
     const company = await service.save(actor('rep'), 'companies', {
       name: 'Signal Co',
@@ -1531,10 +1598,25 @@ describe('CRM API security and domain rules', () => {
     expect((await signals.of(actor('rep'), companyId)).signals[0]!.status).toBe(
       'dismissed',
     );
+    // Dismissing is the one decision, which can be undone; marking one
+    // seen is no longer offered.
+    expect(
+      (
+        await request(`/signals/${signalId}`, 'rep', 'PATCH', {
+          status: 'seen',
+        })
+      ).status,
+    ).toBe(400);
     expect(
       (await request(`/signals/${signalId}`, 'rep', 'PATCH', { status: 'new' }))
         .status,
-    ).toBe(400);
+    ).toBe(200);
+    expect(
+      (await signals.of(actor('rep'), companyId)).signals[0],
+    ).toMatchObject({ status: 'new', decidedById: null });
+    await request(`/signals/${signalId}`, 'rep', 'PATCH', {
+      status: 'dismissed',
+    });
     expect((await request(`/signals/${signalId}`)).status).toBe(401);
     expect((await request(`/companies/${companyId}/signals`)).status).toBe(401);
     expect(
@@ -1612,15 +1694,15 @@ describe('CRM API security and domain rules', () => {
     );
   });
 
-  // A signal worth acting on starts the company's open deals' follow-ups
-  // (the deal follow-up's `companySignal` trigger); each check is logged and
-  // listed on the Auto follow-up page's Company signals tab.
-  it("starts the open deals' follow-ups for news worth acting on, and lists each check", async () => {
+  // A check starts no deal follow-up of its own: the deals' daily pass takes
+  // the news (deal-signals.ts). Each check is logged and listed on the Auto
+  // follow-up page's Company signals tab.
+  it('logs each check and lists them, leaving the deals to their daily pass', async () => {
     const company = await service.save(actor('rep'), 'companies', {
       name: 'Acting Co',
     });
     const companyId = toText(company.id);
-    const deal = await service.save(actor('rep'), 'opportunities', {
+    await service.save(actor('rep'), 'opportunities', {
       name: 'Acting deal',
       companyId,
     });
@@ -1633,37 +1715,12 @@ describe('CRM API security and domain rules', () => {
         { index: 1, title, url: `https://n.example.cn/${type}`, site: 'News' },
       ],
     });
-    // Hiring is only told: no follow-up.
-    web.followUps = [];
     web.answers.push(answer('hiring', 'Acting Co hires 200.'));
     await signals.checkNow(actor('rep'), companyId);
-    expect(web.followUps).toEqual([]);
-    // A new executive starts the deal's follow-up as its owner.
     web.answers.push(answer('leadership', 'Acting Co names a CIO.'));
     await signals.checkNow(actor('rep'), companyId);
-    expect(web.followUps).toEqual([
-      { dealId: toText(deal.id), ownerId: 'rep' },
-    ]);
-    // Not while the deal has a card waiting.
-    await database
-      .query()
-      .insertInto('crmHistory')
-      .values({
-        id: 'acting-card',
-        entity: 'opportunities',
-        recordId: toText(deal.id),
-        actorId: 'rep',
-        action: 'ai',
-        source: 'ai',
-        aiStatus: 'pending',
-        ai: JSON.stringify({ kind: 'evaluation' }),
-        changes: JSON.stringify({}),
-        createdAt: new Date().toISOString(),
-      })
-      .execute();
     web.answers.push(answer('funding', 'Acting Co raises a Series C.'));
     await signals.checkNow(actor('rep'), companyId);
-    expect(web.followUps).toHaveLength(1);
     // A failed search is logged, its reason kept.
     web.answers.push({ text: '', pages: [] });
     web.calls = [];
@@ -1679,16 +1736,29 @@ describe('CRM API security and domain rules', () => {
       checks.map((c) => [c.status, Number(c.found), Number(c.followUps)]),
     ).toEqual([
       ['found', 1, 0],
-      ['found', 1, 1],
+      ['found', 1, 0],
       ['found', 1, 0],
       ['nothing', 0, 0],
     ]);
     expect(
       checks.every((c) => c.trigger === 'asked' && c.actorId === 'rep'),
     ).toBe(true);
+    // No follow-up was asked for the deal.
+    expect(
+      await database
+        .query()
+        .selectFrom('crmHistory')
+        .select('id')
+        .where('entity', '=', 'opportunities')
+        .where('action', '=', 'ai')
+        .where('createdAt', '>=', new Date(Date.now() - 60_000).toISOString())
+        .execute()
+        .then((rows) => rows.length),
+    ).toBe(0);
 
     // The Auto follow-up page's tab: the checks on the companies the reader
-    // reads, the signals' new, seen and dismissed as its outcomes.
+    // reads, the signals found, dismissed and worth acting on as its
+    // outcomes.
     const overview = (
       await (await request('/aiAgents/signals?status=found', 'rep')).json()
     ).data as {
@@ -1698,14 +1768,15 @@ describe('CRM API security and domain rules', () => {
     };
     expect(overview.triggers).toEqual(['daily']);
     expect(overview.week.runs).toBeGreaterThanOrEqual(4);
-    expect(overview.week.pending).toBeGreaterThanOrEqual(3);
+    expect(overview.week.accepted).toBeGreaterThanOrEqual(3);
+    // Hiring is only told: two of the three are worth acting on.
+    expect(overview.week.pending).toBeGreaterThanOrEqual(2);
     const mine = overview.runs.filter((r) => r.recordId === companyId);
     expect(mine.map((r) => r.status)).toEqual(['found', 'found', 'found']);
     expect(mine[0]!.summary).toBe('Acting Co raises a Series C.');
     expect((await request('/aiAgents/signals')).status).toBe(401);
 
-    // Switched off by an administrator: the daily pass does nothing, and the
-    // deal follow-up's trigger off starts none.
+    // Switched off by an administrator: the daily pass does nothing.
     expect(
       (
         await request('/aiAgents/signals/switches', 'rep', 'PUT', {
@@ -1724,23 +1795,26 @@ describe('CRM API security and domain rules', () => {
     await request('/aiAgents/signals/switches', 'admin', 'PUT', {
       enabled: true,
     });
-    await request('/aiAgents/opportunities/switches', 'admin', 'PUT', {
-      triggers: { companySignal: false },
+
+    // Out of its time budget, the pass starts no further company: those
+    // left keep their last check's time, so tomorrow's pass takes them
+    // first.
+    await signals.watch(actor('rep'), companyId, true);
+    await database
+      .query()
+      .updateTable('crmCompanies')
+      .set({ signalsCheckedAt: null })
+      .where('id', '=', companyId)
+      .execute();
+    let tick = 0;
+    const late = await signals.scan(new Date(), 100, 1000, () => {
+      tick += 5000;
+      return tick;
     });
-    try {
-      await database
-        .query()
-        .deleteFrom('crmHistory')
-        .where('id', '=', 'acting-card')
-        .execute();
-      web.answers.push(answer('risk', 'Acting Co faces a lawsuit.'));
-      await signals.checkNow(actor('rep'), companyId);
-      expect(web.followUps).toHaveLength(1);
-    } finally {
-      await request('/aiAgents/opportunities/switches', 'admin', 'PUT', {
-        triggers: { companySignal: true },
-      });
-    }
+    expect(late).toMatchObject({ checked: 0, stopped: true });
+    expect(
+      (await signals.due(new Date(), 1000)).map((r) => toText(r.id)),
+    ).toContain(companyId);
   });
 
   it('lets an administrator set who may approve, offering and accepting only whom it names', async () => {
@@ -6541,8 +6615,9 @@ describe('demo dataset', () => {
       expect.arrayContaining(['mentioned', 'replied']),
     );
     expect(told.length).toBeGreaterThanOrEqual(3);
-    // The projects' companies carry signals, with their timeline lines,
-    // written straight in (company-signals.ts).
+    // The demo's companies carry signals, with their timeline lines,
+    // written straight in (company-signals.ts): nine across seven
+    // companies, two of them with two.
     const demoSignals = (
       await database
         .query()
@@ -6550,7 +6625,15 @@ describe('demo dataset', () => {
         .select(['id', 'companyId', 'status', 'runId'])
         .execute()
     ).filter((row) => !signalsBefore.has(toText(row.id)));
-    expect(demoSignals.length).toBeGreaterThanOrEqual(1);
+    expect(demoSignals).toHaveLength(9);
+    const perCompany = new Map<string, number>();
+    for (const row of demoSignals)
+      perCompany.set(
+        toText(row.companyId),
+        (perCompany.get(toText(row.companyId)) ?? 0) + 1,
+      );
+    expect(perCompany.size).toBe(7);
+    expect([...perCompany.values()].filter((n) => n === 2)).toHaveLength(2);
     expect(
       await database
         .query()
@@ -6872,6 +6955,16 @@ describe('demo dataset', () => {
         /\p{Script=Han}/u,
       );
     }
+    // Its companies' nine signals too, their titles, summaries and sources
+    // in English.
+    const signalRows = await database
+      .query()
+      .selectFrom('crmSignals')
+      .selectAll()
+      .where('companyId', 'in', ids)
+      .execute();
+    expect(signalRows).toHaveLength(9);
+    expect(JSON.stringify(signalRows)).not.toMatch(/\p{Script=Han}/u);
     // The English companies are its own, created by the import, and the
     // Chinese ones keep their names.
     const users = await service.users(actor('admin'));
@@ -9009,6 +9102,100 @@ describe('opportunity signals', () => {
     await scanDealSignals(service, evaluator, new Date(), 1000);
     expect(requests.some((r) => r.deal === closing.id)).toBe(false);
   });
+
+  it('follows up an open deal whose company has news since its last follow-up, once', async () => {
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'News Co',
+    });
+    // Nothing else to say about it: recent, its close date far off.
+    const deal = await service.save(actor('rep'), 'opportunities', {
+      name: 'News deal',
+      companyId: company.id,
+      stage: 'proposal',
+      expectedCloseAt: new Date(Date.now() + 60 * 86_400_000)
+        .toISOString()
+        .slice(0, 10),
+    });
+    const paused = await service.save(actor('rep'), 'opportunities', {
+      name: 'Paused news deal',
+      companyId: company.id,
+      stage: 'paused',
+      pauseReason: 'budgetDeferred',
+      resumeAt: new Date(Date.now() + 30 * 86_400_000)
+        .toISOString()
+        .slice(0, 10),
+    });
+    const signal = async (type: string, status = 'new') =>
+      database
+        .query()
+        .insertInto('crmSignals')
+        .values({
+          id: randomUUID(),
+          companyId: toText(company.id),
+          type,
+          title: `${type} news`,
+          summary: '',
+          occurredOn: new Date().toISOString().slice(0, 10),
+          sources: JSON.stringify([]),
+          eventKey: `news:${type}:${randomUUID()}`,
+          status,
+          runId: null,
+          decidedById: null,
+          decidedAt: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+        .execute();
+    const requests: { deal: string; trigger: unknown }[] = [];
+    const evaluator = {
+      available: async () => true,
+      request: async (
+        by: Actor,
+        dealId: string,
+        _revise: unknown,
+        trigger: unknown,
+      ) => {
+        requests.push({ deal: dealId, trigger });
+        await database
+          .query()
+          .insertInto('crmHistory')
+          .values({
+            id: randomUUID(),
+            entity: 'opportunities',
+            recordId: dealId,
+            actorId: by.id,
+            action: 'ai',
+            source: 'ai',
+            aiStatus: 'dismissed',
+            ai: JSON.stringify({ kind: 'evaluation', trigger }),
+            changes: JSON.stringify({}),
+            createdAt: new Date().toISOString(),
+          })
+          .execute();
+        return { id: dealId };
+      },
+    } as unknown as OpportunityEvaluator;
+    const mine = () =>
+      requests.filter((r) => r.deal === deal.id || r.deal === paused.id);
+    // Hiring, or news dismissed: not worth a follow-up.
+    await signal('hiring');
+    await signal('risk', 'dismissed');
+    await scanDealSignals(service, evaluator, new Date(), 1000);
+    expect(mine()).toEqual([]);
+    // Funding: the open deal is followed up, the paused one waits.
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await signal('funding');
+    await scanDealSignals(service, evaluator, new Date(), 1000);
+    expect(mine()).toEqual([{ deal: deal.id, trigger: 'companySignal' }]);
+    // Not again for the same news.
+    await scanDealSignals(service, evaluator, new Date(), 1000);
+    expect(mine()).toHaveLength(1);
+    // New news since that follow-up: followed up again, no week to wait.
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await signal('leadership');
+    await scanDealSignals(service, evaluator, new Date(), 1000);
+    expect(mine()).toHaveLength(2);
+  });
 });
 
 describe('mail in the timeline', () => {
@@ -10466,8 +10653,163 @@ describe("The assistant's conversations on the Agents plugin", () => {
     });
   });
 
-  it('creates the Background AI once, for its creator alone, with the enabled chat models (Qwen first) and no actions', async () => {
+  it("names the work agents in the viewer's language while they keep the name they were made with", async () => {
+    const query = database.query();
+    if (!(await database.builder().hasCollection('agAgents')))
+      await database.builder().createCollection('agAgents', (c) => {
+        c.string('id');
+        c.primary('id');
+        c.string('name');
+        c.json('nameText').nullable();
+      });
+    await query
+      .insertInto('agAgents')
+      .values([
+        { id: 'name-leads', name: 'Lead follow-up', nameText: null },
+        // Renamed by an administrator: shown as they wrote it.
+        { id: 'name-deals', name: 'Our deals', nameText: null },
+      ])
+      .execute();
+    await nameWorkAgents(database, {
+      leads: 'name-leads',
+      opportunities: 'name-deals',
+    });
+    // The assistant too, as its marker names it.
+    await query
+      .insertInto('agAgents')
+      .values({ id: 'name-assistant', name: 'Sales Expert', nameText: null })
+      .execute();
+    const marker = await query
+      .selectFrom('crmSettings')
+      .select('value')
+      .where('id', '=', 'agents-noco-v1')
+      .executeTakeFirst();
+    await query
+      .deleteFrom('crmSettings')
+      .where('id', '=', 'agents-noco-v1')
+      .execute();
+    await query
+      .insertInto('crmSettings')
+      .values({
+        id: 'agents-noco-v1',
+        value: JSON.stringify({ version: 1, agentId: 'name-assistant' }),
+        updatedAt: new Date().toISOString(),
+      })
+      .execute();
+    await nameAssistant(database);
+    if (marker)
+      await query
+        .updateTable('crmSettings')
+        .set({ value: marker.value })
+        .where('id', '=', 'agents-noco-v1')
+        .execute();
+    else
+      await query
+        .deleteFrom('crmSettings')
+        .where('id', '=', 'agents-noco-v1')
+        .execute();
+    const rows = await query
+      .selectFrom('agAgents')
+      .select(['id', 'nameText'])
+      .where('id', 'in', ['name-leads', 'name-deals', 'name-assistant'])
+      .orderBy('id')
+      .execute();
+    expect(
+      rows.map((row) => [
+        row.id,
+        typeof row.nameText === 'string'
+          ? JSON.parse(row.nameText)
+          : row.nameText,
+      ]),
+    ).toEqual([
+      ['name-assistant', { key: 'crm.agentPreset.agentName', ns: 'crm' }],
+      ['name-deals', null],
+      ['name-leads', { key: 'crm.agentWork.names.leads', ns: 'crm' }],
+    ]);
+  });
+
+  it('deletes the Background AI and its recorded use once every work has its agent', async () => {
+    const calls: string[] = [];
+    const fakeAgents = {
+      agents: {
+        get: (id: string) => Promise.resolve({ id, archivedAt: null }),
+        archive: (id: string) => {
+          calls.push(`archive ${id}`);
+          return Promise.resolve({ id });
+        },
+        remove: (id: string) => {
+          calls.push(`remove ${id}`);
+          return Promise.resolve();
+        },
+      },
+    } as never;
+    const query = database.query();
+    if (!(await database.builder().hasCollection('agModelUsage')))
+      await database.builder().createCollection('agModelUsage', (c) => {
+        c.string('id');
+        c.primary('id');
+        c.string('source');
+      });
+    await query
+      .insertInto('agModelUsage')
+      .values([
+        { id: 'u1', source: 'Background AI' },
+        { id: 'u2', source: 'crm' },
+        { id: 'u3', source: 'Lead follow-up' },
+      ])
+      .execute();
+    const setMarker = async (id: string, value: unknown) => {
+      await query.deleteFrom('crmSettings').where('id', '=', id).execute();
+      await query
+        .insertInto('crmSettings')
+        .values({
+          id,
+          value: JSON.stringify(value),
+          updatedAt: new Date().toISOString(),
+        })
+        .execute();
+    };
+    await setMarker('agents-background-v1', { version: 1, agentId: 'bg' });
+    // Not while a work still lacks its agent.
+    await setMarker('agents-work-v1', {
+      version: 1,
+      agentIds: { leads: 'a1' },
+    });
+    await retireBackgroundAgent(fakeAgents, database);
+    expect(calls).toEqual([]);
+    await setMarker('agents-work-v1', {
+      version: 1,
+      agentIds: {
+        leads: 'a1',
+        opportunities: 'a2',
+        approvals: 'a3',
+        tasks: 'a4',
+        signals: 'a5',
+      },
+    });
+    await retireBackgroundAgent(fakeAgents, database);
+    await retireBackgroundAgent(fakeAgents, database);
+    expect(calls).toEqual(['archive bg', 'remove bg']);
+    expect(
+      (await query.selectFrom('agModelUsage').select('source').execute()).map(
+        (row) => row.source,
+      ),
+    ).toEqual(['Lead follow-up']);
+    const marker = await query
+      .selectFrom('crmSettings')
+      .select('value')
+      .where('id', '=', 'agents-background-v1')
+      .executeTakeFirst();
+    expect(JSON.parse(toText(marker?.value))).toMatchObject({
+      agentId: null,
+      removed: true,
+    });
+  });
+
+  it('creates an agent for each work once, each with its skill, taking over and archiving the Background AI', async () => {
     const created: Record<string, unknown>[] = [];
+    const attached: Record<string, string[]> = {};
+    const archived: string[] = [];
     const fakeAgents = {
       online: {
         services: {
@@ -10491,42 +10833,113 @@ describe("The assistant's conversations on the Agents plugin", () => {
       agents: {
         create: (_by: string, input: Record<string, unknown>) => {
           created.push(input);
-          return Promise.resolve({ id: 'background-1' });
+          return Promise.resolve({ id: `agent-${created.length}` });
+        },
+        // The Background AI an installation from before has, its
+        // instructions changed by an administrator.
+        get: (id: string) =>
+          Promise.resolve({
+            id,
+            archivedAt: null,
+            instructions: 'Our own rules.',
+            // Its order is not taken: the work's defaults replace it.
+            modelEntries: [
+              { modelService: 'qwen', model: 'flash' },
+              { modelService: 'deepseek', model: 'chat' },
+            ],
+          }),
+        archive: (id: string) => {
+          archived.push(id);
+          return Promise.resolve({ id });
+        },
+      },
+      skills: {
+        attach: (target: { scopeId: string }, ids: string[]) => {
+          attached[target.scopeId] = ids;
+          return Promise.resolve(ids);
         },
       },
     } as never;
-    await database
-      .query()
-      .deleteFrom('crmSettings')
-      .where('id', '=', 'agents-background-v1')
+    const query = database.query();
+    for (const id of [
+      'agents-work-v1',
+      'agents-background-v1',
+      'agents-skills-v1',
+    ])
+      await query.deleteFrom('crmSettings').where('id', '=', id).execute();
+    await query
+      .insertInto('crmSettings')
+      .values([
+        {
+          id: 'agents-background-v1',
+          value: JSON.stringify({ version: 1, agentId: 'background-1' }),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'agents-skills-v1',
+          value: JSON.stringify({
+            version: 1,
+            skillIds: {
+              'lead-follow-up': 'skill-leads',
+              'company-signals': 'skill-signals',
+            },
+          }),
+          updatedAt: new Date().toISOString(),
+        },
+      ])
       .execute();
-    await provisionBackgroundAgent(fakeAgents, database);
-    await provisionBackgroundAgent(fakeAgents, database);
-    expect(created).toHaveLength(1);
+    await provisionWorkAgents(fakeAgents, database);
+    await provisionWorkAgents(fakeAgents, database);
+    expect(created.map((agent) => agent.name)).toEqual([
+      'Lead follow-up',
+      'Opportunity follow-up',
+      'Approval review',
+      'Task assistant',
+      'Company signals',
+    ]);
     expect(created[0]).toMatchObject({
-      name: 'Background AI',
       type: 'online',
       access: 'ownerOnly',
       actions: [],
-      // Qwen's first.
+      // DeepSeek's first for the work that needs no web; the Background AI's
+      // changed instructions.
       modelEntries: [
-        { modelService: 'qwen', model: 'flash' },
         { modelService: 'deepseek', model: 'chat' },
+        { modelService: 'qwen', model: 'flash' },
       ],
+      instructions: 'Our own rules.',
     });
-    expect(created[0].instructions).toContain("the CRM's background work");
-    const marker = await database
-      .query()
-      .selectFrom('crmSettings')
-      .select('value')
-      .where('id', '=', 'agents-background-v1')
-      .executeTakeFirst();
-    expect(JSON.parse(toText(marker?.value))).toEqual({
-      version: 1,
-      agentId: 'background-1',
+    // The company signals search with Qwen alone.
+    expect(created[4]!.modelEntries).toEqual([
+      { modelService: 'qwen', model: 'flash' },
+    ]);
+    // Each its own skill, where the library has it.
+    expect(attached).toEqual({
+      'agent-1': ['skill-leads'],
+      'agent-5': ['skill-signals'],
     });
+    expect(archived).toEqual(['background-1']);
+    expect(await workAgentIds(database)).toEqual({
+      leads: 'agent-1',
+      opportunities: 'agent-2',
+      approvals: 'agent-3',
+      tasks: 'agent-4',
+      signals: 'agent-5',
+    });
+    // Without a Background AI, each its own instructions, DeepSeek's
+    // first.
+    created.length = 0;
+    await query
+      .deleteFrom('crmSettings')
+      .where('id', 'in', ['agents-work-v1', 'agents-background-v1'])
+      .execute();
+    await provisionWorkAgents(fakeAgents, database);
+    expect(created[1]!.instructions).toContain('following opportunities up');
+    expect(created[1]!.modelEntries).toEqual([
+      { modelService: 'deepseek', model: 'chat' },
+      { modelService: 'qwen', model: 'flash' },
+    ]);
   });
-
   it('puts the method skills into the library once, attached to the assistant, keeping one a person added', async () => {
     const created: string[] = [];
     let attached: string[] = ['their-own'];
@@ -10560,13 +10973,13 @@ describe("The assistant's conversations on the Agents plugin", () => {
       'task-preparation',
       'company-signals',
     ]);
+    // Not the company signals' method: the chat cannot search.
     expect(attached).toEqual([
       'their-own',
       'mine',
       'skill-1',
       'skill-2',
       'skill-3',
-      'skill-4',
     ]);
   });
 

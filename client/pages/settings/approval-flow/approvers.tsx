@@ -91,7 +91,6 @@ function ApproverRuleForm({ rule }: { rule: ApproverRule }): ReactElement {
           </p>
         </div>
         <Button
-          variant='contrast'
           disabled={!changed || busy || (!roles.length && !people.length)}
           onClick={() => void save()}
         >

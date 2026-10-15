@@ -586,6 +586,7 @@ export class ApprovalReviewer {
       const session = await openSession(this.container, {
         timeZone: settings.timeZone,
         guidance: settingsGuidance(settings),
+        work: 'approvals',
       });
       if (!session) throw new Error('No model to ask');
       // The JSON object the prompt spells out, in the reply.

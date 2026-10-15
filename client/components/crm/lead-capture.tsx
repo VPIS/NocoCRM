@@ -33,6 +33,7 @@ import {
   useRefresh,
   type Data,
 } from './api.js';
+import { WorkAgentLabel } from './work-agent.js';
 import { LONG_TEXT_LIMIT } from '../../../server/providers/crm/limits.js';
 
 // What the server's lead capture returns for one person in the text
@@ -340,6 +341,7 @@ export function LeadCaptureDialog({
               {text('newRecord', { entity: text('entity.leads') })}
             </DialogTitle>
             <CaptureTabs current='ai' disabled={busy} onSwitch={onForm} />
+            <WorkAgentLabel work='leads' className='ml-auto' />
           </div>
         </DialogHeader>
         {rows ? (

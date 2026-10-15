@@ -203,6 +203,164 @@ export const zhProjects: DemoProjects = {
         },
       ],
     },
+    // The other companies' (by their index in `companies`): 0 Shanghai
+    // Electric, 2 United Family Healthcare, 4 XJTLU, 5 XGIMI, 6 NARI,
+    // 7 Guangzhou Restaurant.
+    {
+      company: 6,
+      type: 'business',
+      title: '国电南瑞中标国网福建电力2026年第四次物资公开招标采购项目',
+      summary:
+        '国电南瑞是这次采购的119家中标企业之一，采购总金额约2.4亿元，涉及主设备全面监视系统、智能变电站辅助系统等品类。',
+      occurredOn: '2026-10-14',
+      foundDaysAgo: 1,
+      status: 'new',
+      sources: [
+        {
+          title: '国电南瑞等119家企业中标国网福建电力物资公开招标采购项目',
+          url: 'https://app.myzaker.com/news/article.php?pk=6acef609b15ec037f525cb68',
+          site: 'ZAKER',
+        },
+      ],
+    },
+    {
+      company: 6,
+      type: 'business',
+      title: '国电南瑞申请面向电力系统的数据交互方法及装置专利',
+      summary:
+        '国电南瑞及其子公司申请了一项面向电力系统的数据交互方法、存储介质及装置专利，用于简化数据交互链路。',
+      occurredOn: '2026-10-10',
+      foundDaysAgo: 4,
+      status: 'new',
+      sources: [
+        {
+          title:
+            '国电南瑞申请面向电力系统的数据交互方法、存储介质及装置专利,简化了数据交互链路',
+          url: 'https://www.163.com/dy/article/L8T53ED00519QIKK.html',
+          site: '网易',
+        },
+      ],
+    },
+    {
+      company: 0,
+      type: 'risk',
+      title: '上海电气子公司重大诉讼按原告撤诉处理结案',
+      summary:
+        '上海电气公告，其控股子公司上海电气通讯技术有限公司涉及的重大诉讼已按原告撤诉处理。',
+      occurredOn: '2026-10-14',
+      foundDaysAgo: 1,
+      status: 'new',
+      sources: [
+        {
+          title: '上海电气集团股份有限公司关于子公司重大诉讼的进展公告',
+          url: 'http://finance.sina.cn/2026-10-15/detail-inivfmzh1339438.d.html',
+          site: '新浪财经',
+        },
+        {
+          title: '上海电气集团股份有限公司 601727',
+          url: 'https://www.sse.com.cn/assortment/stock/list/info/company/index.shtml?COMPANY_CODE=601727',
+          site: '上海证券交易所',
+        },
+      ],
+    },
+    {
+      company: 5,
+      type: 'business',
+      title: '极米科技股东会审议通过2026年股票期权激励计划',
+      summary:
+        '极米科技于2026年10月13日召开临时股东会，审议通过《2026年股票期权激励计划（草案）》及相关考核管理办法。',
+      occurredOn: '2026-10-13',
+      foundDaysAgo: 2,
+      status: 'new',
+      sources: [
+        {
+          title: '股市必读:极米科技新发布《2026年第一次临时股东会决议公告》',
+          url: 'https://stock.stockstar.com/RB2026101500001570.shtml',
+          site: '证券之星',
+        },
+        {
+          title: '股市必读:极米科技新发布《2026年第一次临时股东会决议公告》',
+          url: 'https://m.sohu.com/a/1087843315_115377',
+          site: '搜狐',
+        },
+      ],
+    },
+    {
+      company: 7,
+      type: 'funding',
+      title: '广州酒家发行可转换公司债券的申请获上交所审核通过',
+      summary:
+        '上海证券交易所上市审核委员会审议通过了广州酒家向不特定对象发行可转换公司债券的申请，尚需获得中国证监会同意注册后方可实施。',
+      occurredOn: '2026-10-14',
+      foundDaysAgo: 1,
+      status: 'new',
+      sources: [
+        {
+          title:
+            '广州酒家集团股份有限公司关于向不特定对象发行可转换公司债券申请获得上海证券交易所上市审核委员会审核通过的公告',
+          url: 'https://www.sohu.com/a/1087889292_120988533',
+          site: '搜狐',
+        },
+        {
+          title:
+            '广州酒家披露向不特定对象发行可转换公司债券申请获上交所上市审核委审核通过',
+          url: 'https://www.toutiao.com/article/7696535638497215016/',
+          site: '今日头条',
+        },
+      ],
+    },
+    {
+      company: 4,
+      type: 'business',
+      title: '西交利物浦大学举办首届生涯嘉年华',
+      summary:
+        '西交利物浦大学于2026年10月14日举办首届生涯嘉年华，近60所高校和近150家企业参与升学与校园招聘对接。',
+      occurredOn: '2026-10-14',
+      foundDaysAgo: 1,
+      status: 'new',
+      sources: [
+        {
+          title:
+            '学生邀请函|2026西交利物浦大学生涯嘉年华:近60名校&近150名企,一站直达',
+          url: 'https://www.sohu.com/a/1087291940_121124035',
+          site: '搜狐',
+        },
+      ],
+    },
+    {
+      company: 4,
+      type: 'business',
+      title: '西交利物浦大学技术与创新支持中心（TISC）揭牌',
+      summary:
+        '国家知识产权局同意西交利物浦大学作为第二期技术与创新支持中心（TISC）正式运行，学校于9月19日参加了苏州市获批机构的揭牌仪式。',
+      occurredOn: '2026-09-19',
+      foundDaysAgo: 6,
+      status: 'new',
+      sources: [
+        {
+          title: '西交利物浦大学知识产权信息服务中心',
+          url: 'https://ipisc.xjtlu.edu.cn/',
+          site: '西交利物浦大学',
+        },
+      ],
+    },
+    {
+      company: 2,
+      type: 'business',
+      title: '和睦家医疗为2026中国网球公开赛提供赛事医疗保障',
+      summary:
+        '和睦家医疗作为2026中国网球公开赛指定的赛事医疗服务保障供应商，完成了为期数周的驻场医疗保障，这是其连续第二年为该赛事提供医疗支持。',
+      occurredOn: '2026-10-11',
+      foundDaysAgo: 3,
+      status: 'new',
+      sources: [
+        {
+          title: '对标国际赛事标准 和睦家全程护航2026中国网球公开赛',
+          url: 'https://www.cqn.com.cn/cj/content/2026-10/12/content_9175871.htm',
+          site: '中国质量新闻网',
+        },
+      ],
+    },
   ],
   ai: {
     sfLead: {

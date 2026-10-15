@@ -62,19 +62,28 @@ export type AgentReadiness =
   | { state: 'ready'; agent: ChatAgent; reason?: undefined }
   | { state: 'unavailable'; agent: ChatAgent | null; reason: string };
 
-// The agents a person may chat with: the plugin's, without the agent the
-// CRM's background work runs on (crm-agents/background.ts), which nobody
-// talks to though its creator may see it.
+// The agents a person may chat with: the plugin's, without the agents the
+// CRM's work runs on (crm-agents/work-agents.ts, and the Background AI they
+// replaced), which nobody talks to though their creator may see them.
 export function useCrmChatAgents(): ReturnType<typeof useChatAgents> {
   const agents = useChatAgents();
   const { data: meta } = useMetadata();
-  const background = meta?.backgroundAgent;
+  const hidden = useMemo(
+    () =>
+      new Set(
+        [
+          meta?.backgroundAgent,
+          ...Object.values(meta?.workAgents ?? {}),
+        ].filter(Boolean),
+      ),
+    [meta?.backgroundAgent, meta?.workAgents],
+  );
   const data = useMemo(
     () =>
-      background
-        ? agents.data?.filter((agent) => agent.id !== background)
+      hidden.size
+        ? agents.data?.filter((agent) => !hidden.has(agent.id))
         : agents.data,
-    [agents.data, background],
+    [agents.data, hidden],
   );
   return { ...agents, data } as ReturnType<typeof useChatAgents>;
 }

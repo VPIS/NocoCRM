@@ -5,10 +5,12 @@ import { agentsToken } from '@nocobase/app-plugin-agents/server/tokens';
 import { idGeneratorToken } from '@nocobase/app-server/id-generator';
 import { databaseManagerToken } from '@nocobase/db';
 import type { ServiceResolver } from '@nocobase/service-provider';
+import { BACKGROUND_MARKER } from '../crm-agents/background.js';
 import {
-  BACKGROUND_MARKER,
-  BACKGROUND_SOURCE,
-} from '../crm-agents/background.js';
+  WORK_AGENTS,
+  WORK_AGENTS_MARKER,
+  type Work,
+} from '../crm-agents/work-agents.js';
 import { generateText, type LanguageModelUsage } from 'ai';
 import { z, type ZodType } from 'zod';
 import { TEXT_LIMIT } from './limits.js';
@@ -18,42 +20,33 @@ import { CrmError, toText } from './schema.js';
 // the captures, the merge proposals and the feedback write-ups ask the
 // Agents plugin's model gateway's language models, which keep the keys,
 // with their reasoning turned off (generateQuietly), the use recorded in
-// the plugin's usage table. The Background AI agent (crm-agents/background.ts) is how an
-// administrator configures the work: its first model is the one asked and
-// its instructions open the system prompt; without it (archived, deleted,
-// or listing no model) the people's default chat agent's first model, else
-// the system default chat model. A run is a
-// session of turns, each one call: a reply in another shape than asked is
-// asked once more with what came before. Results are JSON in the reply,
-// checked against the shape the caller gives; the gateway's `generate` has
-// no structured output of its own.
+// the plugin's usage table under the agent's name. Each call is a work's
+// (crm-agents/work-agents.ts: the lead and opportunity follow-ups, approval
+// review, task preparation, company signals), and the work's agent is how
+// an administrator configures it: its first model is the one asked and its
+// instructions open the system prompt; without it (archived, deleted, or
+// listing no model) the Background AI an installation from before still
+// has, else the people's default chat agent's first model, else the system
+// default chat model. A run is a session of turns, each one call: a reply
+// in another shape than asked is asked once more with what came before.
+// Results are JSON in the reply, checked against the shape the caller
+// gives; the gateway's `generate` has no structured output of its own.
 
-// Who the gateway records the use as: the Background AI agent, whose model
-// and instructions the work follows (crm-agents/background.ts).
-export const AI_SOURCE = BACKGROUND_SOURCE;
+// Who the usage page records a work's use as: its agent, by name.
+export const sourceOf = (work: Work): string => WORK_AGENTS[work].name;
 
 type ModelRef = { modelService: string; model: string };
+type AgentSettings = { model: ModelRef | null; instructions: string };
 
-// The Background AI agent as the work follows it: its first model, when it
-// lists one, and its instructions; null when there is none to follow.
-async function backgroundAgent(
+// An agent as the work follows it: its first model, when it lists one, and
+// its instructions; null when it is archived, deleted or unreadable.
+async function agentSettings(
   container: ServiceResolver,
-): Promise<{ model: ModelRef | null; instructions: string } | null> {
-  if (!container.has(agentsToken) || !container.has(databaseManagerToken))
-    return null;
+  agentId: unknown,
+): Promise<AgentSettings | null> {
+  if (typeof agentId !== 'string' || !agentId) return null;
   try {
-    const row = await container
-      .resolve(databaseManagerToken)
-      .query()
-      .selectFrom('crmSettings')
-      .select('value')
-      .where('id', '=', BACKGROUND_MARKER)
-      .executeTakeFirst();
-    const value: unknown =
-      typeof row?.value === 'string' ? JSON.parse(row.value) : row?.value;
-    const id = (value as { agentId?: unknown } | null)?.agentId;
-    if (typeof id !== 'string' || !id) return null;
-    const agent = await container.resolve(agentsToken).agents.get(id);
+    const agent = await container.resolve(agentsToken).agents.get(agentId);
     if (agent.archivedAt) return null;
     const entry = agent.modelEntries[0];
     return {
@@ -64,22 +57,64 @@ async function backgroundAgent(
       instructions: (agent.instructions ?? '').trim(),
     };
   } catch {
-    // Not made, deleted, or unreadable: the work follows the assistant.
     return null;
   }
 }
 
-// The model a run answers with and the instructions it opens with, or null
-// when there is no model to ask (no agents plugin, no enabled chat model):
-// the CRM's AI is then off.
+// The value a marker row keeps.
+async function markerValue(
+  container: ServiceResolver,
+  id: string,
+): Promise<Record<string, unknown> | null> {
+  if (!container.has(databaseManagerToken)) return null;
+  try {
+    const row = await container
+      .resolve(databaseManagerToken)
+      .query()
+      .selectFrom('crmSettings')
+      .select('value')
+      .where('id', '=', id)
+      .executeTakeFirst();
+    const value: unknown =
+      typeof row?.value === 'string' ? JSON.parse(row.value) : row?.value;
+    return value && typeof value === 'object'
+      ? (value as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+// The agent a work follows: its own, else the Background AI an
+// installation from before has not yet had replaced.
+async function workAgent(
+  container: ServiceResolver,
+  work: Work,
+): Promise<AgentSettings | null> {
+  if (!container.has(agentsToken)) return null;
+  const ids = (await markerValue(container, WORK_AGENTS_MARKER))?.agentIds as
+    Record<string, unknown> | undefined;
+  return (
+    (await agentSettings(container, ids?.[work])) ??
+    (await agentSettings(
+      container,
+      (await markerValue(container, BACKGROUND_MARKER))?.agentId,
+    ))
+  );
+}
+
+// The model a work's run answers with and the instructions it opens with,
+// or null when there is no model to ask (no agents plugin, no enabled chat
+// model): the CRM's AI is then off.
 async function crmRun(
   container: ServiceResolver,
+  work: Work,
 ): Promise<{ model: ModelRef; instructions: string } | null> {
   if (!container.has(agentsToken)) return null;
   const agents = container.resolve(agentsToken);
-  const background = await backgroundAgent(container);
-  const instructions = background?.instructions ?? '';
-  if (background?.model) return { model: background.model, instructions };
+  const own = await workAgent(container, work);
+  const instructions = own?.instructions ?? '';
+  if (own?.model) return { model: own.model, instructions };
   try {
     const { defaultAgentId } = await agents.chat.settings();
     if (defaultAgentId) {
@@ -100,18 +135,20 @@ async function crmRun(
     : null;
 }
 
-// The model a run answers with, or null when there is none to ask.
+// The model a work's run answers with, or null when there is none to ask.
 export async function crmModel(
   container: ServiceResolver,
+  work: Work,
 ): Promise<ModelRef | null> {
-  return (await crmRun(container))?.model ?? null;
+  return (await crmRun(container, work))?.model ?? null;
 }
 
-// Whether the CRM's AI can run: there is a model to ask.
+// Whether the CRM's AI can run: there is a model to ask (the follow-ups'
+// standing for every work's, which differ only by an agent's model).
 export async function aiAvailable(
   container: ServiceResolver,
 ): Promise<boolean> {
-  return (await crmModel(container).catch(() => null)) !== null;
+  return (await crmModel(container, 'leads').catch(() => null)) !== null;
 }
 
 export interface ModelSession {
@@ -161,10 +198,11 @@ async function generateQuietly(
     model: ModelRef;
     system: string;
     prompt: string;
+    source: string;
     signal?: AbortSignal;
   },
 ): Promise<string> {
-  const { model, system, prompt, signal } = request;
+  const { model, system, prompt, source, signal } = request;
   const languageModel = await container
     .resolve(agentsToken)
     .online.gateway.languageModel(model);
@@ -187,7 +225,9 @@ async function generateQuietly(
   } catch (error) {
     throw asModelError(error, signal);
   }
-  await recordUse(container, model, result.totalUsage).catch(() => undefined);
+  await recordUse(container, model, result.totalUsage, source).catch(
+    () => undefined,
+  );
   return result.text;
 }
 
@@ -230,6 +270,8 @@ export async function recordUse(
   container: ServiceResolver,
   model: ModelRef,
   usage: LanguageModelUsage,
+  // The work's agent, by name (sourceOf).
+  source: string,
 ): Promise<void> {
   if (!container.has(databaseManagerToken) || !container.has(idGeneratorToken))
     return;
@@ -242,7 +284,7 @@ export async function recordUse(
     .values({
       id: container.resolve(idGeneratorToken).generate(),
       purpose: 'text',
-      source: AI_SOURCE,
+      source,
       modelService: model.modelService,
       model: model.model.slice(0, 200),
       inputTokens: count(usage.inputTokens),
@@ -255,15 +297,19 @@ export async function recordUse(
 
 // A run of turns with the CRM's model, its system prompt the current time
 // in the CRM's time zone (dates such as "next Tuesday" in what it reads are
-// reckoned from it), the Background AI agent's instructions, how to settle
+// reckoned from it), the work's agent's instructions, how to settle
 // what the material leaves open (DECIDING) and the deployment's business
 // guidance (guidance.ts); null when there is no
 // model to ask.
 export async function openSession(
   container: ServiceResolver,
-  { timeZone, guidance }: { timeZone: string; guidance: string },
+  {
+    timeZone,
+    guidance,
+    work,
+  }: { timeZone: string; guidance: string; work: Work },
 ): Promise<ModelSession | null> {
-  const run = await crmRun(container).catch(() => null);
+  const run = await crmRun(container, work).catch(() => null);
   if (!run) return null;
   const { model, instructions } = run;
   const now = new Intl.DateTimeFormat('en-CA', {
@@ -302,6 +348,7 @@ export async function openSession(
       model,
       system,
       prompt,
+      source: sourceOf(work),
       ...(signal ? { signal } : {}),
     });
     turns.push({ role: 'assistant', text });

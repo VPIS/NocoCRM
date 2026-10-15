@@ -5,8 +5,9 @@ import type { LucideIcon } from 'lucide-react';
 // Tabs that are addresses (Auto follow-up's agents, the settings' pages),
 // drawn as a record page's tabs (DetailTabBar in pages/crm-detail.tsx):
 // underlined on a thin rule, the open one in the foreground over a 2px line
-// of it, the others muted until hovered, each led by its icon and followed
-// by what it adds (a count, a state). A click replaces the address, so the
+// of it, the others muted until hovered, each led by its icon (or what it
+// gives in its place, an agent's avatar) and followed by what it adds (a
+// count, a state). A click replaces the address, so the
 // browser's back leaves the page rather than stepping through its tabs.
 export function LinkTabs({
   tabs,
@@ -17,6 +18,8 @@ export function LinkTabs({
     to: string;
     label: ReactNode;
     icon: LucideIcon;
+    // Drawn in the icon's place.
+    lead?: ReactNode;
     selected: boolean;
     extra?: ReactNode;
   }[];
@@ -31,7 +34,7 @@ export function LinkTabs({
       aria-label={label}
       className={`flex w-full flex-wrap gap-x-5 border-b border-border ${className}`}
     >
-      {tabs.map(({ to, label: name, icon: Icon, selected, extra }) => (
+      {tabs.map(({ to, label: name, icon: Icon, lead, selected, extra }) => (
         <button
           key={to}
           type='button'
@@ -44,7 +47,7 @@ export function LinkTabs({
               : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          <Icon className='size-4' />
+          {lead ?? <Icon className='size-4' />}
           {name}
           {extra}
         </button>
