@@ -76,7 +76,8 @@ export function registerCrmSkill(agents: Agents): () => void {
 }
 
 // The CRM's method skills (ai/skills: lead follow-up, opportunity
-// follow-up, approval review, task preparation): the background runs' method
+// follow-up, approval review, task preparation, company signals): the
+// background runs' method
 // (readSkill in crm/ai-model.ts), and skills of the Agents plugin's library
 // attached to the assistant (library.ts), so a question in the chat about a
 // lead's or a deal's next step, or an approval, is answered by the same
@@ -86,4 +87,5 @@ export const METHOD_SKILLS = [
   'opportunity-follow-up',
   'approval-review',
   'task-preparation',
+  'company-signals',
 ] as const;

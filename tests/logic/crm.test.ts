@@ -223,6 +223,9 @@ const web = {
   on: true,
   answers: [] as { text: string; pages: Record<string, unknown>[] }[],
   calls: [] as { search: boolean }[],
+  // The deal follow-ups a signal started, as the opportunity evaluator
+  // would have been asked.
+  followUps: [] as { dealId: string; ownerId: string }[],
 };
 let plans: CrmPlans;
 const planOutcomes: PlanOutcome[] = [];
@@ -595,6 +598,10 @@ beforeAll(async () => {
           { status: 200 },
         );
       }) as unknown as typeof fetch,
+      followUp: async (dealId: string, ownerId: string) => {
+        web.followUps.push({ dealId, ownerId });
+        return true;
+      },
     },
   );
   container.instance(companySignalsToken, signals);
@@ -1603,6 +1610,137 @@ describe('CRM API security and domain rules', () => {
     expect(new Set(told.map((r) => toText(r.recipientId)))).toEqual(
       new Set(['manager', 'rep']),
     );
+  });
+
+  // A signal worth acting on starts the company's open deals' follow-ups
+  // (the deal follow-up's `companySignal` trigger); each check is logged and
+  // listed on the Auto follow-up page's Company signals tab.
+  it("starts the open deals' follow-ups for news worth acting on, and lists each check", async () => {
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Acting Co',
+    });
+    const companyId = toText(company.id);
+    const deal = await service.save(actor('rep'), 'opportunities', {
+      name: 'Acting deal',
+      companyId,
+    });
+    const day = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    const answer = (type: string, title: string) => ({
+      text: JSON.stringify({
+        events: [{ type, title, date: day, refs: [1] }],
+      }),
+      pages: [
+        { index: 1, title, url: `https://n.example.cn/${type}`, site: 'News' },
+      ],
+    });
+    // Hiring is only told: no follow-up.
+    web.followUps = [];
+    web.answers.push(answer('hiring', 'Acting Co hires 200.'));
+    await signals.checkNow(actor('rep'), companyId);
+    expect(web.followUps).toEqual([]);
+    // A new executive starts the deal's follow-up as its owner.
+    web.answers.push(answer('leadership', 'Acting Co names a CIO.'));
+    await signals.checkNow(actor('rep'), companyId);
+    expect(web.followUps).toEqual([
+      { dealId: toText(deal.id), ownerId: 'rep' },
+    ]);
+    // Not while the deal has a card waiting.
+    await database
+      .query()
+      .insertInto('crmHistory')
+      .values({
+        id: 'acting-card',
+        entity: 'opportunities',
+        recordId: toText(deal.id),
+        actorId: 'rep',
+        action: 'ai',
+        source: 'ai',
+        aiStatus: 'pending',
+        ai: JSON.stringify({ kind: 'evaluation' }),
+        changes: JSON.stringify({}),
+        createdAt: new Date().toISOString(),
+      })
+      .execute();
+    web.answers.push(answer('funding', 'Acting Co raises a Series C.'));
+    await signals.checkNow(actor('rep'), companyId);
+    expect(web.followUps).toHaveLength(1);
+    // A failed search is logged, its reason kept.
+    web.answers.push({ text: '', pages: [] });
+    web.calls = [];
+    await signals.checkNow(actor('rep'), companyId);
+    const checks = await database
+      .query()
+      .selectFrom('crmSignalChecks')
+      .select(['trigger', 'actorId', 'status', 'found', 'followUps'])
+      .where('companyId', '=', companyId)
+      .orderBy('createdAt')
+      .execute();
+    expect(
+      checks.map((c) => [c.status, Number(c.found), Number(c.followUps)]),
+    ).toEqual([
+      ['found', 1, 0],
+      ['found', 1, 1],
+      ['found', 1, 0],
+      ['nothing', 0, 0],
+    ]);
+    expect(
+      checks.every((c) => c.trigger === 'asked' && c.actorId === 'rep'),
+    ).toBe(true);
+
+    // The Auto follow-up page's tab: the checks on the companies the reader
+    // reads, the signals' new, seen and dismissed as its outcomes.
+    const overview = (
+      await (await request('/aiAgents/signals?status=found', 'rep')).json()
+    ).data as {
+      triggers: string[];
+      week: Record<string, number>;
+      runs: { recordId: string; status: string; summary: string | null }[];
+    };
+    expect(overview.triggers).toEqual(['daily']);
+    expect(overview.week.runs).toBeGreaterThanOrEqual(4);
+    expect(overview.week.pending).toBeGreaterThanOrEqual(3);
+    const mine = overview.runs.filter((r) => r.recordId === companyId);
+    expect(mine.map((r) => r.status)).toEqual(['found', 'found', 'found']);
+    expect(mine[0]!.summary).toBe('Acting Co raises a Series C.');
+    expect((await request('/aiAgents/signals')).status).toBe(401);
+
+    // Switched off by an administrator: the daily pass does nothing, and the
+    // deal follow-up's trigger off starts none.
+    expect(
+      (
+        await request('/aiAgents/signals/switches', 'rep', 'PUT', {
+          enabled: false,
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await request('/aiAgents/signals/switches', 'admin', 'PUT', {
+          enabled: false,
+        })
+      ).status,
+    ).toBe(200);
+    expect(await signals.scan()).toMatchObject({ available: true, checked: 0 });
+    await request('/aiAgents/signals/switches', 'admin', 'PUT', {
+      enabled: true,
+    });
+    await request('/aiAgents/opportunities/switches', 'admin', 'PUT', {
+      triggers: { companySignal: false },
+    });
+    try {
+      await database
+        .query()
+        .deleteFrom('crmHistory')
+        .where('id', '=', 'acting-card')
+        .execute();
+      web.answers.push(answer('risk', 'Acting Co faces a lawsuit.'));
+      await signals.checkNow(actor('rep'), companyId);
+      expect(web.followUps).toHaveLength(1);
+    } finally {
+      await request('/aiAgents/opportunities/switches', 'admin', 'PUT', {
+        triggers: { companySignal: true },
+      });
+    }
   });
 
   it('lets an administrator set who may approve, offering and accepting only whom it names', async () => {
@@ -10420,6 +10558,7 @@ describe("The assistant's conversations on the Agents plugin", () => {
       'opportunity-follow-up',
       'approval-review',
       'task-preparation',
+      'company-signals',
     ]);
     expect(attached).toEqual([
       'their-own',
@@ -10427,6 +10566,7 @@ describe("The assistant's conversations on the Agents plugin", () => {
       'skill-1',
       'skill-2',
       'skill-3',
+      'skill-4',
     ]);
   });
 
@@ -10468,7 +10608,7 @@ describe("The assistant's conversations on the Agents plugin", () => {
       })
       .where('id', '=', 'agents-skills-v1')
       .execute();
-    // The next start finds the files: the three never put there are added.
+    // The next start finds the files: the four never put there are added.
     const dir = resolve(process.cwd(), 'ai/skills');
     await provisionSkills(fakeAgents, database, dir);
     await provisionSkills(fakeAgents, database, dir);
@@ -10476,6 +10616,7 @@ describe("The assistant's conversations on the Agents plugin", () => {
       'opportunity-follow-up',
       'approval-review',
       'task-preparation',
+      'company-signals',
     ]);
     const marker = await database
       .query()
@@ -10490,6 +10631,7 @@ describe("The assistant's conversations on the Agents plugin", () => {
         'opportunity-follow-up': 'skill-1',
         'approval-review': 'skill-2',
         'task-preparation': 'skill-3',
+        'company-signals': 'skill-4',
       },
     });
   });

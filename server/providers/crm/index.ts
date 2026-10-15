@@ -177,7 +177,27 @@ export default class CrmProvider extends ServiceProvider<Application> {
                 'ai.llmServices',
               ),
             ),
-          { container: this.app.container },
+          {
+            container: this.app.container,
+            // A signal worth acting on follows up the company's open deals,
+            // each as its owner, in the language they use.
+            followUp: async (dealId, ownerId) =>
+              Boolean(
+                await this.app.container
+                  .resolve(opportunityEvaluatorToken)
+                  .request(
+                    crmActor(this.app.container.resolve(authorizationToken), {
+                      id: ownerId,
+                      locale: await this.app.container
+                        .resolve(crmToken)
+                        .localeOf(ownerId),
+                    }),
+                    dealId,
+                    undefined,
+                    'companySignal',
+                  ),
+              ),
+          },
         ),
     );
     registerCrmResources(this.app.container.resolve(authorizationToken));

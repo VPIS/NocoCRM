@@ -1,4 +1,5 @@
 import { loggingToken } from '@nocobase/app-server/logging';
+import { jsonValue } from './values.js';
 import type { QueryAdapter, Row } from '@nocobase/db';
 import {
   createServiceToken,
@@ -879,6 +880,9 @@ function prompt(input: {
   // The owner's mail with the deal's people (mail-context.ts), newest
   // first.
   mail?: Row[];
+  // What the web says happened at the deal's company lately
+  // (company-signals.ts), newest first.
+  signals?: Row[];
 }): string {
   const { opportunity, revision } = input;
   const zh = input.locale.startsWith('zh');
@@ -967,6 +971,9 @@ ${input.context.lead ? json(input.context.lead) : 'Not converted from a lead.'}
 
 # The company's other opportunities
 ${(input.context.otherDeals as Row[]).length ? json(input.context.otherDeals) : 'No other opportunities.'}
+
+# Company news
+${input.signals?.length ? `What happened at the company in the last 30 days, found on the web with its sources, newest first: news about the company, not what the customer said. Weigh it as a reason to get in touch (a new decision maker to meet, new money or projects) or as a risk to the deal, and name it in reasons as the company's news of its date.\n${json(input.signals)}` : 'No recent company news.'}
 
 # Previous follow-up recommendation
 ${input.previous ? json(input.previous) : 'This is the first follow-up.'}
@@ -1134,7 +1141,8 @@ export class OpportunityEvaluator {
       | 'customerReplied'
       | 'silent'
       | 'closeDue'
-      | 'resumeDue',
+      | 'resumeDue'
+      | 'companySignal',
     // The approvals whose decisions started it: those submitted together,
     // each with what became of it.
     decidedApprovals?: { id: string; name: string; status: string }[],
@@ -1417,6 +1425,7 @@ export class OpportunityEvaluator {
             options,
             revision,
             owners: Object.keys(owners),
+            signals: await signalsOf(this.service, actor, opportunity),
             mail: await mailOf(
               this.container,
               ownerId,
@@ -2016,4 +2025,46 @@ export class OpportunityEvaluator {
       enrichedAt: new Date().toISOString(),
     };
   }
+}
+
+// The company's signals of the last 30 days (company-signals.ts), not
+// dismissed, newest first, for a reader who may read the company.
+async function signalsOf(
+  service: CrmService,
+  actor: Actor,
+  opportunity: CrmRecord,
+): Promise<Row[]> {
+  const companyId = toText(opportunity.companyId ?? '');
+  if (!companyId) return [];
+  try {
+    await service.get(actor, 'companies', companyId);
+  } catch {
+    return [];
+  }
+  const since = new Date(Date.now() - 30 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  const rows = await service.database
+    .query()
+    .selectFrom('crmSignals')
+    .select(['type', 'title', 'summary', 'occurredOn', 'sources'])
+    .where('companyId', '=', companyId)
+    .where('status', '!=', 'dismissed')
+    .where('occurredOn', '>=', since)
+    .orderBy('occurredOn', 'desc')
+    .limit(5)
+    .execute();
+  return rows.map((row) => {
+    const sources = jsonValue(row.sources);
+    const first = Array.isArray(sources)
+      ? (sources[0] as Row | undefined)
+      : undefined;
+    return {
+      type: row.type,
+      title: row.title,
+      summary: row.summary,
+      date: row.occurredOn,
+      source: first ? toText(first.site || first.title) : null,
+    };
+  });
 }

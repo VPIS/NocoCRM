@@ -16,9 +16,14 @@ import { doesTask } from './task-participants.js';
 
 export const AGENTS = ['leads', 'opportunities', 'approvals', 'tasks'] as const;
 export type AgentName = (typeof AGENTS)[number];
+// Every agent the page switches, the company signals' check too
+// (company-signals.ts), which keeps its runs in a table of its own rather
+// than as `ai` entries, so it is not among AGENTS.
+export const SWITCHED_AGENTS = [...AGENTS, 'signals'] as const;
+export type SwitchedAgent = (typeof SWITCHED_AGENTS)[number];
 
 // The triggers each agent runs on, in the order its page lists them.
-export const AGENT_TRIGGERS: Record<AgentName, readonly string[]> = {
+export const AGENT_TRIGGERS: Record<SwitchedAgent, readonly string[]> = {
   leads: [
     'created',
     'daily',
@@ -33,10 +38,14 @@ export const AGENT_TRIGGERS: Record<AgentName, readonly string[]> = {
     'taskDone',
     'approvalDecided',
     'customerReplied',
+    // A company signal worth acting on (company-signals.ts).
+    'companySignal',
   ],
   approvals: ['submitted'],
   // Today's timed tasks, prepared on the morning of their day.
   tasks: ['daily'],
+  // The watched companies, looked up on the web each morning.
+  signals: ['daily'],
 };
 
 // The daily checks' signals (lead-signals.ts, deal-signals.ts) all fall
@@ -56,7 +65,7 @@ export interface AgentSwitch {
   enabled: boolean;
   triggers: Record<string, boolean>;
 }
-export type AgentSwitches = Record<AgentName, AgentSwitch>;
+export type AgentSwitches = Record<SwitchedAgent, AgentSwitch>;
 
 const ROW = 'agents';
 
@@ -75,7 +84,7 @@ export async function agentSwitches(
     typeof raw === 'string' ? JSON.parse(raw) : (raw ?? {})
   ) as Partial<Record<string, Partial<AgentSwitch>>>;
   return Object.fromEntries(
-    AGENTS.map((agent) => [
+    SWITCHED_AGENTS.map((agent) => [
       agent,
       {
         enabled: stored[agent]?.enabled !== false,
@@ -93,7 +102,7 @@ export async function agentSwitches(
 // Whether the agent runs on this trigger now: itself on, and the trigger.
 export async function agentOn(
   service: CrmService,
-  agent: AgentName,
+  agent: SwitchedAgent,
   trigger: string,
 ): Promise<boolean> {
   const switches = (await agentSwitches(service))[agent];
@@ -109,8 +118,9 @@ export async function saveAgentSwitch(
   input: Partial<AgentSwitch>,
 ): Promise<AgentSwitches> {
   await requireCapability(actor, 'manage', 'settings');
-  if (!AGENTS.includes(agent as AgentName)) throw new CrmError('notFound', 404);
-  const name = agent as AgentName;
+  if (!SWITCHED_AGENTS.includes(agent as SwitchedAgent))
+    throw new CrmError('notFound', 404);
+  const name = agent as SwitchedAgent;
   const current = await agentSwitches(service);
   const next: AgentSwitch = {
     enabled: current[name].enabled,

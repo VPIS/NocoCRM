@@ -53,14 +53,21 @@ export function dayBefore(today: string, days: number): string {
     .slice(0, 10);
 }
 
-// The question: the company as the CRM knows it, the window, the kinds of
-// event, and the events already known, which it should not repeat. In the
-// AI's language, the language its titles come back in.
+// The question: the company as the CRM knows it, the window, the events
+// already known, and the rules the reading holds the answer to whatever the
+// method says: only the five kinds, cited pages, real days, the JSON shape.
+// In the AI's language, the language its titles come back in. The method
+// (the company-signals skill, ai/skills, which an administrator may edit:
+// what counts and what to leave out) goes beside it as the system message
+// (company-signals.ts), never in it: the search is formed from this
+// question, and a method in it turned the search to the method's words.
+// Without one (`guided` false), the question says what to leave out.
 export function signalQuestion(
   company: CompanyFacts,
   today: string,
   known: readonly string[],
   chinese: boolean,
+  guided = false,
 ): string {
   const since = dayBefore(today, SIGNAL_WINDOW_DAYS);
   const facts = [
@@ -72,13 +79,10 @@ export function signalQuestion(
     .join(', ');
   return [
     `Today is ${today}. Search the web for what happened to the company "${company.name}"${facts ? ` (${facts})` : ''} from ${since} to ${today}.`,
-    'Report only events of these kinds, the ones a salesperson selling to this company would act on:',
-    '- funding: a funding round, an investment, an IPO filing;',
-    '- hiring: hiring at scale, a new office or market;',
-    '- leadership: a new or departing executive (CEO, CTO, CIO, a head of a function);',
-    '- business: a major product launch, an acquisition or merger, a large contract or tender won, a listing;',
-    '- risk: layoffs, a lawsuit or penalty, financial trouble.',
-    'Leave out routine news: monthly sales or delivery figures, share price moves, awards, rankings, speeches, marketing campaigns, events about other companies with a similar name.',
+    `Report only events of these kinds, the ones a salesperson selling to this company would act on: ${SIGNAL_TYPES.join(', ')}.`,
+    guided
+      ? ''
+      : 'Leave out routine news: monthly sales or delivery figures, share price moves, awards, rankings, speeches, marketing campaigns, events about other companies with a similar name.',
     'Every event must come from the search results: cite the pages that state it as [ref_n] in its "refs" (the numbers only). Give the date the event happened, not the date of the article, and leave out events before the window or without a date. Never write a URL. When nothing qualifies, return an empty list.',
     known.length
       ? `Already known, do not report again: ${known.map((k) => `"${k}"`).join('; ')}.`

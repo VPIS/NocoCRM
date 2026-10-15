@@ -853,9 +853,9 @@ async function populate(
             // the content files are chosen to match.
             gender: LEAD_GENDERS[i] ?? 'unknown',
             country: 'CN',
-            state: provinceOf[leadPlaces[i]![1]],
-            city: text.cities[leadPlaces[i]![1]],
-            industry: leadPlaces[i]![0],
+            state: provinceOf[leadPlaces[i][1]],
+            city: text.cities[leadPlaces[i][1]],
+            industry: leadPlaces[i][0],
             // Half of them say what their company turns over, in CNY.
             ...(i % 2 === 0
               ? {
@@ -2544,6 +2544,11 @@ async function deleteRecords(
     if (companies.length)
       await q
         .deleteFrom('crmSignals')
+        .where('companyId', 'in', companies)
+        .execute();
+    if (companies.length)
+      await q
+        .deleteFrom('crmSignalChecks')
         .where('companyId', 'in', companies)
         .execute();
     // The approvals' lifecycle log (server/lifecycles/approvals.ts) goes

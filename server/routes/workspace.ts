@@ -36,6 +36,7 @@ import {
   resetDemo,
 } from '../providers/crm/demo.js';
 import { searchPlaces, subdivisions } from '../providers/crm/geography.js';
+import { companySignalsToken } from '../providers/crm/company-signals.js';
 import { crmToken } from '../providers/crm/index.js';
 import { jsonValue } from '../providers/crm/values.js';
 import { BACKGROUND_MARKER } from '../providers/crm-agents/background.js';
@@ -746,15 +747,24 @@ export function registerWorkspaceRoutes(
     }),
     apiValidator('param', AgentParams),
     apiValidator('query', AgentQuery),
-    async (c) =>
-      c.json({
-        data: await agentOverview(
-          service,
-          c.get('actor'),
-          c.req.valid('param').agent,
-          c.req.valid('query'),
-        ),
-      }),
+    async (c) => {
+      const { agent } = c.req.valid('param');
+      // The company signals' check keeps its runs in a table of its own
+      // (company-signals.ts), answered in the same shape.
+      return c.json({
+        data:
+          agent === 'signals'
+            ? await app.container
+                .resolve(companySignalsToken)
+                .overview(c.get('actor'), c.req.valid('query'))
+            : await agentOverview(
+                service,
+                c.get('actor'),
+                agent,
+                c.req.valid('query'),
+              ),
+      });
+    },
   );
   router.put(
     '/aiAgents/:agent/switches',

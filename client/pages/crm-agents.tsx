@@ -6,6 +6,7 @@ import {
   Ban,
   CircleCheck,
   CircleX,
+  Activity,
   ClipboardList,
   Clock3,
   Hourglass,
@@ -56,28 +57,35 @@ import { DEFAULT_TIME_ZONE } from '../../server/providers/crm/zone-time.js';
 // record. The tab is the path's last segment (/crm/agents/<agent>, the
 // address the menu's four entries once had), the first when there is none.
 
-type AgentName = 'leads' | 'opportunities' | 'approvals' | 'tasks';
+// The company signals' check (company-signals.ts) last: its runs are checks
+// of companies, its outcomes signals seen or dismissed.
+type AgentName = 'leads' | 'opportunities' | 'approvals' | 'tasks' | 'signals';
 // The method skill each agent works by (ai/skills).
 const SKILLS: Record<AgentName, string> = {
   leads: 'lead-follow-up',
   opportunities: 'opportunity-follow-up',
   approvals: 'approval-review',
   tasks: 'task-preparation',
+  signals: 'company-signals',
 };
 const AGENTS: readonly AgentName[] = [
   'leads',
   'opportunities',
   'approvals',
   'tasks',
+  'signals',
 ];
 const ICONS: Record<AgentName, LucideIcon> = {
   leads: ScanSearch,
   opportunities: TrendingUp,
   approvals: ShieldCheck,
   tasks: ClipboardList,
+  signals: Activity,
 };
 const FRAME = 'border border-border shadow-xs ring-0';
 const STATUSES = ['pending', 'accepted', 'dismissed', 'running', 'failed'];
+// A company signals' check found news, found nothing new, or failed.
+const CHECK_STATUSES = ['found', 'nothing', 'failed'];
 
 interface Overview {
   agent: AgentName;
@@ -176,6 +184,11 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
   const enabled = data.switches.enabled;
   const percent = (value: unknown): string =>
     value == null ? '—' : `${toText(Math.round(Number(value) * 100))}%`;
+  const signals = agent === 'signals';
+  // A metric's name: the signals' own (checks, seen, dismissed, new), else
+  // the runs' and cards'.
+  const statLabel = (key: string, fallback: string): string =>
+    signals ? text(`agents.signals.stats.${key}`) : text(fallback);
   const triggerLabel = (trigger: string): string =>
     trigger === 'asked' || trigger === 'revised'
       ? text(`agents.started.${trigger}`)
@@ -200,7 +213,13 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
               {text(`agents.${agent}.description`)}
             </p>
             <p className='text-muted-foreground'>
-              {text(agent === 'tasks' ? 'agents.byAiTasks' : 'agents.byAi')}
+              {text(
+                agent === 'tasks'
+                  ? 'agents.byAiTasks'
+                  : signals
+                    ? 'agents.byAiSignals'
+                    : 'agents.byAi',
+              )}
             </p>
             <p className='text-xs text-muted-foreground'>
               {skillId && canSkills ? (
@@ -247,8 +266,10 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
                       {triggerLabel(trigger)}
                     </p>
                     <p className='text-xs text-muted-foreground'>
-                      {text(`agents.triggers.${trigger}.hint`, { zone })}
-                      {trigger === 'daily'
+                      {signals
+                        ? text('agents.triggers.dailySignals.hint', { zone })
+                        : text(`agents.triggers.${trigger}.hint`, { zone })}
+                      {trigger === 'daily' && !signals
                         ? ` ${text(
                             agent === 'leads'
                               ? 'agents.triggers.dailyLeads.hint'
@@ -275,7 +296,9 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
               {text(
                 agent === 'tasks'
                   ? 'agents.manualNoteTasks'
-                  : 'agents.manualNote',
+                  : signals
+                    ? 'agents.manualNoteSignals'
+                    : 'agents.manualNote',
               )}
               {admin ? '' : ` ${text('agents.adminOnly')}`}
             </p>
@@ -306,33 +329,33 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
         <div className='@container'>
           <div className='grid grid-cols-2 gap-4 @xl:grid-cols-3 @3xl:grid-cols-6'>
             <Metric
-              title={text('agents.runs')}
+              title={statLabel('runs', 'agents.runs')}
               icon={Play}
               value={Number(stats.runs ?? 0)}
             />
             <Metric
-              title={text('agents.statuses.accepted')}
+              title={statLabel('accepted', 'agents.statuses.accepted')}
               icon={CircleCheck}
               value={Number(stats.accepted ?? 0)}
             />
             <Metric
-              title={text('agents.statuses.dismissed')}
+              title={statLabel('dismissed', 'agents.statuses.dismissed')}
               icon={CircleX}
               value={Number(stats.dismissed ?? 0)}
             />
             <Metric
-              title={text('agents.statuses.pending')}
+              title={statLabel('pending', 'agents.statuses.pending')}
               icon={Hourglass}
               value={Number(stats.pending ?? 0)}
               tone={Number(stats.pending ?? 0) > 0 ? 'attention' : 'neutral'}
             />
             <Metric
-              title={text('agents.statuses.failed')}
+              title={statLabel('failed', 'agents.statuses.failed')}
               icon={Ban}
               value={Number(stats.failed ?? 0)}
             />
             <Metric
-              title={text('agents.acceptance')}
+              title={statLabel('acceptance', 'agents.acceptance')}
               icon={Percent}
               value={percent(stats.acceptance)}
             />
@@ -352,12 +375,14 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
                   ? 'agents.runsScopeApprovals'
                   : agent === 'tasks'
                     ? 'agents.runsScopeTasks'
-                    : 'agents.runsScope',
+                    : signals
+                      ? 'agents.runsScopeSignals'
+                      : 'agents.runsScope',
               )}
             </p>
           </div>
           <div className='flex flex-wrap rounded-lg border p-0.5'>
-            {['', ...STATUSES].map((value) => (
+            {['', ...(signals ? CHECK_STATUSES : STATUSES)].map((value) => (
               <Button
                 key={value || 'all'}
                 size='xs'
@@ -383,7 +408,7 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
                   <div className='flex min-w-0 items-center gap-2'>
                     <span className='min-w-0 truncate font-medium'>
                       <RecordLink
-                        entity={agent}
+                        entity={signals ? 'companies' : agent}
                         record={
                           {
                             id: run.recordId,
@@ -425,7 +450,9 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
                         ? 'success'
                         : run.status === 'failed'
                           ? 'warning'
-                          : run.status === 'pending' || run.status === 'running'
+                          : run.status === 'pending' ||
+                              run.status === 'running' ||
+                              run.status === 'found'
                             ? 'ai'
                             : 'muted'
                     }

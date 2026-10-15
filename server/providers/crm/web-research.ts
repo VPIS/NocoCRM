@@ -92,6 +92,10 @@ export async function searchWeb(
     signal?: AbortSignal;
     fetch?: typeof fetch;
     search?: boolean;
+    // How to judge what is found (a method skill), sent as the system
+    // message: the search is formed from the user's message, and a method
+    // in it turned the search to the method's own words.
+    system?: string;
   } = {},
 ): Promise<WebAnswer> {
   const search = options.search !== false;
@@ -106,7 +110,14 @@ export async function searchWeb(
       },
       body: JSON.stringify({
         model: searcher.model,
-        input: { messages: [{ role: 'user', content: [{ text: prompt }] }] },
+        input: {
+          messages: [
+            ...(options.system
+              ? [{ role: 'system', content: [{ text: options.system }] }]
+              : []),
+            { role: 'user', content: [{ text: prompt }] },
+          ],
+        },
         parameters: {
           result_format: 'message',
           enable_thinking: false,

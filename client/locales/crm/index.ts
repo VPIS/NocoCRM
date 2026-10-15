@@ -479,6 +479,23 @@ const wording = {
       ],
       skill: ['Skill: Prepare a task', '技能：任务准备'],
     },
+    // The company signals' check (company-signals.ts), its runs the checks.
+    signals: {
+      title: ['Company signals', '客户信号'],
+      description: [
+        "Looks on the web each morning for what happened lately at the companies with an open deal or marked as watched: funding, hiring at scale, new executives, major news and risks. It keeps each with its sources on the company's Signals tab and tells the people selling to it; one worth acting on starts the company's open deals' follow-ups.",
+        '每天早上联网查看有进行中商机或被标记关注的公司最近发生了什么：融资、扩张招聘、高管变动、重大动态和风险。每条带出处记在公司的"信号"页签上，并通知公司和商机的负责人；值得跟进的会启动这家公司进行中商机的跟进。',
+      ],
+      skill: ['Skill: Company signals', '技能：客户信号'],
+      stats: {
+        runs: ['Checks', '检查次数'],
+        accepted: ['Seen', '已看'],
+        dismissed: ['Dismissed', '已忽略'],
+        pending: ['New signals', '新信号'],
+        failed: ['Failed checks', '检查失败'],
+        acceptance: ['Seen rate', '已看率'],
+      },
+    },
     duty: ['What it does', '职责'],
     // Who runs it and who decides, on every agent's page.
     byAi: [
@@ -489,6 +506,15 @@ const wording = {
     byAiTasks: [
       "Run by the AI. It changes nothing: the task's owner and participants read it on the task and may write it into the description.",
       '由 AI 执行；它不改动任何记录，任务负责人和参与人在任务上查看，可以写入任务描述。',
+    ],
+    // The company signals': nothing to accept, its signals are read.
+    byAiSignals: [
+      'Run by the AI. It changes nothing on the company: whoever may edit the company marks each signal seen or dismisses it, and a dismissed event is not shown again.',
+      '由 AI 执行；它不改动公司的任何资料，能编辑公司的人把每条信号标为已看或忽略，忽略的事件不再出现。',
+    ],
+    manualNoteSignals: [
+      'Whoever may edit a company can always check it on its Signals tab, whatever is switched off. It needs the Qwen model service.',
+      '能编辑公司的人在公司的"信号"页签点「立即检查」随时可以手动发起，不受这些开关影响。需要配置通义千问。',
     ],
     manualNoteTasks: [
       "A task's owner or participant can always ask for a preparation on the task, whatever is switched off.",
@@ -540,6 +566,19 @@ const wording = {
         hint: [
           "Today's open tasks with a time of day that concern a lead, an opportunity or a company, each once.",
           '当天还没开始、有具体时间、关联了线索、商机或公司的任务，每个准备一次。',
+        ],
+      },
+      dailySignals: {
+        hint: [
+          'Every day at 09:30 in the business time zone ({{zone}}): the companies with an open deal or watched, each at most once a week, at most 20 a day.',
+          '每天 09:30（业务时区 {{zone}}）检查有进行中商机或被关注的公司，每家每周最多一次，每天最多 20 家。',
+        ],
+      },
+      companySignal: {
+        label: ['The company has news', '客户有新动态时'],
+        hint: [
+          'When the company signals find funding, a new executive, major news or a risk at its company (hiring is only told).',
+          '客户信号发现公司有融资、高管变动、重大动态或风险时（扩张招聘只通知）。',
         ],
       },
       dailyOpportunities: {
@@ -602,6 +641,9 @@ const wording = {
       dismissed: ['Ignored', '已忽略'],
       failed: ['Failed', '失败'],
       retired: ['Settled elsewhere', '已在别处处理'],
+      // A company signals' check.
+      found: ['Found news', '有新动态'],
+      nothing: ['Nothing new', '无新动态'],
     },
     all: ['All', '全部'],
     runsTitle: ['Runs', '运行记录'],
@@ -618,6 +660,10 @@ const wording = {
     runsScopeApprovals: [
       'Reviews of the approvals submitted to you, over the last 90 days',
       '近 90 天提交给你的审批的分析',
+    ],
+    runsScopeSignals: [
+      'Checks of the companies you may read, over the last 90 days',
+      '近 90 天、你有权查看的公司的检查',
     ],
     runsScopeTasks: [
       'Preparations of the tasks you own or take part in, over the last 90 days',
@@ -957,6 +1003,10 @@ const wording = {
       resumeDue: [
         'The pause is due to end: the AI followed it up.',
         '暂停到了预计恢复日期，AI 自动跟进。',
+      ],
+      companySignal: [
+        'The company has news: the AI followed up again.',
+        '客户有新动态，AI 继续跟进。',
       ],
       approvalsDecided: [
         'Approvals decided ({{approvals}}): the AI followed up again.',

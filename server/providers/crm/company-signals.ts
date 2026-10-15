@@ -5,7 +5,9 @@ import {
   type ServiceResolver,
   type ServiceToken,
 } from '@nocobase/service-provider';
-import { recordUse } from './ai-model.js';
+import { readSkill, recordUse } from './ai-model.js';
+import { agentOn, agentSwitches, AGENT_TRIGGERS } from './agents.js';
+import { readEntry } from './ai-entries.js';
 import type { Actor } from './authorization.js';
 import { CrmError, toText } from './schema.js';
 import type { CrmService } from './service.js';
@@ -42,6 +44,10 @@ import {
 
 const DAY = 86_400_000;
 export const CHECK_EVERY_DAYS = 7;
+// The method skill (ai/skills/company-signals).
+export const SIGNALS_SKILL = 'company-signals';
+// The kinds worth a deal's follow-up; hiring is only told.
+const ACTING_TYPES = new Set(['funding', 'leadership', 'business', 'risk']);
 const KNOWN_NAMED = 20;
 const STATUSES = ['new', 'seen', 'dismissed'] as const;
 export type SignalStatus = (typeof STATUSES)[number];
@@ -123,6 +129,10 @@ export class CompanySignals {
     private readonly options: {
       container?: ServiceResolver;
       fetch?: typeof fetch;
+      // Starts a deal's follow-up as its owner because of a company signal
+      // (the opportunity evaluator, wired by CrmProvider); true when one
+      // started.
+      followUp?: (dealId: string, ownerId: string) => Promise<boolean>;
     } = {},
   ) {}
 
@@ -235,7 +245,10 @@ export class CompanySignals {
     const company = await this.company(companyId);
     if (!company) throw new CrmError('notFound', 404);
     try {
-      return await this.check(searcher, company, new Date());
+      return await this.check(searcher, company, new Date(), {
+        trigger: 'asked',
+        actorId: actor.id,
+      });
     } catch (error) {
       throw error instanceof WebSearchError
         ? new CrmError('signalsFailed', 503, undefined, error.message)
@@ -253,10 +266,17 @@ export class CompanySignals {
       failed: 0,
     };
     if (!searcher) return pass;
+    // Switched off on the Auto follow-up page (agents.ts).
+    if (!(await agentOn(this.service, 'signals', 'daily'))) return pass;
     for (const company of await this.due(now, limit)) {
       pass.checked += 1;
       try {
-        pass.found += (await this.check(searcher, company, now)).found.length;
+        pass.found += (
+          await this.check(searcher, company, now, {
+            trigger: 'daily',
+            actorId: null,
+          })
+        ).found.length;
       } catch {
         // Left unchecked, so the next pass looks at it first; the pass's
         // counts say how many failed.
@@ -305,13 +325,64 @@ export class CompanySignals {
       .executeTakeFirst();
   }
 
-  // One company searched: its new signals kept, put on its timeline and told
-  // to the people who sell to it.
+  // One company searched, logged as a check whatever came of it.
   private async check(
     searcher: WebSearcher,
     company: Row,
     now: Date,
+    by: { trigger: 'daily' | 'asked'; actorId: string | null },
   ): Promise<CheckResult> {
+    const checkId = randomUUID();
+    const log = (row: {
+      status: 'found' | 'nothing' | 'failed';
+      found: number;
+      followUps: number;
+      error?: string;
+    }) =>
+      this.service.database
+        .query()
+        .insertInto('crmSignalChecks')
+        .values({
+          id: checkId,
+          companyId: toText(company.id),
+          trigger: by.trigger,
+          actorId: by.actorId,
+          status: row.status,
+          found: row.found,
+          followUps: row.followUps,
+          error: row.error ? row.error.slice(0, 500) : null,
+          createdAt: now.toISOString(),
+        })
+        .execute();
+    let result: CheckResult & { followUps: number };
+    try {
+      result = await this.search(searcher, company, now, checkId);
+    } catch (error) {
+      await log({
+        status: 'failed',
+        found: 0,
+        followUps: 0,
+        error: error instanceof Error ? error.message : String(error),
+      }).catch(() => undefined);
+      throw error;
+    }
+    await log({
+      status: result.found.length ? 'found' : 'nothing',
+      found: result.found.length,
+      followUps: result.followUps,
+    });
+    return { found: result.found };
+  }
+
+  // One company searched: its new signals kept, put on its timeline, told to
+  // the people who sell to it, and the ones worth acting on handed to its
+  // open deals' follow-ups.
+  private async search(
+    searcher: WebSearcher,
+    company: Row,
+    now: Date,
+    checkId: string,
+  ): Promise<CheckResult & { followUps: number }> {
     const service = this.service;
     const settings = await service.settings();
     const today = dayIn(now, settings.timeZone);
@@ -323,6 +394,11 @@ export class CompanySignals {
       .where('companyId', '=', companyId)
       .orderBy('createdAt', 'desc')
       .execute();
+    // The method an administrator may edit on the Skills page, as the
+    // system message.
+    const method = this.options.container
+      ? await readSkill(this.options.container, SIGNALS_SKILL)
+      : '';
     const question = signalQuestion(
       {
         name: toText(company.name),
@@ -333,9 +409,10 @@ export class CompanySignals {
       today,
       known.slice(0, KNOWN_NAMED).map((row) => toText(row.title)),
       settings.aiLanguage.startsWith('zh'),
+      Boolean(method),
     );
     const keys = new Set(known.map((row) => toText(row.eventKey)));
-    const answer = await this.ask(searcher, question);
+    const answer = await this.ask(searcher, question, true, method);
     let read = readSignals(answer, today, keys);
     // An answer in prose: reshaped without searching, its [ref_n] marks
     // still naming the first answer's pages.
@@ -349,23 +426,179 @@ export class CompanySignals {
     }
     const found: SignalView[] = [];
     for (const signal of read.signals)
-      found.push(await this.keep(companyId, signal, now));
+      found.push(await this.keep(companyId, signal, now, checkId));
     await query
       .updateTable('crmCompanies')
       .set({ signalsCheckedAt: now.toISOString() })
       .where('id', '=', companyId)
       .execute();
-    if (found.length) await this.tell(company, found);
-    return { found };
+    if (!found.length) return { found, followUps: 0 };
+    await this.tell(company, found);
+    return { found, followUps: await this.followUps(companyId, found) };
+  }
+
+  // A signal worth acting on (all but hiring) starts each open deal's
+  // follow-up as its owner, which reads the company's recent signals
+  // (opportunity-evaluation.ts), unless the deal already has a card waiting
+  // or being worked on, or the trigger is switched off.
+  private async followUps(
+    companyId: string,
+    found: readonly SignalView[],
+  ): Promise<number> {
+    const followUp = this.options.followUp;
+    if (!followUp || !found.some((s) => ACTING_TYPES.has(s.type))) return 0;
+    if (!(await agentOn(this.service, 'opportunities', 'companySignal')))
+      return 0;
+    const query = this.service.database.query();
+    const deals = await query
+      .selectFrom('crmOpportunities')
+      .select(['id', 'ownerId'])
+      .where('companyId', '=', companyId)
+      .where('stage', 'not in', ['won', 'lost', 'paused'])
+      .execute();
+    let started = 0;
+    for (const deal of deals) {
+      if (!deal.ownerId) continue;
+      const busy = (
+        await query
+          .selectFrom('crmHistory')
+          .selectAll()
+          .where('entity', '=', 'opportunities')
+          .where('recordId', '=', toText(deal.id))
+          .where('action', '=', 'ai')
+          .where('aiStatus', 'in', ['pending', 'running'])
+          .execute()
+      ).some((row) => {
+        const status = readEntry(row).status;
+        return status === 'pending' || status === 'running';
+      });
+      if (busy) continue;
+      try {
+        if (await followUp(toText(deal.id), toText(deal.ownerId))) started += 1;
+      } catch {
+        // A deal its owner can no longer read, or closed meanwhile.
+      }
+    }
+    return started;
+  }
+
+  // The Auto follow-up page's tab (agents.ts's agentOverview, for this
+  // agent): the switches, the last 7 and 30 days, and the checks of the
+  // last 90 days on companies the reader may read, newest first. A check's
+  // runs count as an agent's runs; its signals' seen, dismissed and new as
+  // a card's accepted, dismissed and pending, the acceptance their seen
+  // share of those decided.
+  async overview(
+    actor: Actor,
+    options: {
+      page?: number;
+      pageSize?: number;
+      trigger?: string;
+      status?: string;
+    },
+  ): Promise<Row> {
+    const query = this.service.database.query();
+    const now = Date.now();
+    const since = new Date(now - 90 * DAY).toISOString();
+    const checks = await query
+      .selectFrom('crmSignalChecks')
+      .selectAll()
+      .where('createdAt', '>=', since)
+      .orderBy('createdAt', 'desc')
+      .execute();
+    const signals = await query
+      .selectFrom('crmSignals')
+      .select(['companyId', 'status', 'createdAt', 'title', 'checkId'])
+      .where('createdAt', '>=', since)
+      .execute();
+    const ids = [
+      ...new Set([...checks, ...signals].map((r) => toText(r.companyId))),
+    ];
+    const readable = new Map<string, Row>();
+    for (let i = 0; i < ids.length; i += 500) {
+      const { data } = await this.service.list(actor, 'companies', {
+        ids: ids.slice(i, i + 500).join(','),
+        pageSize: 1000,
+      });
+      for (const record of data) readable.set(toText(record.id), record);
+    }
+    const mine = checks.filter((c) => readable.has(toText(c.companyId)));
+    const theirs = signals.filter((s) => readable.has(toText(s.companyId)));
+    const stats = (days: number): Row => {
+      const from = now - days * DAY;
+      const within = <T extends Row>(rows: T[]) =>
+        rows.filter((r) => Date.parse(toText(r.createdAt)) >= from);
+      const runs = within(mine);
+      const found = within(theirs);
+      const count = (status: string) =>
+        found.filter((s) => s.status === status).length;
+      const accepted = count('seen');
+      const dismissed = count('dismissed');
+      return {
+        runs: runs.length,
+        accepted,
+        dismissed,
+        pending: count('new'),
+        failed: runs.filter((r) => r.status === 'failed').length,
+        found: found.length,
+        followUps: runs.reduce((sum, r) => sum + Number(r.followUps ?? 0), 0),
+        acceptance:
+          accepted + dismissed ? accepted / (accepted + dismissed) : null,
+      };
+    };
+    const listed = mine.filter(
+      (c) =>
+        (!options.trigger || c.trigger === options.trigger) &&
+        (!options.status || c.status === options.status),
+    );
+    const page = Math.max(1, options.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, options.pageSize ?? 20));
+    const titlesOf = new Map<string, string[]>();
+    for (const signal of theirs) {
+      const key = toText(signal.checkId ?? '');
+      if (key)
+        titlesOf.set(key, [...(titlesOf.get(key) ?? []), toText(signal.title)]);
+    }
+    return {
+      agent: 'signals',
+      switches: (await agentSwitches(this.service)).signals,
+      triggers: AGENT_TRIGGERS.signals,
+      week: stats(7),
+      month: stats(30),
+      total: listed.length,
+      page,
+      pageSize,
+      runs: listed.slice((page - 1) * pageSize, page * pageSize).map((c) => {
+        const company = readable.get(toText(c.companyId));
+        return {
+          id: toText(c.id),
+          recordId: toText(c.companyId),
+          name: toText(company?.name ?? ''),
+          ownerId: company?.ownerId ?? null,
+          createdAt: toText(c.createdAt),
+          trigger: toText(c.trigger),
+          status: toText(c.status),
+          recommendation: null,
+          grade: null,
+          // What it found, or why it failed.
+          summary:
+            c.status === 'failed'
+              ? toText(c.error ?? '')
+              : (titlesOf.get(toText(c.id)) ?? []).join('；') || null,
+        };
+      }),
+    };
   }
 
   private async ask(
     searcher: WebSearcher,
     prompt: string,
     search = true,
+    system = '',
   ): Promise<WebAnswer> {
     const answer = await searchWeb(searcher, prompt, {
       search,
+      ...(system ? { system } : {}),
       ...(this.options.fetch ? { fetch: this.options.fetch } : {}),
     });
     // Recorded as the CRM's other model calls are, on the usage page.
@@ -385,6 +618,7 @@ export class CompanySignals {
     companyId: string,
     signal: FoundSignal,
     now: Date,
+    checkId: string,
   ): Promise<SignalView> {
     const id = randomUUID();
     const runId = randomUUID();
@@ -400,6 +634,7 @@ export class CompanySignals {
       eventKey: signal.eventKey,
       status: 'new',
       runId,
+      checkId,
       createdAt: at,
       updatedAt: at,
     };

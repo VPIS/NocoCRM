@@ -2165,8 +2165,13 @@ export class CrmService {
       .where((eb) => compileFilter(eb, access.scope))
       .execute();
     // A company's signals (company-signals.ts) are its own: they go with it.
-    if (entity === 'companies')
+    if (entity === 'companies') {
       await tx.deleteFrom('crmSignals').where('companyId', '=', id).execute();
+      await tx
+        .deleteFrom('crmSignalChecks')
+        .where('companyId', '=', id)
+        .execute();
+    }
     await this.history(tx, actor, entity, id, 'deleted');
   }
   async history(

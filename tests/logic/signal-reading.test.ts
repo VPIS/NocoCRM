@@ -147,6 +147,13 @@ describe('reading company signals', () => {
     expect(question).toContain('"Acme raised a Series B."');
     expect(question).toContain('Simplified Chinese');
     expect(question).toContain('Never write a URL');
+    // With the method (the company-signals skill) as the system message,
+    // the question keeps the rules and leaves what to omit to it.
+    const guided = signalQuestion({ name: 'Acme' }, TODAY, [], false, true);
+    expect(guided).toContain('funding, hiring, leadership, business, risk');
+    expect(guided).toContain('cite the pages that state it as [ref_n]');
+    expect(guided).not.toContain('Leave out routine news');
+    expect(question).toContain('Leave out routine news');
   });
 
   it('searches with the configured Qwen service that has a key, its fast model first', () => {

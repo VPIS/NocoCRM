@@ -70,6 +70,8 @@ export const AgentSwitchesSchema: z.ZodType<AgentSwitches> = z
     opportunities: AgentSwitch,
     approvals: AgentSwitch,
     tasks: AgentSwitch,
+    // The company signals' check (company-signals.ts).
+    signals: AgentSwitch,
   })
   .meta({ ref: 'CrmAgentSwitches' });
 
@@ -423,7 +425,7 @@ export const DecisionsMeta = z.object({
 });
 
 export const AgentParams = z.object({
-  agent: z.enum(['leads', 'opportunities', 'approvals', 'tasks']),
+  agent: z.enum(['leads', 'opportunities', 'approvals', 'tasks', 'signals']),
 });
 export const AgentQuery = z.object({
   ...PageQuery.shape,
