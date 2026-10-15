@@ -1,4 +1,5 @@
 import { MoneyField } from '../components/crm/money-field.js';
+import { RecordWhatsAppPanel } from '../components/crm/whatsapp/record-tab.js';
 import {
   PrepFeedEntry,
   PrepPanel,
@@ -370,6 +371,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       'historyTab',
       'tasks',
       ...(mailSetup.can ? ['mail'] : []),
+      ...(meta?.whatsapp?.configured ? ['whatsapp'] : []),
       'attachments',
     ]) ?? 'historyTab';
   // The tasks and the history arrive one page each with the lead;
@@ -542,6 +544,11 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                 ),
               },
             ]
+          : []),
+        // The lead's WhatsApp messages, once the company's number is
+        // connected (components/crm/whatsapp/record-tab.tsx).
+        ...(meta?.whatsapp?.configured
+          ? [{ name: 'whatsapp', label: 'whatsapp.tab', icon: MessageCircle }]
           : []),
         // Attachments last, as on every record.
         {
@@ -805,6 +812,8 @@ function LeadDetail({ id }: { id: string }): ReactElement {
               focus={mailFocus}
               record={{ entity: 'leads', id: toText(record.id) }}
             />
+          ) : tab === 'whatsapp' ? (
+            <RecordWhatsAppPanel entity='leads' id={toText(record.id)} />
           ) : tab === 'attachments' ? (
             <RecordAttachments
               entity='leads'
@@ -845,6 +854,11 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                       setMailFocus(sourceKey);
                       setTab('mail');
                     }
+                  : undefined
+              }
+              onOpenWhatsApp={
+                meta?.whatsapp?.configured
+                  ? () => setTab('whatsapp')
                   : undefined
               }
             />
@@ -2342,6 +2356,72 @@ function MailEvent({
   );
 }
 
+// A customer's WhatsApp messages of a day on the record's people: how many,
+// how many from the customer, and who wrote last; it opens the WhatsApp tab,
+// where they are read.
+function WhatsAppEvent({
+  event,
+  onOpen,
+}: {
+  event: Data;
+  onOpen?: () => void;
+}): ReactElement {
+  const { text } = useCrmText();
+  const day = (event.changes ?? {}) as Data;
+  const inbound = Number(day.inbound) || 0;
+  const total = inbound + (Number(day.outbound) || 0);
+  const summary = [
+    toText(
+      total === 1
+        ? text('feed.whatsapp.countOne')
+        : text('feed.whatsapp.count', { count: total }),
+    ) +
+      (inbound
+        ? toText(text('feed.whatsapp.fromCustomer', { count: inbound }))
+        : ''),
+  ];
+  const last = toText(
+    text(
+      day.lastFrom === 'team'
+        ? 'feed.whatsapp.lastTeam'
+        : 'feed.whatsapp.lastCustomer',
+    ),
+  );
+  const line = (
+    <>
+      {summary[0]}
+      <span className='ml-2 text-muted-foreground'>{last}</span>
+    </>
+  );
+  return (
+    <>
+      <span className='shrink-0 text-muted-foreground'>
+        {text('feed.whatsapp.exchanged')}
+      </span>
+      <span className='min-w-0 truncate' title={`${summary[0]} · ${last}`}>
+        {onOpen ? (
+          <span
+            role='button'
+            tabIndex={0}
+            className='cursor-pointer underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none'
+            onClick={onOpen}
+            onKeyDown={(keyEvent) => {
+              if (keyEvent.key === 'Enter' || keyEvent.key === ' ') {
+                keyEvent.preventDefault();
+                onOpen();
+              }
+            }}
+          >
+            {line}
+          </span>
+        ) : (
+          line
+        )}
+      </span>
+    </>
+  );
+}
+
 // The mail from before the record existed (historyOf's `mailBefore`): one
 // line at the end of the timeline saying how many conversations there were,
 // the count opening the Mail tab, which lists them whole, rather than a list
@@ -2908,6 +2988,8 @@ const eventIcons: Record<string, LucideIcon> = {
   commentDeleted: MessageSquareText,
   // A person asking the AI to redo its card, in their words.
   aiRevise: MessageCircle,
+  // A customer's WhatsApp messages of a day (whatsapp/service.ts).
+  whatsapp: MessageCircle,
   merged: Merge,
   mail: Mail,
 };
@@ -2957,6 +3039,7 @@ export function HistoryFeed({
   focusId,
   focusAt,
   onOpenMail,
+  onOpenWhatsApp,
 }: {
   entity: Entity;
   id: string;
@@ -2974,6 +3057,8 @@ export function HistoryFeed({
   focusAt?: number;
   // Opens a mail conversation on the Mail tab, for the mailbox's owner.
   onOpenMail?: (sourceKey: string) => void;
+  // Opens the WhatsApp tab, where a day's messages are read.
+  onOpenWhatsApp?: () => void;
 }): ReactElement {
   const { text, language } = useCrmText();
   const refresh = useRefresh();
@@ -3364,7 +3449,13 @@ export function HistoryFeed({
                                 own work (as it is named now), else "AI", in
                                 bold. */}
                               <span className='shrink-0 font-semibold text-foreground'>
-                                {event.action === 'signal' ? (
+                                {event.action === 'whatsapp' ? (
+                                  // The customer who wrote, not a user.
+                                  toText(
+                                    (event.changes as Data | undefined)?.name ??
+                                      '',
+                                  )
+                                ) : event.action === 'signal' ? (
                                   <AgentWords
                                     work='signals'
                                     wordKey='name'
@@ -3409,6 +3500,11 @@ export function HistoryFeed({
                                 <ApprovalEvent event={event} />
                               ) : event.action === 'mail' ? (
                                 <MailEvent event={event} onOpen={onOpenMail} />
+                              ) : event.action === 'whatsapp' ? (
+                                <WhatsAppEvent
+                                  event={event}
+                                  onOpen={onOpenWhatsApp}
+                                />
                               ) : event.action === 'signal' ? (
                                 <SignalEvent event={event} />
                               ) : (
@@ -3503,6 +3599,7 @@ export function HistoryFeed({
                                 event.action !== 'aiRevise' &&
                                 event.action !== 'merged' &&
                                 event.action !== 'mail' &&
+                                event.action !== 'whatsapp' &&
                                 event.action !== 'signal' &&
                                 !taskEvent &&
                                 !approvalEvent && (

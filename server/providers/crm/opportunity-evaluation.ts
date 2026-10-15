@@ -48,6 +48,7 @@ import { JobInterruptedError } from '@nocobase/jobs';
 import { markStarted, within, type FollowUpPayload } from './follow-up-jobs.js';
 import { LONG_TEXT_LIMIT, TEXT_LIMIT } from './limits.js';
 import { mailOf, mailboxOwnersOf } from './mail-context.js';
+import { whatsappOf, whatsappSection } from './whatsapp/service.js';
 import type { MailTarget } from './mail-target.js';
 import { ROLES, matchCompany } from './opportunity-capture.js';
 import { normalizePhone } from './phone.js';
@@ -880,6 +881,9 @@ function prompt(input: {
   // What the web says happened at the deal's company lately
   // (company-signals.ts), newest first.
   signals?: Row[];
+  // The deal's people's WhatsApp messages (whatsapp/service.ts), oldest
+  // first.
+  whatsapp?: Row[];
 }): string {
   const { opportunity, revision } = input;
   const zh = input.locale.startsWith('zh');
@@ -959,6 +963,8 @@ ${input.comments.length ? json(input.comments) : 'No comments.'}
 
 # Mail with the customer
 ${mail?.length ? `The owner's mail with the opportunity's contacts in the last six months, newest first; direction fromCustomer is what the customer wrote, toCustomer what the owner sent; text is the message without the earlier messages it quotes. A message with concerns is about the company's other opportunity it names, not this one: what it says of a contract, an invoice, a payment or a project is that opportunity's, never this one's evidence; read it only for what it shows of the customer.\n${json(mail)}` : "No mail with the customer was found in the owner's mailbox."}
+
+${whatsappSection('WhatsApp with the customer', input.whatsapp ?? [])}
 
 # Approvals
 ${(input.context.approvals as Row[]).length ? json(input.context.approvals) : 'No approvals.'}
@@ -1424,6 +1430,11 @@ export class OpportunityEvaluator {
             revision,
             owners: Object.keys(owners),
             signals: await signalsOf(this.service, actor, opportunity),
+            whatsapp: await whatsappOf(
+              this.container,
+              this.service.database.query(),
+              { entity: 'opportunities', id: toText(opportunity.id) },
+            ),
             mail: await mailOf(
               this.container,
               ownerId,

@@ -17,6 +17,7 @@ import { registerOperationRoutes } from './operations.js';
 import { registerPlanRoutes } from './plans.js';
 import { registerRecordRoutes } from './records.js';
 import { registerSignalRoutes } from './signals.js';
+import { registerWhatsAppRoutes } from './whatsapp.js';
 import { registerWorkspaceRoutes, WORKSPACE_PATHS } from './workspace.js';
 import { HistoryEntry } from './schemas/common.js';
 import { CommentParams, UpdateCommentInput } from './schemas/comments.js';
@@ -35,6 +36,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
       'comments',
       'plans',
       'signals',
+      'whatsapp',
       ...WORKSPACE_PATHS,
     ])
       router.use(`/${path}/*`, ...crmGuard(app));
@@ -44,6 +46,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
     registerPlanRoutes(app, router);
     registerOperationRoutes(app, router);
     registerSignalRoutes(app, router);
+    registerWhatsAppRoutes(app, router);
     for (const entity of entities) registerRecordRoutes(app, router, entity);
 
     // A comment, changed or removed by its author (CrmService.editComment).

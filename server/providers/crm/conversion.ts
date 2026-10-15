@@ -213,6 +213,7 @@ export async function convertLead(
     .where((eb) => compileFilter(eb, access.scope))
     .execute();
   if (!updated.updatedCount) throw new CrmError('conflict', 409);
+  await service.whatsappRecords?.converted(tx, id, toText(contact.id));
   // Conversion is the single authorized system operation that links all existing history,
   // including tasks owned by colleagues, while preserving their original content.
   const tasks = await tx

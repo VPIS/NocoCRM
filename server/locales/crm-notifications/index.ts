@@ -16,6 +16,13 @@ const labels: Record<string, [string, string]> = {
   // The AI found news about a company the reader sells to
   // (company-signals.ts).
   signal: ['{{entity}} has news', '{{entity}}有新动态'],
+  // A customer wrote on WhatsApp: on the lead or contact they are, or in a
+  // conversation linked to no record yet (whatsapp/service.ts).
+  whatsapp: [
+    '{{entity}} has a new WhatsApp message',
+    '{{entity}}有新的 WhatsApp 消息',
+  ],
+  whatsappNew: ['New WhatsApp conversation', '新的 WhatsApp 对话'],
   pending: ['Approval requested', '待审批申请'],
   withdrawn: ['Request withdrawn', '审批已撤回'],
   approved: ['Request approved', '审批已通过'],

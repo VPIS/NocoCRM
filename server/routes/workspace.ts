@@ -1,4 +1,5 @@
 import { Readable } from 'node:stream';
+import { whatsappToken } from '../providers/crm/whatsapp/service.js';
 import { serverFileRepositoryManagerToken } from '@nocobase/app-plugin-file/server';
 import type { Application } from '@nocobase/app-server/application';
 import { driveManagerToken } from '@nocobase/app-server/drive';
@@ -229,6 +230,13 @@ export function registerWorkspaceRoutes(
             : {}),
           // Whether the pages offer the assistant at all.
           assistant: await service.assistantEnabled(),
+          // Whether the company's WhatsApp number is connected, so records
+          // show their WhatsApp tab (whatsapp/service.ts).
+          whatsapp: {
+            configured: (
+              await app.container.resolve(whatsappToken).connection()
+            ).configured,
+          },
           // Which of the agents' triggers are on, so a form offers "AI
           // follows up at once" only while that would happen (agents.ts).
           agents: await agentSwitches(service),

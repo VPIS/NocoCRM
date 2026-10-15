@@ -1,4 +1,8 @@
 import { FieldIcon } from '../components/crm/field-icons.js';
+import {
+  RecordWhatsAppPanel,
+  type WhatsAppEntity,
+} from '../components/crm/whatsapp/record-tab.js';
 import { recordTitle } from '../components/crm/lookups.js';
 import { TaskCards } from '../components/crm/task-list.js';
 import { AutoLoadMore } from '../components/crm/auto-load.js';
@@ -15,6 +19,7 @@ import {
   UserRound,
   History,
   Mail,
+  MessageCircle,
   Paperclip,
   Plus,
   Star,
@@ -366,6 +371,11 @@ export default function EntityDetail({
     ...(mailSetup.can && mailEntity
       ? [['mail', 'mail.tab', 0] as [string, string, number]]
       : []),
+    // Its people's WhatsApp messages, once the company's number is
+    // connected (components/crm/whatsapp/record-tab.tsx).
+    ...(meta?.whatsapp?.configured && mailEntity
+      ? [['whatsapp', 'whatsapp.tab', 0] as [string, string, number]]
+      : []),
     // The opportunity's own contact list with roles, a tab like its others.
     ...(entity === 'opportunities'
       ? [
@@ -492,7 +502,12 @@ export default function EntityDetail({
     ) : undefined;
   const tabContent = (
     <>
-      {activeTab === 'mail' ? (
+      {activeTab === 'whatsapp' ? (
+        <RecordWhatsAppPanel
+          entity={entity as WhatsAppEntity}
+          id={toText(record.id)}
+        />
+      ) : activeTab === 'mail' ? (
         <RecordMailPanel
           target={mailTarget}
           focus={mailFocus}
@@ -649,6 +664,11 @@ export default function EntityDetail({
                   setMailFocus(sourceKey);
                   setTab('mail');
                 }
+              : undefined
+          }
+          onOpenWhatsApp={
+            meta?.whatsapp?.configured && mailEntity
+              ? () => setTab('whatsapp')
               : undefined
           }
         />
@@ -1024,6 +1044,7 @@ export default function EntityDetail({
     approvals: ListChecks,
     attachments: Paperclip,
     mail: Mail,
+    whatsapp: MessageCircle,
   };
   // The timeline without a count, as on the lead page: its entries only grow.
   const tabBar = (
@@ -1041,7 +1062,7 @@ export default function EntityDetail({
               target={mailTarget}
               record={{ entity, id: toText(record.id) }}
             />
-          ) : name === 'historyTab' ? undefined : (
+          ) : name === 'historyTab' || name === 'whatsapp' ? undefined : (
             count
           ),
       }))}

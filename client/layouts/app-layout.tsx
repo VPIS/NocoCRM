@@ -31,6 +31,7 @@ import {
 } from '../components/crm/waiting-count.js';
 import { useCrmText } from '../components/crm/api.js';
 import { useMailUnreadCount } from '../components/crm/mail-unread.js';
+import { useWhatsAppUnreadCount } from '../components/crm/whatsapp/api.js';
 import { DemoBanner } from '../components/crm/demo-banner.js';
 import { AssistantDock } from '../components/crm/assistant-dock.js';
 import {
@@ -88,6 +89,7 @@ export function AppLayout({ routes }: AppLayoutProps): ReactElement {
         }
       : {};
   const unreadMail = useMailUnreadCount();
+  const unreadWhatsApp = useWhatsAppUnreadCount();
 
   return (
     // The shell owns the business route tree used by its pages and navigation.
@@ -117,6 +119,7 @@ export function AppLayout({ routes }: AppLayoutProps): ReactElement {
                 'crm-approvals': toDecide,
                 ...runningBadges,
                 'crm-mail': unreadMail,
+                'crm-whatsapp': unreadWhatsApp,
               }}
             />
           </AppSidebar>

@@ -50,6 +50,13 @@ async function usedFiles(service: CrmService): Promise<Set<string>> {
     if (changes.deleted) continue;
     for (const id of array(changes.attachments)) used.add(toText(id));
   }
+  // The media of WhatsApp messages, kept as long as the message.
+  for (const message of await query
+    .selectFrom('crmWaMessages')
+    .select('mediaFileId')
+    .where('mediaFileId', 'is not', null)
+    .execute())
+    used.add(toText(message.mediaFileId));
   return used;
 }
 

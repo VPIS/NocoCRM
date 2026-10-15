@@ -87,7 +87,7 @@ const digits = (value: unknown): string =>
   toText(value ?? '').replace(/\D/g, '');
 // Two phone numbers as the same line: the shorter, seven digits or more,
 // ending the longer, so a country code or a leading 0 does not matter.
-function samePhone(a: unknown, b: unknown): boolean {
+export function samePhone(a: unknown, b: unknown): boolean {
   const [x, y] = [digits(a), digits(b)].sort((p, q) => p.length - q.length);
   return x.length >= 7 && y.endsWith(x);
 }
@@ -836,6 +836,7 @@ export async function mergeLeads(
     );
     // Gone, its tasks moved: deleted here rather than through
     // remove(), which asks for the right to delete (see the top).
+    await service.whatsappRecords?.merged(tx, keepId, fromId);
     await tx.deleteFrom('crmLeads').where('id', '=', fromId).execute();
     await service.history(tx, prepared, 'leads', fromId, 'deleted');
     return service.get(prepared, 'leads', keepId, tx);

@@ -148,7 +148,9 @@ function filterShape(entity: Entity): Record<string, z.ZodType> {
           excludeStatus: z
             .string()
             .optional()
-            .meta({ description: `Everything but this ${status}.` }),
+            .meta({
+              description: `Everything but this ${status}, or these, comma-separated.`,
+            }),
         }
       : {}),
     ...Object.fromEntries(

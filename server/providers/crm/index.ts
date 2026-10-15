@@ -30,6 +30,7 @@ import {
 } from './follow-up-jobs.js';
 import { CrmPlans, crmPlansToken } from './plans/engine.js';
 import { MailTimeline, mailTimelineToken } from './mail-timeline.js';
+import { WhatsAppService, whatsappToken } from './whatsapp/service.js';
 import { mailProviderRegistryToken } from '@nocobase/app-plugin-mail/server';
 import {
   DEMO_MAIL_ROW,
@@ -141,6 +142,15 @@ export default class CrmProvider extends ServiceProvider<Application> {
       mailTimelineToken,
       () =>
         new MailTimeline(
+          this.app.container.resolve(crmToken),
+          this.app.container,
+        ),
+    );
+    // The company's WhatsApp number (whatsapp/service.ts).
+    this.app.container.singleton(
+      whatsappToken,
+      () =>
+        new WhatsAppService(
           this.app.container.resolve(crmToken),
           this.app.container,
         ),
@@ -565,10 +575,11 @@ export default class CrmProvider extends ServiceProvider<Application> {
         if (await agentOn(service, 'leads', 'companyChanged'))
           await evaluator.request(by, leadId, undefined, 'companyChanged');
       })().catch(() => undefined);
-    // A customer wrote: the lead or the deal is followed up as its owner,
-    // unless a card on it is waiting or being worked on.
+    // A customer wrote, by mail or on WhatsApp: the lead or the deal is
+    // followed up as its owner, unless a card on it is waiting or being
+    // worked on.
     const timeline = this.app.container.resolve(mailTimelineToken);
-    timeline.customerReplied = (_mailboxOwnerId, target) =>
+    const customerReplied = (target: { entity: string; id: string }): void =>
       void (async () => {
         const entity = target.entity === 'leads' ? 'leads' : 'opportunities';
         if ((await aiStates(service, [target.id], entity))[target.id]) return;
@@ -601,6 +612,23 @@ export default class CrmProvider extends ServiceProvider<Application> {
             'customerReplied',
           );
       })().catch(() => undefined);
+    timeline.customerReplied = (_mailboxOwnerId, target) =>
+      customerReplied(target);
+    const whatsapp = this.app.container.resolve(whatsappToken);
+    whatsapp.customerReplied = customerReplied;
+    whatsapp.publicBasePath = toText(this.app.publicBasePath ?? '');
+    service.whatsappRecords = {
+      converted: (query, leadId, contactId) =>
+        whatsapp.leadConverted(query, leadId, contactId),
+      merged: (query, keptId, otherId) =>
+        whatsapp.leadsMerged(query, keptId, otherId),
+      removed: (query, entity, id) => whatsapp.recordRemoved(query, entity, id),
+    };
+    service.whatsappFileReadable = (actor, messageId) =>
+      whatsapp
+        .mediaFile(actor, messageId)
+        .then(() => true)
+        .catch(() => false);
     // Plain timers: @nocobase/cron, which ran these passes, was never
     // published to the public npm registry. Each pass skips a tick while
     // the previous one still runs.
@@ -613,6 +641,9 @@ export default class CrmProvider extends ServiceProvider<Application> {
     // @temporary(nocobase-official): every mailbox read once a minute until
     // the Mail plugin publishes a server-side change event (mail-timeline.ts).
     every(60_000, () => timeline.syncAll());
+    // WhatsApp deliveries read, their media fetched within Meta's five
+    // minutes, and the follow-ups of customers gone quiet started.
+    every(10_000, () => whatsapp.process());
   }
   public override async shutdown(): Promise<void> {
     // A follow-up running is handed back, to run again at the next start.
@@ -714,12 +745,49 @@ export default class CrmProvider extends ServiceProvider<Application> {
               subjects: [{ type: 'authenticated', id: '*' }],
             }),
           };
+          const i18n = this.app.container.resolve(i18nToken);
+          // A WhatsApp customer linked to no record yet: the conversation,
+          // for someone who still has the WhatsApp page.
+          if (row.entity === 'whatsapp') {
+            if (
+              !(await this.app.container
+                .resolve(whatsappToken)
+                .hasPage(recipient))
+            )
+              throw new CrmError('forbidden', 403);
+            await i18n.ensureLocaleLoaded(recipient.locale);
+            const t = i18n.getFixedT('crm-notifications', recipient.locale);
+            const title = t(`titles.${toText(row.event)}`);
+            const sent = await this.app.container
+              .resolve(notificationServiceToken)
+              .send({
+                idempotencyKey: `crm:${toText(row.id)}`,
+                source: { type: 'crm', referenceId: toText(row.id) },
+                messages: {
+                  [CRM_INBOX_CHANNEL]: {
+                    to: toText(row.recipientId),
+                    title,
+                    body: t('body', { title, name: toText(row.name) }),
+                    target: {
+                      type: 'route',
+                      path: `/crm/whatsapp/${toText(row.recordId)}`,
+                    },
+                  },
+                },
+              });
+            await query
+              .updateTable('crmOutbox')
+              .set({ status: 'submitted', notificationId: sent.notificationId })
+              .where('id', '=', row.id)
+              .execute();
+            delivered += 1;
+            continue;
+          }
           const record = await service.get(
             recipient,
             asEntity(toText(row.entity)),
             toText(row.recordId),
           );
-          const i18n = this.app.container.resolve(i18nToken);
           await i18n.ensureLocaleLoaded(recipient.locale);
           const t = i18n.getFixedT('crm-notifications', recipient.locale);
           const title = t(`titles.${toText(row.event)}`, {
@@ -761,7 +829,11 @@ export default class CrmProvider extends ServiceProvider<Application> {
                     // its signals (the Signals card's dialog, which /signals
                     // opens).
                     path: `/crm/${toText(row.entity)}/${toText(row.recordId)}${
-                      row.event === 'signal' ? '/signals' : ''
+                      row.event === 'signal'
+                        ? '/signals'
+                        : row.event === 'whatsapp'
+                          ? '/whatsapp'
+                          : ''
                     }`,
                   },
                 },

@@ -25,6 +25,7 @@ import {
   Inbox,
   ListChecks,
   Mail,
+  MessageCircle,
   Radar,
   Workflow,
   ScrollText,
@@ -177,6 +178,39 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         auth: 'required',
         authz: page('mail.workspace'),
         componentLoader: () => import('./pages/crm-mail/accounts.js'),
+      },
+      // The company's WhatsApp number (pages/crm-whatsapp/): its
+      // conversations, one open beside the list at its own address, which
+      // its link and new-lead dialogs stack on. The page grant is the one
+      // its API checks (server/routes/whatsapp.ts).
+      {
+        name: 'crm-whatsapp',
+        path: '/crm/whatsapp',
+        auth: 'required',
+        authz: page('crm-whatsapp'),
+        navigation: { title: 'crm.navigation.whatsapp', icon: MessageCircle },
+        componentLoader: () => import('./pages/crm-whatsapp/index.js'),
+        children: [
+          {
+            name: 'crm-whatsapp-conversation',
+            path: ':conversationId',
+            componentLoader: () =>
+              import('./pages/crm-whatsapp/conversation.js'),
+            children: [
+              {
+                name: 'crm-whatsapp-link',
+                path: 'link',
+                componentLoader: () => import('./pages/crm-whatsapp/link.js'),
+              },
+              {
+                name: 'crm-whatsapp-new-lead',
+                path: 'new-lead',
+                componentLoader: () =>
+                  import('./pages/crm-whatsapp/new-lead.js'),
+              },
+            ],
+          },
+        ],
       },
     ],
   },
@@ -398,6 +432,18 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
           action: 'manage',
         },
         componentLoader: () => import('./pages/settings/demo-data.js'),
+      },
+      {
+        // The company's WhatsApp number: its connection, webhook and
+        // status (pages/settings/whatsapp.tsx); the administrators', as the
+        // General tab is.
+        name: 'settings-whatsapp',
+        path: 'whatsapp',
+        authz: {
+          resource: { type: 'settings', id: 'crm' },
+          action: 'manage',
+        },
+        componentLoader: () => import('./pages/settings/whatsapp.js'),
       },
       {
         // How an approval moves, read only; the administrators', as the

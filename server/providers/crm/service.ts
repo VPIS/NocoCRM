@@ -604,6 +604,25 @@ export class CrmService {
   // (approval-review.ts, set by CrmProvider).
   approvalSubmitted?: (by: Actor, approval: CrmRecord) => void;
   leadCompanyChanged?: (by: Actor, leadId: string) => void;
+  // Set by CrmProvider: whether the reader may open a WhatsApp message's
+  // media, by its conversation (whatsapp/service.ts).
+  whatsappFileReadable?: (actor: Actor, messageId: string) => Promise<boolean>;
+  // Set by CrmProvider: WhatsApp customers follow the records they are
+  // linked to when a lead is converted or merged, or a record deleted
+  // (whatsapp/service.ts), inside the change's transaction.
+  whatsappRecords?: {
+    converted(
+      query: QueryAdapter,
+      leadId: string,
+      contactId: string,
+    ): Promise<void>;
+    merged(query: QueryAdapter, keptId: string, otherId: string): Promise<void>;
+    removed(
+      query: QueryAdapter,
+      entity: 'leads' | 'contacts',
+      id: string,
+    ): Promise<void>;
+  };
   // Set by CrmProvider: the settings were saved (the assistant's prompt
   // follows the AI language setting).
   settingsSaved?: (settings: CrmSettings) => void;
@@ -667,11 +686,13 @@ export class CrmService {
         select = select.where(key, '=', options[key]);
     if (options.status && definition.statusField)
       select = select.where(definition.statusField, '=', options.status);
+    // One status or several, comma-separated (a WhatsApp customer is
+    // linked to neither a converted nor an invalid lead).
     if (options.excludeStatus && definition.statusField)
       select = select.where(
         definition.statusField,
-        '!=',
-        options.excludeStatus,
+        'not in',
+        options.excludeStatus.split(',').filter(Boolean),
       );
     if (entity === 'tasks') {
       if (options.dueFrom)
@@ -1249,10 +1270,12 @@ export class CrmService {
           : // A comment's text is the comment, not a field of the record; an edit
             // entry carries the text as changed, and a person's instruction to
             // the AI to redo a card (aiRevise) its words, a mail
-            // conversation (mail-timeline.ts) its summary, and a company
+            // conversation (mail-timeline.ts) its summary, a customer's
+            // WhatsApp day (whatsapp/service.ts) its counts, and a company
             // signal (company-signals.ts) what was found and where.
             event.action === 'comment' ||
               event.action === 'mail' ||
+              event.action === 'whatsapp' ||
               event.action === 'signal' ||
               event.action === 'commentEdited' ||
               event.action === 'aiRevise' ||
@@ -1972,6 +1995,14 @@ export class CrmService {
       .where('ownerId', '=', actor.id)
       .executeTakeFirst();
     if (upload) return true;
+    // A WhatsApp message's media: whoever may read its conversation.
+    const message = await query
+      .selectFrom('crmWaMessages')
+      .select('id')
+      .where('mediaFileId', '=', id)
+      .executeTakeFirst();
+    if (message && this.whatsappFileReadable)
+      return this.whatsappFileReadable(actor, toText(message.id));
     for (const entity of entities) {
       let access;
       try {
@@ -2171,6 +2202,8 @@ export class CrmService {
       .where('id', '=', id)
       .where((eb) => compileFilter(eb, access.scope))
       .execute();
+    if (entity === 'leads' || entity === 'contacts')
+      await this.whatsappRecords?.removed(tx, entity, id);
     // A company's signals (company-signals.ts) are its own: they go with it.
     if (entity === 'companies') {
       await tx.deleteFrom('crmSignals').where('companyId', '=', id).execute();
@@ -2906,6 +2939,51 @@ export class CrmService {
       event: 'signal',
       key: `signal:${signalId}:${recipientId}`,
     });
+  }
+  // A customer's WhatsApp message, to the person who answers them, once
+  // until they read it (whatsapp/service.ts): on the lead or contact it is
+  // linked to, or, for a customer linked to none yet, on the conversation
+  // itself, which the delivery opens on the WhatsApp page. Under the record
+  // changes switch, inside the transaction that stored the message.
+  async notifyWhatsApp(
+    query: QueryAdapter,
+    message: {
+      record?: { entity: Entity; id: string };
+      conversationId: string;
+      name: string;
+      recipientId: string;
+      key: string;
+    },
+  ): Promise<boolean> {
+    if (!message.recipientId) return false;
+    if (!(await this.settings(query))[notificationSwitches.recordChanges])
+      return false;
+    if (message.record) {
+      const record = await query
+        .selectFrom(definitions[message.record.entity].table)
+        .select(['id', 'name'])
+        .where('id', '=', message.record.id)
+        .executeTakeFirst();
+      if (!record) return false;
+      return this.enqueue(
+        query,
+        { id: 'system' },
+        message.record.entity,
+        record,
+        message.recipientId,
+        'whatsapp',
+        message.key,
+      );
+    }
+    return this.enqueue(
+      query,
+      { id: 'system' },
+      'whatsapp' as Entity,
+      { id: message.conversationId, name: message.name },
+      message.recipientId,
+      'whatsappNew',
+      message.key,
+    );
   }
   // A task about to start, to its owner and each internal participant; the
   // key is the reminder's identity, so a scan that sees the same task again

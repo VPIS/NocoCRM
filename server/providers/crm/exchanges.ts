@@ -3,7 +3,8 @@ import type { QueryAdapter } from '@nocobase/db';
 // When a record was last in touch with its customer, as the dashboard's
 // risks, the statistics and the daily checks read it: the latest of a task
 // of it completed, a comment written on it, and mail exchanged with its people
-// (a `mail` timeline entry, mail-timeline.ts). Read over the whole database,
+// (a `mail` timeline entry, mail-timeline.ts) or on WhatsApp (a `whatsapp`
+// entry, whatsapp/service.ts). Read over the whole database,
 // not the reader's scope: a colleague's call still means the customer was
 // reached. Without any, a record counts from its creation.
 
@@ -46,13 +47,13 @@ export async function lastExchanges(
     .selectFrom('crmHistory')
     .select(['recordId', 'action', 'createdAt', 'occurredAt'])
     .where('entity', '=', entity)
-    .where('action', 'in', ['comment', 'mail'])
+    .where('action', 'in', ['comment', 'mail', 'whatsapp'])
     .execute();
   for (const entry of entries)
     latest(
       last,
       entry.recordId,
-      entry.action === 'mail' ? entry.occurredAt : entry.createdAt,
+      entry.action === 'comment' ? entry.createdAt : entry.occurredAt,
     );
   return last;
 }

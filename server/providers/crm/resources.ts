@@ -187,6 +187,9 @@ export const crmPages: readonly { name: string; title: AuthorizationTitle }[] =
     { name: 'crm-agents', title: crm('authz.pages.agents') },
     { name: 'crm-reports', title: crm('authz.pages.reports') },
     { name: 'crm-agent-chat', title: crm('authz.pages.agentChat') },
+    // The company's WhatsApp conversations (whatsapp/service.ts); a
+    // conversation linked to a record is also read by whoever reads it.
+    { name: 'crm-whatsapp', title: crm('authz.pages.whatsapp') },
   ];
 
 export function pageGrant(name: string): PermissionGrant {

@@ -37,6 +37,7 @@ import {
 } from './lead-evaluation.js';
 import { LONG_TEXT_LIMIT, TEXT_LIMIT } from './limits.js';
 import { mailOf, mailboxOwnersOf } from './mail-context.js';
+import { whatsappOf, whatsappSection } from './whatsapp/service.js';
 import { domainOf, type MailTarget } from './mail-target.js';
 import { dealMailTarget } from './opportunity-evaluation.js';
 import { mergePlanDescription } from './plan.js';
@@ -363,6 +364,8 @@ function prompt(input: {
   skill: string;
   context: Row;
   mail: Row[];
+  // The customer's WhatsApp messages (whatsapp/service.ts), oldest first.
+  whatsapp: Row[];
   today: string;
   locale: string;
   revision: { instruction: string; preparation: TaskPreparation } | null;
@@ -411,6 +414,8 @@ ${list(c.comments, 'No comments.')}
 
 # Mail with the customer
 ${list(input.mail, 'No mail.')}
+
+${whatsappSection('WhatsApp with the customer', input.whatsapp)}
 
 ${input.revision ? `\n# The preparation to revise\n${json(input.revision.preparation)}\n\n# The owner's revision instructions\n${input.revision.instruction}\n` : ''}
 ${OUTPUT}`;
@@ -705,6 +710,21 @@ export class TaskPreparer {
             skill,
             context: context.text,
             mail,
+            whatsapp: context.linked
+              ? await whatsappOf(
+                  this.container,
+                  this.service.database.query(),
+                  {
+                    entity:
+                      context.linked.entity === 'opportunities'
+                        ? 'opportunities'
+                        : context.linked.entity === 'companies'
+                          ? 'companies'
+                          : 'leads',
+                    id: context.linked.id,
+                  },
+                )
+              : [],
             today: new Intl.DateTimeFormat('sv-SE', {
               timeZone: settings.timeZone,
               dateStyle: 'short',

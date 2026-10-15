@@ -22,6 +22,7 @@ import { contactTime, isEndOfDay } from './zone-time.js';
 import { mergePlanDescription, planDescription } from './plan.js';
 import { followUpLead } from './feedback.js';
 import { mailOf, mailboxOwnersOf } from './mail-context.js';
+import { whatsappOf, whatsappSection } from './whatsapp/service.js';
 import { JobInterruptedError } from '@nocobase/jobs';
 import { markStarted, within, type FollowUpPayload } from './follow-up-jobs.js';
 import { LONG_TEXT_LIMIT, TEXT_LIMIT } from './limits.js';
@@ -862,6 +863,8 @@ function prompt(
   mail: Row[] = [],
   // The owner's name, which an email draft signs with.
   ownerName: string | null = null,
+  // The lead's WhatsApp messages (whatsapp/service.ts), oldest first.
+  whatsapp: Row[] = [],
 ): string {
   const fields = Object.fromEntries(
     definitions.leads.fields
@@ -911,6 +914,8 @@ ${comments.length ? `\`\`\`json\n${JSON.stringify(comments, null, 2)}\n\`\`\`` :
 
 # Mail with the lead
 ${mail.length ? `The owner's mail with the lead in the last six months, newest first; direction fromCustomer is what the customer wrote, toCustomer what the owner sent; text is the message without the earlier messages it quotes.\n\`\`\`json\n${JSON.stringify(mail, null, 2)}\n\`\`\`` : "No mail with the lead was found in the owner's mailbox."}
+
+${whatsappSection('WhatsApp with the lead', whatsapp)}
 
 # Previous follow-up recommendation
 ${previous ? `\`\`\`json\n${JSON.stringify(previous, null, 2)}\n\`\`\`` : 'This is the first follow-up.'}
@@ -1337,6 +1342,10 @@ export class LeadEvaluator {
                 (u) => toText(u.id) === ownerId,
               )?.name ?? '',
             ) || null,
+            await whatsappOf(this.container, this.service.database.query(), {
+              entity: 'leads',
+              id: toText(lead.id),
+            }),
           ),
         ),
       );

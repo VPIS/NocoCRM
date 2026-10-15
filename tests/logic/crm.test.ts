@@ -97,6 +97,15 @@ import {
   crmToken,
 } from '../../server/providers/crm/index.js';
 import { crmRoutes } from '../../server/routes/crm.js';
+import { whatsappWebhookRoutes } from '../../server/routes/whatsapp.js';
+import {
+  QUIET_MS,
+  WhatsAppService,
+  whatsappToken,
+} from '../../server/providers/crm/whatsapp/service.js';
+import { secretsServiceToken } from '@nocobase/app-server/secrets';
+import { serverFileRepositoryManagerToken } from '@nocobase/app-plugin-file/server';
+import { createHmac } from 'node:crypto';
 import {
   agentsToken,
   type CallerIdentity,
@@ -227,6 +236,10 @@ const passwordResets: string[] = [];
 let folder: string;
 let router: Hono;
 let signals: CompanySignals;
+let whatsapp: WhatsAppService;
+let webhooks: Hono;
+// What the WhatsApp channel's fake fetched: a media file per id.
+const waMedia = new Map<string, string>();
 // What the faked web search answers, and how it was asked.
 const web = {
   on: true,
@@ -607,6 +620,79 @@ beforeAll(async () => {
     },
   );
   container.instance(companySignalsToken, signals);
+  // WhatsApp: credentials sealed by a stand-in for the secrets service, media
+  // stored as CRM files, Meta's Cloud API faked for media.
+  container.instance(secretsServiceToken, {
+    ready: true,
+    seal: (plain: string) => `sealed:${plain}`,
+    open: (sealed: string) => sealed.replace(/^sealed:/, ''),
+  } as unknown as ReturnType<
+    typeof container.resolve<typeof secretsServiceToken>
+  >);
+  container.instance(serverFileRepositoryManagerToken, {
+    repository: () => ({
+      async uploadOne({ file }: { file: File }) {
+        const id = randomUUID();
+        const now = new Date().toISOString();
+        await database
+          .query()
+          .insertInto('crmFiles')
+          .values({
+            id,
+            disk: 'local',
+            key: `wa/${id}`,
+            filename: file.name,
+            mimeType: file.type,
+            size: file.size,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .execute();
+        return { record: { id } };
+      },
+    }),
+  } as unknown as ReturnType<
+    typeof container.resolve<typeof serverFileRepositoryManagerToken>
+  >);
+  whatsapp = new WhatsAppService(service, container);
+  whatsapp.channelFactory = async () => {
+    const { cloudApiChannel } =
+      await import('../../server/providers/crm/whatsapp/channel.js');
+    return cloudApiChannel({
+      appSecret: 'app-secret',
+      accessToken: 'token',
+      fetch: (async (url: string) => {
+        const id = url.split('/').pop() ?? '';
+        if (url.startsWith('https://media.test/'))
+          return new Response(waMedia.get(id) ?? '', {
+            headers: { 'content-type': 'image/jpeg' },
+          });
+        if (!waMedia.has(id)) return new Response('{}', { status: 404 });
+        return new Response(
+          JSON.stringify({
+            url: `https://media.test/${id}`,
+            mime_type: 'image/jpeg',
+          }),
+        );
+      }) as unknown as typeof fetch,
+    });
+  };
+  container.instance(whatsappToken, whatsapp);
+  service.whatsappRecords = {
+    converted: (query, leadId, contactId) =>
+      whatsapp.leadConverted(query, leadId, contactId),
+    merged: (query, keptId, otherId) =>
+      whatsapp.leadsMerged(query, keptId, otherId),
+    removed: (query, entity, id) => whatsapp.recordRemoved(query, entity, id),
+  };
+  service.whatsappFileReadable = (reader, messageId) =>
+    whatsapp
+      .mediaFile(reader, messageId)
+      .then(() => true)
+      .catch(() => false);
+  webhooks = await whatsappWebhookRoutes.createRouter({
+    container,
+  } as unknown as Application);
   router = await crmRoutes.createRouter({
     container,
     publicBasePath: '/test',
@@ -11329,5 +11415,498 @@ describe('the attachment cleanup', () => {
         .where('conversationId', '=', 'sa-closed')
         .execute(),
     ).toEqual([]);
+  });
+});
+
+describe('WhatsApp', () => {
+  const NUMBER = '1234567890';
+  const sign = (body: string): string =>
+    `sha256=${createHmac('sha256', 'app-secret').update(body).digest('hex')}`;
+  const deliver = (body: unknown, signature?: string): Promise<Response> => {
+    const text = JSON.stringify(body);
+    return webhooks.request('/webhooks/whatsapp', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...(signature === undefined
+          ? { 'x-hub-signature-256': sign(text) }
+          : signature
+            ? { 'x-hub-signature-256': signature }
+            : {}),
+      },
+      body: text,
+    });
+  };
+  // A delivery of one customer's messages, in Meta's shape.
+  const delivery = (
+    from: { waId?: string; userId?: string; name?: string },
+    messages: Record<string, unknown>[],
+    statuses: Record<string, unknown>[] = [],
+  ) => ({
+    object: 'whatsapp_business_account',
+    entry: [
+      {
+        id: 'waba-1',
+        changes: [
+          {
+            field: 'messages',
+            value: {
+              messaging_product: 'whatsapp',
+              metadata: {
+                display_phone_number: '15550001111',
+                phone_number_id: NUMBER,
+              },
+              contacts: [
+                {
+                  profile: { name: from.name ?? 'Customer' },
+                  ...(from.waId ? { wa_id: from.waId } : {}),
+                  ...(from.userId ? { user_id: from.userId } : {}),
+                },
+              ],
+              messages: messages.map((m) => ({
+                ...(from.waId ? { from: from.waId } : {}),
+                ...(from.userId ? { from_user_id: from.userId } : {}),
+                ...m,
+              })),
+              statuses,
+            },
+          },
+        ],
+      },
+    ],
+  });
+  const seconds = (at: Date): string => String(Math.floor(at.getTime() / 1000));
+  const text = (id: string, body: string, at = new Date()) => ({
+    id,
+    timestamp: seconds(at),
+    type: 'text',
+    text: { body },
+  });
+  const outbox = async (recipientId: string, event: string) =>
+    database
+      .query()
+      .selectFrom('crmOutbox')
+      .selectAll()
+      .where('recipientId', '=', recipientId)
+      .where('event', '=', event)
+      .execute();
+
+  beforeAll(async () => {
+    await whatsapp.saveConnection({
+      phoneNumberId: NUMBER,
+      wabaId: 'waba-1',
+      accessToken: 'token',
+      appSecret: 'app-secret',
+      defaultHandlerId: 'manager',
+    });
+  });
+
+  it('answers Meta’s subscription check only with the verify token it made', async () => {
+    const { verifyToken } = await whatsapp.connection();
+    expect(verifyToken).toBeTruthy();
+    const check = (token: string) =>
+      webhooks.request(
+        `/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=${encodeURIComponent(token)}&hub.challenge=4242`,
+      );
+    const ok = await check(toText(verifyToken));
+    expect(ok.status).toBe(200);
+    expect(await ok.text()).toBe('4242');
+    expect((await check('wrong')).status).toBe(403);
+    // The credentials are never returned, only that they are set.
+    const view = await request('/whatsapp/connection', 'admin');
+    expect(view.status).toBe(200);
+    const { data } = (await view.json()) as { data: Row };
+    expect(data).toMatchObject({
+      configured: true,
+      hasAccessToken: true,
+      hasAppSecret: true,
+    });
+    expect(JSON.stringify(data)).not.toContain('app-secret');
+    expect((await request('/whatsapp/connection', 'rep')).status).toBe(403);
+    expect((await request('/whatsapp/connection')).status).toBe(401);
+  });
+
+  it('keeps only deliveries signed with the app secret, and a redelivered message once', async () => {
+    const body = delivery({ waId: '4930123456789' }, [
+      text('wamid.sig-1', 'Hallo'),
+    ]);
+    expect((await deliver(body, '')).status).toBe(401);
+    expect((await deliver(body, 'sha256=00ff')).status).toBe(401);
+    expect((await deliver(body)).status).toBe(200);
+    expect((await deliver(body)).status).toBe(200);
+    await whatsapp.process();
+    const stored = await database
+      .query()
+      .selectFrom('crmWaMessages')
+      .select('id')
+      .where('waMessageId', '=', 'wamid.sig-1')
+      .execute();
+    expect(stored).toHaveLength(1);
+    const health = await whatsapp.health();
+    expect(health.failed).toBe(0);
+    expect(health.pending).toBe(0);
+  });
+
+  it('links a customer to the one lead with their number, and writes the lead’s timeline', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Olivia Grant',
+      company: 'Grant Optics',
+      phone: '+44 7700 900123',
+      source: 'website',
+    });
+    const now = new Date();
+    await deliver(
+      delivery({ waId: '447700900123', userId: 'GB.1001', name: 'Olivia' }, [
+        text('wamid.lead-1', 'Is the on-premises edition available?', now),
+        text('wamid.lead-2', 'We are 40 people.', now),
+      ]),
+    );
+    await whatsapp.process(now);
+    const customer = await database
+      .query()
+      .selectFrom('crmWaContacts')
+      .selectAll()
+      .where('waId', '=', '447700900123')
+      .executeTakeFirstOrThrow();
+    expect(customer).toMatchObject({
+      leadId: lead.id,
+      state: 'linked',
+      matchedBy: 'phone',
+    });
+    const history = await database
+      .query()
+      .selectFrom('crmHistory')
+      .selectAll()
+      .where('entity', '=', 'leads')
+      .where('recordId', '=', lead.id)
+      .where('action', '=', 'whatsapp')
+      .execute();
+    expect(history).toHaveLength(1);
+    expect(JSON.parse(toText(history[0].changes))).toMatchObject({
+      inbound: 2,
+      outbound: 0,
+      lastFrom: 'customer',
+    });
+    // Contact made: the lead is being worked, and counts as reached.
+    expect((await service.get(actor('rep'), 'leads', lead.id)).status).toBe(
+      'working',
+    );
+    expect((await lastExchanges(database.query(), 'leads')).has(lead.id)).toBe(
+      true,
+    );
+    // Its owner hears of it once, until they read it.
+    expect(
+      (await outbox('rep', 'whatsapp')).filter((r) => r.recordId === lead.id),
+    ).toHaveLength(1);
+    // Its messages on the lead, for whoever may read it.
+    const messages = await request(`/leads/${lead.id}/whatsappMessages`, 'rep');
+    expect(messages.status).toBe(200);
+    const { data } = (await messages.json()) as {
+      data: { messages: Row[] };
+    };
+    expect(data.messages.map((m) => m.text)).toEqual([
+      'Is the on-premises edition available?',
+      'We are 40 people.',
+    ]);
+    expect(
+      (await request(`/leads/${lead.id}/whatsappMessages`, 'outsider')).status,
+    ).not.toBe(200);
+  });
+
+  it('starts the follow-up once the customer has been quiet, not at every message', async () => {
+    const calls: { entity: string; id: string }[] = [];
+    whatsapp.customerReplied = (target) => calls.push(target);
+    try {
+      const lead = await service.save(actor('rep'), 'leads', {
+        name: 'Quiet Customer',
+        company: 'Quiet Co',
+        phone: '+44 7700 900456',
+        source: 'website',
+      });
+      const now = new Date();
+      await deliver(
+        delivery({ waId: '447700900456' }, [text('wamid.q-1', 'Hi', now)]),
+      );
+      await whatsapp.process(now);
+      expect(calls).toEqual([]);
+      await whatsapp.process(new Date(now.getTime() + QUIET_MS + 1000));
+      const mine = () => calls.filter((call) => call.id === lead.id);
+      expect(mine()).toEqual([{ entity: 'leads', id: lead.id }]);
+      // Once only.
+      await whatsapp.process(new Date(now.getTime() + 2 * QUIET_MS));
+      expect(mine()).toHaveLength(1);
+    } finally {
+      whatsapp.customerReplied = undefined;
+    }
+  });
+
+  it('keeps a stranger without a number unlinked, for the WhatsApp page, until someone links them', async () => {
+    const now = new Date();
+    await deliver(
+      delivery({ userId: 'US.2002', name: 'Stranger' }, [
+        text('wamid.s-1', 'Do you ship to Brazil?', now),
+      ]),
+    );
+    await whatsapp.process(now);
+    const list = await request('/whatsapp/conversations?view=unlinked', 'rep');
+    expect(list.status).toBe(200);
+    const { data } = (await list.json()) as { data: Row[] };
+    const row = data.find((r) => r.name === 'Stranger');
+    expect(row).toMatchObject({ state: 'unlinked', handlerId: 'manager' });
+    // The receptionist hears of the new conversation.
+    expect(
+      (await outbox('manager', 'whatsappNew')).some(
+        (r) => r.recordId === row?.id,
+      ),
+    ).toBe(true);
+    // Without the page, nothing.
+    expect((await request('/whatsapp/conversations', 'outsider')).status).toBe(
+      403,
+    );
+    // Linked to a contact the reader may edit: the contact's and its
+    // company's timelines have the day's line.
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Brasil Ltda',
+      source: 'website',
+    });
+    const contact = await service.save(actor('rep'), 'contacts', {
+      name: 'Ana Souza',
+      companyId: company.id,
+      gender: 'female',
+    });
+    const linked = await request(
+      `/whatsapp/conversations/${toText(row?.id)}/link`,
+      'rep',
+      'POST',
+      { contactId: contact.id },
+    );
+    expect(linked.status).toBe(200);
+    for (const [entity, id] of [
+      ['contacts', contact.id],
+      ['companies', company.id],
+    ])
+      expect(
+        await database
+          .query()
+          .selectFrom('crmHistory')
+          .select('id')
+          .where('entity', '=', entity)
+          .where('recordId', '=', id)
+          .where('action', '=', 'whatsapp')
+          .execute(),
+      ).toHaveLength(1);
+    // A new id for the same customer (they changed their number) is theirs.
+    await deliver(
+      delivery({ userId: 'US.2002' }, [
+        {
+          id: 'wamid.s-2',
+          timestamp: seconds(now),
+          type: 'system',
+          system: {
+            type: 'user_changed_number',
+            body: 'User changed number',
+            new_user_id: 'US.3003',
+            new_wa_id: '5511999990000',
+          },
+        },
+      ]),
+    );
+    await deliver(
+      delivery({ userId: 'US.3003', waId: '5511999990000' }, [
+        text('wamid.s-3', 'New number, same Ana', now),
+      ]),
+    );
+    await whatsapp.process(now);
+    const customers = await database
+      .query()
+      .selectFrom('crmWaContacts')
+      .selectAll()
+      .where('contactId', '=', contact.id)
+      .execute();
+    expect(customers).toHaveLength(1);
+    expect(customers[0].waId).toBe('5511999990000');
+  });
+
+  it('moves a customer\u2019s messages off a lead they are linked away from, and guards changes by the linked record', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Relink Lead',
+      company: 'Relink Co',
+      phone: '+44 7700 900654',
+      source: 'website',
+    });
+    const now = new Date();
+    await deliver(
+      delivery({ waId: '447700900654' }, [text('wamid.r-1', 'Hello', now)]),
+    );
+    await whatsapp.process(now);
+    const conversation = await database
+      .query()
+      .selectFrom('crmWaConversations as c')
+      .innerJoin('crmWaContacts as w', 'w.id', 'c.waContactId')
+      .select(['c.id as id'])
+      .where('w.waId', '=', '447700900654')
+      .executeTakeFirstOrThrow();
+    const id = toText(conversation.id);
+    // Without the WhatsApp page, the conversation is not there.
+    expect(
+      (await request(`/whatsapp/conversations/${id}`, 'outsider')).status,
+    ).toBe(403);
+    // Another salesperson may not set aside a customer linked to a record
+    // they may not edit.
+    expect(
+      (
+        await request(`/whatsapp/conversations/${id}/link`, 'other', 'POST', {
+          state: 'dismissed',
+        })
+      ).status,
+    ).not.toBe(200);
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Relink Company',
+      source: 'website',
+    });
+    const contact = await service.save(actor('rep'), 'contacts', {
+      name: 'Relink Person',
+      companyId: company.id,
+      gender: 'female',
+    });
+    expect(
+      (
+        await request(`/whatsapp/conversations/${id}/link`, 'rep', 'POST', {
+          contactId: contact.id,
+        })
+      ).status,
+    ).toBe(200);
+    // The lead no longer shows them; the contact does.
+    const messagesOf = async (path: string) =>
+      (
+        (await (await request(path, 'rep')).json()) as {
+          data: { messages: unknown[] };
+        }
+      ).data.messages.length;
+    expect(await messagesOf(`/leads/${lead.id}/whatsappMessages`)).toBe(0);
+    expect(await messagesOf(`/contacts/${contact.id}/whatsappMessages`)).toBe(
+      1,
+    );
+  });
+
+  it('stores media within Meta’s minutes, readable by whoever reads the conversation', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Media Sender',
+      company: 'Pixels',
+      phone: '+44 7700 900789',
+      source: 'website',
+    });
+    waMedia.set('media-1', 'jpeg-bytes');
+    const now = new Date();
+    await deliver(
+      delivery({ waId: '447700900789' }, [
+        {
+          id: 'wamid.m-1',
+          timestamp: seconds(now),
+          type: 'image',
+          image: {
+            id: 'media-1',
+            mime_type: 'image/jpeg',
+            caption: 'Our line',
+          },
+        },
+        {
+          id: 'wamid.m-2',
+          timestamp: seconds(now),
+          type: 'document',
+          document: { id: 'gone', filename: 'spec.pdf' },
+        },
+      ]),
+    );
+    await whatsapp.process(now);
+    const rows = await database
+      .query()
+      .selectFrom('crmWaMessages')
+      .selectAll()
+      .where('waMessageId', 'in', ['wamid.m-1', 'wamid.m-2'])
+      .orderBy('waMessageId')
+      .execute();
+    expect(rows.map((r) => r.mediaStatus)).toEqual(['stored', 'unavailable']);
+    const fileId = toText(rows[0].mediaFileId);
+    expect(await service.canReadFile(actor('rep'), fileId)).toBe(true);
+    expect(await service.canReadFile(actor('outsider'), fileId)).toBe(false);
+    void lead;
+  });
+
+  it('moves a lead’s customer to the contact its conversion creates', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Convert Me',
+      company: 'Convert Co',
+      phone: '+44 7700 900321',
+      source: 'website',
+    });
+    const now = new Date();
+    await deliver(
+      delivery({ waId: '447700900321' }, [
+        text('wamid.c-1', 'Ready to buy', now),
+      ]),
+    );
+    await whatsapp.process(now);
+    const converted = await convertLead(service, actor('rep'), lead.id, {});
+    const customer = await database
+      .query()
+      .selectFrom('crmWaContacts')
+      .selectAll()
+      .where('waId', '=', '447700900321')
+      .executeTakeFirstOrThrow();
+    expect(customer.contactId).toBe(converted.convertedContactId);
+    expect(
+      await database
+        .query()
+        .selectFrom('crmHistory')
+        .select('id')
+        .where('entity', '=', 'contacts')
+        .where('recordId', '=', toText(converted.convertedContactId))
+        .where('action', '=', 'whatsapp')
+        .execute(),
+    ).toHaveLength(1);
+  });
+
+  it('records a sent message’s status without going back', async () => {
+    const conversation = await database
+      .query()
+      .selectFrom('crmWaConversations')
+      .select(['id', 'numberId'])
+      .executeTakeFirstOrThrow();
+    await database
+      .query()
+      .insertInto('crmWaMessages')
+      .values({
+        id: randomUUID(),
+        waMessageId: 'wamid.out-1',
+        conversationId: conversation.id,
+        numberId: conversation.numberId,
+        direction: 'out',
+        origin: 'crm',
+        type: 'text',
+        text: 'Hello',
+        mediaAttempts: 0,
+        status: 'sent',
+        occurredAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      })
+      .execute();
+    const status = (state: string) => ({
+      id: 'wamid.out-1',
+      status: state,
+      timestamp: seconds(new Date()),
+      recipient_id: '4930123456789',
+      pricing: { billable: true, category: 'service', pricing_model: 'PMP' },
+    });
+    await deliver(delivery({}, [], [status('read'), status('delivered')]));
+    await whatsapp.process();
+    expect(
+      await database
+        .query()
+        .selectFrom('crmWaMessages')
+        .select(['status', 'pricingCategory', 'billable'])
+        .where('waMessageId', '=', 'wamid.out-1')
+        .executeTakeFirst(),
+    ).toMatchObject({ status: 'read', pricingCategory: 'service' });
   });
 });
