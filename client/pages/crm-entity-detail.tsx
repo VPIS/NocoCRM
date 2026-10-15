@@ -892,6 +892,18 @@ export default function EntityDetail({
       {inline(key)}
     </InfoRow>
   );
+  // The LinkedIn address, opened by a click as the website is.
+  const linkedinRow = (
+    <InfoRow field='linkedin' label={text('fields.linkedin')}>
+      <WebsiteField
+        entity={entity}
+        field='linkedin'
+        record={record}
+        editable={editable}
+        label={text('fields.linkedin')}
+      />
+    </InfoRow>
+  );
   // A linked record's own field atop its card, under the card's heading:
   // its name.
   const linkRow = (key: string): ReactElement => (
@@ -1293,6 +1305,7 @@ export default function EntityDetail({
               label={text('fields.website')}
             />
           </InfoRow>
+          {linkedinRow}
           {['industry', 'employees'].map(row)}
           <InfoRow field='annualRevenue' label={text('fields.annualRevenue')}>
             {/* One value, its currency and number edited together in a
@@ -1336,6 +1349,7 @@ export default function EntityDetail({
         </InfoGroup>
         <InfoGroup title={text('contactGroups.reach')}>
           {['gender', 'phone', 'email'].map(row)}
+          {linkedinRow}
         </InfoGroup>
         {/* The company is picked in its own card, which then reads what
             the company is. */}
@@ -1681,6 +1695,15 @@ function CompanyCard({
           record={company}
           editable={may('website')}
           label={text('fields.website')}
+        />
+      </InfoRow>
+      <InfoRow field='linkedin' label={text('fields.linkedin')}>
+        <WebsiteField
+          entity='companies'
+          field='linkedin'
+          record={company}
+          editable={may('linkedin')}
+          label={text('fields.linkedin')}
         />
       </InfoRow>
       {['industry', 'employees'].map(field)}

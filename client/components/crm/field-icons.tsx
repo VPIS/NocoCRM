@@ -17,6 +17,7 @@ import {
   Globe,
   Handshake,
   IdCard,
+  Link2,
   Mail,
   MapPin,
   MapPinned,
@@ -53,6 +54,8 @@ const FIELD_ICONS: Record<string, LucideIcon> = {
   company: Building2,
   companyId: Building2,
   website: Globe,
+  // A plain link: LinkedIn's own mark is a brand icon lucide is removing.
+  linkedin: Link2,
   industry: Factory,
   employees: UsersRound,
   region: MapPin,

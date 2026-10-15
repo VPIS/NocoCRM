@@ -14,6 +14,7 @@ import { openSession } from './ai-model.js';
 import { settingsGuidance } from './guidance.js';
 import { compileFilter, conditions, type Actor } from './authorization.js';
 import { LONG_TEXT_LIMIT } from './limits.js';
+import { linkedinKey } from './linkedin.js';
 import {
   CrmError,
   definitions,
@@ -26,7 +27,7 @@ import { array, type CrmService } from './service.js';
 // Leads that are the same enquiry twice (the same person written down by
 // two salespeople, or a form sent again), found and merged into one. The
 // check is plain matching, not the model: the same email, the same phone,
-// or the same person at the same company, among the open leads the reader
+// the same LinkedIn profile, or the same person at the same company, among the open leads the reader
 // may see. Merging keeps one lead, takes for each field the value the
 // person picks (either lead's, or for the long texts both), moves the
 // other's tasks, comments and attachments over, comments the merge on the
@@ -49,6 +50,7 @@ export const MERGE_GROUPS: readonly (readonly string[])[] = [
   ['company'],
   ['phone'],
   ['email'],
+  ['linkedin'],
   ['jobTitle'],
   ['ownerId'],
   ['source'],
@@ -63,7 +65,7 @@ export const MERGE_GROUPS: readonly (readonly string[])[] = [
 // The long texts, whose two versions may both be kept, one after the other.
 const BOTH = new Set(['message', 'companyDescription']);
 
-export type MatchReason = 'email' | 'phone' | 'person';
+export type MatchReason = 'email' | 'phone' | 'linkedin' | 'person';
 export interface LeadDuplicate {
   id: string;
   name: string;
@@ -131,6 +133,11 @@ export function matchReasons(a: Row, b: Row): MatchReason[] {
   if (email(a) && email(a) === email(b)) reasons.push('email');
   if (samePhone(a.phone, b.phone)) reasons.push('phone');
   if (
+    linkedinKey(a.linkedin) &&
+    linkedinKey(a.linkedin) === linkedinKey(b.linkedin)
+  )
+    reasons.push('linkedin');
+  if (
     bare(a.name) &&
     bare(a.name) === bare(b.name) &&
     companyKey(a.company) &&
@@ -172,6 +179,7 @@ export async function leadDuplicates(
       'company',
       'email',
       'phone',
+      'linkedin',
       'status',
       'ownerId',
       'createdAt',
@@ -223,8 +231,8 @@ export interface FoundDuplicate {
 
 // What a lead not yet created may repeat (the AI's capture review): open
 // leads by the same rules as a lead's page, and also those of the same
-// company, which are worth knowing though not mergeable; contacts by email
-// or phone; companies by name. As the reader may see them, at most five,
+// company, which are worth knowing though not mergeable; contacts by email,
+// phone or LinkedIn profile; companies by name. As the reader may see them, at most five,
 // the leads first.
 export async function findDuplicates(
   service: CrmService,
@@ -257,6 +265,7 @@ export async function findDuplicates(
     'company',
     'email',
     'phone',
+    'linkedin',
   ])) {
     const matched: FoundDuplicate['matched'] = matchReasons(input, row);
     const person = matched.length > 0;
@@ -282,10 +291,11 @@ export async function findDuplicates(
     'name',
     'email',
     'phone',
+    'linkedin',
   ])) {
     const matched = matchReasons(
-      { email: input.email, phone: input.phone },
-      { email: row.email, phone: row.phone },
+      { email: input.email, phone: input.phone, linkedin: input.linkedin },
+      { email: row.email, phone: row.phone, linkedin: row.linkedin },
     );
     if (matched.length)
       found.push({
@@ -392,7 +402,8 @@ function groupValues(lead: Row, group: readonly string[]): unknown[] {
   return group.map((key) => (blank(lead[key]) ? null : lead[key]));
 }
 // The same value however it is written: an email in another case, a
-// phone with a country code or other separators is no choice to make.
+// phone with a country code or other separators, a LinkedIn profile with or
+// without "https://www." is no choice to make.
 function sameGroup(a: Row, b: Row, group: readonly string[]): boolean {
   const [key] = group;
   if (key === 'email')
@@ -406,6 +417,8 @@ function sameGroup(a: Row, b: Row, group: readonly string[]): boolean {
     );
   if (key === 'phone')
     return (blank(a.phone) && blank(b.phone)) || samePhone(a.phone, b.phone);
+  if (key === 'linkedin' && linkedinKey(a.linkedin))
+    return linkedinKey(a.linkedin) === linkedinKey(b.linkedin);
   return (
     JSON.stringify(groupValues(a, group)) ===
     JSON.stringify(groupValues(b, group))

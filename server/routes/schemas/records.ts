@@ -137,7 +137,7 @@ function filterShape(entity: Entity): Record<string, z.ZodType> {
   return {
     q: z.string().max(200).optional().meta({
       description:
-        'Search: a phone number whole, anything else word by word across name, company, email, phone and website.',
+        'Search: a phone number whole, anything else word by word across name, company, email, phone, website and LinkedIn address.',
     }),
     ...(status
       ? {

@@ -45,7 +45,7 @@ interface Duplicate {
   status: string;
   ownerId: string;
   createdAt: string;
-  matched: ('email' | 'phone' | 'person')[];
+  matched: ('email' | 'phone' | 'linkedin' | 'person')[];
   mergeable: boolean;
 }
 type Side = CrmRecord & { tasks: number; comments: number };
@@ -71,6 +71,7 @@ const GROUPS: readonly (readonly string[])[] = [
   ['company'],
   ['phone'],
   ['email'],
+  ['linkedin'],
   ['jobTitle'],
   ['ownerId'],
   ['source'],

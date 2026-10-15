@@ -180,6 +180,7 @@ import {
   useRecordMessages,
 } from '../components/crm/mail.js';
 import type { MailTarget } from '../../server/providers/crm/mail-target.js';
+import { linkedinPath } from '../../server/providers/crm/linkedin.js';
 import {
   ReviewFeedEntry,
   ReviewPanel,
@@ -326,7 +327,7 @@ export function RecordDrawer({
 // column as a group of their own.
 const leadGroups = [
   ['general', ['source']],
-  ['contact', ['name', 'gender', 'jobTitle', 'phone', 'email']],
+  ['contact', ['name', 'gender', 'jobTitle', 'phone', 'email', 'linkedin']],
   [
     'company',
     [
@@ -491,11 +492,12 @@ function LeadDetail({ id }: { id: string }): ReactElement {
           label={text('location')}
           countries={field('country').options ?? []}
         />
-      ) : key === 'website' ? (
+      ) : key === 'website' || key === 'linkedin' ? (
         <WebsiteField
+          field={key}
           record={record}
           editable={editable}
-          label={text('fields.website')}
+          label={text(`fields.${key}`)}
         />
       ) : key === 'annualRevenue' ? (
         <MoneyField
@@ -1438,27 +1440,35 @@ function LeadStatusField({
   );
 }
 
-// The one field where clicking the value opens a link instead of editing it.
-// Double-clicking the row (beside the link text) or Enter / F2 with focus
-// opens the editor, the same gesture as every other field.
+// The fields where clicking the value opens a link instead of editing it:
+// the website and the LinkedIn address. Double-clicking the row (beside the
+// link text) or Enter / F2 with focus opens the editor, the same gesture as
+// every other field.
 export function WebsiteField({
   entity = 'leads',
+  field = 'website',
   record,
   editable,
   label,
 }: {
   entity?: Entity;
+  field?: 'website' | 'linkedin';
   record: CrmRecord;
   editable: boolean;
   label: string;
 }): ReactElement {
   const { text } = useCrmText();
   const [editing, setEditing] = useState(false);
-  const url = toText(record.website);
+  const url = toText(record[field]);
   const href = linkOf(url);
-  // The site by its domain alone, as a person names it; the whole address
+  // The site by its domain alone, as a person names it, and a LinkedIn
+  // profile or page by what it points at ("in/jane-doe"); the whole address
   // on hover.
   const host = (() => {
+    if (field === 'linkedin') {
+      const path = linkedinPath(url);
+      if (path) return path;
+    }
     try {
       return new URL(href ?? '').host.replace(/^www\./, '');
     } catch {
@@ -1470,7 +1480,7 @@ export function WebsiteField({
       <InlineField
         entity={entity}
         record={record}
-        field={{ key: 'website', type: 'url' }}
+        field={{ key: field, type: 'url' }}
         editable={editable}
         label={label}
         hint
@@ -1510,7 +1520,7 @@ export function WebsiteField({
         rel='noopener noreferrer'
         title={url}
         data-copy={url}
-        aria-label={`${toText(label)}: ${toText(text('openWebsite'))}`}
+        aria-label={`${toText(label)}: ${toText(text(field === 'linkedin' ? 'openLinkedin' : 'openWebsite'))}`}
         onDoubleClick={(e) => e.stopPropagation()}
       >
         <span className='min-w-0 truncate'>{host}</span>

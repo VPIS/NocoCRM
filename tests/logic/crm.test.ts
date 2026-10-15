@@ -1047,6 +1047,7 @@ describe('CRM API security and domain rules', () => {
       name: 'Contact A',
       company: 'Company A',
       email: 'a@example.test',
+      linkedin: 'linkedin.com/in/contact-a',
     });
     const task = await service.save(actor('rep'), 'tasks', {
       name: 'Intro',
@@ -1077,6 +1078,16 @@ describe('CRM API security and domain rules', () => {
       amount: 1200,
     });
     expect(converted.status).toBe('converted');
+    // The person's LinkedIn profile goes to the contact the conversion made.
+    expect(
+      (
+        await service.get(
+          actor('rep'),
+          'contacts',
+          toText(converted.convertedContactId),
+        )
+      ).linkedin,
+    ).toBe('linkedin.com/in/contact-a');
     const linked = await service.get(actor('rep'), 'tasks', task.id);
     expect(linked.companyId).toBe(converted.convertedCompanyId);
     expect(linked.opportunityId).toBe(converted.convertedOpportunityId);
@@ -3381,6 +3392,7 @@ describe('CRM lead capture', () => {
             source: 'website',
             country: 'Atlantis',
             state: '浙江省',
+            linkedin: ' linkedin.com/in/chen-fang ',
           },
           // Nothing the form could use: dropped.
           { ...blank, uncertain: ['name'] },
@@ -3414,6 +3426,9 @@ describe('CRM lead capture', () => {
       // A source is filled only when the text states one; otherwise the
       // form or the batch review asks for it.
       expect(leads[1].input.source).toBe('website');
+      // A LinkedIn profile the text gives is kept as written.
+      expect(leads[1].input.linkedin).toBe('linkedin.com/in/chen-fang');
+      expect(leads[0].input).not.toHaveProperty('linkedin');
       expect(leads[1].input).not.toHaveProperty('country');
       expect(leads[1].input).not.toHaveProperty('state');
       // The pasted text is not kept with the lead; what the review shows is
@@ -8448,6 +8463,41 @@ describe('duplicate leads and their merge', () => {
         { name: '李雷', company: '远洋物流', phone: '+86 3591' },
       ),
     ).toEqual([]);
+    // The same LinkedIn profile, written with or without the scheme, on a
+    // country's subdomain or with a query.
+    expect(
+      matchReasons(
+        { linkedin: 'https://www.linkedin.com/in/Li-Lei/?trk=x' },
+        { linkedin: 'cn.linkedin.com/in/li-lei' },
+      ),
+    ).toEqual(['linkedin']);
+    expect(
+      matchReasons(
+        { linkedin: 'linkedin.com/in/li-lei' },
+        { linkedin: 'linkedin.com/company/li-lei' },
+      ),
+    ).toEqual([]);
+  });
+  it('finds a contact with the same LinkedIn profile as a lead not yet created', async () => {
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'LinkedIn Match Works',
+    });
+    const contact = await service.save(actor('rep'), 'contacts', {
+      name: 'Ada Park',
+      companyId: company.id,
+      linkedin: 'https://www.linkedin.com/in/ada-park-match/',
+    });
+    const found = await findDuplicates(service, actor('rep'), {
+      name: 'A. Park',
+      linkedin: 'linkedin.com/in/Ada-Park-Match',
+    });
+    expect(found).toContainEqual(
+      expect.objectContaining({
+        entity: 'contacts',
+        id: contact.id,
+        matched: ['linkedin'],
+      }),
+    );
   });
   it('lists an open lead that repeats this one, and only to those who may read it', async () => {
     const first = await service.save(actor('rep'), 'leads', {

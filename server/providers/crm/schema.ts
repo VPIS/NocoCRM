@@ -185,9 +185,12 @@ const geography: Field[] = [
   field('state', 'subdivision'),
   field('city'),
 ];
+// A person's LinkedIn profile is an address kept as typed and opened from
+// the record: LinkedIn offers no way to read a profile or its messages.
 const person: Field[] = [
   field('phone'),
   field('email', 'email'),
+  field('linkedin', 'url'),
   field('jobTitle'),
 ];
 export const definitions: Record<Entity, EntityDefinition> = {
@@ -288,6 +291,8 @@ export const definitions: Record<Entity, EntityDefinition> = {
       field('annualRevenue', 'number'),
       ...geography,
       field('website', 'url'),
+      // Its LinkedIn page, as a person's profile.
+      field('linkedin', 'url'),
       field('address'),
       field('description', 'textarea'),
       attachments,

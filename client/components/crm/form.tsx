@@ -207,9 +207,10 @@ export function Choice({
     </Select>
   );
 }
-// A new lead's fields that wait behind "More": the company's particulars
-// and attachments, usually filled later or by research.
+// A new lead's fields that wait behind "More": the person's LinkedIn, the
+// company's particulars and attachments, usually filled later or by research.
 const LEAD_MORE_FIELDS = [
+  'linkedin',
   'employees',
   'currency',
   'annualRevenue',

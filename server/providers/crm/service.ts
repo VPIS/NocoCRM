@@ -126,7 +126,14 @@ export interface ListOptions {
   pageSize?: number;
 }
 // The fields a search looks in, where the kind of record has them.
-const SEARCH_FIELDS = ['name', 'company', 'email', 'phone', 'website'];
+const SEARCH_FIELDS = [
+  'name',
+  'company',
+  'email',
+  'phone',
+  'website',
+  'linkedin',
+];
 
 // A search's words: split on spaces and the punctuation people put between
 // terms, at most eight. The LIKE wildcards split words too, since the query

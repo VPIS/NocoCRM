@@ -63,6 +63,7 @@ const AI_FIELDS = [
   'jobTitle',
   'phone',
   'email',
+  'linkedin',
   'website',
   'country',
   'state',

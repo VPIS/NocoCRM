@@ -52,6 +52,12 @@ function shapes(owners: readonly string[]) {
     jobTitle: text.describe('Job title'),
     phone: text.describe('Phone number, as written'),
     email: text.describe('Email address, as written'),
+    // May be left out (OPTIONAL_FIELDS): a reply without it loses nothing.
+    linkedin: text
+      .optional()
+      .describe(
+        "The person's LinkedIn profile address, as written; null unless the text gives one",
+      ),
     website: text.describe("The company's website"),
     country: text.describe(
       'Country or region, an ISO 3166-1 alpha-2 code such as CN',
@@ -103,6 +109,7 @@ const TEXT_FIELDS = [
   'jobTitle',
   'phone',
   'email',
+  'linkedin',
   'website',
   'city',
   'address',
@@ -117,6 +124,10 @@ const FIELDS: readonly string[] = [
   'country',
   'state',
 ];
+// The fields a reply may leave out, which an adjustment then leaves as they
+// were rather than clearing: one the model forgets is no reason to fail the
+// whole capture, or to drop what the person typed.
+const OPTIONAL_FIELDS: ReadonlySet<string> = new Set(['linkedin']);
 // The most leads one text or one adjustment handles.
 const MAX_LEADS = 50;
 
@@ -259,7 +270,9 @@ function clean(
     input.employees = fields.employees;
   if (fields.source && sources.includes(fields.source))
     input.source = fields.source;
-  if (withNulls) for (const key of FIELDS) input[key] ??= null;
+  if (withNulls)
+    for (const key of FIELDS)
+      if (key in fields || !OPTIONAL_FIELDS.has(key)) input[key] ??= null;
   // An owner is kept only when it is one of the salespeople offered.
   const owner = toText(fields.ownerId ?? '');
   if (owners.has(owner)) input.ownerId = owner;

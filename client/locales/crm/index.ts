@@ -775,6 +775,7 @@ const wording = {
   detailsGroup: ['Details', '详情'],
   requiredField: ['This field is required', '此字段必填'],
   openWebsite: ['Open website in a new tab', '在新窗口打开官网'],
+  openLinkedin: ['Open LinkedIn in a new tab', '在新窗口打开 LinkedIn'],
   noTasks: ['No tasks yet', '暂无任务'],
   noTasksOnDay: ['No tasks on this day', '这一天没有任务'],
   dayTotal: ['Total {{count}}', '共 {{count}} 项'],
@@ -1326,6 +1327,7 @@ const wording = {
     matched: {
       email: ['email', '邮箱'],
       phone: ['phone', '电话'],
+      linkedin: ['LinkedIn profile', 'LinkedIn 主页'],
       person: ['person and company', '人和公司'],
     },
     // Between what it shares ("email and phone", "邮箱、电话").
@@ -2469,6 +2471,8 @@ const wording = {
     state: ['State / province', '省份'],
     city: ['City', '城市'],
     website: ['Website', '官网'],
+    // A person's profile, or a company's page.
+    linkedin: ['LinkedIn', 'LinkedIn'],
     description: ['Description', '描述'],
     // The enquiry as it arrived, kept as it is.
     message: ['Original message', '原始信息'],
