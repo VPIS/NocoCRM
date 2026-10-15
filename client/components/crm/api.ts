@@ -304,6 +304,14 @@ export function useCrmText() {
     t(`crm.${toText(key)}`, { ns: 'crm', ...options });
   return { text, language: i18n.language };
 }
+// A field's label inside a Chinese sentence: one that starts with a Latin
+// letter or a digit is set apart from the Chinese before it by a space
+// ("填写 LinkedIn"), as Chinese typesetting does; English needs nothing.
+export function inSentence(label: string, language: string): string {
+  return language.startsWith('zh') && /^[A-Za-z0-9]/.test(label)
+    ? ` ${label}`
+    : label;
+}
 // The standard error body (references/http-api.md): the CRM's reasons are
 // its camelCase codes in UPPER_SNAKE_CASE (server/routes/errors.ts), turned
 // back so `errors.<code>` names their text; the framework's and other

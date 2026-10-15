@@ -14,6 +14,7 @@ import { FadePreview } from './long-text-field.js';
 import { useDebounced } from './record-search.js';
 import { TEXT_LIMIT } from '../../../server/providers/crm/limits.js';
 import {
+  inSentence,
   errorCode,
   toText,
   useCrmApi,
@@ -169,7 +170,7 @@ export function LocationField({
       >
         {blank ? (
           <span data-placeholder className='text-muted-foreground'>
-            {text('emptyFill', { field: label })}
+            {text('emptyFill', { field: inSentence(label, language) })}
           </span>
         ) : (
           line

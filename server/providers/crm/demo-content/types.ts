@@ -47,6 +47,9 @@ export interface DemoCompany {
   readonly domain: string;
   // The company's real website.
   readonly website: string;
+  // The company's real LinkedIn page, where one was found to be its own;
+  // left out otherwise rather than guessed.
+  readonly linkedin?: string;
   readonly description: string;
   // The street address, over two lines.
   readonly address: string;

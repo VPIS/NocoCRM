@@ -25,6 +25,8 @@ export const enUS: DemoContent = {
       name: 'Shanghai Electric',
       domain: 'shanghai-electric',
       website: 'https://www.shanghai-electric.com',
+      linkedin:
+        'https://www.linkedin.com/company/shanghai-electric-group-co.-ltd/',
       description:
         "Shanghai Electric is one of China's largest industrial equipment groups, headquartered in Shanghai, making power generation equipment, industrial equipment and integrated solutions, with a workforce in the tens of thousands and annual revenue of over RMB 100 billion.\n\nThe IT centre of one of its manufacturing businesses wants production reporting, equipment inspections and quality issues for several factories in one system:\n\n- each factory's output should be totalled on the same day, without collecting spreadsheets by hand;\n- equipment checks should be filled in on the phone, with every issue followed to closure;\n- a quality issue should reach the person responsible quickly, with a complete trail for customer audits.\n\nThe IT centre plans a unified production management platform on NocoBase. Phase one covers production reporting and inspections on the pilot lines; phase two connects the MES and the ERP so that work orders, materials and costs line up.\n\nIt must be deployed in their own data centre on an Enterprise cluster, keep an audit log of every change, and import the historical production reports. The project budget is approved; the head of the IT centre decides and the production manager joins the requirement reviews. We met them at the Shanghai industrial trade show; the deal is at proposal, competing with another low-code vendor.",
       address: 'Shanghai\nShanghai Electric, IT Centre',
@@ -41,6 +43,7 @@ export const enUS: DemoContent = {
       name: 'United Family Healthcare',
       domain: 'ufh',
       website: 'https://www.ufh.com.cn',
+      linkedin: 'https://www.linkedin.com/company/united-family-healthcare/',
       description:
         "United Family Healthcare is a private healthcare network headquartered in Beijing, with hospitals and clinics in several Chinese cities.\n\nIts IT department is choosing one workflow platform for administrative processes (equipment repairs, supply requests, meeting rooms and vehicles), so that every hospital and clinic follows the same processes and the group can see equipment repairs and their costs across sites.\n\nThree things matter most:\n\n- permissions down to site, department and role, with some fields hidden from certain roles;\n- an audit log of every action kept for at least six years and searchable by person and time;\n- support for a domestic database such as Kingbase, which the project's requirements include.\n\nLaura Hughes from the IT department is our main contact, and the decision goes through the group's IT committee. The deal is in negotiation; the customer would like an on-site technical session next month with the equipment managers of several sites.",
       address:
@@ -50,6 +53,7 @@ export const enUS: DemoContent = {
       name: 'Digital China',
       domain: 'digitalchina',
       website: 'https://www.digitalchina.com',
+      linkedin: 'https://www.linkedin.com/company/digital-china/',
       description:
         'Digital China is a major Chinese IT services group based in Shenzhen, offering cloud, digital transformation and system integration services to enterprise and public-sector customers.\n\nOne of its solution delivery teams uses NocoBase as its delivery base, so that custom management systems start from a platform rather than from scratch. Since last year the team has launched equipment registers, project management and contract approval apps for three end customers on it, with shorter delivery and lighter maintenance than fully custom code.\n\nIt buys Professional licences per project and expects three new projects this year. Each contract has to state:\n\n- whether Digital China or the end customer holds the licence;\n- whether Digital China may keep developing for the customer after delivery;\n- who owns the source code and the plugins the team writes, and whether they can be reused in other projects.\n\nThose terms are in contract review. Digital China is also our partner and has referred two customers to us, so the relationship is close.',
       address: 'Shenzhen\nDigital China, solution delivery team',
@@ -67,6 +71,7 @@ export const enUS: DemoContent = {
       name: 'XGIMI Technology',
       domain: 'xgimi',
       website: 'https://www.xgimi.com',
+      linkedin: 'https://www.linkedin.com/company/xgimitech/',
       description:
         "XGIMI Technology is a Chengdu-based maker of smart projectors and home entertainment devices, selling in China and abroad.\n\nIts commercial projects and after-sales team built an internal workbench on NocoBase to manage customer and partner requests, delivery milestones, timesheets and service tickets, replacing a set of shared spreadsheets. Since then, project managers' weekly reports take half an hour instead of half a day.\n\nIt started on Standard with a dozen users. Next it wants a portal where customers and partners follow delivery progress and download reports themselves, which needs Professional; that upgrade is signed.",
       address:
@@ -76,6 +81,8 @@ export const enUS: DemoContent = {
       name: 'NARI Technology',
       domain: 'naritech',
       website: 'https://www.naritech.cn',
+      linkedin:
+        'https://www.linkedin.com/company/nari-technology-development-co-ltd-/',
       description:
         "NARI Technology is a Nanjing-based supplier of power grid automation, control and energy information systems.\n\nOne of its project delivery units evaluated NocoBase for a field inspection and project collaboration platform: field engineers log and photograph issues on tablets at project sites, the project office tracks the fixes and management sees an overall dashboard. The unit wants every issue followed from discovery to closure in one place, instead of across group chats and a weekly spreadsheet.\n\nThe technical evaluation is done and the operations team liked the demo; the customer also wants the contract to commit to the inspection dashboard going live within six weeks, which is in internal review.\n\nThe purchase has moved to the next budget cycle, so the project is paused. The customer's contact says it will restart when the new cycle opens and suggests we keep in touch monthly.",
       address:

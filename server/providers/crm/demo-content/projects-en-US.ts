@@ -17,6 +17,7 @@ export const enProjects: DemoProjects = {
       name: 'H World Group',
       domain: 'h-world',
       website: 'https://www.hworld.com',
+      linkedin: 'https://www.linkedin.com/company/huazhugrouplimited/',
       description:
         "H World Group runs more than ten hotel brands, including Hanting, JI Hotel and Orange, with over 9,000 hotels in China, most of them franchised.\n\nIts IT department plans to bring store inspections, maintenance tickets and franchisee collaboration from three SaaS tools onto one platform of its own:\n\n- **Inspections**: area supervisors check each hotel against its brand standard, photograph issues and follow the fixes;\n- **Maintenance tickets**: a hotel's repair request goes to the nearest contractor automatically and is measured against its deadline;\n- **Franchisee collaboration**: franchisees see their hotels' inspection scores and ticket progress in a portal.\n\nIt must be deployed privately on H World's own cloud as a cluster, keep audit logs for three years, and sign people in through the membership system's identity service. Phase one covers 2,000 hotels in East China, followed by regional waves.",
       address:
@@ -71,6 +72,8 @@ export const enProjects: DemoProjects = {
       name: 'GAC Group',
       domain: 'gac',
       website: 'https://www.gac.com.cn',
+      linkedin:
+        'https://www.linkedin.com/company/guangzhou-automobile-group-co-ltd-/',
       description:
         "GAC Group's digital department leads a dealer collaboration platform for the more than 1,000 dealers of the group's passenger car brands.\n\nLead distribution, vehicle stock transfers and after-sales service tickets each run in a different system today, so dealers log in to several back offices and the group cannot see each dealer's stock and lead conversion as it happens. The platform brings the three together behind one entry point for dealers.\n\nIt must run on a domestic database as a cluster and meet the group's data security rules; the contract is in legal review, paid in 30-40-30 instalments.",
       address:
@@ -111,6 +114,8 @@ export const enProjects: DemoProjects = {
       name: 'New Hope Group',
       domain: 'newhope',
       website: 'https://www.newhopegroup.com',
+      linkedin:
+        'https://www.linkedin.com/company/%E6%96%B0%E5%B8%8C%E6%9C%9B%E9%9B%86%E5%9B%A2-new-hope-group/',
       description:
         'New Hope Group is an agriculture and food company with many livestock farms and feed mills.\n\nThis year its information centre launched a farm inspection system on NocoBase Professional: the first 12 farms went live within three weeks, the inspection submission rate holds above 90%, and farm managers find it much easier than the paper forms.\n\nBuilding on that, the information centre plans to bring feed mill quality checks and equipment inspections onto the same platform, linking quality data with the farms. Quality requirement interviews are under way and a renewal and expansion proposal is being prepared.',
       address: 'Jinjiang District, Chengdu\nNew Hope Group, Information Centre',

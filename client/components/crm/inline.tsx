@@ -21,6 +21,7 @@ import { FoldingText, LongTextField } from './long-text-field.js';
 import {
   arrayValues,
   errorCode,
+  inSentence,
   toText,
   useCrmApi,
   useCrmText,
@@ -210,7 +211,10 @@ export function InlineField({
         value={toText(record[field.key])}
         label={label}
         editable={editable}
-        placeholder={placeholder ?? toText(text('emptyFill', { field: label }))}
+        placeholder={
+          placeholder ??
+          toText(text('emptyFill', { field: inSentence(label, language) }))
+        }
         error={error}
         onSave={save}
       />
@@ -299,7 +303,7 @@ export function InlineField({
             {placeholder ??
               toText(
                 text(PICKED.has(field.type) ? 'emptyChoose' : 'emptyFill', {
-                  field: label,
+                  field: inSentence(label, language),
                 }),
               )}
           </span>

@@ -57,6 +57,17 @@ const LEAD_GENDERS = [
   'male',
 ] as const;
 
+// A demo person's LinkedIn profile, by their mailbox: the people are made
+// up, so the address is one no real profile has (nococrm-demo-…), as their
+// email is at a .example domain, and opens LinkedIn's "page not found".
+export const demoProfile = (mailbox: string): string =>
+  `https://www.linkedin.com/in/nococrm-demo-${mailbox.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+
+// The leads that came in through prospecting, where a salesperson keeps the
+// person's LinkedIn profile: met at an exhibition, found by outreach, or
+// introduced by a partner.
+const PROSPECTED = new Set(['exhibition', 'outbound', 'partner']);
+
 export const DEMO_MARKER = 'demo-dataset-v1';
 
 export const demoPassword = (username: string): string => `${username}123`;
@@ -705,6 +716,7 @@ async function populate(
           currency: 'CNY',
           type: i === 3 ? 'partner' : 'direct',
           website: text.companies[i].website,
+          linkedin: text.companies[i].linkedin ?? null,
           address,
           description,
         },
@@ -728,6 +740,9 @@ async function populate(
               phone: i === 4 && j === 1 ? null : phone(i * 2 + j),
               employed: !(i === 7 && j === 1),
               primary: j === 0,
+              // The primary contact's profile, and the other's at every
+              // other company.
+              linkedin: j === 0 || i % 2 === 0 ? demoProfile(mailbox) : null,
             },
             i === 4 ? -4 - j : -70 + i * 5 + j,
           ),
@@ -848,6 +863,7 @@ async function populate(
             ownerId: leadOwner(i).id,
             email: `${mailbox}@lead-${i + 1}.example`,
             phone: i % 4 === 0 ? null : phone(40 + i),
+            linkedin: PROSPECTED.has(source) ? demoProfile(mailbox) : null,
             jobTitle: text.leadJobTitles[i % 2],
             // The same person in either language, by place: the names in
             // the content files are chosen to match.
@@ -1429,6 +1445,7 @@ async function populate(
           employees: '5000+',
           type: 'direct',
           website: about.website,
+          linkedin: about.linkedin ?? null,
           address: about.address,
           description: about.description,
         },
@@ -1456,6 +1473,7 @@ async function populate(
           phone: phone(n),
           employed: true,
           primary,
+          linkedin: primary ? demoProfile(person.mailbox) : null,
         },
         day,
       );
