@@ -6748,6 +6748,52 @@ describe('demo dataset', () => {
         )
         .execute(),
     ).toHaveLength(demoSignals.length);
+    // The company's WhatsApp number, the demo's own (demo-whatsapp.ts), with
+    // its conversations: four with demo records, which carry their lines,
+    // three with people nobody linked, one of them set aside. It is never
+    // the connection, and the records offer their WhatsApp tab.
+    const waNumber = await database
+      .query()
+      .selectFrom('crmWaNumbers')
+      .selectAll()
+      .where('mode', '=', 'demo')
+      .executeTakeFirst();
+    expect(waNumber?.defaultHandlerId).toBe('admin');
+    expect((await whatsapp.number())?.mode).not.toBe('demo');
+    expect((await meta('admin')).whatsapp).toEqual({ configured: true });
+    const waConversations = await database
+      .query()
+      .selectFrom('crmWaConversations as c')
+      .innerJoin('crmWaContacts as w', 'w.id', 'c.waContactId')
+      .select(['c.waContactId', 'c.handlerId', 'c.unreadCount', 'w.state'])
+      .where('c.numberId', '=', toText(waNumber?.id))
+      .execute();
+    expect(waConversations.map((row) => toText(row.state)).sort()).toEqual([
+      'dismissed',
+      'linked',
+      'linked',
+      'linked',
+      'linked',
+      'unlinked',
+      'unlinked',
+    ]);
+    expect(
+      waConversations.reduce((sum, row) => sum + Number(row.unreadCount), 0),
+    ).toBe(8);
+    expect(await whatsapp.unreadCount(actor('admin'))).toBeGreaterThan(0);
+    const waCustomers = waConversations.map((row) => toText(row.waContactId));
+    const waLines = async () =>
+      (
+        await database
+          .query()
+          .selectFrom('crmHistory')
+          .select('sourceKey')
+          .where('action', '=', 'whatsapp')
+          .execute()
+      ).filter((row) =>
+        waCustomers.includes(toText(row.sourceKey).split(':')[0]),
+      );
+    expect((await waLines()).length).toBeGreaterThan(4);
     expect((await request('/demoData/remove', 'rep', 'POST', {})).status).toBe(
       403,
     );
@@ -6906,6 +6952,25 @@ describe('demo dataset', () => {
         )
         .execute(),
     ).toEqual([]);
+    // Its WhatsApp number goes with it, with its conversations, customers
+    // and their lines.
+    expect(
+      await database
+        .query()
+        .selectFrom('crmWaNumbers')
+        .select('id')
+        .where('mode', '=', 'demo')
+        .execute(),
+    ).toEqual([]);
+    expect(
+      await database
+        .query()
+        .selectFrom('crmWaContacts')
+        .select('id')
+        .where('id', 'in', waCustomers)
+        .execute(),
+    ).toEqual([]);
+    expect(await waLines()).toEqual([]);
     // Its mailboxes go with it, removed as their owners; so do their messages.
     expect(demoMail.removed.map((r) => r.accountId).sort()).toEqual(
       demoMail.connected.map((c) => `demo-mailbox-${c.userId}`).sort(),

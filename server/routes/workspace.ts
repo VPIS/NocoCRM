@@ -230,12 +230,11 @@ export function registerWorkspaceRoutes(
             : {}),
           // Whether the pages offer the assistant at all.
           assistant: await service.assistantEnabled(),
-          // Whether the company's WhatsApp number is connected, so records
-          // show their WhatsApp tab (whatsapp/service.ts).
+          // Whether the company's WhatsApp number is connected, or the demo
+          // dataset's number holds conversations, so records show their
+          // WhatsApp tab (whatsapp/service.ts).
           whatsapp: {
-            configured: (
-              await app.container.resolve(whatsappToken).connection()
-            ).configured,
+            configured: await app.container.resolve(whatsappToken).available(),
           },
           // Which of the agents' triggers are on, so a form offers "AI
           // follows up at once" only while that would happen (agents.ts).
@@ -429,6 +428,7 @@ export function registerWorkspaceRoutes(
           c.req.valid('json').language ?? 'zh-CN',
           demoMailboxes,
           demoChats,
+          app.container.resolve(whatsappToken),
         ),
       }),
   );

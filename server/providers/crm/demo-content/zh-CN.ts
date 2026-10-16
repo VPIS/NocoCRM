@@ -1,6 +1,7 @@
 import type { DemoContent } from './types.js';
 import { zhMail, zhMailSenders } from './mail-zh-CN.js';
 import { zhProjects } from './projects-zh-CN.js';
+import { zhWhatsApp } from './whatsapp-zh-CN.js';
 
 export const zhCN: DemoContent = {
   label: 'NocoBase 销售演示数据',
@@ -569,4 +570,5 @@ export const zhCN: DemoContent = {
     },
   },
   projects: zhProjects,
+  whatsapp: zhWhatsApp,
 };

@@ -27,6 +27,12 @@ import {
   type Actor,
 } from './authorization.js';
 import { DEFAULT_TIME_ZONE } from './zone-time.js';
+import {
+  populateDemoWhatsApp,
+  removeDemoWhatsApp,
+  type DemoWhatsAppManifest,
+} from './demo-whatsapp.js';
+import type { WhatsAppService } from './whatsapp/service.js';
 
 // The demo dataset: NocoBase selling its own licences and services (the
 // editions and prices of nocobase.com/cn/commercial) to fictional customers,
@@ -211,6 +217,9 @@ interface Manifest {
   // The importer's conversations with the assistant, which removal deletes;
   // absent on an import made before the dataset had them.
   chats?: string[];
+  // The demo's WhatsApp number and its customers, which removal deletes;
+  // absent on an import made before the dataset had them.
+  whatsapp?: DemoWhatsAppManifest;
 }
 
 // Whether a demo dataset is imported, for the banner that offers one to
@@ -329,6 +338,7 @@ export async function populateDemo(
   language: DemoLanguage = 'zh-CN',
   mailboxes?: DemoMailboxes,
   chats?: DemoChats,
+  whatsapp?: WhatsAppService,
 ): Promise<DemoStatus> {
   await requireCapability(actor, 'manage', 'settings');
   // The marker is claimed before anything is written, so a second import
@@ -351,7 +361,7 @@ export async function populateDemo(
       .insertInto('crmSettings')
       .values({
         id: DEMO_MARKER,
-        value: JSON.stringify({ version: 7, importing: true, records: [] }),
+        value: JSON.stringify({ version: 8, importing: true, records: [] }),
         updatedAt: new Date(),
       })
       .execute();
@@ -369,6 +379,7 @@ export async function populateDemo(
       language,
       mailboxes,
       chats,
+      whatsapp,
       claim,
     );
   } catch (error) {
@@ -391,6 +402,7 @@ async function populate(
   language: DemoLanguage,
   mailboxes: DemoMailboxes | undefined,
   chats: DemoChats | undefined,
+  whatsapp: WhatsAppService | undefined,
   // What the import wrote so far, for taking it back should it fail.
   claim: { manifest?: Manifest },
 ): Promise<DemoStatus> {
@@ -488,8 +500,8 @@ async function populate(
     ).toISOString();
   const started = now.toISOString();
   const manifest: Manifest = {
-    // 7: the demo mailboxes (mailAccounts).
-    version: 7,
+    // 7: the demo mailboxes (mailAccounts); 8: the WhatsApp number.
+    version: 8,
     language,
     label: text.label,
     createdAt: started,
@@ -2069,6 +2081,25 @@ async function populate(
       .execute();
   }
 
+  // The company's WhatsApp number, with conversations as the webhook would
+  // have kept them (demo-whatsapp.ts).
+  if (whatsapp)
+    await populateDemoWhatsApp(
+      query,
+      whatsapp,
+      {
+        text: text.whatsapp,
+        at,
+        receptionistId: actor.id,
+        contacts,
+        leads,
+        hworldPeople: projects.hworldPeople,
+      },
+      (part) => {
+        manifest.whatsapp = part;
+      },
+    );
+
   reached(65);
   setDemoMailLanguage(language);
   // The demo mailboxes: the messages first, which the plugin reads as soon
@@ -2599,6 +2630,27 @@ async function deleteRecords(
       const ids = byEntity.get(entity) ?? [];
       if (ids.length)
         await q.deleteFrom(table).where('id', 'in', ids).execute();
+    }
+    if (manifest.whatsapp) await removeDemoWhatsApp(q, manifest.whatsapp);
+    // A WhatsApp customer someone linked to a demo lead or contact is
+    // unlinked again, its record gone.
+    for (const [entity, column] of [
+      ['leads', 'leadId'],
+      ['contacts', 'contactId'],
+    ] as const) {
+      const ids = byEntity.get(entity) ?? [];
+      if (ids.length)
+        await q
+          .updateTable('crmWaContacts')
+          .set({
+            state: 'unlinked',
+            leadId: null,
+            contactId: null,
+            matchedBy: null,
+            updatedAt: new Date().toISOString(),
+          })
+          .where(column, 'in', ids)
+          .execute();
     }
   });
 }

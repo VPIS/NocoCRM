@@ -185,12 +185,27 @@ export class WhatsAppService {
     return this.secrets().seal(plain, { ...SEAL, aad: [field] });
   }
   // The one number connected (phase 1 connects one; the tables hold more).
+  // The demo dataset's number (mode 'demo', demo-whatsapp.ts) is never it:
+  // it receives nothing, and saving the connection leaves it alone.
   async number(): Promise<Row | undefined> {
     return this.query
       .selectFrom('crmWaNumbers')
       .selectAll()
+      .where('mode', '!=', 'demo')
       .orderBy('createdAt')
       .executeTakeFirst();
+  }
+  // Whether the pages offer WhatsApp on records: a number is connected, or
+  // the demo dataset's number holds its conversations.
+  async available(): Promise<boolean> {
+    if ((await this.connection()).configured) return true;
+    return Boolean(
+      await this.query
+        .selectFrom('crmWaNumbers')
+        .select('id')
+        .where('mode', '=', 'demo')
+        .executeTakeFirst(),
+    );
   }
   async connection(): Promise<ConnectionView> {
     const settings = await this.stored();
@@ -773,6 +788,7 @@ export class WhatsAppService {
       (await query
         .selectFrom('crmWaNumbers')
         .select('defaultHandlerId')
+        .where('mode', '!=', 'demo')
         .orderBy('createdAt')
         .executeTakeFirst());
     return receptionist?.defaultHandlerId

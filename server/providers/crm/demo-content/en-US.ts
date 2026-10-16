@@ -1,6 +1,7 @@
 import type { DemoContent } from './types.js';
 import { enMail, enMailSenders } from './mail-en-US.js';
 import { enProjects } from './projects-en-US.js';
+import { enWhatsApp } from './whatsapp-en-US.js';
 
 export const enUS: DemoContent = {
   label: 'NocoBase sales demo data',
@@ -581,4 +582,5 @@ export const enUS: DemoContent = {
     },
   },
   projects: enProjects,
+  whatsapp: enWhatsApp,
 };
