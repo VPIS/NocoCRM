@@ -45,8 +45,9 @@ const SEAL = { purpose: 'crm.whatsapp' };
 // A delivery tried this many times without success is failed and reported.
 const MAX_ATTEMPTS = 5;
 // The quiet after a customer's last message before their follow-up runs:
-// people send several short messages in a row.
-export const QUIET_MS = 10 * 60_000;
+// people send several short messages in a row, and a conversation often
+// goes back and forth for a while (ten minutes until 2026-10-16).
+export const QUIET_MS = 30 * 60_000;
 // Only a message this recent starts a follow-up (a late redelivery does not).
 const NEWS_MS = 24 * 3600_000;
 // Meta's media ids expire after seven days.

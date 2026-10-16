@@ -598,8 +598,8 @@ const wording = {
       customerReplied: {
         label: ['The customer writes', '客户来信时'],
         hint: [
-          'A message from one of its people reaches the timeline.',
-          '客户方联系人的邮件同步到动态时。',
+          'A mail from one of its people reaches the timeline, or their WhatsApp messages have gone quiet for 30 minutes.',
+          '客户方联系人的邮件同步到动态时，或 WhatsApp 消息停顿 30 分钟后。',
         ],
       },
       companyChanged: {
