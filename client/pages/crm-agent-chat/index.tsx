@@ -8,9 +8,17 @@ import {
   EmptyTitle,
 } from '#components/ui/empty';
 import { Skeleton } from '#components/ui/skeleton';
-import { useConversationList } from '@nocobase/app-plugin-agents/client/chat';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '#components/ui/tooltip';
+import {
+  useChatPanel,
+  useConversationList,
+} from '@nocobase/app-plugin-agents/client/chat';
 import type { ConversationDetail } from '@nocobase/app-plugin-agents/shared/conversations';
-import { ArrowLeft, Bot, MessagesSquare, Plus } from 'lucide-react';
+import { Bot, MessagesSquare, Minimize2, Plus } from 'lucide-react';
 import { lazy, Suspense, useRef, useState, type ReactElement } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { BackButton } from '../../components/back-button.js';
@@ -53,9 +61,11 @@ export default function AgentChatPage(): ReactElement {
   const isNew = params.conversationId === 'new';
   const openId = isNew ? null : (params.conversationId ?? null);
   const archived = searchParams.get('archived') === '1';
+  const chat = useChatPanel();
   // Where the reader came from: the browser history's place when the page
-  // opened (the router keeps it as `idx`), so Back returns there past the
-  // conversations opened since; opened first, or with no place, the overview.
+  // opened (the router keeps it as `idx`), so Collapse returns there past
+  // the conversations opened since; opened first, or with no place, the
+  // overview.
   const [cameAt] = useState<number | null>(() => {
     const idx = (window.history.state as { idx?: unknown } | null)?.idx;
     return typeof idx === 'number' ? idx : null;
@@ -136,7 +146,36 @@ export default function AgentChatPage(): ReactElement {
   // While nothing is known yet the header offers nothing; with no
   // conversation at all the empty state holds the only way to start one,
   // and a first conversation being started needs none.
-  const headerAction = open.isLoading || first ? undefined : newButton;
+  // Collapse, beside New conversation: back to the page the reader came
+  // from, the conversation open (if any) in the side panel, as the panel's
+  // Open full page undone; it took the place of a Back of its own row.
+  const collapseButton = (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            variant='outline'
+            onClick={() => {
+              chat.openChat(
+                openId ? { conversationId: openId, view: 'chat' } : {},
+              );
+              goBack();
+            }}
+          />
+        }
+      >
+        <Minimize2 />
+        {text('agentChat.collapse')}
+      </TooltipTrigger>
+      <TooltipContent>{text('agentChat.collapseHint')}</TooltipContent>
+    </Tooltip>
+  );
+  const headerAction = (
+    <div className='flex items-center gap-2'>
+      {collapseButton}
+      {open.isLoading || first ? null : newButton}
+    </div>
+  );
 
   // The conversation, or why none can be held, beside the list.
   const detail =
@@ -262,19 +301,7 @@ export default function AgentChatPage(): ReactElement {
       value={{ open: drawer.open, close: drawer.close, inDrawer: false }}
     >
       <div className='flex h-full min-h-0 flex-col'>
-        <div className='flex shrink-0 flex-col gap-3 border-b px-6 py-5 md:px-8'>
-          {/* Back to the page the reader came from, drawn as a record page's
-              Back is (back-button.tsx), which leads to a parent route
-              instead; this page has none. Narrow, an open conversation has
-              its own Back to the list instead. */}
-          <button
-            type='button'
-            className={`inline-flex w-fit items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground ${detailOpen ? 'max-lg:hidden' : ''}`}
-            onClick={goBack}
-          >
-            <ArrowLeft className='size-4' />
-            {text('back')}
-          </button>
+        <div className='shrink-0 border-b px-6 py-5 md:px-8'>
           <PageHeader
             title={text('navigation.conversations')}
             actions={headerAction}

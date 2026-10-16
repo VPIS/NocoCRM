@@ -8,6 +8,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import locales from '../../client/locales/index.js';
+import { chatFake } from '../setup/agent-chat-fake.js';
 import { crmZh } from '../../client/locales/crm/index.js';
 import {
   definitions,
@@ -270,10 +271,12 @@ function renderAt(path: string): void {
 }
 
 describe('the agent conversations', () => {
-  it('goes back to the overview when it was opened first', async () => {
+  it('collapses into the side panel, back to the overview when it was opened first', async () => {
     renderAt('/crm/agent-chat');
-    fireEvent.click(screen.getByRole('button', { name: '返回' }));
+    expect(screen.getByRole('heading', { name: '全部对话' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '收起' }));
     expect(await screen.findByText('Overview page')).toBeTruthy();
+    expect(chatFake.opened.at(-1)).toEqual({});
   });
 
   it('starts with an empty state holding the only way to a new one', () => {

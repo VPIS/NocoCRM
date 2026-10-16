@@ -2224,6 +2224,13 @@ const wording = {
   // The conversations with the Agents plugin's agents.
   agentChat: {
     new: ['New conversation', '新建对话'],
+    // Back into the side panel, on the conversation open: the panel's
+    // Open full page undone.
+    collapse: ['Collapse', '收起'],
+    collapseHint: [
+      'Back to the page you came from, the conversation in the side panel',
+      '回到之前的页面，在右侧面板里继续这段对话',
+    ],
     actions: ['Conversation actions', '对话操作'],
     // A conversation's last message in its list row, when it is the person's.
     lastYours: ['You: ', '你：'],
@@ -2734,7 +2741,9 @@ const wording = {
   navigation: {
     reports: ['Reports', '报表'],
     inbox: ['Inbox', '收件箱'],
-    conversations: ['Conversations', '对话'],
+    // The agents' conversations page (pages/crm-agent-chat/), its heading
+    // and its breadcrumb.
+    conversations: ['All conversations', '全部对话'],
     records: ['Records', '记录'],
     // Where the user's connected services sit: mail now, other channels
     // (WhatsApp, LinkedIn) later.
