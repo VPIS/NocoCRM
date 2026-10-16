@@ -25,13 +25,14 @@ import {
   Inbox,
   ListChecks,
   Mail,
-  MessageCircle,
   Radar,
   Workflow,
   ScrollText,
   Settings2,
   SquareCheckBig,
 } from 'lucide-react';
+
+import { WhatsAppLogo } from '#components/crm/whatsapp/logo';
 
 // One of the Agents plugin's pages, drawn in the CRM's look
 // (components/crm/plugin-page.tsx): its component is loaded as the plugin
@@ -188,7 +189,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         path: '/crm/whatsapp',
         auth: 'required',
         authz: page('crm-whatsapp'),
-        navigation: { title: 'crm.navigation.whatsapp', icon: MessageCircle },
+        navigation: { title: 'crm.navigation.whatsapp', icon: WhatsAppLogo },
         componentLoader: () => import('./pages/crm-whatsapp/index.js'),
         children: [
           {
@@ -211,6 +212,20 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
             ],
           },
         ],
+      },
+      // The number's connection, webhook and status, reached from the
+      // WhatsApp page's header as the mail accounts are from the mailbox's,
+      // with no entry of its own (the menu keeps WhatsApp marked); the CRM
+      // settings' administrators', as its API checks.
+      {
+        name: 'crm-whatsapp-connection',
+        path: '/crm/whatsapp/connection',
+        auth: 'required',
+        authz: {
+          resource: { type: 'settings', id: 'crm' },
+          action: 'manage',
+        },
+        componentLoader: () => import('./pages/crm-whatsapp/connection.js'),
       },
     ],
   },
@@ -432,18 +447,6 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
           action: 'manage',
         },
         componentLoader: () => import('./pages/settings/demo-data.js'),
-      },
-      {
-        // The company's WhatsApp number: its connection, webhook and
-        // status (pages/settings/whatsapp.tsx); the administrators', as the
-        // General tab is.
-        name: 'settings-whatsapp',
-        path: 'whatsapp',
-        authz: {
-          resource: { type: 'settings', id: 'crm' },
-          action: 'manage',
-        },
-        componentLoader: () => import('./pages/settings/whatsapp.js'),
       },
       {
         // How an approval moves, read only; the administrators', as the

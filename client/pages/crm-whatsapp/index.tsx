@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Plug } from 'lucide-react';
 import { lazy, Suspense, useState, type ReactElement } from 'react';
 import { Link, Outlet, useParams, useSearchParams } from 'react-router';
 import { PageContainer } from '#components/page-container';
@@ -62,6 +62,7 @@ export default function WhatsAppPage(): ReactElement {
   const { conversationId } = useParams();
   const [params, setParams] = useSearchParams();
   const view = viewOf(params);
+  const { data: meta } = useMetadata();
   const drawer = useRecordDrawerState();
   // Loaded on the first open and kept mounted after, so closing animates.
   const [drawerLoaded, setDrawerLoaded] = useState(false);
@@ -74,6 +75,20 @@ export default function WhatsAppPage(): ReactElement {
         <PageHeader
           title={toText(text('whatsapp.title'))}
           description={toText(text('whatsapp.description'))}
+          // The number's connection, for whoever manages the CRM's settings,
+          // as the mailbox leads to its accounts.
+          actions={
+            meta?.settingsAccess ? (
+              <Button
+                variant='outline'
+                nativeButton={false}
+                render={<Link to='/crm/whatsapp/connection' />}
+              >
+                <Plug data-icon='inline-start' />
+                {text('whatsapp.manageConnection')}
+              </Button>
+            ) : undefined
+          }
         />
         {/* Both panes scroll on their own: the card takes the height left
             under the header on a wide screen (design: F7). */}
@@ -115,17 +130,19 @@ export default function WhatsAppPage(): ReactElement {
             {conversationId ? (
               <Outlet />
             ) : (
-              <Empty className='m-6 min-h-48 border border-dashed'>
-                <EmptyHeader>
-                  <EmptyMedia variant='icon'>
-                    <MessageCircle />
-                  </EmptyMedia>
-                  <EmptyTitle>{text('whatsapp.choose')}</EmptyTitle>
-                  <EmptyDescription>
-                    {text('whatsapp.chooseBody')}
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
+              <div className='p-6'>
+                <Empty className='min-h-48 border border-dashed'>
+                  <EmptyHeader>
+                    <EmptyMedia variant='icon'>
+                      <MessageCircle />
+                    </EmptyMedia>
+                    <EmptyTitle>{text('whatsapp.choose')}</EmptyTitle>
+                    <EmptyDescription>
+                      {text('whatsapp.chooseBody')}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              </div>
             )}
           </section>
         </Card>
@@ -327,25 +344,27 @@ function EmptyView({ view }: { view: ConversationView }): ReactElement {
             ? 'whatsapp.empty.connect'
             : 'whatsapp.empty.askAdmin';
   return (
-    <Empty className='m-3 min-h-40 border border-dashed p-6 md:p-6'>
-      <EmptyHeader>
-        <EmptyMedia variant='icon'>
-          <MessageCircle />
-        </EmptyMedia>
-        <EmptyTitle>{text(title)}</EmptyTitle>
-        <EmptyDescription>{text(body)}</EmptyDescription>
-      </EmptyHeader>
-      {view === 'all' && !configured && meta?.settingsAccess ? (
-        <EmptyContent>
-          <Button
-            variant='outline'
-            nativeButton={false}
-            render={<Link to='/settings/whatsapp' />}
-          >
-            {text('whatsapp.empty.openSettings')}
-          </Button>
-        </EmptyContent>
-      ) : null}
-    </Empty>
+    <div className='p-3'>
+      <Empty className='min-h-40 border border-dashed p-6 md:p-6'>
+        <EmptyHeader>
+          <EmptyMedia variant='icon'>
+            <MessageCircle />
+          </EmptyMedia>
+          <EmptyTitle>{text(title)}</EmptyTitle>
+          <EmptyDescription>{text(body)}</EmptyDescription>
+        </EmptyHeader>
+        {view === 'all' && !configured && meta?.settingsAccess ? (
+          <EmptyContent>
+            <Button
+              variant='outline'
+              nativeButton={false}
+              render={<Link to='/crm/whatsapp/connection' />}
+            >
+              {text('whatsapp.manageConnection')}
+            </Button>
+          </EmptyContent>
+        ) : null}
+      </Empty>
+    </div>
   );
 }

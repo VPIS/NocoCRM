@@ -62,15 +62,17 @@ export function RecordWhatsAppPanel({
   const { people } = query.data;
   if (!query.data.messages.length)
     return (
-      <Empty className='m-4 min-h-48 border border-dashed'>
-        <EmptyHeader>
-          <EmptyMedia variant='icon'>
-            <MessageCircle />
-          </EmptyMedia>
-          <EmptyTitle>{text('whatsapp.tabEmptyTitle')}</EmptyTitle>
-          <EmptyDescription>{text('whatsapp.tabEmptyBody')}</EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <div className='p-4'>
+        <Empty className='min-h-48 border border-dashed'>
+          <EmptyHeader>
+            <EmptyMedia variant='icon'>
+              <MessageCircle />
+            </EmptyMedia>
+            <EmptyTitle>{text('whatsapp.tabEmptyTitle')}</EmptyTitle>
+            <EmptyDescription>{text('whatsapp.tabEmptyBody')}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </div>
     );
   const latestIds = new Set(query.data.messages.map((m) => m.id));
   const messages = [

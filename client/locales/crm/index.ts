@@ -2333,10 +2333,9 @@ const wording = {
         '客户发到公司 WhatsApp 号码的消息会出现在这里。',
       ],
       connect: [
-        "Connect the company's number in Settings → WhatsApp.",
-        '在 设置 → WhatsApp 里连接公司的号码。',
+        "Connect the company's number with Manage WhatsApp connection.",
+        '用“管理 WhatsApp 连接”连接公司的号码。',
       ],
-      openSettings: ['Open settings', '打开设置'],
       askAdmin: [
         "Ask an administrator to connect the company's WhatsApp number.",
         '请管理员连接公司的 WhatsApp 号码。',
@@ -2362,6 +2361,7 @@ const wording = {
     newMessages: ['New messages', '有新消息'],
     loadMoreFailed: ["Couldn't load more conversations", '无法加载更多对话'],
     loadEarlierFailed: ["Couldn't load earlier messages", '无法加载更早的消息'],
+    manageConnection: ['Manage WhatsApp connection', '管理 WhatsApp 连接'],
     link: ['Link to record', '关联到记录'],
     changeLink: ['Change link', '更改关联'],
     newLead: ['New lead', '新建线索'],
@@ -2452,8 +2452,9 @@ const wording = {
       '这条记录的联系人发到公司 WhatsApp 号码的消息会出现在这里。',
     ],
   },
-  // Settings → WhatsApp (pages/settings/whatsapp.tsx).
+  // The WhatsApp connection (pages/crm-whatsapp/connection.tsx).
   whatsappSettings: {
+    title: ['WhatsApp connection', 'WhatsApp 连接'],
     description: [
       "Connect the company's WhatsApp number through Meta's Cloud API.",
       '通过 Meta Cloud API 连接公司的 WhatsApp 号码。',

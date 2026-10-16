@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { crmEn } from '../../client/locales/crm/index.js';
 
 // The WhatsApp pages (client/pages/crm-whatsapp/, components/crm/whatsapp/,
-// pages/settings/whatsapp.tsx): the messages as bubbles with their media,
+// pages/crm-whatsapp/connection.tsx): the messages as bubbles with their media,
 // the workspace's list and conversation with its actions, a record's tab,
 // and the connection form's validation.
 
@@ -55,7 +55,7 @@ const { default: WhatsAppPage } =
 const { default: ConversationPane } =
   await import('../../client/pages/crm-whatsapp/conversation.js');
 const { default: WhatsAppSettingsPage } =
-  await import('../../client/pages/settings/whatsapp.js');
+  await import('../../client/pages/crm-whatsapp/connection.js');
 
 const message = (
   id: string,
@@ -260,6 +260,13 @@ describe('the workspace', () => {
     );
     expect(screen.queryByText(crmEn.whatsapp.newLead)).toBe(null);
     expect(screen.getByText('Message m1')).toBeTruthy();
+    // The number's connection, from the page's header, for an administrator.
+    expect(
+      screen
+        .getByText(crmEn.whatsapp.manageConnection)
+        .closest('a')
+        ?.getAttribute('href'),
+    ).toBe('/crm/whatsapp/connection');
     expect(screen.getByText(crmEn.whatsapp.readOnlyNote)).toBeTruthy();
   });
 
@@ -384,7 +391,7 @@ describe('the connection settings', () => {
     });
     render(
       wrap(
-        <MemoryRouter initialEntries={['/settings/whatsapp']}>
+        <MemoryRouter initialEntries={['/crm/whatsapp/connection']}>
           <WhatsAppSettingsPage />
         </MemoryRouter>,
       ),

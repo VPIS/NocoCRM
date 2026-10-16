@@ -5,7 +5,6 @@ import {
   CalendarClock,
   Database,
   KeyRound,
-  MessageCircle,
   Settings2,
   ShieldUser,
   UsersRound,
@@ -49,7 +48,6 @@ const TABS: readonly Tab[] = [
     label: 'navigation.scheduledTasks',
     icon: CalendarClock,
   },
-  { path: 'whatsapp', label: 'navigation.whatsapp', icon: MessageCircle },
   // Last: a trial's, rarely opened once the CRM is in use.
   { path: 'demo-data', label: 'navigation.demoData', icon: Database },
 ];
@@ -61,10 +59,6 @@ export default function SettingsPage(): ReactElement {
   // everyone's own.
   const access: Record<string, ReturnType<typeof useCan>> = {
     crm: useCan({
-      resource: { type: 'settings', id: 'crm' },
-      action: 'manage',
-    }),
-    whatsapp: useCan({
       resource: { type: 'settings', id: 'crm' },
       action: 'manage',
     }),

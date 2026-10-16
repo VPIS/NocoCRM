@@ -12,6 +12,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react';
+import { BackButton } from '#components/back-button';
 import { PageContainer } from '#components/page-container';
 import { PageHeader } from '#components/page-header';
 import { Alert, AlertDescription } from '#components/ui/alert';
@@ -48,9 +49,11 @@ import {
   useCrmText,
   useMetadata,
 } from '../../components/crm/api.js';
-import { LoadFailure, TextField } from './shared.js';
+import { LoadFailure, TextField } from '../settings/shared.js';
 
-// Settings → WhatsApp: the company number's connection to Meta's Cloud API
+// The WhatsApp connection (/crm/whatsapp/connection, from the WhatsApp page's
+// "Manage connection", as the mail accounts are reached from the mailbox):
+// the company number's connection to Meta's Cloud API
 // (its ids and credentials, sealed on the server and never shown again), what
 // to enter in the Meta app's webhook settings, and how the number and the
 // deliveries stand. The status changes on its own, so the page has a Refresh
@@ -127,8 +130,9 @@ export default function WhatsAppSettingsPage(): ReactElement {
   };
   return (
     <PageContainer>
+      <BackButton to='/crm/whatsapp' />
       <PageHeader
-        title={toText(text('navigation.whatsapp'))}
+        title={toText(text('whatsappSettings.title'))}
         description={toText(text('whatsappSettings.description'))}
         actions={
           <Tooltip>
