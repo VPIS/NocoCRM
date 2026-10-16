@@ -106,7 +106,10 @@ export function AssistantDock(): ReactElement | null {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const phoneRef = useRef<HTMLButtonElement>(null);
   const dockRef = useRef<HTMLDivElement>(null);
-  useFocusReturn(() => (isMobile ? phoneRef.current : inputRef.current));
+  useFocusReturn(
+    () => (isMobile ? phoneRef.current : inputRef.current),
+    () => (isMobile ? phoneRef.current : dockRef.current),
+  );
   // A press outside closes it too, focus or not: a page that drags on a
   // press (the board) keeps focus where it was, so no blur would come. Its
   // model menu, outside it while open, keeps it open.

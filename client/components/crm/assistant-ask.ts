@@ -1,4 +1,7 @@
-import { useChatPanel } from '@nocobase/app-plugin-agents/client/chat';
+import {
+  CHAT_PANEL_ATTRIBUTE,
+  useChatPanel,
+} from '@nocobase/app-plugin-agents/client/chat';
 import type { ChatModelChoice } from '@nocobase/app-plugin-agents/shared/conversations';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -17,17 +20,38 @@ import type { CurrentRecord } from './current-record.js';
 // plugin, in its panel (agent-chat/).
 
 // When the panel closes, focus left inside it (or fallen to the page) comes
-// back to the box that `target` gives; focus the user has put elsewhere
-// stays.
+// back to the box that `target` gives, when the reader was last in the box
+// (`area`, the box with its buttons; `target` by default) before the panel
+// took them: they asked there. A panel opened from elsewhere (the header's
+// button, the conversations page) leaves the box alone when it closes, and
+// focus the user has put elsewhere stays.
 export function useFocusReturn(
   target: () => HTMLElement | null | undefined,
+  area: () => HTMLElement | null | undefined = target,
 ): void {
   const panelOpen = useChatPanel().open;
   const wasOpenRef = useRef(panelOpen);
+  // Whether the reader's last press or focus outside the panel was in the
+  // box; a box shown with the panel already open was not where it opened.
+  const inBoxRef = useRef(false);
+  useEffect(() => {
+    const note = (event: Event): void => {
+      const node = event.target;
+      if (!(node instanceof Element)) return;
+      if (node.closest(`[${CHAT_PANEL_ATTRIBUTE}]`)) return;
+      inBoxRef.current = Boolean(area()?.contains(node));
+    };
+    document.addEventListener('pointerdown', note, true);
+    document.addEventListener('focusin', note, true);
+    return () => {
+      document.removeEventListener('pointerdown', note, true);
+      document.removeEventListener('focusin', note, true);
+    };
+  }, [area]);
   // Run again with each render's `target`; it acts only on the render where
   // the panel has just closed.
   useEffect(() => {
-    if (wasOpenRef.current && !panelOpen) {
+    if (wasOpenRef.current && !panelOpen && inBoxRef.current) {
       const active = document.activeElement;
       const stranded =
         !active ||

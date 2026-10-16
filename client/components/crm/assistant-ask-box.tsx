@@ -32,7 +32,11 @@ export function AssistantAskBox({
   const disabled = readiness.state !== 'ready';
   const draft = useAskDraft(undefined, disabled);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  useFocusReturn(() => inputRef.current);
+  const boxRef = useRef<HTMLDivElement>(null);
+  useFocusReturn(
+    () => inputRef.current,
+    () => boxRef.current,
+  );
 
   const unavailable =
     readiness.state === 'unavailable' ? readiness.reason : undefined;
@@ -52,7 +56,7 @@ export function AssistantAskBox({
 
   return (
     <TooltipProvider>
-      <div className='flex flex-col'>
+      <div ref={boxRef} className='flex flex-col'>
         {unavailable ? (
           // Disabled controls take no pointer events, so the reason's
           // tooltip hangs on a wrapper around the box.

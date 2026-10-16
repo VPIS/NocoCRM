@@ -266,6 +266,29 @@ describe('the assistant dock', () => {
     expect(input).toHaveValue('draft');
   });
 
+  it('stays one line when a panel opened from elsewhere closes', () => {
+    // Opened from the header's button, then back from the conversations
+    // page: the dock comes back with the panel open, and the panel closes.
+    const header = document.createElement('button');
+    document.body.append(header);
+    act(() => header.focus());
+    chatFake.open = true;
+    const { rerender } = renderDock('/crm/contacts');
+    header.remove();
+    chatFake.open = false;
+    act(() =>
+      rerender(
+        <MemoryRouter initialEntries={['/crm/contacts']}>
+          <AssistantDock />
+        </MemoryRouter>,
+      ),
+    );
+    expect(screen.getByRole('textbox')).not.toHaveFocus();
+    expect(
+      screen.queryByRole('button', { name: english('dock.attach') }),
+    ).toBeNull();
+  });
+
   it('stays out of the way: agents loading, panel open, the overview, filled pages', () => {
     chatFake.loading = true;
     const loading = renderDock('/crm/leads');

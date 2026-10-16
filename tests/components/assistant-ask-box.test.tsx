@@ -37,6 +37,8 @@ vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) =>
   ),
 );
 const { chatFake } = await import('../setup/agent-chat-fake.js');
+const { CHAT_PANEL_ATTRIBUTE } =
+  await import('@nocobase/app-plugin-agents/client/chat');
 const QWEN = { modelService: 'qwen', model: 'qwen-max' };
 
 const { AssistantAskBox } =
@@ -135,22 +137,41 @@ describe("the overview's ask box", () => {
     expect(chatFake.created).toHaveLength(0);
   });
 
-  it('takes focus back when the panel closes with focus left in it', () => {
+  it('takes focus back when the panel it opened closes with focus left in it', () => {
+    const { rerender } = render(<AssistantAskBox />);
+    const input = screen.getByRole('textbox', {
+      name: english('dock.placeholder'),
+    });
+    act(() => input.focus());
+    // The panel opens on the question, and its composer takes focus.
     chatFake.open = true;
     const panel = document.createElement('div');
-    panel.setAttribute('data-crm-agent-panel', '');
+    panel.setAttribute(CHAT_PANEL_ATTRIBUTE, '');
     const composer = document.createElement('textarea');
     panel.append(composer);
     document.body.append(panel);
-    const { rerender } = render(<AssistantAskBox />);
-    composer.focus();
+    act(() => rerender(<AssistantAskBox />));
+    act(() => composer.focus());
     // The panel unmounts as it closes, taking the focused composer along.
     chatFake.open = false;
     panel.remove();
     act(() => rerender(<AssistantAskBox />));
+    expect(input).toHaveFocus();
+  });
+
+  it('leaves focus alone when a panel opened from elsewhere closes', () => {
+    const button = document.createElement('button');
+    document.body.append(button);
+    const { rerender } = render(<AssistantAskBox />);
+    act(() => button.focus());
+    chatFake.open = true;
+    act(() => rerender(<AssistantAskBox />));
+    button.remove();
+    chatFake.open = false;
+    act(() => rerender(<AssistantAskBox />));
     expect(
       screen.getByRole('textbox', { name: english('dock.placeholder') }),
-    ).toHaveFocus();
+    ).not.toHaveFocus();
   });
 
   it('grows past one line: Shift+Enter breaks the line, Enter sends both', async () => {
