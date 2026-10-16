@@ -41,3 +41,7 @@ database/*/collections/
 
 # Local preview servers for the Claude desktop app, each developer's own.
 /.claude/launch.json
+
+# Local research reports, kept beside the checkout and never committed.
+/reports/
+/research_notes/

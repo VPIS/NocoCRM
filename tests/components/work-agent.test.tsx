@@ -90,9 +90,7 @@ it('names the agent a follow-up option runs, and keeps the AI words without it',
     />
   );
   const { container, unmount } = render(option('evaluation.followUpAfter'));
-  expect(container.textContent).toBe(
-    'RunOpportunity follow-uponce recorded',
-  );
+  expect(container.textContent).toBe('RunOpportunity follow-uponce recorded');
   unmount();
   names = {};
   const plain = render(option('dealFollowUpNow'));
