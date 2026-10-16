@@ -300,6 +300,10 @@ const wording = {
     ],
   },
   comments: {
+    lastFileRemovesComment: [
+      'This file is all the comment holds: removing it deletes the comment.',
+      '这个附件是这条评论唯一的内容，移除后整条评论会被删除。',
+    ],
     label: ['Comment', '评论'],
     // Worded as the UI Library's comment composer.
     placeholder: [

@@ -547,6 +547,80 @@ describe("a comment's thread", () => {
     });
   });
 
+  it('asks before taking a file off a comment being edited', async () => {
+    state.history = [
+      {
+        ...comment('n1', 'rep', '带附件的评论'),
+        changes: { text: '带附件的评论', attachments: ['f1'] },
+      },
+    ];
+    renderPage();
+    // The comment's own menu, the last of the page's.
+    await userEvent.click(
+      screen.getAllByRole('button', { name: '更多…' }).at(-1)!,
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: '编辑' }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^移除/ }));
+    // Not gone yet: the same question as a record's attachment.
+    const dialog = await screen.findByRole('dialog', { name: '移除此附件？' });
+    await userEvent.click(within(dialog).getByRole('button', { name: '取消' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    // Still there, nothing deleted.
+    expect(screen.getByRole('button', { name: /^移除/ })).toBeTruthy();
+    expect(state.api).not.toHaveBeenCalledWith('comments/n1', 'DELETE');
+  });
+
+  it("takes a file off one's own posted comment from its card, keeping the text, once confirmed", async () => {
+    state.history = [
+      {
+        ...comment('n1', 'rep', '报价单见附件'),
+        changes: {
+          text: '报价单见附件',
+          mentions: ['manager'],
+          attachments: ['f1', 'f2'],
+        },
+      },
+    ];
+    renderPage();
+    const [first] = screen.getAllByRole('button', { name: /^移除/ });
+    await userEvent.click(first);
+    const dialog = await screen.findByRole('dialog', { name: '移除此附件？' });
+    await userEvent.click(within(dialog).getByRole('button', { name: '确认' }));
+    expect(state.api).toHaveBeenCalledWith('comments/n1', 'PATCH', {
+      text: '报价单见附件',
+      mentions: ['manager'],
+      attachments: ['f2'],
+    });
+  });
+
+  it('deletes a posted comment whose only content is the file taken off, saying so first', async () => {
+    state.history = [
+      {
+        ...comment('n1', 'rep', ''),
+        changes: { text: '', attachments: ['f1'] },
+      },
+    ];
+    renderPage();
+    await userEvent.click(screen.getByRole('button', { name: /^移除/ }));
+    const dialog = await screen.findByRole('dialog', { name: '移除此附件？' });
+    expect(within(dialog).getByText(/整条评论会被删除/u)).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole('button', { name: '确认' }));
+    expect(state.api).toHaveBeenCalledWith('comments/n1', 'DELETE');
+  });
+
+  it("offers no removal on a colleague's comment's files", () => {
+    state.history = [
+      {
+        ...comment('n1', 'manager', '他的附件'),
+        changes: { text: '他的附件', attachments: ['f1'] },
+      },
+    ];
+    renderPage();
+    expect(screen.queryByRole('button', { name: /^移除/ })).toBeNull();
+  });
+
   it('sends a reply on Enter, but not on Shift+Enter or while an input method composes', async () => {
     state.history = [comment('n1', 'manager', '客户想看演示')];
     renderPage();

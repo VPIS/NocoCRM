@@ -2827,7 +2827,10 @@ function CommentThread({
                         )}
                       />
                     ) : null}
-                    <CommentFiles ids={commentFilesOf(reply)} />
+                    <PostedCommentFiles
+                      comment={reply}
+                      own={reply.actorId === meta?.userId}
+                    />
                   </div>
                 )}
               </div>
@@ -3781,7 +3784,10 @@ export function HistoryFeed({
                           commentFilesOf(event).length ? (
                             <div className='relative pl-8'>
                               {threaded ? <ThreadLine /> : null}
-                              <CommentFiles ids={commentFilesOf(event)} />
+                              <PostedCommentFiles
+                                comment={event}
+                                own={event.actorId === meta?.userId}
+                              />
                             </div>
                           ) : null}
                         </div>
@@ -4392,22 +4398,94 @@ function CommentEditor({
   );
 }
 
-// The files a box holds while it is written, each to take away again, and
-// a word while more are on their way up.
+// A posted comment's files under it; its author removes one from its card,
+// once confirmed, as a record's attachment is removed: the comment keeps its
+// text and mentions, or, when the file is all it holds, it is deleted, which
+// the question says.
+function PostedCommentFiles({
+  comment,
+  own,
+}: {
+  comment: Data;
+  own: boolean;
+}): ReactElement {
+  const { text } = useCrmText();
+  const api = useCrmApi();
+  const refresh = useRefresh();
+  const [pending, setPending] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>();
+  const files = commentFilesOf(comment);
+  const only = files.length === 1 && !commentText(comment).trim();
+  const id = toText(comment.id);
+  const remove = (): void => {
+    setBusy(true);
+    setError(undefined);
+    const mentions = (comment.changes as Data | undefined)?.mentions;
+    (only
+      ? api(`comments/${id}`, 'DELETE')
+      : api(`comments/${id}`, 'PATCH', {
+          text: commentText(comment),
+          mentions: Array.isArray(mentions) ? mentions.map(toText) : [],
+          attachments: files.filter((file) => file !== pending),
+        })
+    )
+      .then(() => refresh())
+      .then(() => setPending(''))
+      .catch(setError)
+      .finally(() => setBusy(false));
+  };
+  return (
+    <>
+      <CommentFiles ids={files} onRemove={own ? setPending : undefined} />
+      {pending ? (
+        <ConfirmDialog
+          title={text('removeFileTitle')}
+          description={
+            only
+              ? text('comments.lastFileRemovesComment')
+              : text('removeFileHint')
+          }
+          busy={busy}
+          onCancel={() => setPending('')}
+          onConfirm={remove}
+        />
+      ) : null}
+      <ErrorNotice error={error} />
+    </>
+  );
+}
+
+// The files a box holds while it is written, each to take away again once
+// confirmed, as a record's attachment is, and a word while more are on
+// their way up.
 function CommentUploads({
   uploads,
 }: {
   uploads: ReturnType<typeof useCommentUploads>;
 }): ReactElement | null {
   const { text } = useCrmText();
+  const [pending, setPending] = useState('');
   if (!uploads.files.length && !uploads.uploading) return null;
   return (
     <div>
-      <CommentFiles ids={uploads.files} onRemove={uploads.remove} />
+      <CommentFiles ids={uploads.files} onRemove={setPending} />
       {uploads.uploading ? (
         <p className='mt-1 text-xs text-muted-foreground'>
           {text('comments.uploading')}
         </p>
+      ) : null}
+      {pending ? (
+        <ConfirmDialog
+          title={text('removeFileTitle')}
+          description={text('removeFileHint')}
+          busy={false}
+          onCancel={() => setPending('')}
+          onConfirm={() => {
+            uploads.remove(pending);
+            setPending('');
+          }}
+        />
       ) : null}
     </div>
   );
