@@ -1875,8 +1875,8 @@ const wording = {
   clearDate: ['Clear', '清除'],
   demoData: ['Demo data', '演示数据'],
   demoDescription: [
-    'A dataset of NocoBase selling its own licences and services to fictional customers, in Chinese or in English: leads, companies, contacts, opportunities, tasks and approvals, mail in demo mailboxes and conversations on a demo WhatsApp number, dated relative to the day it is imported. Importing creates the demo companies below when they do not exist; the password is the username followed by 123.',
-    '一套以 NocoBase 自己的销售（商业授权与服务，客户均为虚构）为背景的演示数据，有中文和英文两种，包含线索、公司、联系人、商机、任务和审批，以及演示邮箱里的往来邮件和演示 WhatsApp 号码上的对话，日期以导入当天为基准。导入时会自动创建下列演示账号（已存在的直接使用），密码为用户名加 123。',
+    'A dataset of NocoBase selling its own licences and services to fictional customers, in Chinese or in English: leads, companies, contacts, opportunities, tasks and approvals, mail in demo mailboxes and conversations on two demo WhatsApp numbers, dated relative to the day it is imported. Importing creates the demo companies below when they do not exist; the password is the username followed by 123.',
+    '一套以 NocoBase 自己的销售（商业授权与服务，客户均为虚构）为背景的演示数据，有中文和英文两种，包含线索、公司、联系人、商机、任务和审批，以及演示邮箱里的往来邮件和两个演示 WhatsApp 号码上的对话，日期以导入当天为基准。导入时会自动创建下列演示账号（已存在的直接使用），密码为用户名加 123。',
   ],
   demoLanguage: ['Demo data language', '演示数据语言'],
   demoAbsent: ['No demo data has been imported.', '尚未导入演示数据。'],
@@ -2301,20 +2301,15 @@ const wording = {
     tasks: ['task', '任务'],
     approvals: ['approval', '审批'],
   },
-  // The company's WhatsApp number (pages/crm-whatsapp/, components/crm/
-  // whatsapp/): its conversations, a record's messages.
+  // The company's WhatsApp numbers (pages/crm-whatsapp/, components/crm/
+  // whatsapp/): their conversations, a record's messages.
   whatsapp: {
     title: ['WhatsApp', 'WhatsApp'],
-    description: [
-      "Conversations with customers on the company's WhatsApp number.",
-      '公司 WhatsApp 号码上与客户的对话。',
-    ],
     what: ['WhatsApp conversations', 'WhatsApp 对话'],
     whatOne: ['this conversation', '这个对话'],
     whatMessages: ['the WhatsApp messages', 'WhatsApp 消息'],
     views: {
       label: ['Conversations to show', '显示的对话'],
-      mine: ['Mine', '我负责的'],
       unlinked: ['Unlinked', '未关联'],
       all: ['All', '全部'],
     },
@@ -2323,8 +2318,15 @@ const wording = {
       dismissed: ['Not a customer', '不是客户'],
       spam: ['Spam', '垃圾消息'],
     },
-    unread: ['Unread', '未读'],
-    unreadCount: ['{{count}} unread', '{{count}} 条未读'],
+    // The customer wrote last: the team has not replied yet.
+    awaiting: ['Awaiting reply', '待回复'],
+    awaitingCount: [
+      '{{count}} messages since the last reply',
+      '上次回复后客户发来 {{count}} 条',
+    ],
+    allNumbers: ['All numbers', '全部号码'],
+    numberFilter: ['Number', '号码'],
+    onNumber: ['On {{number}}', '号码：{{number}}'],
     linkedTo: ['Linked to', '已关联'],
     empty: {
       title: ['No WhatsApp conversations yet', '还没有 WhatsApp 对话'],
@@ -2339,11 +2341,6 @@ const wording = {
       askAdmin: [
         "Ask an administrator to connect the company's WhatsApp number.",
         '请管理员连接公司的 WhatsApp 号码。',
-      ],
-      mineTitle: ['No conversations you answer', '没有你负责的对话'],
-      mineBody: [
-        'Conversations you answer appear here.',
-        '你负责的对话会出现在这里。',
       ],
       unlinkedTitle: ['No unlinked conversations', '没有未关联的对话'],
       unlinkedBody: [
@@ -2467,13 +2464,57 @@ const wording = {
   whatsappSettings: {
     title: ['WhatsApp connection', 'WhatsApp 连接'],
     description: [
-      "Connect the company's WhatsApp number through Meta's Cloud API.",
+      "Connect the company's WhatsApp numbers through Meta's Cloud API.",
       '通过 Meta Cloud API 连接公司的 WhatsApp 号码。',
     ],
-    connection: ['Connection', '连接'],
-    connectionBody: [
-      "The number's ids and credentials from your Meta app, kept on the server only.",
-      'Meta 应用里这个号码的 ID 与凭据，只保存在服务器上。',
+    app: ['Meta app', 'Meta 应用'],
+    appBody: [
+      'The app every number is connected through; its secret checks each delivery and stays on the server.',
+      '所有号码都通过这个应用接入；它的密钥用来校验每一次推送，只保存在服务器上。',
+    ],
+    appSaved: ['App secret saved', '应用密钥已保存'],
+    numbers: ['Numbers', '号码'],
+    numbersBody: [
+      'The company numbers whose messages come into the CRM, each with its own access token.',
+      '消息进入 CRM 的公司号码，每个号码有自己的访问令牌。',
+    ],
+    addNumber: ['Add number', '添加号码'],
+    editNumber: ['Edit number', '编辑号码'],
+    numberAdded: ['Number added', '号码已添加'],
+    numberSaved: ['Number saved', '号码已保存'],
+    numberRemoved: ['Number removed', '号码已移除'],
+    whatNumber: ['the number', '号码'],
+    removeTitle: ['Remove {{number}}?', '移除 {{number}}？'],
+    removeBody: [
+      'Its messages stop coming into the CRM. You can add it again later.',
+      '移除后不再接收它的消息，之后可以重新添加。',
+    ],
+    removeInUse: [
+      "This number holds conversations, so it stays: its customers' history is kept in the CRM.",
+      '这个号码已有对话，不能移除：客户的往来记录要保留在 CRM 里。',
+    ],
+    conversations: ['Conversations', '对话'],
+    conversationCount: ['{{value}} conversations', '{{value}} 个对话'],
+    mode: ['Connection mode', '接入方式'],
+    modes: {
+      coexistence: ['Coexistence', '共存'],
+      api: ['Cloud API only', '纯 API'],
+    },
+    modeHints: {
+      coexistence: [
+        "The number stays in the WhatsApp Business app: the team's replies on the phone come in too, and its earlier chats are imported once.",
+        '号码继续在 WhatsApp Business App 里使用：团队在手机上的回复也会同步进来，之前的聊天导入一次。',
+      ],
+      api: [
+        "The number is on the Cloud API alone: only customers' messages come in, and opening a conversation stops it awaiting a reply.",
+        '号码只走 Cloud API：只同步客户发来的消息，打开对话即不再算待回复。',
+      ],
+    },
+    recommended: ['Recommended', '推荐'],
+    demo: ['Demo', '演示'],
+    demoHint: [
+      "The demo data's number: not connected to Meta, it receives nothing, and goes when the demo data is removed.",
+      '演示数据的号码：不连接 Meta，也收不到消息，删除演示数据时一并删除。',
     ],
     whatConnection: ['the connection', '连接设置'],
     whatStatus: ['the status', '状态'],
@@ -2481,28 +2522,21 @@ const wording = {
     wabaId: ['WhatsApp Business Account ID', 'WhatsApp 企业账号 ID'],
     accessToken: ['Access token', '访问令牌'],
     appSecret: ['App secret', '应用密钥'],
-    receptionist: ['Receptionist', '默认接待人'],
-    receptionistHint: [
-      'Who answers customers linked to no record.',
-      '未关联记录的客户由谁接待。',
-    ],
-    none: ['None', '无'],
     secretSet: ['Set — leave empty to keep it', '已设置，留空则保持不变'],
     enterToken: ['Enter the access token', '请填写访问令牌'],
     enterSecret: ['Enter the app secret', '请填写应用密钥'],
     phoneInvalid: ['Enter 5 to 32 digits', '请输入 5 到 32 位数字'],
     save: ['Save', '保存'],
-    saved: ['WhatsApp connection saved', 'WhatsApp 连接已保存'],
     webhook: ['Webhook', '推送地址'],
     webhookBody: [
-      "Enter these in your Meta app's WhatsApp webhook settings, then subscribe to the messages field.",
-      '填到 Meta 应用的 WhatsApp Webhook 设置里，并订阅 messages 字段。',
+      "Enter these in your Meta app's WhatsApp webhook settings, then subscribe to the messages field, and for coexistence numbers to smb_message_echoes and history too.",
+      '填到 Meta 应用的 WhatsApp Webhook 设置里，并订阅 messages 字段；有共存号码时还要订阅 smb_message_echoes 和 history。',
     ],
     callbackUrl: ['Callback URL', '回调地址'],
     verifyToken: ['Verify token', '校验令牌'],
     tokenLater: [
-      'Made when you first save the connection.',
-      '首次保存连接时生成。',
+      'Made when you first save the app secret or add a number.',
+      '首次保存应用密钥或添加号码时生成。',
     ],
     show: ['Show', '显示'],
     hide: ['Hide', '隐藏'],
@@ -2513,18 +2547,15 @@ const wording = {
       '无法复制，请选中文字后手动复制',
     ],
     leaveConfirm: [
-      'Leave without saving the connection?',
-      '离开且不保存连接设置？',
+      'Leave without saving the app secret?',
+      '离开且不保存应用密钥？',
     ],
-    deliveries: ['Deliveries', '推送'],
-    files: ['Files', '文件'],
-    status: ['Status', '状态'],
+    status: ['Processing', '处理情况'],
     statusBody: [
-      'How the number stands and how deliveries are processed.',
-      '号码状况和推送处理情况。',
+      "Whether Meta's deliveries and their files are processed; what needs doing shows here.",
+      'Meta 推送的消息和文件是否处理正常；有需要处理的会显示在这里。',
     ],
     notConnected: ['No number connected yet', '还没有连接号码'],
-    number: ['Number', '号码'],
     quality: ['Quality', '质量评级'],
     limit: ['Messaging limit', '发送上限'],
     lastDelivery: ['Last delivery', '最近一次推送'],
@@ -2544,11 +2575,13 @@ const wording = {
       TIER_UNLIMITED: ['Unlimited', '不限'],
       other: ['Other', '其他'],
     },
-    received: ['Received', '收到'],
-    processed: ['Processed', '已处理'],
-    waiting: ['Waiting', '等待处理'],
-    failed: ['Failed', '失败'],
-    failures: ['Failure reasons', '失败原因'],
+    waiting: ['Waiting to be processed', '等待处理的推送'],
+    allWell: [
+      'All well; last delivery {{time}}',
+      '一切正常，最近一次推送：{{time}}',
+    ],
+    noDeliveries: ['No delivery from Meta yet', '还没有收到 Meta 的推送'],
+    failed: ['Failed deliveries', '失败的推送'],
     failureReasons: {
       unknownNumber: [
         "Sent to a number this CRM doesn't hold",
@@ -2560,7 +2593,7 @@ const wording = {
     },
     filesWaiting: ['Files waiting', '待下载文件'],
     filesUnavailable: ['Files unavailable', '无法获取的文件'],
-    check: ['Check connection', '检查连接'],
+    check: ['Check', '检查'],
     checked: ['Connected: {{name}}', '已连接：{{name}}'],
     retry: ['Retry failed deliveries', '重试失败的推送'],
     retrying: [
@@ -2569,8 +2602,8 @@ const wording = {
     ],
     checkReason: {
       notConfigured: [
-        'Save the number and token first',
-        '还没有保存号码和令牌',
+        "Save the number's access token first",
+        '还没有保存这个号码的访问令牌',
       ],
       network: [
         "Couldn't reach Meta; try again later",
@@ -3154,6 +3187,14 @@ const wording = {
     secretsMissing: [
       "Credentials can't be saved: set SECRETS_KEYS on the server first.",
       '无法保存凭据：请先在服务器上配置 SECRETS_KEYS。',
+    ],
+    numberExists: [
+      'That WhatsApp number is already connected.',
+      '这个 WhatsApp 号码已经接入了。',
+    ],
+    numberInUse: [
+      "This number holds conversations, so it can't be removed: its customers' history stays in the CRM.",
+      '这个号码已有会话，不能删除：客户的往来记录要保留在 CRM 里。',
     ],
     demoAccounts: [
       'The demo accounts could not be created.',

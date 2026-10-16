@@ -24,10 +24,8 @@ describe('demo WhatsApp content', () => {
         expect(content.messages.every((m) => m.trim().length > 0)).toBe(true);
         if ('state' in entry.customer)
           expect(Boolean(content.profileName || content.username)).toBe(true);
-        expect(entry.unread).toBeLessThanOrEqual(
-          entry.messages.length -
-            1 -
-            entry.messages.map(([direction]) => direction).lastIndexOf('out'),
+        expect(entry.number).toBeLessThan(
+          demoContent(language).whatsapp.displayNames.length,
         );
       }
     });

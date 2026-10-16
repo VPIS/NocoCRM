@@ -32,9 +32,10 @@ import { useCurrentRecord, type CurrentRecord } from './current-record.js';
 // on pages filled by panes of their own that cannot leave room for it.
 
 // Pages the dock is not shown on: the overview, which opens on an ask box of
-// its own (assistant-ask-box.tsx); the Mail plugin's workspace and the inbox,
-// which fill the window with fixed panes whose bottom (pagination, keyboard
-// hints) it would cover; the agents' conversations, which have a composer
+// its own (assistant-ask-box.tsx); the Mail plugin's workspace, the inbox and
+// the WhatsApp page (its connection page with it), which fill the window
+// with fixed panes whose bottom (pagination, keyboard hints, the open
+// conversation's last messages) it would cover; the agents' conversations, which have a composer
 // of their own; and the Settings pages (users, permission sets, API keys,
 // scheduled tasks), whose tables and sticky save bar it would cover.
 function hiddenOn(pathname: string): boolean {
@@ -43,6 +44,8 @@ function hiddenOn(pathname: string): boolean {
     pathname === '/crm/mail' ||
     pathname === '/inbox' ||
     pathname.startsWith('/inbox/') ||
+    pathname === '/crm/whatsapp' ||
+    pathname.startsWith('/crm/whatsapp/') ||
     // The agents' conversations have a composer of their own.
     pathname === '/crm/agent-chat' ||
     pathname.startsWith('/crm/agent-chat/') ||

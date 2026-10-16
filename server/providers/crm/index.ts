@@ -747,7 +747,10 @@ export default class CrmProvider extends ServiceProvider<Application> {
           };
           const i18n = this.app.container.resolve(i18nToken);
           // A WhatsApp customer linked to no record yet: the conversation,
-          // for someone who still has the WhatsApp page.
+          // for someone who still has the WhatsApp page. Nothing queues
+          // WhatsApp notices since 2026-10-16 (replies are made on WhatsApp,
+          // so the CRM assigns no one); this and the record's `whatsapp`
+          // event below deliver those queued before.
           if (row.entity === 'whatsapp') {
             if (
               !(await this.app.container

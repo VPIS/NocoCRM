@@ -15,6 +15,14 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '#components/ui/empty';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#components/ui/select';
 import { Skeleton } from '#components/ui/skeleton';
 import { Spinner } from '#components/ui/spinner';
 import { Tabs, TabsList, TabsTrigger } from '#components/ui/tabs';
@@ -32,19 +40,24 @@ import {
 import {
   LIST_POLL_MS,
   VIEWS,
+  numberLabel,
   useConversationsKey,
+  useWhatsAppNumbers,
   viewOf,
   type ConversationRow,
   type ConversationView,
+  type WhatsAppNumberLabel,
 } from '../../components/crm/whatsapp/api.js';
 import { MessageSummary } from '../../components/crm/whatsapp/messages.js';
 import { WhatsAppFailure } from '../../components/crm/whatsapp/failure.js';
 
-// The WhatsApp page (/crm/whatsapp): the company number's conversations with
+// The WhatsApp page (/crm/whatsapp): the company numbers' conversations with
 // customers, an inbox of two panes as the Mail workspace is — the list on
 // the left, the conversation open beside it (/crm/whatsapp/:conversationId,
 // its own route, pages/crm-whatsapp/conversation.tsx). Which conversations
-// the list shows is its tab, kept in the address (?view=). Records named in
+// the list shows is its tab and, with two numbers or more, its number, both
+// kept in the address (?view=, ?number=). One awaiting a reply (the customer
+// wrote last) is marked so. Records named in
 // a conversation open in the record drawer over the page (?open=). Kept
 // current by asking again every few seconds (LIST_POLL_MS), so it has no
 // Refresh. On a phone one pane shows at a time.
@@ -62,6 +75,11 @@ export default function WhatsAppPage(): ReactElement {
   const { conversationId } = useParams();
   const [params, setParams] = useSearchParams();
   const view = viewOf(params);
+  const numbers = useWhatsAppNumbers();
+  // A number no longer there reads as all of them.
+  const numberId = numbers.some((n) => n.id === params.get('number'))
+    ? (params.get('number') ?? undefined)
+    : undefined;
   const { data: meta } = useMetadata();
   const drawer = useRecordDrawerState();
   // Loaded on the first open and kept mounted after, so closing animates.
@@ -71,10 +89,9 @@ export default function WhatsAppPage(): ReactElement {
     <RecordDrawerContext.Provider
       value={{ open: drawer.open, close: drawer.close, inDrawer: false }}
     >
-      <PageContainer>
+      <PageContainer className='flex h-full flex-col'>
         <PageHeader
           title={toText(text('whatsapp.title'))}
-          description={toText(text('whatsapp.description'))}
           // The number's connection, for whoever manages the CRM's settings,
           // as the mailbox leads to its accounts.
           actions={
@@ -91,12 +108,13 @@ export default function WhatsAppPage(): ReactElement {
           }
         />
         {/* Both panes scroll on their own: the card takes the height left
-            under the header on a wide screen (design: F7). */}
-        <Card className='h-[calc(100dvh-12rem)] min-h-96 gap-0 overflow-hidden p-0 md:flex-row'>
+            under the header, down to the page's own bottom padding, the
+            assistant's dock being hidden here (design: F7). */}
+        <Card className='min-h-96 flex-1 basis-0 gap-0 overflow-hidden p-0 md:flex-row'>
           <aside
             className={`${conversationId ? 'hidden md:flex' : 'flex'} min-h-0 flex-col border-border md:w-80 md:shrink-0 md:border-r`}
           >
-            <div className='border-b border-border p-3'>
+            <div className='flex flex-col gap-2 border-b border-border p-3'>
               <Tabs
                 value={view}
                 onValueChange={(next) =>
@@ -121,8 +139,16 @@ export default function WhatsAppPage(): ReactElement {
                   ))}
                 </TabsList>
               </Tabs>
+              {numbers.length > 1 ? (
+                <NumberFilter numbers={numbers} value={numberId} />
+              ) : null}
             </div>
-            <ConversationList view={view} openId={conversationId} />
+            <ConversationList
+              view={view}
+              numberId={numberId}
+              showNumber={numbers.length > 1 && !numberId}
+              openId={conversationId}
+            />
           </aside>
           <section
             className={`${conversationId ? 'flex' : 'hidden md:flex'} min-h-0 min-w-0 flex-1 flex-col`}
@@ -160,23 +186,79 @@ export default function WhatsAppPage(): ReactElement {
   );
 }
 
+const ALL = '__all__';
+
+// Which number's conversations the list shows, all of them when none.
+function NumberFilter({
+  numbers,
+  value,
+}: {
+  numbers: WhatsAppNumberLabel[];
+  value?: string;
+}): ReactElement {
+  const { text } = useCrmText();
+  const [, setParams] = useSearchParams();
+  const items = [
+    { value: ALL, label: toText(text('whatsapp.allNumbers')) },
+    ...numbers.map((n) => ({ value: n.id, label: numberLabel(n) })),
+  ];
+  return (
+    <Select
+      items={items}
+      value={value ?? ALL}
+      onValueChange={(next) =>
+        setParams(
+          (previous) => {
+            const nextParams = new URLSearchParams(previous);
+            if (next && next !== ALL) nextParams.set('number', String(next));
+            else nextParams.delete('number');
+            return nextParams;
+          },
+          { replace: true },
+        )
+      }
+    >
+      <SelectTrigger
+        aria-label={toText(text('whatsapp.numberFilter'))}
+        className='w-full'
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          {items.map((item) => (
+            <SelectItem key={item.value} value={item.value}>
+              {item.label}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+  );
+}
+
 function ConversationList({
   view,
+  numberId,
+  showNumber,
   openId,
 }: {
   view: ConversationView;
+  numberId?: string;
+  // Each row names its number: two or more, none picked.
+  showNumber: boolean;
   openId?: string;
 }): ReactElement {
   const { text, language } = useCrmText();
   const api = useCrmApi();
   const toaster = useToaster();
   const [params] = useSearchParams();
-  const key = useConversationsKey(view);
+  const key = useConversationsKey(view, numberId);
   const query = useInfiniteQuery({
     queryKey: key,
     queryFn: ({ pageParam }) =>
       api<{ data: ConversationRow[]; meta: { total: number } }>(
-        `whatsapp/conversations?view=${view}&page=${String(pageParam)}&pageSize=${String(PAGE)}`,
+        `whatsapp/conversations?view=${view}${numberId ? `&numberId=${encodeURIComponent(numberId)}` : ''}&page=${String(pageParam)}&pageSize=${String(PAGE)}`,
       ),
     initialPageParam: 1,
     getNextPageParam: (last, pages) =>
@@ -222,7 +304,7 @@ function ConversationList({
         }).format(date)
       : new Intl.DateTimeFormat(language, { dateStyle: 'medium' }).format(date);
   };
-  const search = `?view=${view}${params.get('open') ? `&open=${params.get('open') ?? ''}` : ''}`;
+  const search = `?view=${view}${numberId ? `&number=${encodeURIComponent(numberId)}` : ''}${params.get('open') ? `&open=${params.get('open') ?? ''}` : ''}`;
   return (
     <div className='flex min-h-0 flex-1 flex-col overflow-y-auto'>
       {query.isFetching && !query.isFetchingNextPage ? (
@@ -233,6 +315,7 @@ function ConversationList({
       <ul className='flex flex-col p-2'>
         {rows.map((row) => {
           const open = row.id === openId;
+          const awaiting = row.unreadCount > 0;
           return (
             <li key={row.id}>
               <Link
@@ -243,14 +326,9 @@ function ConversationList({
                 }`}
               >
                 <span className='flex min-w-0 items-center gap-2'>
-                  {row.unreadCount > 0 ? (
-                    <span className='size-2 shrink-0 rounded-full bg-primary'>
-                      <span className='sr-only'>{text('whatsapp.unread')}</span>
-                    </span>
-                  ) : null}
                   <span
                     className={`min-w-0 flex-1 truncate ${
-                      row.unreadCount > 0 ? 'font-medium' : ''
+                      awaiting ? 'font-medium' : ''
                     }`}
                     title={row.name}
                   >
@@ -270,23 +348,31 @@ function ConversationList({
                       />
                     ) : null}
                   </span>
-                  {row.unreadCount > 0 ? (
+                  {awaiting ? (
                     <Badge
-                      aria-label={toText(
-                        text('whatsapp.unreadCount', {
+                      variant='warning'
+                      title={toText(
+                        text('whatsapp.awaitingCount', {
                           count: row.unreadCount,
                         }),
                       )}
                     >
-                      {row.unreadCount.toLocaleString(language)}
+                      {text('whatsapp.awaiting')}
                     </Badge>
                   ) : null}
                 </span>
-                {row.state !== 'linked' ? (
-                  <span>
-                    <Badge variant='outline'>
-                      {text(`whatsapp.state.${row.state}`)}
-                    </Badge>
+                {row.state !== 'linked' || (showNumber && row.number) ? (
+                  <span className='flex min-w-0 items-center gap-2'>
+                    {row.state !== 'linked' ? (
+                      <Badge variant='outline'>
+                        {text(`whatsapp.state.${row.state}`)}
+                      </Badge>
+                    ) : null}
+                    {showNumber && row.number ? (
+                      <span className='min-w-0 truncate text-xs text-muted-foreground'>
+                        {row.number.name ?? row.number.phone}
+                      </span>
+                    ) : null}
                   </span>
                 ) : null}
               </Link>
@@ -328,21 +414,17 @@ function EmptyView({ view }: { view: ConversationView }): ReactElement {
   const { data: meta } = useMetadata();
   const configured = meta?.whatsapp?.configured === true;
   const title =
-    view === 'mine'
-      ? 'whatsapp.empty.mineTitle'
-      : view === 'unlinked'
-        ? 'whatsapp.empty.unlinkedTitle'
-        : 'whatsapp.empty.title';
+    view === 'unlinked'
+      ? 'whatsapp.empty.unlinkedTitle'
+      : 'whatsapp.empty.title';
   const body =
-    view === 'mine'
-      ? 'whatsapp.empty.mineBody'
-      : view === 'unlinked'
-        ? 'whatsapp.empty.unlinkedBody'
-        : configured
-          ? 'whatsapp.empty.body'
-          : meta?.settingsAccess
-            ? 'whatsapp.empty.connect'
-            : 'whatsapp.empty.askAdmin';
+    view === 'unlinked'
+      ? 'whatsapp.empty.unlinkedBody'
+      : configured
+        ? 'whatsapp.empty.body'
+        : meta?.settingsAccess
+          ? 'whatsapp.empty.connect'
+          : 'whatsapp.empty.askAdmin';
   return (
     <div className='p-3'>
       <Empty className='min-h-40 border border-dashed p-6 md:p-6'>

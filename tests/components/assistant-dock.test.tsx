@@ -239,6 +239,9 @@ describe('the assistant dock', () => {
       '/',
       '/crm/mail',
       '/inbox',
+      '/crm/whatsapp',
+      '/crm/whatsapp/c1',
+      '/crm/whatsapp/connection',
       '/crm/agent-chat',
       '/crm/agent-chat/c1',
     ]) {

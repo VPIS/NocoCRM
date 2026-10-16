@@ -217,17 +217,18 @@ export interface DemoContent {
   };
   // The importing administrator's own projects (projects-*.ts).
   readonly projects: DemoProjects;
-  // The company's WhatsApp number and its conversations (whatsapp-*.ts).
+  // The company's WhatsApp numbers and their conversations (whatsapp-*.ts).
   readonly whatsapp: DemoWhatsApp;
 }
 
-// The demo's WhatsApp number (demo-whatsapp.ts): its business name and its
-// conversations, in the order of the schedule there, each message's text in
-// the order of that conversation's messages. A customer linked to a record
+// The demo's WhatsApp numbers (demo-whatsapp.ts): their business names, in
+// the order of the numbers there, and the conversations, in the order of
+// the schedule there, each message's text in the order of that
+// conversation's messages. A customer linked to a record
 // takes the record's name; one nobody linked shows the profile name or the
 // username WhatsApp gives.
 export interface DemoWhatsApp {
-  readonly displayName: string;
+  readonly displayNames: readonly [string, string];
   readonly conversations: readonly {
     readonly profileName?: string;
     readonly username?: string;

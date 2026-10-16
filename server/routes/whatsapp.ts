@@ -23,12 +23,16 @@ import {
   LinkConversationInput,
   MessagesQuery,
   RecordMessages,
-  SaveWhatsAppConnection,
+  AddWhatsAppNumber,
+  NumberParams,
+  SaveWhatsAppApp,
+  UpdateWhatsAppNumber,
   WhatsAppCheck,
   WhatsAppConnection,
   WhatsAppConversation,
   WhatsAppConversationRow,
   WhatsAppHealth,
+  WhatsAppNumberLabel,
 } from './schemas/whatsapp.js';
 
 // Meta's webhook for the company's WhatsApp number, at the application's
@@ -107,7 +111,7 @@ export function registerWhatsAppRoutes(
       summary: 'Get the WhatsApp connection',
       operationId: 'getWhatsAppConnection',
       description:
-        "The number connected and what to enter in Meta's webhook settings; credentials are never returned. For whoever manages the CRM's settings.",
+        "The company's numbers, the Meta app's secret set or not, and what to enter in Meta's webhook settings; credentials are never returned. For whoever manages the CRM's settings.",
       responses: {
         '200': dataResponse(WhatsAppConnection),
         ...apiErrorResponses,
@@ -122,40 +126,121 @@ export function registerWhatsAppRoutes(
     '/whatsapp/connection',
     describeRoute({
       tags,
-      summary: 'Save the WhatsApp connection',
+      summary: "Save the WhatsApp Meta app's secret",
       operationId: 'saveWhatsAppConnection',
       description:
-        "The number's ids, the system user's access token and the app secret, sealed on the server; a credential left out is kept. Needs the secrets service's keys.",
+        "The secret of the Meta app every number comes through, which signs the webhook's deliveries, sealed on the server; left out to keep the stored one. A verify token is made the first time. Needs the secrets service's keys.",
       responses: {
         '200': dataResponse(WhatsAppConnection),
         ...apiErrorResponses,
         '503': apiErrorResponse(503, 'No secrets key is configured.'),
       },
     }),
-    apiValidator('json', SaveWhatsAppConnection),
+    apiValidator('json', SaveWhatsAppApp),
     async (c) => {
       await manage(c);
       return c.json({
-        data: withBase(await whatsapp().saveConnection(c.req.valid('json'))),
+        data: withBase(await whatsapp().saveApp(c.req.valid('json'))),
       });
     },
   );
   router.post(
-    '/whatsapp/connection/check',
+    '/whatsapp/numbers',
     describeRoute({
       tags,
-      summary: 'Check the WhatsApp number',
-      operationId: 'checkWhatsAppConnection',
+      summary: 'Add a WhatsApp number',
+      operationId: 'addWhatsAppNumber',
       description:
-        "Reads the number's standing from Meta (name, quality, limit) with the stored token, and saves it.",
+        "A number of the company's, by Meta's phone number id (unique: 409 with reason NUMBER_EXISTS otherwise), with its access token, sealed on the server, and how it is connected.",
+      responses: {
+        '200': dataResponse(WhatsAppConnection),
+        ...apiErrorResponses,
+        '409': apiErrorResponse(409, 'The number is already there.'),
+        '503': apiErrorResponse(503, 'No secrets key is configured.'),
+      },
+    }),
+    apiValidator('json', AddWhatsAppNumber),
+    async (c) => {
+      await manage(c);
+      return c.json({
+        data: withBase(await whatsapp().addNumber(c.req.valid('json'))),
+      });
+    },
+  );
+  router.put(
+    '/whatsapp/numbers/:numberId',
+    describeRoute({
+      tags,
+      summary: 'Change a WhatsApp number',
+      operationId: 'updateWhatsAppNumber',
+      description:
+        'Its ids, how it is connected, and its access token (left out to keep the stored one).',
+      responses: {
+        '200': dataResponse(WhatsAppConnection),
+        ...apiErrorResponses,
+        '404': apiErrorResponse(404),
+        '409': apiErrorResponse(409, 'Another number has that id.'),
+      },
+    }),
+    apiValidator('param', NumberParams),
+    apiValidator('json', UpdateWhatsAppNumber),
+    async (c) => {
+      await manage(c);
+      return c.json({
+        data: withBase(
+          await whatsapp().updateNumber(
+            c.req.valid('param').numberId,
+            c.req.valid('json'),
+          ),
+        ),
+      });
+    },
+  );
+  router.delete(
+    '/whatsapp/numbers/:numberId',
+    describeRoute({
+      tags,
+      summary: 'Remove a WhatsApp number',
+      operationId: 'removeWhatsAppNumber',
+      description:
+        "Only while it holds no conversation, its customers' history being the CRM's: 409 with reason NUMBER_IN_USE otherwise.",
+      responses: {
+        '200': dataResponse(WhatsAppConnection),
+        ...apiErrorResponses,
+        '404': apiErrorResponse(404),
+        '409': apiErrorResponse(409, 'The number holds conversations.'),
+      },
+    }),
+    apiValidator('param', NumberParams),
+    async (c) => {
+      await manage(c);
+      return c.json({
+        data: withBase(
+          await whatsapp().removeNumber(c.req.valid('param').numberId),
+        ),
+      });
+    },
+  );
+  router.post(
+    '/whatsapp/numbers/:numberId/check',
+    describeRoute({
+      tags,
+      summary: 'Check a WhatsApp number',
+      operationId: 'checkWhatsAppNumber',
+      description:
+        "Reads the number's standing from Meta (name, quality, limit) with its stored token, and saves it.",
       responses: {
         '200': dataResponse(WhatsAppCheck),
         ...apiErrorResponses,
+        '404': apiErrorResponse(404),
       },
     }),
+    apiValidator('param', NumberParams),
     async (c) => {
       await manage(c);
-      return c.json({ data: await whatsapp().check() });
+      return c.json({
+        data: await whatsapp().check(c.req.valid('param').numberId),
+      });
     },
   );
   router.get(
@@ -192,20 +277,22 @@ export function registerWhatsAppRoutes(
   );
 
   router.get(
-    '/whatsapp/unreadCount',
+    '/whatsapp/numbers',
     describeRoute({
       tags,
-      summary: 'Count unread WhatsApp messages',
-      operationId: 'countUnreadWhatsAppMessages',
+      summary: 'List the WhatsApp numbers',
+      operationId: 'listWhatsAppNumbers',
       description:
-        'The unread messages in the conversations the reader answers; 0 without the WhatsApp page.',
+        "The numbers conversations can be on (the demo's too), named as the pages name them, for the WhatsApp page's filter. For whoever has that page.",
       responses: {
-        '200': dataResponse(z.object({ count: z.number() })),
+        '200': dataResponse(z.array(WhatsAppNumberLabel)),
         ...apiErrorResponses,
       },
     }),
-    async (c) =>
-      c.json({ data: { count: await whatsapp().unreadCount(c.get('actor')) } }),
+    async (c) => {
+      await page(c);
+      return c.json({ data: [...(await whatsapp().numberLabels()).values()] });
+    },
   );
   router.get(
     '/whatsapp/conversations',
@@ -214,7 +301,7 @@ export function registerWhatsAppRoutes(
       summary: 'List WhatsApp conversations',
       operationId: 'listWhatsAppConversations',
       description:
-        "Newest first: the reader's own (`mine`), those linked to no record (`unlinked`), or all they may read.",
+        'Newest first: all the reader may read, or those linked to no record (`unlinked`).',
       responses: {
         '200': listResponse(WhatsAppConversationRow),
         ...apiErrorResponses,
@@ -262,6 +349,8 @@ export function registerWhatsAppRoutes(
       tags,
       summary: 'Mark a WhatsApp conversation read',
       operationId: 'readWhatsAppConversation',
+      description:
+        "On a number on the API alone, whose team's replies the CRM does not see, opening it ends its awaiting a reply; on a coexistence number only the team's reply does, and this changes nothing.",
       responses: {
         '204': emptyResponse(),
         ...apiErrorResponses,

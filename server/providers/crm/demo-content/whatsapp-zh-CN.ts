@@ -3,7 +3,7 @@ import type { DemoContent } from './types.js';
 // The demo's WhatsApp conversations in Chinese (demo-whatsapp.ts), in the
 // order of its schedule.
 export const zhWhatsApp: DemoContent['whatsapp'] = {
-  displayName: 'NocoBase 销售',
+  displayNames: ['NocoBase 销售', 'NocoBase 海外'],
   conversations: [
     // Shanghai Electric's decision maker, about the deal at proposal.
     {

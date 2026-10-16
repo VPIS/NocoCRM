@@ -36,7 +36,9 @@ import {
 import { RecordLink } from '../../components/crm/common.js';
 import {
   CONVERSATION_POLL_MS,
+  numberLabel,
   useConversationKey,
+  useWhatsAppNumbers,
   viewOf,
   type Conversation,
   type CustomerState,
@@ -77,7 +79,7 @@ export default function ConversationPane(): ReactElement {
   const scopeKey = useCrmScopeKey();
   const [params] = useSearchParams();
   const view = viewOf(params);
-  const listSearch = `?view=${view}`;
+  const listSearch = `?view=${view}${params.get('number') ? `&number=${encodeURIComponent(params.get('number') ?? '')}` : ''}`;
   const key = useConversationKey(conversationId);
   const nameRef = useRef<HTMLHeadingElement>(null);
   const query = useQuery({
@@ -103,9 +105,6 @@ export default function ConversationPane(): ReactElement {
     void queryClient.invalidateQueries({
       queryKey: [...scopeKey, 'whatsapp/conversations'],
     });
-    void queryClient.invalidateQueries({
-      queryKey: [...scopeKey, 'whatsapp/unreadCount'],
-    });
   }, [queryClient, scopeKey]);
   const focusName = useCallback(() => {
     setTimeout(() => nameRef.current?.focus(), 0);
@@ -121,7 +120,10 @@ export default function ConversationPane(): ReactElement {
   // Read: once the newest message is in view (marked again only when more
   // arrive unread).
   const readingRef = useRef('');
-  const unread = query.data?.unreadCount ?? 0;
+  // Only a number on the API alone: elsewhere the team's reply, which the
+  // CRM receives, is what ends the wait (server: markRead()).
+  const unread =
+    query.data?.number?.mode === 'api' ? query.data.unreadCount : 0;
   const lastId = query.data?.messages.at(-1)?.id ?? '';
   const markRead = useCallback(() => {
     if (!unread || readingRef.current === `${conversationId}:${lastId}`) return;
@@ -333,6 +335,7 @@ function ConversationHeader({
 }): ReactElement {
   const { text } = useCrmText();
   const { data: meta } = useMetadata();
+  const numbers = useWhatsAppNumbers();
   const { contact, record } = conversation;
   const state = contact.state;
   const mayCreateLead = Boolean(meta?.permissions.leads?.create);
@@ -353,6 +356,13 @@ function ConversationHeader({
         </h2>
         <div className='flex flex-wrap items-center gap-2 text-sm text-muted-foreground'>
           {contact.phone ? <span>{contact.phone}</span> : null}
+          {conversation.number && numbers.length > 1 ? (
+            <span>
+              {text('whatsapp.onNumber', {
+                number: numberLabel(conversation.number),
+              })}
+            </span>
+          ) : null}
           {state === 'unlinked' ? (
             <Badge variant='outline'>{text('whatsapp.state.unlinked')}</Badge>
           ) : state === 'linked' && record ? (

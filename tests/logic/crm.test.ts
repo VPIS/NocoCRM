@@ -6748,25 +6748,42 @@ describe('demo dataset', () => {
         )
         .execute(),
     ).toHaveLength(demoSignals.length);
-    // The company's WhatsApp number, the demo's own (demo-whatsapp.ts), with
-    // its conversations: four with demo records, which carry their lines,
-    // three with people nobody linked, one of them set aside. It is never
-    // the connection, and the records offer their WhatsApp tab.
-    const waNumber = await database
+    // The company's WhatsApp numbers, the demo's own (demo-whatsapp.ts),
+    // with their conversations: four with demo records, which carry their
+    // lines, three with people nobody linked, one of them set aside. They
+    // are never the connection's, and the records offer their WhatsApp tab.
+    const waNumbers = await database
       .query()
       .selectFrom('crmWaNumbers')
       .selectAll()
       .where('mode', '=', 'demo')
-      .executeTakeFirst();
-    expect(waNumber?.defaultHandlerId).toBe('admin');
-    expect((await whatsapp.number())?.mode).not.toBe('demo');
+      .execute();
+    expect(waNumbers).toHaveLength(2);
+    expect(
+      (await whatsapp.numbers()).some((n) => toText(n.mode) === 'demo'),
+    ).toBe(false);
+    // The connection page shows them apart, read-only, with what they hold.
+    const view = await whatsapp.connection();
+    expect(view.numbers.some((n) => n.mode === 'demo')).toBe(false);
+    expect(view.demoNumbers.map((n) => n.displayPhone)).toEqual([
+      '+1 555 010 0199',
+      '+44 7700 900123',
+    ]);
+    expect(view.demoNumbers.map((n) => n.conversations)).toEqual([5, 2]);
+    await expect(
+      whatsapp.updateNumber(view.demoNumbers[0].id, {}),
+    ).rejects.toMatchObject({ code: 'notFound' });
     expect((await meta('admin')).whatsapp).toEqual({ configured: true });
     const waConversations = await database
       .query()
       .selectFrom('crmWaConversations as c')
       .innerJoin('crmWaContacts as w', 'w.id', 'c.waContactId')
-      .select(['c.waContactId', 'c.handlerId', 'c.unreadCount', 'w.state'])
-      .where('c.numberId', '=', toText(waNumber?.id))
+      .select(['c.waContactId', 'c.unreadCount', 'w.state'])
+      .where(
+        'c.numberId',
+        'in',
+        waNumbers.map((n) => toText(n.id)),
+      )
       .execute();
     expect(waConversations.map((row) => toText(row.state)).sort()).toEqual([
       'dismissed',
@@ -6779,8 +6796,7 @@ describe('demo dataset', () => {
     ]);
     expect(
       waConversations.reduce((sum, row) => sum + Number(row.unreadCount), 0),
-    ).toBe(8);
-    expect(await whatsapp.unreadCount(actor('admin'))).toBeGreaterThan(0);
+    ).toBe(9);
     const waCustomers = waConversations.map((row) => toText(row.waContactId));
     const waLines = async () =>
       (
@@ -11557,12 +11573,12 @@ describe('WhatsApp', () => {
       .execute();
 
   beforeAll(async () => {
-    await whatsapp.saveConnection({
+    await whatsapp.saveApp({ appSecret: 'app-secret' });
+    await whatsapp.addNumber({
       phoneNumberId: NUMBER,
       wabaId: 'waba-1',
+      mode: 'coexistence',
       accessToken: 'token',
-      appSecret: 'app-secret',
-      defaultHandlerId: 'manager',
     });
   });
 
@@ -11583,12 +11599,149 @@ describe('WhatsApp', () => {
     const { data } = (await view.json()) as { data: Row };
     expect(data).toMatchObject({
       configured: true,
-      hasAccessToken: true,
       hasAppSecret: true,
+      numbers: [
+        {
+          phoneNumberId: NUMBER,
+          mode: 'coexistence',
+          hasAccessToken: true,
+        },
+      ],
     });
     expect(JSON.stringify(data)).not.toContain('app-secret');
+    expect(JSON.stringify(data)).not.toContain('"token"');
     expect((await request('/whatsapp/connection', 'rep')).status).toBe(403);
     expect((await request('/whatsapp/connection')).status).toBe(401);
+  });
+
+  it('adds, changes and removes numbers for the managers, and lists conversations by number', async () => {
+    const OTHER = '2223334445';
+    const add = {
+      phoneNumberId: OTHER,
+      mode: 'api',
+      accessToken: 't2',
+    };
+    expect(
+      (await request('/whatsapp/numbers', 'rep', 'POST', add)).status,
+    ).toBe(403);
+    expect(
+      (await request('/whatsapp/numbers', undefined, 'POST', add)).status,
+    ).toBe(401);
+    await expect(
+      whatsapp.addNumber({
+        phoneNumberId: NUMBER,
+        accessToken: 'x',
+      }),
+    ).rejects.toMatchObject({ code: 'numberExists' });
+    // The CRM assigns no one to reply: a receptionist is no field of it.
+    expect(
+      (
+        await request('/whatsapp/numbers', 'admin', 'POST', {
+          ...add,
+          defaultHandlerId: 'admin',
+        })
+      ).status,
+    ).toBe(400);
+    await expect(
+      whatsapp.addNumber({ phoneNumberId: 'abc', accessToken: 'x' }),
+    ).rejects.toMatchObject({ code: 'invalidInput' });
+    await expect(
+      whatsapp.addNumber({ phoneNumberId: '99988877766' }),
+    ).rejects.toMatchObject({ code: 'required' });
+    expect((await request('/whatsapp/numbers', 'admin', 'POST', add)).ok).toBe(
+      true,
+    );
+    const other = (await whatsapp.numbers()).find(
+      (n) => toText(n.phoneNumberId) === OTHER,
+    );
+    expect(other).toMatchObject({ mode: 'api' });
+    const otherId = toText(other?.id);
+    expect(
+      (
+        await request(`/whatsapp/numbers/${otherId}`, 'admin', 'PUT', {
+          wabaId: 'waba-2',
+        })
+      ).ok,
+    ).toBe(true);
+    expect(
+      (await whatsapp.numbers()).find((n) => toText(n.id) === otherId),
+    ).toMatchObject({ wabaId: 'waba-2', mode: 'api' });
+    expect(
+      (await request(`/whatsapp/numbers/${otherId}`, 'rep', 'PUT', {})).status,
+    ).toBe(403);
+    // A customer writes to it: the conversation is that number's, and only
+    // it shows under that number.
+    const body = JSON.parse(
+      JSON.stringify(
+        delivery({ waId: '4930999000111', name: 'Two' }, [
+          text('wamid.two-1', 'Hello there'),
+        ]),
+      ).replace(NUMBER, OTHER),
+    ) as unknown;
+    expect((await deliver(body)).status).toBe(200);
+    await whatsapp.process();
+    const listed = await request(
+      `/whatsapp/conversations?view=all&numberId=${otherId}`,
+      'manager',
+    );
+    const { data: rows } = (await listed.json()) as { data: Row[] };
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).not.toHaveProperty('handlerId');
+    expect(rows[0]).toMatchObject({
+      unreadCount: 1,
+      number: { id: otherId, mode: 'api' },
+    });
+    const labels = (await (
+      await request('/whatsapp/numbers', 'manager')
+    ).json()) as { data: Row[] };
+    expect(labels.data.map((n) => n.id)).toContain(otherId);
+    // On a number on the API alone, opening it stops it awaiting a reply.
+    expect(
+      (
+        await request(
+          `/whatsapp/conversations/${toText(rows[0].id)}/read`,
+          'manager',
+          'POST',
+        )
+      ).ok,
+    ).toBe(true);
+    expect(
+      (
+        await database
+          .query()
+          .selectFrom('crmWaConversations')
+          .select('unreadCount')
+          .where('id', '=', toText(rows[0].id))
+          .executeTakeFirstOrThrow()
+      ).unreadCount,
+    ).toBe(0);
+    // A number with conversations stays; one without goes.
+    await expect(whatsapp.removeNumber(otherId)).rejects.toMatchObject({
+      code: 'numberInUse',
+    });
+    await whatsapp.addNumber({
+      phoneNumberId: '5556667778',
+      accessToken: 't3',
+    });
+    const spare = (await whatsapp.numbers()).find(
+      (n) => toText(n.phoneNumberId) === '5556667778',
+    );
+    expect(
+      (await request(`/whatsapp/numbers/${toText(spare?.id)}`, 'rep', 'DELETE'))
+        .status,
+    ).toBe(403);
+    expect(
+      (
+        await request(
+          `/whatsapp/numbers/${toText(spare?.id)}`,
+          'admin',
+          'DELETE',
+        )
+      ).ok,
+    ).toBe(true);
+    expect(
+      (await whatsapp.numbers()).map((n) => toText(n.phoneNumberId)),
+    ).toEqual([NUMBER, OTHER]);
   });
 
   it('keeps only deliveries signed with the app secret, and a redelivered message once', async () => {
@@ -11659,10 +11812,14 @@ describe('WhatsApp', () => {
     expect((await lastExchanges(database.query(), 'leads')).has(lead.id)).toBe(
       true,
     );
-    // Its owner hears of it once, until they read it.
+    // Nobody is told: replies are made on WhatsApp.
     expect(
       (await outbox('rep', 'whatsapp')).filter((r) => r.recordId === lead.id),
-    ).toHaveLength(1);
+    ).toHaveLength(0);
+    // No one's own list: the CRM assigns no one.
+    expect(
+      (await request('/whatsapp/conversations?view=mine', 'rep')).status,
+    ).toBe(400);
     // Its messages on the lead, for whoever may read it.
     const messages = await request(`/leads/${lead.id}/whatsappMessages`, 'rep');
     expect(messages.status).toBe(200);
@@ -11717,13 +11874,13 @@ describe('WhatsApp', () => {
     expect(list.status).toBe(200);
     const { data } = (await list.json()) as { data: Row[] };
     const row = data.find((r) => r.name === 'Stranger');
-    expect(row).toMatchObject({ state: 'unlinked', handlerId: 'manager' });
-    // The receptionist hears of the new conversation.
+    expect(row).toMatchObject({ state: 'unlinked' });
+    // Nobody is told; it waits under Unlinked.
     expect(
       (await outbox('manager', 'whatsappNew')).some(
         (r) => r.recordId === row?.id,
       ),
-    ).toBe(true);
+    ).toBe(false);
     // Without the page, nothing.
     expect((await request('/whatsapp/conversations', 'outsider')).status).toBe(
       403,
@@ -11932,7 +12089,7 @@ describe('WhatsApp', () => {
     ).toHaveLength(1);
   });
 
-  it("keeps coexistence's echoes and history as the conversation's, telling and counting only the customer's live messages", async () => {
+  it("keeps coexistence's echoes and history as the conversation's, counting only the customer's live messages as awaiting a reply", async () => {
     const waId = '4930555000111';
     const coexistence = (name: string, inner: Record<string, unknown>) => ({
       object: 'whatsapp_business_account',
@@ -11962,13 +12119,38 @@ describe('WhatsApp', () => {
         .selectAll()
         .where('waMessageId', '=', waMessageId)
         .executeTakeFirstOrThrow();
-    const before = (await outbox('manager', 'whatsappNew')).length;
-    // The customer writes: unread, and their handler told.
+    // The customer writes: awaiting a reply; on a
+    // coexistence number, opening it does not change that.
     await deliver(
       delivery({ waId, name: 'Co Ex' }, [text('wamid.co-1', 'Hi')]),
     );
     await whatsapp.process();
-    // The team answers from the app: kept, theirs, neither unread nor told.
+    expect(
+      (
+        await request(
+          `/whatsapp/conversations/${toText((await messageOf('wamid.co-1')).conversationId)}/read`,
+          'manager',
+          'POST',
+        )
+      ).ok,
+    ).toBe(true);
+    expect(
+      Number(
+        (
+          await database
+            .query()
+            .selectFrom('crmWaConversations')
+            .select('unreadCount')
+            .where(
+              'id',
+              '=',
+              toText((await messageOf('wamid.co-1')).conversationId),
+            )
+            .executeTakeFirstOrThrow()
+        ).unreadCount,
+      ),
+    ).toBe(1);
+    // The team answers from the app: kept, theirs, and answered.
     await deliver(
       coexistence('smb_message_echoes', {
         message_echoes: [
@@ -11989,11 +12171,11 @@ describe('WhatsApp', () => {
       .selectAll()
       .where('id', '=', toText(reply.conversationId))
       .executeTakeFirstOrThrow();
-    expect(Number(conversation.unreadCount)).toBe(1);
+    // Answered: it no longer awaits a reply.
+    expect(Number(conversation.unreadCount)).toBe(0);
     expect(conversation.lastDirection).toBe('out');
-    expect((await outbox('manager', 'whatsappNew')).length).toBe(before + 1);
     // The history, imported: either way, in the same conversation, neither
-    // unread nor told; its file a placeholder until its own delivery.
+    // awaiting a reply; its file a placeholder until its own delivery.
     const old = new Date(Date.now() - 30 * 86_400_000);
     await deliver(
       coexistence('history', {
@@ -12041,8 +12223,7 @@ describe('WhatsApp', () => {
             .executeTakeFirstOrThrow()
         ).unreadCount,
       ),
-    ).toBe(1);
-    expect((await outbox('manager', 'whatsappNew')).length).toBe(before + 1);
+    ).toBe(0);
     // The placeholder's file arrives: the message takes it.
     await deliver(
       delivery({ waId }, [

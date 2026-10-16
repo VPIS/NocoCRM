@@ -4,7 +4,7 @@ import {
   useToaster,
 } from '@nocobase/app-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CopyIcon, RefreshCwIcon } from 'lucide-react';
+import { CopyIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
 import {
   useEffect,
   useRef,
@@ -12,28 +12,21 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react';
+import { Link, Outlet } from 'react-router';
 import { BackButton } from '#components/back-button';
 import { PageContainer } from '#components/page-container';
 import { PageHeader } from '#components/page-header';
 import { Alert, AlertDescription } from '#components/ui/alert';
+import { Badge } from '#components/ui/badge';
 import { Button } from '#components/ui/button';
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '#components/ui/card';
-import { Field, FieldDescription, FieldLabel } from '#components/ui/field';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '#components/ui/select';
 import { Skeleton } from '#components/ui/skeleton';
 import { Spinner } from '#components/ui/spinner';
 import {
@@ -47,40 +40,52 @@ import {
   useCrmApi,
   useCrmScopeKey,
   useCrmText,
-  useMetadata,
 } from '../../components/crm/api.js';
+import { ConfirmDialog } from '../../components/crm/confirm-dialog.js';
 import { LoadFailure, TextField } from '../settings/shared.js';
 
 // The WhatsApp connection (/crm/whatsapp/connection, from the WhatsApp page's
 // "Manage connection", as the mail accounts are reached from the mailbox):
-// the company number's connection to Meta's Cloud API
-// (its ids and credentials, sealed on the server and never shown again), what
-// to enter in the Meta app's webhook settings, and how the number and the
-// deliveries stand. The status changes on its own, so the page has a Refresh
-// (R4); the connection is saved by its card's Save (T4).
+// the Meta app every number is connected through (its secret, sealed on the
+// server and never shown again), the company's numbers on it, each with its
+// own token and mode, added and changed in a dialog at its own address
+// (number.tsx), what to enter in the Meta app's webhook settings, and how the
+// deliveries are processed. The status changes on its own, so the page has a
+// Refresh (R4); the app secret is saved by its card's Save (T4).
 
-const FORM_ID = 'crm-whatsapp-connection';
-const SELECT_CONTENT =
-  'w-auto max-w-[min(var(--container-sm),var(--available-width))] min-w-(--anchor-width) [&_[data-slot=select-item]>:first-child]:whitespace-normal';
+const FORM_ID = 'crm-whatsapp-app';
 
-interface Connection {
-  configured: boolean;
-  phoneNumberId: string | null;
+export interface WhatsAppNumber {
+  id: string;
+  phoneNumberId: string;
   wabaId: string | null;
+  mode: 'api' | 'coexistence' | 'demo';
   displayPhone: string | null;
   displayName: string | null;
   qualityRating: string | null;
   status: string | null;
   messagingLimit: string | null;
-  defaultHandlerId: string | null;
   hasAccessToken: boolean;
+  connectedAt: string | null;
+  lastWebhookAt: string | null;
+  conversations: number;
+}
+export interface Connection {
+  configured: boolean;
   hasAppSecret: boolean;
   verifyToken: string | null;
   webhookPath: string;
   secretsReady: boolean;
+  numbers: WhatsAppNumber[];
+  // The demo dataset's, shown read-only.
+  demoNumbers: WhatsAppNumber[];
+}
+// What the number dialog stacked on the page reads and reports back.
+export interface ConnectionContext {
+  connection: Connection;
+  saved: (next: Connection) => void;
 }
 interface Health {
-  lastWebhookAt: string | null;
   received: number;
   processed: number;
   pending: number;
@@ -89,23 +94,6 @@ interface Health {
   mediaPending: number;
   mediaUnavailable: number;
 }
-interface Values {
-  phoneNumberId: string;
-  wabaId: string;
-  accessToken: string;
-  appSecret: string;
-  defaultHandlerId: string;
-}
-type Errors = Partial<Record<keyof Values, string>>;
-
-const NONE = '__none__';
-const valuesOf = (connection: Connection): Values => ({
-  phoneNumberId: connection.phoneNumberId ?? '',
-  wabaId: connection.wabaId ?? '',
-  accessToken: '',
-  appSecret: '',
-  defaultHandlerId: connection.defaultHandlerId ?? '',
-});
 
 export default function WhatsAppSettingsPage(): ReactElement {
   const { text } = useCrmText();
@@ -128,6 +116,24 @@ export default function WhatsAppSettingsPage(): ReactElement {
     void connection.refetch();
     void health.refetch();
   };
+  const saved = (next: Connection) => {
+    queryClient.setQueryData(connectionKey, next);
+    void queryClient.invalidateQueries({
+      queryKey: [...scopeKey, 'workspace'],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: [...scopeKey, 'whatsapp/numbers'],
+    });
+  };
+  const failure = (
+    <CardContent>
+      <LoadFailure
+        error={connection.error}
+        what={toText(text('whatsappSettings.whatConnection'))}
+        onRetry={() => void connection.refetch()}
+      />
+    </CardContent>
+  );
   return (
     <PageContainer>
       <BackButton to='/crm/whatsapp' />
@@ -160,29 +166,39 @@ export default function WhatsAppSettingsPage(): ReactElement {
           </Alert>
         ) : null}
         <SettingsCard
-          title={toText(text('whatsappSettings.connection'))}
-          description={toText(text('whatsappSettings.connectionBody'))}
+          title={toText(text('whatsappSettings.app'))}
+          description={toText(text('whatsappSettings.appBody'))}
         >
-          {connection.error && !connection.data ? (
-            <CardContent>
-              <LoadFailure
-                error={connection.error}
-                what={toText(text('whatsappSettings.whatConnection'))}
-                onRetry={() => void connection.refetch()}
-              />
-            </CardContent>
-          ) : connection.data ? (
-            <ConnectionForm
-              connection={connection.data}
-              onSaved={(next) => {
-                queryClient.setQueryData(connectionKey, next);
-                void queryClient.invalidateQueries({
-                  queryKey: [...scopeKey, 'workspace'],
-                });
-              }}
-            />
+          {connection.data ? (
+            <AppForm connection={connection.data} onSaved={saved} />
+          ) : connection.error ? (
+            failure
           ) : (
-            <FieldsSkeleton rows={5} />
+            <FieldsSkeleton rows={1} />
+          )}
+        </SettingsCard>
+        <SettingsCard
+          title={toText(text('whatsappSettings.numbers'))}
+          description={toText(text('whatsappSettings.numbersBody'))}
+          action={
+            connection.data ? (
+              <Button
+                variant='outline'
+                nativeButton={false}
+                render={<Link to='numbers/new' />}
+              >
+                <PlusIcon data-icon='inline-start' />
+                {text('whatsappSettings.addNumber')}
+              </Button>
+            ) : null
+          }
+        >
+          {connection.data ? (
+            <Numbers connection={connection.data} onChanged={saved} />
+          ) : connection.error ? (
+            failure
+          ) : (
+            <FieldsSkeleton rows={2} />
           )}
         </SettingsCard>
         <SettingsCard
@@ -192,13 +208,7 @@ export default function WhatsAppSettingsPage(): ReactElement {
           {connection.data ? (
             <Webhook connection={connection.data} />
           ) : connection.error ? (
-            <CardContent>
-              <LoadFailure
-                error={connection.error}
-                what={toText(text('whatsappSettings.whatConnection'))}
-                onRetry={() => void connection.refetch()}
-              />
-            </CardContent>
+            failure
           ) : (
             <FieldsSkeleton rows={2} />
           )}
@@ -215,19 +225,30 @@ export default function WhatsAppSettingsPage(): ReactElement {
                 onRetry={() => void health.refetch()}
               />
             </CardContent>
-          ) : health.data && (connection.data || connection.error) ? (
-            // Without the connection (its own card says why), the
-            // deliveries still show; the number's rows read "—".
+          ) : health.data ? (
             <Status
-              connection={connection.data}
               health={health.data}
+              lastDelivery={
+                connection.data?.numbers
+                  .map((n) => n.lastWebhookAt)
+                  .filter((at): at is string => Boolean(at))
+                  .sort()
+                  .at(-1) ?? null
+              }
               refresh={refresh}
             />
           ) : (
-            <FieldsSkeleton rows={4} />
+            <FieldsSkeleton rows={3} />
           )}
         </SettingsCard>
       </div>
+      {connection.data ? (
+        <Outlet
+          context={
+            { connection: connection.data, saved } satisfies ConnectionContext
+          }
+        />
+      ) : null}
     </PageContainer>
   );
 }
@@ -235,10 +256,12 @@ export default function WhatsAppSettingsPage(): ReactElement {
 function SettingsCard({
   title,
   description,
+  action,
   children,
 }: {
   title: string;
   description: string;
+  action?: ReactNode;
   children: ReactNode;
 }): ReactElement {
   return (
@@ -246,6 +269,7 @@ function SettingsCard({
       <CardHeader>
         <CardTitle className='text-base font-medium'>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
+        {action ? <CardAction>{action}</CardAction> : null}
       </CardHeader>
       {children}
     </Card>
@@ -272,7 +296,8 @@ function FieldsSkeleton({ rows }: { rows: number }): ReactElement {
   );
 }
 
-function ConnectionForm({
+// The Meta app's secret: required until saved, then left empty to keep it.
+function AppForm({
   connection,
   onSaved,
 }: {
@@ -282,17 +307,12 @@ function ConnectionForm({
   const { text } = useCrmText();
   const api = useCrmApi();
   const toaster = useToaster();
-  const { data: meta } = useMetadata();
-  const [values, setValues] = useState<Values>(() => valuesOf(connection));
-  const [saved, setSaved] = useState<Values>(() => valuesOf(connection));
-  const [errors, setErrors] = useState<Errors>({});
-  const [submitted, setSubmitted] = useState(false);
+  const [appSecret, setAppSecret] = useState('');
+  const [error, setError] = useState<string>();
   const [rootError, setRootError] = useState<string>();
   const [saving, setSaving] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
-  const dirty = (Object.keys(values) as (keyof Values)[]).some(
-    (key) => values[key] !== saved[key],
-  );
+  const inputRef = useRef<HTMLFormElement>(null);
+  const dirty = appSecret !== '';
   const dirtyRef = useRef(dirty);
   useEffect(() => {
     dirtyRef.current = dirty;
@@ -309,37 +329,13 @@ function ConnectionForm({
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
   }, [dirty]);
-  const validate = (next: Values): Errors => {
-    const found: Errors = {};
-    if (!/^\d{5,32}$/.test(next.phoneNumberId.trim()))
-      found.phoneNumberId = toText(text('whatsappSettings.phoneInvalid'));
-    if (!connection.hasAccessToken && !next.accessToken.trim())
-      found.accessToken = toText(text('whatsappSettings.enterToken'));
-    if (!connection.hasAppSecret && !next.appSecret.trim())
-      found.appSecret = toText(text('whatsappSettings.enterSecret'));
-    return found;
-  };
-  const set = (key: keyof Values, value: string) => {
-    const next = { ...values, [key]: value };
-    setValues(next);
-    // After a failed save a field is checked again as it changes (T3.3).
-    if (submitted) setErrors(validate(next));
-  };
-  const focusFirst = (found: Errors) => {
-    const first = (['phoneNumberId', 'accessToken', 'appSecret'] as const).find(
-      (key) => found[key],
-    );
-    if (first)
-      formRef.current
-        ?.querySelector<HTMLElement>(`#${FORM_ID}-${first}`)
-        ?.focus();
-  };
   const save = async () => {
-    setSubmitted(true);
-    const found = validate(values);
-    setErrors(found);
-    if (Object.keys(found).length) {
-      focusFirst(found);
+    if (!appSecret.trim()) {
+      if (connection.hasAppSecret) return;
+      setError(toText(text('whatsappSettings.enterSecret')));
+      inputRef.current
+        ?.querySelector<HTMLElement>(`#${FORM_ID}-appSecret`)
+        ?.focus();
       return;
     }
     setSaving(true);
@@ -348,57 +344,29 @@ function ConnectionForm({
       const { data } = await api<{ data: Connection }>(
         'whatsapp/connection',
         'PUT',
-        {
-          phoneNumberId: values.phoneNumberId.trim(),
-          wabaId: values.wabaId.trim() || null,
-          defaultHandlerId: values.defaultHandlerId || null,
-          ...(values.accessToken.trim()
-            ? { accessToken: values.accessToken.trim() }
-            : {}),
-          ...(values.appSecret.trim()
-            ? { appSecret: values.appSecret.trim() }
-            : {}),
-        },
+        { appSecret: appSecret.trim() },
       );
-      const next = valuesOf(data);
-      setValues(next);
-      setSaved(next);
-      setSubmitted(false);
+      setAppSecret('');
+      setError(undefined);
       onSaved(data);
       toaster.show({
         type: 'success',
-        title: toText(text('whatsappSettings.saved')),
+        title: toText(text('whatsappSettings.appSaved')),
       });
-    } catch (error) {
-      const { code, field } = errorCode(error);
-      if (field === 'phoneNumberId') {
-        const fieldError = {
-          phoneNumberId: toText(text('whatsappSettings.phoneInvalid')),
-        };
-        setErrors(fieldError);
-        focusFirst(fieldError);
-      } else
-        setRootError(
-          toText(
-            text(`errors.${code}`, {
-              defaultValue: text('errors.serverError'),
-            }),
-          ),
-        );
+    } catch (caught) {
+      const { code } = errorCode(caught);
+      setRootError(
+        toText(
+          text(`errors.${code}`, { defaultValue: text('errors.serverError') }),
+        ),
+      );
     } finally {
       setSaving(false);
     }
   };
-  const users = (meta?.users ?? []).filter(
-    (u) => !u.disabled && u.roles.length,
-  );
-  const userItems = [
-    { value: NONE, label: toText(text('whatsappSettings.none')) },
-    ...users.map((u) => ({ value: u.id, label: u.name })),
-  ];
   return (
     <form
-      ref={formRef}
+      ref={inputRef}
       id={FORM_ID}
       noValidate
       onSubmit={(event) => {
@@ -415,41 +383,6 @@ function ConnectionForm({
           ) : null}
           <TextField
             formId={FORM_ID}
-            name='phoneNumberId'
-            label={toText(text('whatsappSettings.phoneNumberId'))}
-            required
-            maxLength={32}
-            value={values.phoneNumberId}
-            onChange={(value) => set('phoneNumberId', value)}
-            error={errors.phoneNumberId}
-          />
-          <TextField
-            formId={FORM_ID}
-            name='wabaId'
-            label={toText(text('whatsappSettings.wabaId'))}
-            maxLength={32}
-            value={values.wabaId}
-            onChange={(value) => set('wabaId', value)}
-          />
-          <TextField
-            formId={FORM_ID}
-            name='accessToken'
-            type='password'
-            autoComplete='new-password'
-            label={toText(text('whatsappSettings.accessToken'))}
-            required={!connection.hasAccessToken}
-            hint={
-              connection.hasAccessToken
-                ? toText(text('whatsappSettings.secretSet'))
-                : undefined
-            }
-            maxLength={1024}
-            value={values.accessToken}
-            onChange={(value) => set('accessToken', value)}
-            error={errors.accessToken}
-          />
-          <TextField
-            formId={FORM_ID}
             name='appSecret'
             type='password'
             autoComplete='new-password'
@@ -461,50 +394,264 @@ function ConnectionForm({
                 : undefined
             }
             maxLength={256}
-            value={values.appSecret}
-            onChange={(value) => set('appSecret', value)}
-            error={errors.appSecret}
+            value={appSecret}
+            onChange={(value) => {
+              setAppSecret(value);
+              if (error && value.trim()) setError(undefined);
+            }}
+            error={error}
           />
-          <Field>
-            <FieldLabel htmlFor={`${FORM_ID}-receptionist`}>
-              {text('whatsappSettings.receptionist')}
-            </FieldLabel>
-            <Select
-              items={userItems}
-              value={values.defaultHandlerId || NONE}
-              onValueChange={(value) =>
-                set('defaultHandlerId', value === NONE ? '' : String(value))
-              }
-            >
-              <SelectTrigger
-                id={`${FORM_ID}-receptionist`}
-                className='w-full sm:w-72'
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className={SELECT_CONTENT}>
-                <SelectGroup>
-                  {userItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <FieldDescription>
-              {text('whatsappSettings.receptionistHint')}
-            </FieldDescription>
-          </Field>
+          <div className='flex justify-end'>
+            <Button type='submit' disabled={saving}>
+              {saving ? <Spinner data-icon='inline-start' /> : null}
+              {text('whatsappSettings.save')}
+            </Button>
+          </div>
         </fieldset>
       </CardContent>
-      <CardFooter className='justify-end'>
-        <Button type='submit' disabled={saving}>
-          {saving ? <Spinner data-icon='inline-start' /> : null}
-          {text('whatsappSettings.save')}
-        </Button>
-      </CardFooter>
     </form>
+  );
+}
+
+const QUALITIES = ['GREEN', 'YELLOW', 'RED', 'UNKNOWN'];
+const LIMITS = [
+  'TIER_250',
+  'TIER_1K',
+  'TIER_10K',
+  'TIER_100K',
+  'TIER_UNLIMITED',
+];
+
+// The company's numbers, each with its standing, Check, Edit and Remove;
+// one holding conversations stays, to keep its customers' history.
+function Numbers({
+  connection,
+  onChanged,
+}: {
+  connection: Connection;
+  onChanged: (next: Connection) => void;
+}): ReactElement {
+  const { text, language } = useCrmText();
+  const api = useCrmApi();
+  const toaster = useToaster();
+  const [checking, setChecking] = useState<string>();
+  const [removing, setRemoving] = useState<WhatsAppNumber>();
+  const [busy, setBusy] = useState(false);
+  const known = (value: string | null, list: string[], group: string) =>
+    value
+      ? toText(
+          text(
+            `whatsappSettings.${group}.${list.includes(value) ? value : 'other'}`,
+          ),
+        )
+      : '—';
+  const time = (at: string | null) =>
+    at
+      ? new Intl.DateTimeFormat(language, {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        }).format(new Date(at))
+      : toText(text('whatsappSettings.never'));
+  const label = (number: WhatsAppNumber) =>
+    number.displayPhone ?? number.phoneNumberId;
+  const check = (number: WhatsAppNumber) => {
+    setChecking(number.id);
+    api<{
+      data: {
+        ok: boolean;
+        reason?: string;
+        standing?: { displayName?: string };
+      };
+    }>(`whatsapp/numbers/${encodeURIComponent(number.id)}/check`, 'POST')
+      .then(async ({ data }) => {
+        if (data.ok)
+          toaster.show({
+            type: 'success',
+            title: toText(
+              text('whatsappSettings.checked', {
+                name: data.standing?.displayName ?? label(number),
+              }),
+            ),
+          });
+        else {
+          const reason = data.reason ?? 'other';
+          toaster.show({
+            type: 'error',
+            title: toText(
+              text(`whatsappSettings.checkReason.${reason}`, {
+                defaultValue: text('whatsappSettings.checkReason.other'),
+              }),
+            ),
+          });
+        }
+        onChanged(
+          (await api<{ data: Connection }>('whatsapp/connection')).data,
+        );
+      })
+      .catch((error: unknown) =>
+        toaster.show({
+          type: 'error',
+          title: toText(
+            text(
+              error instanceof ApiClientError && error.status === 403
+                ? 'errors.forbidden'
+                : 'whatsappSettings.checkReason.other',
+            ),
+          ),
+        }),
+      )
+      .finally(() => setChecking(undefined));
+  };
+  const remove = (number: WhatsAppNumber) => {
+    setBusy(true);
+    api<{ data: Connection }>(
+      `whatsapp/numbers/${encodeURIComponent(number.id)}`,
+      'DELETE',
+    )
+      .then(({ data }) => {
+        onChanged(data);
+        setRemoving(undefined);
+        toaster.show({
+          type: 'success',
+          title: toText(text('whatsappSettings.numberRemoved')),
+        });
+      })
+      .catch((error: unknown) => {
+        const { code } = errorCode(error);
+        toaster.show({
+          type: 'error',
+          title: toText(
+            text(`errors.${code}`, {
+              defaultValue: text('errors.serverError'),
+            }),
+          ),
+        });
+      })
+      .finally(() => setBusy(false));
+  };
+  return (
+    <CardContent className='flex flex-col gap-3'>
+      {connection.numbers.length ? null : (
+        <p className='text-sm text-muted-foreground'>
+          {text('whatsappSettings.notConnected')}
+        </p>
+      )}
+      <ul className='flex flex-col gap-3 empty:hidden'>
+        {connection.numbers.map((number) => (
+          <li
+            key={number.id}
+            className='flex flex-col gap-3 rounded-lg border border-border p-4'
+          >
+            <div className='flex flex-wrap items-start justify-between gap-2'>
+              <div className='flex min-w-0 flex-col gap-1'>
+                <div className='flex flex-wrap items-center gap-2'>
+                  <span className='font-medium'>{label(number)}</span>
+                  <Badge variant='muted'>
+                    {text(`whatsappSettings.modes.${number.mode}`)}
+                  </Badge>
+                </div>
+                {number.displayName ? (
+                  <span className='text-sm text-muted-foreground'>
+                    {number.displayName}
+                  </span>
+                ) : null}
+              </div>
+              <div className='flex flex-wrap gap-2'>
+                <Button
+                  variant='outline'
+                  disabled={checking === number.id}
+                  onClick={() => check(number)}
+                >
+                  {checking === number.id ? (
+                    <Spinner data-icon='inline-start' />
+                  ) : null}
+                  {text('whatsappSettings.check')}
+                </Button>
+                <Button
+                  variant='outline'
+                  nativeButton={false}
+                  render={
+                    <Link to={`numbers/${encodeURIComponent(number.id)}`} />
+                  }
+                >
+                  {text('edit')}
+                </Button>
+                <Button variant='outline' onClick={() => setRemoving(number)}>
+                  {text('remove')}
+                </Button>
+              </div>
+            </div>
+            <dl className='flex flex-col gap-2'>
+              <Row label={toText(text('whatsappSettings.quality'))}>
+                {known(number.qualityRating, QUALITIES, 'qualities')}
+              </Row>
+              <Row label={toText(text('whatsappSettings.limit'))}>
+                {known(number.messagingLimit, LIMITS, 'limits')}
+              </Row>
+              <Row label={toText(text('whatsappSettings.lastDelivery'))}>
+                {time(number.lastWebhookAt)}
+              </Row>
+              <Row label={toText(text('whatsappSettings.conversations'))}>
+                {number.conversations.toLocaleString(language)}
+              </Row>
+            </dl>
+          </li>
+        ))}
+        {/* The demo dataset's: what they hold, nothing to change. They
+            behave as coexistence numbers do (the team's replies from the
+            phone among their messages, a reply alone ending the wait), so
+            they show as such. */}
+        {(connection.demoNumbers ?? []).map((number) => (
+          <li
+            key={number.id}
+            className='flex flex-col gap-2 rounded-lg border border-dashed border-border p-4'
+          >
+            <div className='flex flex-wrap items-center gap-2'>
+              <span className='font-medium'>{label(number)}</span>
+              <Badge variant='muted'>
+                {text('whatsappSettings.modes.coexistence')}
+              </Badge>
+              <Badge variant='info'>{text('whatsappSettings.demo')}</Badge>
+            </div>
+            <span className='text-sm text-muted-foreground'>
+              {[
+                number.displayName,
+                toText(
+                  text('whatsappSettings.conversationCount', {
+                    count: number.conversations,
+                    value: number.conversations.toLocaleString(language),
+                  }),
+                ),
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
+            <p className='text-sm text-muted-foreground'>
+              {text('whatsappSettings.demoHint')}
+            </p>
+          </li>
+        ))}
+      </ul>
+      {removing ? (
+        <ConfirmDialog
+          title={toText(
+            text('whatsappSettings.removeTitle', { number: label(removing) }),
+          )}
+          description={toText(
+            text(
+              removing.conversations
+                ? 'whatsappSettings.removeInUse'
+                : 'whatsappSettings.removeBody',
+            ),
+          )}
+          busy={busy}
+          confirmDisabled={removing.conversations > 0}
+          confirmLabel={toText(text('remove'))}
+          onCancel={() => setRemoving(undefined)}
+          onConfirm={() => remove(removing)}
+        />
+      ) : null}
+    </CardContent>
   );
 }
 
@@ -556,13 +703,18 @@ function CopyButton({
 
 function Row({
   label,
+  center = false,
   children,
 }: {
   label: string;
+  // The label level with a value that carries buttons.
+  center?: boolean;
   children: ReactNode;
 }): ReactElement {
   return (
-    <div className='grid gap-1 sm:grid-cols-[8rem_1fr] sm:gap-4'>
+    <div
+      className={`grid gap-1 sm:grid-cols-[8rem_1fr] sm:gap-4 ${center ? 'sm:items-center' : ''}`}
+    >
       <dt className='text-sm text-muted-foreground'>{label}</dt>
       <dd className='min-w-0 text-sm'>{children}</dd>
     </div>
@@ -576,9 +728,9 @@ function Webhook({ connection }: { connection: Connection }): ReactElement {
   const token = connection.verifyToken;
   return (
     <CardContent>
-      <dl className='flex flex-col gap-4'>
-        <Row label={toText(text('whatsappSettings.callbackUrl'))}>
-          <span className='flex items-start gap-2'>
+      <dl className='flex flex-col gap-2'>
+        <Row label={toText(text('whatsappSettings.callbackUrl'))} center>
+          <span className='flex items-center gap-2'>
             <code className='min-w-0 font-mono text-xs break-all'>{url}</code>
             <CopyButton
               value={url}
@@ -586,7 +738,7 @@ function Webhook({ connection }: { connection: Connection }): ReactElement {
             />
           </span>
         </Row>
-        <Row label={toText(text('whatsappSettings.verifyToken'))}>
+        <Row label={toText(text('whatsappSettings.verifyToken'))} center>
           {token ? (
             <span className='flex flex-wrap items-center gap-2'>
               <code className='min-w-0 font-mono text-xs break-all'>
@@ -618,87 +770,29 @@ function Webhook({ connection }: { connection: Connection }): ReactElement {
   );
 }
 
-const QUALITIES = ['GREEN', 'YELLOW', 'RED', 'UNKNOWN'];
-const LIMITS = [
-  'TIER_250',
-  'TIER_1K',
-  'TIER_10K',
-  'TIER_100K',
-  'TIER_UNLIMITED',
-];
 const FAILURES = ['unknownNumber', 'invalidJson', 'processingFailed'];
 
+// How Meta's deliveries and their files are processed; failed ones can be
+// tried again.
+// Only what needs doing: all well, with the last delivery, or the
+// deliveries waiting or failed and the files not yet or never fetched.
 function Status({
-  connection,
   health,
+  lastDelivery,
   refresh,
 }: {
-  connection?: Connection;
   health: Health;
+  // The latest of the numbers' last deliveries.
+  lastDelivery: string | null;
   refresh: () => void;
 }): ReactElement {
   const { text, language } = useCrmText();
   const api = useCrmApi();
   const toaster = useToaster();
-  const [busy, setBusy] = useState<'check' | 'retry'>();
+  const [busy, setBusy] = useState(false);
   const number = (value: number) => value.toLocaleString(language);
-  const known = (value: string | null, list: string[], group: string) =>
-    value
-      ? toText(
-          text(
-            `whatsappSettings.${group}.${list.includes(value) ? value : 'other'}`,
-          ),
-        )
-      : '—';
-  const check = () => {
-    setBusy('check');
-    api<{
-      data: {
-        ok: boolean;
-        reason?: string;
-        standing?: { displayName?: string };
-      };
-    }>('whatsapp/connection/check', 'POST')
-      .then(({ data }) => {
-        if (data.ok)
-          toaster.show({
-            type: 'success',
-            title: toText(
-              text('whatsappSettings.checked', {
-                name:
-                  data.standing?.displayName ?? connection?.phoneNumberId ?? '',
-              }),
-            ),
-          });
-        else {
-          const reason = data.reason ?? 'other';
-          toaster.show({
-            type: 'error',
-            title: toText(
-              text(`whatsappSettings.checkReason.${reason}`, {
-                defaultValue: text('whatsappSettings.checkReason.other'),
-              }),
-            ),
-          });
-        }
-        refresh();
-      })
-      .catch((error: unknown) =>
-        toaster.show({
-          type: 'error',
-          title: toText(
-            text(
-              error instanceof ApiClientError && error.status === 403
-                ? 'errors.forbidden'
-                : 'whatsappSettings.checkReason.other',
-            ),
-          ),
-        }),
-      )
-      .finally(() => setBusy(undefined));
-  };
   const retry = () => {
-    setBusy('retry');
+    setBusy(true);
     api('whatsapp/health/retry', 'POST')
       .then(() => {
         toaster.show({
@@ -715,91 +809,75 @@ function Status({
           title: toText(text('errors.serverError')),
         }),
       )
-      .finally(() => setBusy(undefined));
+      .finally(() => setBusy(false));
   };
-  const time = (at: string | null) =>
-    at
-      ? new Intl.DateTimeFormat(language, {
-          dateStyle: 'medium',
-          timeStyle: 'short',
-        }).format(new Date(at))
-      : toText(text('whatsappSettings.never'));
-  return (
-    <>
+  const time = (at: string) =>
+    new Intl.DateTimeFormat(language, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(at));
+  const well =
+    !health.pending &&
+    !health.failed &&
+    !health.mediaPending &&
+    !health.mediaUnavailable;
+  if (well)
+    return (
       <CardContent>
-        <dl className='flex flex-col gap-3'>
-          <Row label={toText(text('whatsappSettings.number'))}>
-            {connection?.phoneNumberId ? (
-              [
-                connection.displayPhone ?? connection.phoneNumberId,
-                connection.displayName,
-              ]
-                .filter(Boolean)
-                .join(' · ')
-            ) : (
-              <span className='text-muted-foreground'>
-                {text('whatsappSettings.notConnected')}
-              </span>
-            )}
-          </Row>
-          <Row label={toText(text('whatsappSettings.quality'))}>
-            {known(connection?.qualityRating ?? null, QUALITIES, 'qualities')}
-          </Row>
-          <Row label={toText(text('whatsappSettings.limit'))}>
-            {known(connection?.messagingLimit ?? null, LIMITS, 'limits')}
-          </Row>
-          <Row label={toText(text('whatsappSettings.lastDelivery'))}>
-            {time(health.lastWebhookAt)}
-          </Row>
-          <Row label={toText(text('whatsappSettings.deliveries'))}>
-            {[
-              `${toText(text('whatsappSettings.received'))} ${number(health.received)}`,
-              `${toText(text('whatsappSettings.processed'))} ${number(health.processed)}`,
-              `${toText(text('whatsappSettings.waiting'))} ${number(health.pending)}`,
-              `${toText(text('whatsappSettings.failed'))} ${number(health.failed)}`,
-            ].join(' · ')}
-          </Row>
-          {health.failures.length ? (
-            <Row label={toText(text('whatsappSettings.failures'))}>
-              <ul className='flex flex-col gap-1'>
-                {health.failures.map((failure) => (
-                  <li key={failure.error}>
-                    {toText(
-                      text(
-                        `whatsappSettings.failureReasons.${
-                          FAILURES.includes(failure.error)
-                            ? failure.error
-                            : 'other'
-                        }`,
-                      ),
-                    )}{' '}
-                    ×{number(failure.count)}
-                  </li>
-                ))}
-              </ul>
-            </Row>
-          ) : null}
-          <Row label={toText(text('whatsappSettings.files'))}>
-            {`${toText(text('whatsappSettings.filesWaiting'))} ${number(health.mediaPending)} · ${toText(text('whatsappSettings.filesUnavailable'))} ${number(health.mediaUnavailable)}`}
-          </Row>
-        </dl>
+        <p className='text-sm text-muted-foreground'>
+          {lastDelivery
+            ? text('whatsappSettings.allWell', { time: time(lastDelivery) })
+            : text('whatsappSettings.noDeliveries')}
+        </p>
       </CardContent>
-      <CardFooter className='flex-wrap justify-end gap-2'>
-        {health.failed > 0 ? (
-          <Button variant='outline' disabled={busy === 'retry'} onClick={retry}>
-            {busy === 'retry' ? <Spinner data-icon='inline-start' /> : null}
+    );
+  return (
+    <CardContent>
+      <dl className='flex flex-col gap-3'>
+        {health.pending ? (
+          <Row label={toText(text('whatsappSettings.waiting'))}>
+            {number(health.pending)}
+          </Row>
+        ) : null}
+        {health.failed ? (
+          <Row label={toText(text('whatsappSettings.failed'))}>
+            <ul className='flex flex-col gap-1'>
+              {health.failures.map((failure) => (
+                <li key={failure.error}>
+                  {toText(
+                    text(
+                      `whatsappSettings.failureReasons.${
+                        FAILURES.includes(failure.error)
+                          ? failure.error
+                          : 'other'
+                      }`,
+                    ),
+                  )}{' '}
+                  ×{number(failure.count)}
+                </li>
+              ))}
+            </ul>
+          </Row>
+        ) : null}
+        {health.mediaPending ? (
+          <Row label={toText(text('whatsappSettings.filesWaiting'))}>
+            {number(health.mediaPending)}
+          </Row>
+        ) : null}
+        {health.mediaUnavailable ? (
+          <Row label={toText(text('whatsappSettings.filesUnavailable'))}>
+            {number(health.mediaUnavailable)}
+          </Row>
+        ) : null}
+      </dl>
+      {health.failed > 0 ? (
+        <div className='mt-4 flex justify-end'>
+          <Button variant='outline' disabled={busy} onClick={retry}>
+            {busy ? <Spinner data-icon='inline-start' /> : null}
             {text('whatsappSettings.retry')}
           </Button>
-        ) : null}
-        <Button
-          variant='outline'
-          disabled={!connection?.configured || busy === 'check'}
-          onClick={check}
-        >
-          {busy === 'check' ? <Spinner data-icon='inline-start' /> : null}
-          {text('whatsappSettings.check')}
-        </Button>
-      </CardFooter>
-    </>
+        </div>
+      ) : null}
+    </CardContent>
   );
 }

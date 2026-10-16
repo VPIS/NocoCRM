@@ -2,14 +2,20 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import {
+  createMemoryRouter,
+  MemoryRouter,
+  Route,
+  RouterProvider,
+  Routes,
+} from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { crmEn } from '../../client/locales/crm/index.js';
 
 // The WhatsApp pages (client/pages/crm-whatsapp/, components/crm/whatsapp/,
 // pages/crm-whatsapp/connection.tsx): the messages as bubbles with their media,
 // the workspace's list and conversation with its actions, a record's tab,
-// and the connection form's validation.
+// and the connection page with its numbers and the number dialog.
 
 function english(key: string, options?: Record<string, unknown>): string {
   let value: unknown = crmEn;
@@ -56,6 +62,8 @@ const { default: ConversationPane } =
   await import('../../client/pages/crm-whatsapp/conversation.js');
 const { default: WhatsAppSettingsPage } =
   await import('../../client/pages/crm-whatsapp/connection.js');
+const { default: WhatsAppNumberDialog } =
+  await import('../../client/pages/crm-whatsapp/number.js');
 
 const message = (
   id: string,
@@ -89,7 +97,6 @@ const customer = {
 };
 const conversation = {
   id: 'c1',
-  handlerId: 'u1',
   lastInboundAt: '2026-10-15T08:00:00.000Z',
   unreadCount: 0,
   contact: customer,
@@ -254,7 +261,6 @@ describe('the workspace', () => {
               state: 'unlinked',
               leadId: null,
               contactId: null,
-              handlerId: 'u1',
               lastMessageAt: '2026-10-14T08:00:00.000Z',
               lastDirection: 'in',
               unreadCount: 2,
@@ -290,6 +296,8 @@ describe('the workspace', () => {
     expect(row.getAttribute('href')).toBe('/crm/whatsapp/c1?view=unlinked');
     expect(within(row).getByText(crmEn.whatsapp.state.unlinked)).toBeTruthy();
     expect(within(row).getByText(crmEn.whatsapp.kind.image)).toBeTruthy();
+    // The customer wrote last: it awaits a reply.
+    expect(within(row).getByText(crmEn.whatsapp.awaiting)).toBeTruthy();
     // The conversation: its customer, and the way to link them; no New
     // lead without the right to create leads.
     expect(
@@ -309,6 +317,47 @@ describe('the workspace', () => {
         ?.getAttribute('href'),
     ).toBe('/crm/whatsapp/connection');
     expect(screen.getByText(crmEn.whatsapp.readOnlyNote)).toBeTruthy();
+  });
+
+  it('filters by number once there are two, naming each row’s number', async () => {
+    const numbers = [
+      { id: 'n1', phone: '+1 555 0100', name: 'Sales', mode: 'coexistence' },
+      { id: 'n2', phone: '+44 7700 900123', name: 'Abroad', mode: 'api' },
+    ];
+    respond({ 'whatsapp/numbers': { data: numbers } });
+    state.api.mockImplementation(
+      ((base) => async (path: string, method?: string) =>
+        path.startsWith('whatsapp/conversations?')
+          ? {
+              ...(await base(path, method)),
+              data: (
+                (await base(path, method)) as { data: { id: string }[] }
+              ).data.map((row) => ({
+                ...row,
+                numberId: 'n2',
+                number: numbers[1],
+              })),
+            }
+          : base(path, method))(
+        state.api.getMockImplementation() as (
+          path: string,
+          method?: string,
+        ) => Promise<unknown>,
+      ),
+    );
+    render(routes('/crm/whatsapp?view=all'));
+    const list = await screen.findByRole('list');
+    expect(await within(list).findByText('Abroad')).toBeTruthy();
+    expect(
+      screen.getByRole('combobox', { name: crmEn.whatsapp.numberFilter }),
+    ).toBeTruthy();
+    // Picked from the address: the list asks for that number's alone.
+    render(routes('/crm/whatsapp?view=all&number=n2'));
+    await waitFor(() =>
+      expect(state.api).toHaveBeenCalledWith(
+        'whatsapp/conversations?view=all&numberId=n2&page=1&pageSize=50',
+      ),
+    );
   });
 
   it('sets a customer aside at once, and offers to restore them', async () => {
@@ -338,15 +387,14 @@ describe('the workspace', () => {
 
   it('says what each empty view holds', async () => {
     respond({
-      'whatsapp/conversations?view=mine&page=1&pageSize=50': {
+      'whatsapp/conversations?view=all&page=1&pageSize=50': {
         data: [],
         meta: { total: 0 },
       },
     });
-    render(routes('/crm/whatsapp'));
-    expect(
-      await screen.findByText(crmEn.whatsapp.empty.mineTitle),
-    ).toBeTruthy();
+    // All by default, and for an old address naming the Mine there was.
+    render(routes('/crm/whatsapp?view=mine'));
+    expect(await screen.findByText(crmEn.whatsapp.empty.title)).toBeTruthy();
     expect(screen.getByText(crmEn.whatsapp.choose)).toBeTruthy();
   });
 });
@@ -384,31 +432,47 @@ describe("a record's WhatsApp tab", () => {
 });
 
 describe('the connection settings', () => {
-  it('asks for what is missing, and keeps stored credentials when left empty', async () => {
-    const user = userEvent.setup();
-    const connection = {
-      configured: false,
-      phoneNumberId: null,
-      wabaId: null,
-      displayPhone: null,
-      displayName: null,
-      qualityRating: null,
-      status: null,
-      messagingLimit: null,
-      defaultHandlerId: null,
-      hasAccessToken: false,
-      hasAppSecret: true,
-      verifyToken: null,
-      webhookPath: '/main/webhooks/whatsapp',
-      secretsReady: true,
-    };
+  const number = {
+    id: 'n1',
+    phoneNumberId: '1234567890',
+    wabaId: null,
+    mode: 'coexistence',
+    displayPhone: '+1 555 0100',
+    displayName: 'Sales',
+    qualityRating: 'GREEN',
+    status: 'CONNECTED',
+    messagingLimit: null,
+    hasAccessToken: true,
+    connectedAt: null,
+    lastWebhookAt: null,
+    conversations: 3,
+  };
+  const connection = {
+    configured: true,
+    hasAppSecret: false,
+    verifyToken: null,
+    webhookPath: '/main/webhooks/whatsapp',
+    secretsReady: true,
+    numbers: [number],
+    demoNumbers: [
+      {
+        ...number,
+        id: 'd1',
+        phoneNumberId: 'demo-d1',
+        mode: 'demo',
+        displayPhone: '+44 7700 900123',
+        hasAccessToken: false,
+        conversations: 2,
+      },
+    ],
+  };
+  const respond = () =>
     state.api.mockImplementation(async (path: string, method = 'GET') => {
       if (path === 'whatsapp/connection' && method === 'GET')
         return { data: connection };
       if (path === 'whatsapp/health')
         return {
           data: {
-            lastWebhookAt: null,
             received: 0,
             processed: 0,
             pending: 0,
@@ -420,52 +484,95 @@ describe('the connection settings', () => {
         };
       if (path === 'whatsapp/connection' && method === 'PUT')
         return {
+          data: { ...connection, hasAppSecret: true, verifyToken: 'tok' },
+        };
+      if (path === 'whatsapp/numbers' && method === 'POST')
+        return {
           data: {
             ...connection,
-            configured: true,
-            phoneNumberId: '1234567890',
-            hasAccessToken: true,
-            verifyToken: 'tok',
+            numbers: [number, { ...number, id: 'n2', conversations: 0 }],
           },
         };
       return {};
     });
+  const page = (path: string) =>
     render(
       wrap(
-        <MemoryRouter initialEntries={['/crm/whatsapp/connection']}>
-          <WhatsAppSettingsPage />
-        </MemoryRouter>,
+        <RouterProvider
+          router={createMemoryRouter(
+            [
+              {
+                path: '/crm/whatsapp/connection',
+                element: <WhatsAppSettingsPage />,
+                children: [
+                  { path: 'numbers/new', element: <WhatsAppNumberDialog /> },
+                ],
+              },
+            ],
+            { initialEntries: [path] },
+          )}
+        />,
       ),
     );
+
+  it('asks for the app secret until it is stored, and lists the numbers with their mode', async () => {
+    const user = userEvent.setup();
+    respond();
+    page('/crm/whatsapp/connection');
     const save = await screen.findByRole('button', {
       name: crmEn.whatsappSettings.save,
     });
-    // The secret is stored: it may be left empty.
-    expect(screen.getByText(crmEn.whatsappSettings.secretSet)).toBeTruthy();
     expect(screen.getByText(crmEn.whatsappSettings.tokenLater)).toBeTruthy();
+    // Nothing to do and nothing delivered yet: one line says so.
+    expect(
+      await screen.findByText(crmEn.whatsappSettings.noDeliveries),
+    ).toBeTruthy();
+    // The number, its mode; one holding conversations is not removed.
+    expect(screen.getByText('+1 555 0100')).toBeTruthy();
+    expect(
+      // The company's, and the demo's, which behaves as coexistence does.
+      screen.getAllByText(crmEn.whatsappSettings.modes.coexistence),
+    ).toHaveLength(2);
+    // The demo's number, read-only: no Check, Edit or Remove of its own.
+    expect(screen.getByText('+44 7700 900123')).toBeTruthy();
+    expect(screen.getByText(crmEn.whatsappSettings.demoHint)).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: crmEn.remove })).toHaveLength(
+      1,
+    );
+    expect(
+      screen
+        .getByText(crmEn.whatsappSettings.addNumber)
+        .closest('a')
+        ?.getAttribute('href'),
+    ).toBe('/crm/whatsapp/connection/numbers/new');
+    await user.click(screen.getByRole('button', { name: crmEn.remove }));
+    expect(
+      await screen.findByText(crmEn.whatsappSettings.removeInUse),
+    ).toBeTruthy();
+    const dialog = screen.getByRole('dialog');
+    expect(
+      (
+        within(dialog).getByRole('button', {
+          name: crmEn.remove,
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    await user.click(
+      within(dialog).getByRole('button', { name: crmEn.cancel }),
+    );
     await user.click(save);
     expect(
-      await screen.findByText(crmEn.whatsappSettings.phoneInvalid),
+      await screen.findByText(crmEn.whatsappSettings.enterSecret),
     ).toBeTruthy();
-    expect(screen.getByText(crmEn.whatsappSettings.enterToken)).toBeTruthy();
-    expect(document.activeElement?.id).toBe(
-      'crm-whatsapp-connection-phoneNumberId',
-    );
+    expect(document.activeElement?.id).toBe('crm-whatsapp-app-appSecret');
     await user.type(
-      screen.getByLabelText(new RegExp(crmEn.whatsappSettings.phoneNumberId)),
-      '1234567890',
-    );
-    await user.type(
-      screen.getByLabelText(new RegExp(crmEn.whatsappSettings.accessToken)),
-      'EAAG-token',
+      screen.getByLabelText(new RegExp(crmEn.whatsappSettings.appSecret)),
+      'app-secret',
     );
     await user.click(save);
     await waitFor(() =>
       expect(state.api).toHaveBeenCalledWith('whatsapp/connection', 'PUT', {
-        phoneNumberId: '1234567890',
-        wabaId: null,
-        defaultHandlerId: null,
-        accessToken: 'EAAG-token',
+        appSecret: 'app-secret',
       }),
     );
     expect(
@@ -473,5 +580,55 @@ describe('the connection settings', () => {
         `${window.location.origin}/main/webhooks/whatsapp`,
       ),
     ).toBeTruthy();
+  });
+
+  it('adds a number, coexistence by default, asking for its id and token', async () => {
+    const user = userEvent.setup();
+    respond();
+    page('/crm/whatsapp/connection/numbers/new');
+    const dialog = await screen.findByRole('dialog');
+    await user.click(
+      within(dialog).getByRole('button', {
+        name: crmEn.whatsappSettings.save,
+      }),
+    );
+    expect(
+      await within(dialog).findByText(crmEn.whatsappSettings.phoneInvalid),
+    ).toBeTruthy();
+    expect(
+      within(dialog).getByText(crmEn.whatsappSettings.enterToken),
+    ).toBeTruthy();
+    expect(
+      (
+        within(dialog).getByRole('radio', {
+          name: new RegExp(crmEn.whatsappSettings.modes.coexistence),
+        }) as HTMLInputElement
+      ).getAttribute('aria-checked'),
+    ).toBe('true');
+    await user.type(
+      within(dialog).getByLabelText(
+        new RegExp(crmEn.whatsappSettings.phoneNumberId),
+      ),
+      '2223334445',
+    );
+    await user.type(
+      within(dialog).getByLabelText(
+        new RegExp(crmEn.whatsappSettings.accessToken),
+      ),
+      'EAAG-token',
+    );
+    await user.click(
+      within(dialog).getByRole('button', {
+        name: crmEn.whatsappSettings.save,
+      }),
+    );
+    await waitFor(() =>
+      expect(state.api).toHaveBeenCalledWith('whatsapp/numbers', 'POST', {
+        phoneNumberId: '2223334445',
+        wabaId: null,
+        mode: 'coexistence',
+        accessToken: 'EAAG-token',
+      }),
+    );
   });
 });

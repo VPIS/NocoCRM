@@ -3,7 +3,7 @@ import type { DemoContent } from './types.js';
 // The demo's WhatsApp conversations in English (demo-whatsapp.ts), in the
 // order of its schedule.
 export const enWhatsApp: DemoContent['whatsapp'] = {
-  displayName: 'NocoBase Sales',
+  displayNames: ['NocoBase Sales', 'NocoBase International'],
   conversations: [
     // Shanghai Electric's decision maker, about the deal at proposal.
     {

@@ -6,18 +6,25 @@ import { normalizePhone } from './phone.js';
 import { toText } from './schema.js';
 import type { WhatsAppService } from './whatsapp/service.js';
 
-// The demo's WhatsApp number and its conversations, written as the webhook
-// would have kept them, so the WhatsApp page, the records' WhatsApp tabs and
-// their timelines show the channel at work with no connection to Meta. The
-// number is marked 'demo': it receives nothing, the connection settings
-// never touch it, and removal deletes it with everything on it.
+// The demo's WhatsApp numbers and their conversations, written as the
+// webhook would have kept them, so the WhatsApp page, the records' WhatsApp
+// tabs and their timelines show the channel at work with no connection to
+// Meta. The numbers are marked 'demo': they receive nothing, the connection
+// settings never touch them, and removal deletes them with everything on
+// them.
 
 // What removal deletes; recorded before anything is written, so a failed
 // import takes back what it wrote too.
 export interface DemoWhatsAppManifest {
-  numberId: string;
+  numberIds: string[];
+  // The one number of a demo imported before there were two.
+  numberId?: string;
   customerIds: string[];
 }
+
+// The demo's numbers: the sales line at home, and the line abroad. Their
+// business names are the content's (displayNames), in this order.
+const demoNumbers = ['+1 555 010 0199', '+44 7700 900123'];
 
 // Who a conversation is with: a demo contact (by company and person), a
 // demo lead, one of the importer's H World people, or a customer nobody
@@ -32,15 +39,17 @@ type Customer =
 // the content's (demo-content/whatsapp-*.ts), by index.
 type Message = ['in' | 'out', number, number, number];
 
-// How many of the customer's last messages nobody has read yet.
+// Each conversation: who it is with, the number it came in on
+// (demoNumbers), and its messages. One awaits a reply when the customer wrote last:
+// as many as they wrote since the team's last reply.
 export const demoWhatsAppSchedule: {
   customer: Customer;
-  unread: number;
+  number: number;
   messages: Message[];
 }[] = [
   {
     customer: { contact: [0, 0] },
-    unread: 2,
+    number: 0,
     messages: [
       ['in', -3, 14, 20],
       ['out', -3, 14, 45],
@@ -51,7 +60,7 @@ export const demoWhatsAppSchedule: {
   },
   {
     customer: { contact: [2, 0] },
-    unread: 0,
+    number: 0,
     messages: [
       ['in', -4, 10, 5],
       ['out', -4, 10, 30],
@@ -62,7 +71,7 @@ export const demoWhatsAppSchedule: {
   },
   {
     customer: { lead: 5 },
-    unread: 1,
+    number: 0,
     messages: [
       ['in', -2, 20, 10],
       ['out', -1, 9, 5],
@@ -71,7 +80,7 @@ export const demoWhatsAppSchedule: {
   },
   {
     customer: { hworld: 0 },
-    unread: 2,
+    number: 0,
     messages: [
       ['in', -5, 18, 30],
       ['out', -5, 18, 45],
@@ -81,7 +90,7 @@ export const demoWhatsAppSchedule: {
   },
   {
     customer: { state: 'unlinked' },
-    unread: 2,
+    number: 1,
     messages: [
       ['in', -1, 11, 20],
       ['in', -1, 11, 21],
@@ -89,7 +98,7 @@ export const demoWhatsAppSchedule: {
   },
   {
     customer: { phone: '+971 50 555 0142', state: 'unlinked' },
-    unread: 1,
+    number: 1,
     messages: [
       ['in', -2, 16, 0],
       ['out', -2, 16, 30],
@@ -98,7 +107,7 @@ export const demoWhatsAppSchedule: {
   },
   {
     customer: { phone: '+86 139 0555 0188', state: 'dismissed' },
-    unread: 0,
+    number: 0,
     messages: [
       ['in', -6, 13, 0],
       ['out', -6, 13, 20],
@@ -112,8 +121,6 @@ export async function populateDemoWhatsApp(
   input: {
     text: DemoContent['whatsapp'];
     at: (day: number, hour: number, minute: number) => string;
-    // Who answers the customers nobody linked: the importer.
-    receptionistId: string;
     contacts: Row[][];
     leads: Row[];
     hworldPeople: Row[];
@@ -123,30 +130,31 @@ export async function populateDemoWhatsApp(
 ): Promise<void> {
   const now = new Date().toISOString();
   const manifest: DemoWhatsAppManifest = {
-    numberId: randomUUID(),
+    numberIds: demoNumbers.map(() => randomUUID()),
     customerIds: [],
   };
   record(manifest);
-  await query
-    .insertInto('crmWaNumbers')
-    .values({
-      id: manifest.numberId,
-      phoneNumberId: `demo-${manifest.numberId}`,
-      displayPhone: '+1 555 010 0199',
-      displayName: input.text.displayName,
-      mode: 'demo',
-      status: 'CONNECTED',
-      qualityRating: 'GREEN',
-      defaultHandlerId: input.receptionistId,
-      connectedAt: input.at(-30, 9, 0),
-      createdAt: now,
-      updatedAt: now,
-    })
-    .execute();
+  for (const [index, numberId] of manifest.numberIds.entries())
+    await query
+      .insertInto('crmWaNumbers')
+      .values({
+        id: numberId,
+        phoneNumberId: `demo-${numberId}`,
+        displayPhone: demoNumbers[index],
+        displayName: input.text.displayNames[index],
+        mode: 'demo',
+        status: 'CONNECTED',
+        qualityRating: 'GREEN',
+        connectedAt: input.at(-30 + index * 10, 9, 0),
+        createdAt: now,
+        updatedAt: now,
+      })
+      .execute();
   for (const [
     index,
-    { customer, unread, messages },
+    { number, customer, messages },
   ] of demoWhatsAppSchedule.entries()) {
+    const numberId = manifest.numberIds[number];
     const content = input.text.conversations[index];
     const linked: Row | undefined =
       'contact' in customer
@@ -189,8 +197,6 @@ export async function populateDemoWhatsApp(
         updatedAt: now,
       })
       .execute();
-    // Linked, the record's owner answers; otherwise the receptionist.
-    const handlerId = linked ? toText(linked.ownerId) : input.receptionistId;
     const conversationId = randomUUID();
     const inbound = messages
       .map(([direction], i) => (direction === 'in' ? times[i] : ''))
@@ -199,13 +205,12 @@ export async function populateDemoWhatsApp(
       .insertInto('crmWaConversations')
       .values({
         id: conversationId,
-        numberId: manifest.numberId,
+        numberId,
         waContactId: id,
-        handlerId,
         lastInboundAt: inbound.at(-1) ?? null,
         lastMessageAt: times.at(-1),
         lastDirection: messages.at(-1)?.[0],
-        unreadCount: unread,
+        unreadCount: awaitingReply(messages),
         createdAt: times[0],
         updatedAt: now,
       })
@@ -217,7 +222,7 @@ export async function populateDemoWhatsApp(
           id: randomUUID(),
           waMessageId: `demo-${randomUUID()}`,
           conversationId,
-          numberId: manifest.numberId,
+          numberId,
           direction,
           // The team's replies as made in the WhatsApp Business app on the
           // number's phone: the CRM receives and does not send yet.
@@ -242,19 +247,33 @@ export async function populateDemoWhatsApp(
   }
 }
 
-// Deletes the demo number with its conversations, messages and customers;
+// How many messages the customer wrote since the team's last reply.
+export function awaitingReply(messages: Message[]): number {
+  return (
+    messages.length -
+    1 -
+    messages.map(([direction]) => direction).lastIndexOf('out')
+  );
+}
+
+// Deletes the demo numbers with their conversations, messages and customers;
 // the records' WhatsApp lines go with the records (demo.ts).
 export async function removeDemoWhatsApp(
   query: QueryAdapter,
   manifest: DemoWhatsAppManifest,
 ): Promise<void> {
+  const numberIds = [
+    ...(manifest.numberIds ?? []),
+    ...(manifest.numberId ? [manifest.numberId] : []),
+  ];
+  if (!numberIds.length) return;
   await query
     .deleteFrom('crmWaMessages')
-    .where('numberId', '=', manifest.numberId)
+    .where('numberId', 'in', numberIds)
     .execute();
   await query
     .deleteFrom('crmWaConversations')
-    .where('numberId', '=', manifest.numberId)
+    .where('numberId', 'in', numberIds)
     .execute();
   if (manifest.customerIds.length) {
     // Their lines on records the demo did not create, should someone have
@@ -274,8 +293,5 @@ export async function removeDemoWhatsApp(
       .where('id', 'in', manifest.customerIds)
       .execute();
   }
-  await query
-    .deleteFrom('crmWaNumbers')
-    .where('id', '=', manifest.numberId)
-    .execute();
+  await query.deleteFrom('crmWaNumbers').where('id', 'in', numberIds).execute();
 }

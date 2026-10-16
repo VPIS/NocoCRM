@@ -197,7 +197,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
           },
         ],
       },
-      // The number's connection, webhook and status, reached from the
+      // The numbers' connection, webhook and status, reached from the
       // WhatsApp page's header as the mail accounts are from the mailbox's,
       // with no entry of its own (the menu keeps WhatsApp marked); the CRM
       // settings' administrators', as its API checks.
@@ -210,6 +210,19 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
           action: 'manage',
         },
         componentLoader: () => import('./pages/crm-whatsapp/connection.js'),
+        // A number added or changed in a dialog over the page.
+        children: [
+          {
+            name: 'crm-whatsapp-number-new',
+            path: 'numbers/new',
+            componentLoader: () => import('./pages/crm-whatsapp/number.js'),
+          },
+          {
+            name: 'crm-whatsapp-number',
+            path: 'numbers/:numberId',
+            componentLoader: () => import('./pages/crm-whatsapp/number.js'),
+          },
+        ],
       },
     ],
   },

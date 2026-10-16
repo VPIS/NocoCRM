@@ -17,7 +17,8 @@ const labels: Record<string, [string, string]> = {
   // (company-signals.ts).
   signal: ['{{entity}} has news', '{{entity}}有新动态'],
   // A customer wrote on WhatsApp: on the lead or contact they are, or in a
-  // conversation linked to no record yet (whatsapp/service.ts).
+  // conversation linked to no record yet. Nothing queues these since
+  // 2026-10-16; kept for those queued before (index.ts).
   whatsapp: [
     '{{entity}} has a new WhatsApp message',
     '{{entity}}有新的 WhatsApp 消息',

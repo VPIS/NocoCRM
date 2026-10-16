@@ -53,7 +53,8 @@ const NEWS_MS = 24 * 3600_000;
 // Meta's media ids expire after seven days.
 const MEDIA_DAYS = 7;
 
-export type ConversationView = 'mine' | 'unlinked' | 'all';
+// No one's own: the CRM assigns no one while it only receives.
+export type ConversationView = 'unlinked' | 'all';
 export type ContactState = 'unlinked' | 'linked' | 'dismissed' | 'spam';
 
 interface Target {
@@ -61,35 +62,54 @@ interface Target {
   readonly id: string;
 }
 
-export interface ConnectionInput {
-  readonly phoneNumberId: string;
-  readonly wabaId?: string | null;
-  // Left out to keep the stored ones.
-  readonly accessToken?: string;
+// The Meta app every number comes through: its secret, which signs the
+// webhook's deliveries, left out to keep the stored one.
+export interface AppInput {
   readonly appSecret?: string;
-  readonly defaultHandlerId?: string | null;
 }
 
-export interface ConnectionView {
-  readonly configured: boolean;
-  readonly phoneNumberId: string | null;
+// A number of the company's: how it is connected (`api`, a number on the
+// Cloud API alone; `coexistence`, one also used on the WhatsApp Business
+// app) and its token (left out to keep the stored one).
+export interface NumberInput {
+  readonly phoneNumberId?: string;
+  readonly wabaId?: string | null;
+  readonly mode?: 'api' | 'coexistence';
+  readonly accessToken?: string;
+}
+
+export interface NumberView {
+  readonly id: string;
+  readonly phoneNumberId: string;
   readonly wabaId: string | null;
+  readonly mode: string;
   readonly displayPhone: string | null;
   readonly displayName: string | null;
   readonly qualityRating: string | null;
   readonly status: string | null;
   readonly messagingLimit: string | null;
-  readonly defaultHandlerId: string | null;
   readonly hasAccessToken: boolean;
+  readonly connectedAt: string | null;
+  readonly lastWebhookAt: string | null;
+  // Its conversations, which keep it from being removed.
+  readonly conversations: number;
+}
+
+export interface ConnectionView {
+  // The app secret and at least one number with its token are set.
+  readonly configured: boolean;
   readonly hasAppSecret: boolean;
   // To be entered in the Meta app's webhook settings.
   readonly verifyToken: string | null;
   readonly webhookPath: string;
   readonly secretsReady: boolean;
+  readonly numbers: readonly NumberView[];
+  // The demo dataset's numbers (demo-whatsapp.ts), shown for what they
+  // hold and never changed here.
+  readonly demoNumbers: readonly NumberView[];
 }
 
 export interface Health {
-  readonly lastWebhookAt: string | null;
   readonly received: number;
   readonly processed: number;
   readonly pending: number;
@@ -97,6 +117,14 @@ export interface Health {
   readonly failures: { readonly error: string; readonly count: number }[];
   readonly mediaPending: number;
   readonly mediaUnavailable: number;
+}
+
+// A number as the conversations name it.
+export interface NumberLabel {
+  readonly id: string;
+  readonly phone: string;
+  readonly name: string | null;
+  readonly mode: string;
 }
 
 export const whatsappToken: ServiceToken<WhatsAppService> =
@@ -185,19 +213,19 @@ export class WhatsAppService {
   private seal(plain: string, field: string): string {
     return this.secrets().seal(plain, { ...SEAL, aad: [field] });
   }
-  // The one number connected (phase 1 connects one; the tables hold more).
-  // The demo dataset's number (mode 'demo', demo-whatsapp.ts) is never it:
-  // it receives nothing, and saving the connection leaves it alone.
-  async number(): Promise<Row | undefined> {
+  // The company's numbers, in the order they were added. The demo
+  // dataset's numbers (mode 'demo', demo-whatsapp.ts) are not among them:
+  // they receive nothing, and the connection page leaves them alone.
+  async numbers(): Promise<Row[]> {
     return this.query
       .selectFrom('crmWaNumbers')
       .selectAll()
       .where('mode', '!=', 'demo')
       .orderBy('createdAt')
-      .executeTakeFirst();
+      .execute();
   }
   // Whether the pages offer WhatsApp on records: a number is connected, or
-  // the demo dataset's number holds its conversations.
+  // the demo dataset's numbers hold its conversations.
   async available(): Promise<boolean> {
     if ((await this.connection()).configured) return true;
     return Boolean(
@@ -210,73 +238,173 @@ export class WhatsAppService {
   }
   async connection(): Promise<ConnectionView> {
     const settings = await this.stored();
-    const number = await this.number();
+    const numbers = await this.numbers();
+    const demoNumbers = await this.query
+      .selectFrom('crmWaNumbers')
+      .selectAll()
+      .where('mode', '=', 'demo')
+      .orderBy('createdAt')
+      .execute();
+    const all = [...numbers, ...demoNumbers];
+    const counts = all.length
+      ? await this.query
+          .selectFrom('crmWaConversations')
+          .select(['numberId'])
+          .select((eb) => [eb.fn.countAll().as('count')])
+          .where(
+            'numberId',
+            'in',
+            all.map((n) => toText(n.id)),
+          )
+          .groupBy('numberId')
+          .execute()
+      : [];
     const text = (value: unknown): string | null =>
       value == null || value === '' ? null : toText(value);
     return {
-      configured: Boolean(number && number.accessToken && settings.appSecret),
-      phoneNumberId: text(number?.phoneNumberId),
-      wabaId: text(number?.wabaId),
-      displayPhone: text(number?.displayPhone),
-      displayName: text(number?.displayName),
-      qualityRating: text(number?.qualityRating),
-      status: text(number?.status),
-      messagingLimit: text(number?.messagingLimit),
-      defaultHandlerId: text(number?.defaultHandlerId),
-      hasAccessToken: Boolean(number?.accessToken),
+      configured:
+        Boolean(settings.appSecret) && numbers.some((n) => n.accessToken),
       hasAppSecret: Boolean(settings.appSecret),
       verifyToken: text(this.open(settings.verifyToken, 'verifyToken')),
       webhookPath: '/webhooks/whatsapp',
       secretsReady: this.secrets().ready,
+      numbers: numbers.map(view),
+      demoNumbers: demoNumbers.map(view),
     };
+    function view(number: Row): NumberView {
+      return {
+        id: toText(number.id),
+        phoneNumberId: toText(number.phoneNumberId),
+        wabaId: text(number.wabaId),
+        mode: toText(number.mode),
+        displayPhone: text(number.displayPhone),
+        displayName: text(number.displayName),
+        qualityRating: text(number.qualityRating),
+        status: text(number.status),
+        messagingLimit: text(number.messagingLimit),
+        hasAccessToken: Boolean(number.accessToken),
+        connectedAt: text(number.connectedAt),
+        lastWebhookAt: text(number.lastWebhookAt),
+        conversations: Number(
+          counts.find((row) => toText(row.numberId) === toText(number.id))
+            ?.count ?? 0,
+        ),
+      };
+    }
   }
-  // Saves the number and its credentials, sealed; a verify token is made
-  // the first time. Credentials left out are kept.
-  async saveConnection(input: ConnectionInput): Promise<ConnectionView> {
+  // The Meta app's secret, sealed; a verify token is made the first time.
+  async saveApp(input: AppInput): Promise<ConnectionView> {
     if (!this.secrets().ready) throw new CrmError('secretsMissing', 503);
-    const phoneNumberId = input.phoneNumberId.trim();
-    if (!/^\d{5,32}$/.test(phoneNumberId))
-      throw new CrmError('invalidInput', 400, 'phoneNumberId');
+    await this.ensureApp(input.appSecret);
+    return this.connection();
+  }
+  private async ensureApp(appSecret?: string): Promise<void> {
     const settings = await this.stored();
     const next: Row = { ...settings };
-    if (input.appSecret?.trim())
-      next.appSecret = this.seal(input.appSecret.trim(), 'appSecret');
+    if (appSecret?.trim())
+      next.appSecret = this.seal(appSecret.trim(), 'appSecret');
     if (!settings.verifyToken)
       next.verifyToken = this.seal(
         randomBytes(24).toString('base64url'),
         'verifyToken',
       );
     await this.store(next);
+  }
+  // A number added: its id unique among the company's, its token needed.
+  async addNumber(input: NumberInput): Promise<ConnectionView> {
+    if (!this.secrets().ready) throw new CrmError('secretsMissing', 503);
+    const phoneNumberId = (input.phoneNumberId ?? '').trim();
+    if (!/^\d{5,32}$/.test(phoneNumberId))
+      throw new CrmError('invalidInput', 400, 'phoneNumberId');
+    if (!input.accessToken?.trim())
+      throw new CrmError('required', 400, 'accessToken');
+    if (
+      await this.query
+        .selectFrom('crmWaNumbers')
+        .select('id')
+        .where('phoneNumberId', '=', phoneNumberId)
+        .executeTakeFirst()
+    )
+      throw new CrmError('numberExists', 409, 'phoneNumberId');
+    await this.ensureApp();
     const now = new Date().toISOString();
-    const query = this.query;
-    const number = await this.number();
-    const values: Row = {
-      phoneNumberId,
-      wabaId: input.wabaId?.trim() || null,
-      defaultHandlerId: input.defaultHandlerId || null,
-      updatedAt: now,
-      ...(input.accessToken?.trim()
-        ? { accessToken: this.seal(input.accessToken.trim(), 'accessToken') }
-        : {}),
-    };
-    if (number)
-      await query
-        .updateTable('crmWaNumbers')
-        .set(values)
-        .where('id', '=', toText(number.id))
-        .execute();
-    else
-      await query
-        .insertInto('crmWaNumbers')
-        .values({
-          id: randomUUID(),
-          mode: 'api',
-          connectedAt: now,
-          createdAt: now,
-          ...values,
-        })
-        .execute();
+    await this.query
+      .insertInto('crmWaNumbers')
+      .values({
+        id: randomUUID(),
+        phoneNumberId,
+        wabaId: input.wabaId?.trim() || null,
+        mode: input.mode ?? 'api',
+        accessToken: this.seal(input.accessToken.trim(), 'accessToken'),
+        connectedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .execute();
     return this.connection();
+  }
+  // A number of the company's changed; a token left out is kept.
+  async updateNumber(id: string, input: NumberInput): Promise<ConnectionView> {
+    if (!this.secrets().ready) throw new CrmError('secretsMissing', 503);
+    const number = await this.ownNumber(id);
+    const phoneNumberId = (
+      input.phoneNumberId ?? toText(number.phoneNumberId)
+    ).trim();
+    if (!/^\d{5,32}$/.test(phoneNumberId))
+      throw new CrmError('invalidInput', 400, 'phoneNumberId');
+    if (
+      phoneNumberId !== toText(number.phoneNumberId) &&
+      (await this.query
+        .selectFrom('crmWaNumbers')
+        .select('id')
+        .where('phoneNumberId', '=', phoneNumberId)
+        .executeTakeFirst())
+    )
+      throw new CrmError('numberExists', 409, 'phoneNumberId');
+    await this.query
+      .updateTable('crmWaNumbers')
+      .set({
+        phoneNumberId,
+        ...(input.wabaId !== undefined
+          ? { wabaId: input.wabaId?.trim() || null }
+          : {}),
+        ...(input.mode ? { mode: input.mode } : {}),
+        ...(input.accessToken?.trim()
+          ? {
+              accessToken: this.seal(input.accessToken.trim(), 'accessToken'),
+            }
+          : {}),
+        updatedAt: new Date().toISOString(),
+      })
+      .where('id', '=', id)
+      .execute();
+    return this.connection();
+  }
+  // A number removed, only while it holds no conversation: one that does
+  // keeps its customers' history.
+  async removeNumber(id: string): Promise<ConnectionView> {
+    await this.ownNumber(id);
+    if (
+      await this.query
+        .selectFrom('crmWaConversations')
+        .select('id')
+        .where('numberId', '=', id)
+        .executeTakeFirst()
+    )
+      throw new CrmError('numberInUse', 409);
+    await this.query.deleteFrom('crmWaNumbers').where('id', '=', id).execute();
+    return this.connection();
+  }
+  // One of the company's numbers (not a demo one), else not found.
+  private async ownNumber(id: string): Promise<Row> {
+    const number = await this.query
+      .selectFrom('crmWaNumbers')
+      .selectAll()
+      .where('id', '=', id)
+      .where('mode', '!=', 'demo')
+      .executeTakeFirst();
+    if (!number) throw new CrmError('notFound', 404);
+    return number;
   }
   // Meta's subscription check: the mode and the token the CRM made.
   async challenge(
@@ -300,11 +428,13 @@ export class WhatsAppService {
   }
   // The number's standing read from Meta, saved and returned; the reason
   // when Meta could not be asked.
-  async check(): Promise<
+  async check(
+    id: string,
+  ): Promise<
     { ok: true; standing: NumberStanding } | { ok: false; reason: string }
   > {
-    const number = await this.number();
-    if (!number?.accessToken) return { ok: false, reason: 'notConfigured' };
+    const number = await this.ownNumber(id);
+    if (!number.accessToken) return { ok: false, reason: 'notConfigured' };
     try {
       const standing = await (
         await this.channel(number)
@@ -353,11 +483,7 @@ export class WhatsAppService {
       .where('mediaStatus', 'in', ['pending', 'unavailable'])
       .groupBy('mediaStatus')
       .execute();
-    const number = await this.number();
     return {
-      lastWebhookAt: number?.lastWebhookAt
-        ? toText(number.lastWebhookAt)
-        : null,
       received: counts.reduce((sum, row) => sum + Number(row.count), 0),
       processed: count('processed'),
       pending: count('pending'),
@@ -395,9 +521,8 @@ export class WhatsAppService {
     const settings = await this.stored();
     const appSecret = this.open(settings.appSecret, 'appSecret');
     if (!appSecret) return false;
-    const number = (await this.number()) ?? {};
     const channel = this.channelFactory
-      ? await this.channelFactory(number)
+      ? await this.channelFactory({})
       : cloudApiChannel({ appSecret, accessToken: '' });
     if (!channel.verify(body, signature)) return false;
     const now = new Date().toISOString();
@@ -411,11 +536,26 @@ export class WhatsAppService {
         attempts: 0,
       })
       .execute();
-    if (number.id)
+    // The numbers it is for heard from, read once signed; a body that
+    // does not parse is the pass's to report.
+    const ids = new Set<string>();
+    try {
+      const payload = JSON.parse(new TextDecoder().decode(body)) as {
+        entry?: { changes?: { value?: { metadata?: Row } }[] }[];
+      };
+      for (const entry of payload.entry ?? [])
+        for (const change of entry.changes ?? []) {
+          const id = change.value?.metadata?.phone_number_id;
+          if (typeof id === 'string' && id) ids.add(id);
+        }
+    } catch {
+      // Kept as it came, reported by the pass.
+    }
+    if (ids.size)
       await this.query
         .updateTable('crmWaNumbers')
         .set({ lastWebhookAt: now })
-        .where('id', '=', toText(number.id))
+        .where('phoneNumberId', 'in', [...ids])
         .execute();
     return true;
   }
@@ -502,8 +642,8 @@ export class WhatsAppService {
 
   // One message of a conversation: a customer's as it arrives, and with
   // coexistence the team's sent from the WhatsApp Business app and the
-  // imported history's. Only a customer's live message counts as unread,
-  // tells its handler and starts a follow-up once quiet; the team's sent
+  // imported history's. Only a customer's live message counts toward
+  // awaiting a reply and starts a follow-up once quiet; the team's sent
   // from the app count as contact on the lead, as the customer's do; the
   // history touches nothing but the conversation and its timeline lines.
   private async receive(message: InboundMessage, now: Date): Promise<void> {
@@ -600,7 +740,7 @@ export class WhatsAppService {
       // history's.
       const fresh = inbound && message.origin === 'customer';
       const recent = fresh && now.getTime() - Date.parse(at) < NEWS_MS;
-      const unread = Number(conversation.unreadCount ?? 0);
+      const awaiting = Number(conversation.unreadCount ?? 0);
       await query
         .updateTable('crmWaConversations')
         .set({
@@ -613,7 +753,15 @@ export class WhatsAppService {
             Date.parse(toText(conversation.lastMessageAt)) <= Date.parse(at)
               ? message.direction
               : toText(conversation.lastDirection),
-          ...(fresh ? { unreadCount: unread + 1 } : {}),
+          // Awaiting a reply: a customer's message adds to it, the team's
+          // reply sent after the customer's last message ends it.
+          ...(fresh ? { unreadCount: awaiting + 1 } : {}),
+          ...(!inbound &&
+          live &&
+          (!conversation.lastInboundAt ||
+            Date.parse(at) >= Date.parse(toText(conversation.lastInboundAt)))
+            ? { unreadCount: 0 }
+            : {}),
           ...(recent && contact.state === 'linked'
             ? {
                 followUpDueAt: new Date(
@@ -645,9 +793,6 @@ export class WhatsAppService {
             now.toISOString(),
           );
       }
-      // The person replying hears of it once until they read it.
-      if (unread === 0 && recent && conversation.handlerId)
-        await this.notify(query, contact, conversation, message.waMessageId);
     });
   }
 
@@ -812,46 +957,12 @@ export class WhatsAppService {
       id: randomUUID(),
       numberId: toText(number.id),
       waContactId: toText(contact.id),
-      handlerId: await this.handlerOf(query, contact, number),
       unreadCount: 0,
       createdAt: now,
       updatedAt: now,
     };
     await query.insertInto('crmWaConversations').values(row).execute();
     return row;
-  }
-
-  // Who answers: the linked record's owner, else the number's receptionist.
-  private async handlerOf(
-    query: QueryAdapter,
-    contact: Row,
-    number?: Row,
-  ): Promise<string | null> {
-    const record = contact.contactId
-      ? await query
-          .selectFrom('crmContacts')
-          .select('ownerId')
-          .where('id', '=', toText(contact.contactId))
-          .executeTakeFirst()
-      : contact.leadId
-        ? await query
-            .selectFrom('crmLeads')
-            .select('ownerId')
-            .where('id', '=', toText(contact.leadId))
-            .executeTakeFirst()
-        : undefined;
-    if (record?.ownerId) return toText(record.ownerId);
-    const receptionist =
-      number ??
-      (await query
-        .selectFrom('crmWaNumbers')
-        .select('defaultHandlerId')
-        .where('mode', '!=', 'demo')
-        .orderBy('createdAt')
-        .executeTakeFirst());
-    return receptionist?.defaultHandlerId
-      ? toText(receptionist.defaultHandlerId)
-      : null;
   }
 
   private async ownerActor(
@@ -875,31 +986,6 @@ export class WhatsAppService {
     return crmActor(this.service.authz, {
       id: ownerId,
       locale: preference?.locale === 'zh-CN' ? 'zh-CN' : 'en-US',
-    });
-  }
-
-  private async notify(
-    query: QueryAdapter,
-    contact: Row,
-    conversation: Row,
-    waMessageId: string,
-  ): Promise<void> {
-    const recipientId = toText(conversation.handlerId);
-    const record: { entity: Entity; id: string } | undefined =
-      contact.state !== 'linked'
-        ? undefined
-        : contact.contactId
-          ? { entity: 'contacts', id: toText(contact.contactId) }
-          : contact.leadId
-            ? { entity: 'leads', id: toText(contact.leadId) }
-            : undefined;
-    if (contact.state === 'dismissed' || contact.state === 'spam') return;
-    await this.service.notifyWhatsApp(query, {
-      record,
-      conversationId: toText(conversation.id),
-      name: displayName(contact),
-      recipientId,
-      key: `whatsapp:${waMessageId}:${recipientId}`,
     });
   }
 
@@ -1282,15 +1368,21 @@ export class WhatsAppService {
 
   async conversations(
     actor: Actor,
-    options: { view: ConversationView; page: number; pageSize: number },
+    options: {
+      view: ConversationView;
+      page: number;
+      pageSize: number;
+      // One number's alone.
+      numberId?: string;
+    },
   ): Promise<{ data: Row[]; total: number }> {
     const query = this.query;
-    let rows = await query
+    let list = query
       .selectFrom('crmWaConversations as c')
       .innerJoin('crmWaContacts as w', 'w.id', 'c.waContactId')
       .select([
         'c.id as id',
-        'c.handlerId as handlerId',
+        'c.numberId as numberId',
         'c.lastInboundAt as lastInboundAt',
         'c.lastMessageAt as lastMessageAt',
         'c.lastDirection as lastDirection',
@@ -1303,10 +1395,10 @@ export class WhatsAppService {
         'w.leadId as leadId',
         'w.contactId as contactId',
       ])
-      .orderBy('c.lastMessageAt', 'desc')
-      .execute();
-    if (options.view === 'mine')
-      rows = rows.filter((row) => row.handlerId === actor.id);
+      .orderBy('c.lastMessageAt', 'desc');
+    if (options.numberId)
+      list = list.where('c.numberId', '=', options.numberId);
+    let rows = await list.execute();
     // Those set aside (not a customer, spam) show in All alone.
     if (options.view === 'unlinked')
       rows = rows.filter((row) => row.state === 'unlinked');
@@ -1322,14 +1414,37 @@ export class WhatsAppService {
     const start = (options.page - 1) * options.pageSize;
     const page = readable.slice(start, start + options.pageSize);
     const last = await this.lastMessages(page.map((row) => toText(row.id)));
+    const numbers = await this.numberLabels();
     return {
       data: page.map((row) => ({
         ...row,
         name: displayName(row),
+        number: numbers.get(toText(row.numberId)) ?? null,
         last: last.get(toText(row.id)) ?? null,
       })),
       total: readable.length,
     };
+  }
+
+  // Every number conversations can be on (the demo's too), as the pages
+  // name it: its display number, else Meta's id, and its name.
+  async numberLabels(): Promise<Map<string, NumberLabel>> {
+    const rows = await this.query
+      .selectFrom('crmWaNumbers')
+      .select(['id', 'phoneNumberId', 'displayPhone', 'displayName', 'mode'])
+      .orderBy('createdAt')
+      .execute();
+    return new Map(
+      rows.map((row) => [
+        toText(row.id),
+        {
+          id: toText(row.id),
+          phone: toText(row.displayPhone ?? '') || toText(row.phoneNumberId),
+          name: row.displayName ? toText(row.displayName) : null,
+          mode: toText(row.mode),
+        },
+      ]),
+    );
   }
 
   private async lastMessages(ids: string[]): Promise<Map<string, Row>> {
@@ -1398,8 +1513,13 @@ export class WhatsAppService {
       // the pages drop those they already show, by id.
       messages = messages.where('occurredAt', '<=', options.before);
     const rows = await messages.execute();
+    // No one is assigned to reply (the column stays from before, unread).
+    const { handlerId: _assigned, ...shown } = conversation;
+    void _assigned;
     return {
-      ...conversation,
+      ...shown,
+      number:
+        (await this.numberLabels()).get(toText(conversation.numberId)) ?? null,
       contact: publicContact(contact),
       record: await this.recordOf(actor, contact),
       messages: rows
@@ -1441,23 +1561,21 @@ export class WhatsAppService {
     }
   }
 
-  // The unread messages in the conversations the reader answers.
-  async unreadCount(actor: Actor): Promise<number> {
-    if (!(await this.hasPage(actor))) return 0;
-    const rows = await this.query
-      .selectFrom('crmWaConversations as c')
-      .innerJoin('crmWaContacts as w', 'w.id', 'c.waContactId')
-      .select(['c.unreadCount as unreadCount'])
-      .where('c.handlerId', '=', actor.id)
-      .where('w.state', 'in', ['unlinked', 'linked'])
-      .execute();
-    return rows.reduce((sum, row) => sum + Number(row.unreadCount ?? 0), 0);
-  }
-
+  // Opened: on a number on the API alone, whose team's replies the CRM
+  // does not see until it sends them itself, the conversation stops
+  // awaiting a reply. On a coexistence number (and the demo's), only the
+  // team's reply does that (receive()).
   async markRead(actor: Actor, id: string): Promise<void> {
     const { contact } = await this.contactOfConversation(id);
     if (!(await this.mayRead(actor, contact)))
       throw new CrmError('notFound', 404);
+    const number = await this.query
+      .selectFrom('crmWaConversations as c')
+      .innerJoin('crmWaNumbers as n', 'n.id', 'c.numberId')
+      .select(['n.mode as mode'])
+      .where('c.id', '=', id)
+      .executeTakeFirst();
+    if (toText(number?.mode) !== 'api') return;
     await this.query
       .updateTable('crmWaConversations')
       .set({ unreadCount: 0 })
@@ -1546,12 +1664,6 @@ export class WhatsAppService {
         .where('id', '=', toText(contact.id))
         .execute();
       const next = { ...contact, ...changes };
-      const handlerId = await this.handlerOf(query, next);
-      await query
-        .updateTable('crmWaConversations')
-        .set({ handlerId, updatedAt: now })
-        .where('waContactId', '=', toText(contact.id))
-        .execute();
       await this.rewriteTimeline(query, next);
       // A lead the customer turns out to be has been in touch, as one their
       // number matched (receive()).

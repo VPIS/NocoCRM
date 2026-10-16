@@ -2940,51 +2940,6 @@ export class CrmService {
       key: `signal:${signalId}:${recipientId}`,
     });
   }
-  // A customer's WhatsApp message, to the person who answers them, once
-  // until they read it (whatsapp/service.ts): on the lead or contact it is
-  // linked to, or, for a customer linked to none yet, on the conversation
-  // itself, which the delivery opens on the WhatsApp page. Under the record
-  // changes switch, inside the transaction that stored the message.
-  async notifyWhatsApp(
-    query: QueryAdapter,
-    message: {
-      record?: { entity: Entity; id: string };
-      conversationId: string;
-      name: string;
-      recipientId: string;
-      key: string;
-    },
-  ): Promise<boolean> {
-    if (!message.recipientId) return false;
-    if (!(await this.settings(query))[notificationSwitches.recordChanges])
-      return false;
-    if (message.record) {
-      const record = await query
-        .selectFrom(definitions[message.record.entity].table)
-        .select(['id', 'name'])
-        .where('id', '=', message.record.id)
-        .executeTakeFirst();
-      if (!record) return false;
-      return this.enqueue(
-        query,
-        { id: 'system' },
-        message.record.entity,
-        record,
-        message.recipientId,
-        'whatsapp',
-        message.key,
-      );
-    }
-    return this.enqueue(
-      query,
-      { id: 'system' },
-      'whatsapp' as Entity,
-      { id: message.conversationId, name: message.name },
-      message.recipientId,
-      'whatsappNew',
-      message.key,
-    );
-  }
   // A task about to start, to its owner and each internal participant; the
   // key is the reminder's identity, so a scan that sees the same task again
   // queues nothing new.

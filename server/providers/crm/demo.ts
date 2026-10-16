@@ -217,7 +217,7 @@ interface Manifest {
   // The importer's conversations with the assistant, which removal deletes;
   // absent on an import made before the dataset had them.
   chats?: string[];
-  // The demo's WhatsApp number and its customers, which removal deletes;
+  // The demo's WhatsApp numbers and their customers, which removal deletes;
   // absent on an import made before the dataset had them.
   whatsapp?: DemoWhatsAppManifest;
 }
@@ -2081,7 +2081,7 @@ async function populate(
       .execute();
   }
 
-  // The company's WhatsApp number, with conversations as the webhook would
+  // The company's WhatsApp numbers, with conversations as the webhook would
   // have kept them (demo-whatsapp.ts).
   if (whatsapp)
     await populateDemoWhatsApp(
@@ -2090,7 +2090,6 @@ async function populate(
       {
         text: text.whatsapp,
         at,
-        receptionistId: actor.id,
         contacts,
         leads,
         hworldPeople: projects.hworldPeople,

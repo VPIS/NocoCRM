@@ -3,23 +3,38 @@ import { z } from 'zod';
 // The company's WhatsApp number (whatsapp/service.ts): its connection, the
 // conversations with customers, their messages.
 
-export const WhatsAppConnection = z
+export const WhatsAppNumber = z
   .object({
-    configured: z
-      .boolean()
-      .describe('A number, its access token and the app secret are set.'),
-    phoneNumberId: z.string().nullable(),
+    id: z.string(),
+    phoneNumberId: z.string().describe("Meta's phone number id."),
     wabaId: z.string().nullable(),
+    mode: z
+      .string()
+      .describe(
+        "api: a number on the Cloud API alone; coexistence: one also used on the WhatsApp Business app; demo: the demo dataset's.",
+      ),
     displayPhone: z.string().nullable(),
     displayName: z.string().nullable(),
     qualityRating: z.string().nullable(),
     status: z.string().nullable(),
     messagingLimit: z.string().nullable(),
-    defaultHandlerId: z
+    hasAccessToken: z.boolean(),
+    connectedAt: z.string().nullable(),
+    lastWebhookAt: z
       .string()
       .nullable()
-      .describe('Who answers a customer linked to no record yet.'),
-    hasAccessToken: z.boolean(),
+      .describe('When a delivery for it last came in.'),
+    conversations: z
+      .number()
+      .describe('Its conversations, which keep it from being removed.'),
+  })
+  .meta({ ref: 'CrmWhatsAppNumber' });
+
+export const WhatsAppConnection = z
+  .object({
+    configured: z
+      .boolean()
+      .describe('The app secret and a number with its access token are set.'),
     hasAppSecret: z.boolean(),
     verifyToken: z
       .string()
@@ -28,29 +43,49 @@ export const WhatsAppConnection = z
     webhookPath: z
       .string()
       .describe(
-        "The webhook's path under the deployment's public address, for Meta's callback URL.",
+        "The webhook's path under the deployment's public address, for Meta's callback URL, the same for every number.",
       ),
     secretsReady: z
       .boolean()
       .describe('Whether the secrets service can seal credentials.'),
+    numbers: z.array(WhatsAppNumber),
+    demoNumbers: z
+      .array(WhatsAppNumber)
+      .describe(
+        "The demo dataset's numbers: shown with their conversations, receiving nothing and changed by no number route.",
+      ),
   })
   .meta({ ref: 'CrmWhatsAppConnection' });
 
-export const SaveWhatsAppConnection = z.strictObject({
-  phoneNumberId: z.string().min(1).max(32),
+export const SaveWhatsAppApp = z.strictObject({
+  appSecret: z
+    .string()
+    .max(256)
+    .optional()
+    .describe(
+      "The Meta app's secret, which signs every number's deliveries; left out to keep the stored one.",
+    ),
+});
+
+const numberFields = {
   wabaId: z.string().max(32).nullable().optional(),
+  mode: z.enum(['api', 'coexistence']).optional(),
+};
+export const AddWhatsAppNumber = z.strictObject({
+  phoneNumberId: z.string().min(1).max(32),
+  accessToken: z.string().min(1).max(1024),
+  ...numberFields,
+});
+export const UpdateWhatsAppNumber = z.strictObject({
+  phoneNumberId: z.string().min(1).max(32).optional(),
   accessToken: z
     .string()
     .max(1024)
     .optional()
     .describe('Left out to keep the stored one.'),
-  appSecret: z
-    .string()
-    .max(256)
-    .optional()
-    .describe('Left out to keep the stored one.'),
-  defaultHandlerId: z.string().max(64).nullable().optional(),
+  ...numberFields,
 });
+export const NumberParams = z.object({ numberId: z.string() });
 
 export const WhatsAppCheck = z.union([
   z.object({
@@ -72,7 +107,6 @@ export const WhatsAppCheck = z.union([
 ]);
 
 export const WhatsAppHealth = z.object({
-  lastWebhookAt: z.string().nullable(),
   received: z.number(),
   processed: z.number(),
   pending: z.number(),
@@ -132,19 +166,35 @@ export const WhatsAppCustomer = z
   })
   .meta({ ref: 'CrmWhatsAppCustomer' });
 
+export const WhatsAppNumberLabel = z
+  .object({
+    id: z.string(),
+    phone: z.string().describe("Its display number, else Meta's id."),
+    name: z.string().nullable(),
+    mode: z.string().describe('api, coexistence or demo.'),
+  })
+  .meta({ ref: 'CrmWhatsAppNumberLabel' });
+
 export const WhatsAppConversationRow = z.object({
   id: z.string(),
+  numberId: z.string(),
+  number: WhatsAppNumberLabel.nullable().describe(
+    'The company number the conversation is on.',
+  ),
   waContactId: z.string(),
   name: z.string(),
   phone: z.string().nullable(),
   state: z.string(),
   leadId: z.string().nullable(),
   contactId: z.string().nullable(),
-  handlerId: z.string().nullable(),
   lastInboundAt: z.string().nullable(),
   lastMessageAt: z.string().nullable(),
   lastDirection: z.string().nullable(),
-  unreadCount: z.number(),
+  unreadCount: z
+    .number()
+    .describe(
+      "Awaiting a reply: the customer's messages since the team's last reply, 0 once answered.",
+    ),
   last: z
     .object({
       type: z
@@ -162,6 +212,9 @@ export const WhatsAppConversationRow = z.object({
 
 export const WhatsAppConversation = z.object({
   id: z.string(),
+  number: WhatsAppNumberLabel.nullable().describe(
+    'The company number the conversation is on.',
+  ),
   record: z
     .object({
       entity: z.enum(['leads', 'contacts']),
@@ -172,7 +225,6 @@ export const WhatsAppConversation = z.object({
     .describe(
       'The lead or contact the customer is linked to, as pages name it; null when none or not readable.',
     ),
-  handlerId: z.string().nullable(),
   lastInboundAt: z.string().nullable(),
   unreadCount: z.number(),
   contact: WhatsAppCustomer,
@@ -181,7 +233,11 @@ export const WhatsAppConversation = z.object({
 });
 
 export const ConversationsQuery = z.object({
-  view: z.enum(['mine', 'unlinked', 'all']).default('all'),
+  view: z.enum(['all', 'unlinked']).default('all'),
+  numberId: z
+    .string()
+    .optional()
+    .meta({ description: "One number's conversations alone." }),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(50),
 });
