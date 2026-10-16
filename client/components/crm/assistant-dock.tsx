@@ -20,8 +20,9 @@ import { useCurrentRecord, type CurrentRecord } from './current-record.js';
 // anything". A question typed there, or one of the page's suggested
 // questions, opens the assistant panel on a new conversation and sends it; on
 // a record's page the conversation starts from that record (announced by the
-// page, current-record.ts). It replaced the header's AI button and every
-// record page's "Ask AI"; the AI cards keep their own "Ask AI", which asks
+// page, current-record.ts). It replaced every record page's "Ask AI"; the
+// header's ✨ button (assistant-header-button.tsx) opens the panel from every
+// page as well; the AI cards keep their own "Ask AI", which asks
 // about the card. Pages keep 6rem empty at the bottom of what scrolls under
 // it (CrmFrame's pb-24, the record page's columns, the board's columns), so
 // their last row can be scrolled above it. One line until it is clicked, it
