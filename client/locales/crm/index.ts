@@ -521,8 +521,8 @@ const wording = {
       '由 AI 执行；它不改动公司的任何资料，能编辑公司的人可以忽略不准确或不相关的信号，忽略的事件不再出现。',
     ],
     manualNoteSignals: [
-      'Whoever may edit a company can always check it with Check now under its name, whatever is switched off. It needs the Qwen model service.',
-      '能编辑公司的人在公司名称下点「立即检查」随时可以手动发起，不受这些开关影响。需要配置通义千问。',
+      'Whoever may edit a company can always check it with Check now under its name, whatever is switched off.',
+      '能编辑公司的人在公司名称下点「立即检查」随时可以手动发起，不受这些开关影响。',
     ],
     manualNoteTasks: [
       "A task's owner or participant can always ask for a preparation on the task, whatever is switched off.",
@@ -2749,8 +2749,8 @@ const wording = {
     checkNow: ['Check now', '立即检查'],
     checking: ['Checking the web…', '正在联网检查…'],
     unavailable: [
-      'Checking on the web needs the Qwen model service (DASHSCOPE_API_KEY).',
-      '联网检查需要配置通义千问模型服务（DASHSCOPE_API_KEY）。',
+      'Checking on the web needs a model service, set up on Agent team → Models.',
+      '联网检查需要先在「Agent 团队 → 模型」里配置模型服务。',
     ],
     foundSome: ['New signals found: {{count}}.', '发现 {{count}} 条新信号。'],
     foundNone: ['Nothing new found.', '没有发现新信号。'],
@@ -3142,8 +3142,8 @@ const wording = {
       '请从可审批的人中选择审批人（在设置 → 审批流程中配置）。',
     ],
     signalsUnavailable: [
-      'Checking a company on the web needs the Qwen model service (DASHSCOPE_API_KEY).',
-      '联网检查公司需要配置通义千问模型服务（DASHSCOPE_API_KEY）。',
+      'Checking a company on the web needs a model service, set up on Agent team → Models.',
+      '联网检查公司需要先在「Agent 团队 → 模型」里配置模型服务。',
     ],
     signalsFailed: [
       'The web search failed. Try again later.',

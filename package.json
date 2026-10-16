@@ -131,6 +131,9 @@
     ]
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.78",
+    "@ai-sdk/google": "^4.0.93",
+    "@ai-sdk/openai": "^4.0.91",
     "@nocobase/app-cli": "^1.0.0-beta.22",
     "@nocobase/app-plugin-agents": "0.1.0-beta.8",
     "@nocobase/app-plugin-api-keys": "^1.0.0-beta.16",

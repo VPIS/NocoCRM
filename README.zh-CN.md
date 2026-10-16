@@ -96,7 +96,7 @@ pnpm dev
 
 `config.yml` 保存密钥，不提交到仓库；`config.example.yml` 说明了每个选项。用 `pnpm nocobase config set key=value` 修改配置。
 
-**AI。** 至少通过环境变量给一个模型服务提供密钥：`DASHSCOPE_API_KEY`（通义千问）、`DEEPSEEK_API_KEY`（DeepSeek），或 `OPENAI_API_KEY` 加 `OPENAI_BASE_URL`（OpenAI 或兼容服务）。这些服务在 `server/config/ai.ts` 里声明；没有密钥的服务不会创建，一个都没有时 AI 关闭。启动时，**Agent 团队 → 模型** 里还没有的服务会自动创建，之后由该页面管理。配置了 DeepSeek 时，助手和跟进类 Agent 优先使用它；客户信号需要能联网搜索的通义千问。
+**AI。** 至少通过环境变量给一个模型服务提供密钥：`DASHSCOPE_API_KEY`（通义千问）、`DEEPSEEK_API_KEY`（DeepSeek），或 `OPENAI_API_KEY` 加 `OPENAI_BASE_URL`（OpenAI 或兼容服务）。这些服务在 `server/config/ai.ts` 里声明；没有密钥的服务不会创建，一个都没有时 AI 关闭。启动时，**Agent 团队 → 模型** 里还没有的服务会自动创建，之后由该页面管理。其他服务商（如 Anthropic 的 Claude、Google 的 Gemini）在该页面填入 key 即可添加，再到 **Agent 团队 → Agent** 里为各个 Agent 选择要用的模型。配置了 DeepSeek 时，助手和跟进类 Agent 优先使用它。客户信号用给它配置的模型联网搜索，需要选能联网搜索的模型：通义千问、OpenAI、Anthropic（Claude）或 Google（Gemini）。
 
 **通知。** 站内收件箱需要 `inbox` 通道（`notification.channels.inbox: { provider: in-app }`，`config.example.yml` 里已有）。每一类通知都可以在 **设置 → 通用 → 提醒设置** 里关闭。
 

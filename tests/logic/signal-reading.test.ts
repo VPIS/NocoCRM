@@ -6,7 +6,13 @@ import {
   readSignals,
   signalQuestion,
 } from '../../server/providers/crm/signal-reading.js';
-import { webSearcher } from '../../server/providers/crm/web-research.js';
+import { MockLanguageModelV4 } from 'ai/test';
+import {
+  citePages,
+  searchWeb,
+  WebSearchError,
+  type WebSearcher,
+} from '../../server/providers/crm/web-research.js';
 
 // The company signals' reading of a web search's answer
 // (server/providers/crm/signal-reading.ts): only events that cite the
@@ -156,20 +162,122 @@ describe('reading company signals', () => {
     expect(question).toContain('Leave out routine news');
   });
 
-  it('searches with the configured Qwen service that has a key, its fast model first', () => {
-    expect(
-      webSearcher({
-        openai: { provider: 'openai', options: { apiKey: 'x' } },
-        qwen: {
-          provider: 'dashscope',
-          options: { apiKey: 'key' },
-          enabledModels: [{ value: 'qwen3.8-max' }, { value: 'qwen3.8-flash' }],
+  it("asks a model that cites by URL for a report naming each event's pages", () => {
+    const question = signalQuestion(
+      { name: 'Acme' },
+      TODAY,
+      [],
+      false,
+      true,
+      'urls',
+    );
+    expect(question).toContain('write the full URL of every page');
+    expect(question).toContain('Answer as a short report');
+    expect(question).not.toContain('Return only one JSON object');
+    expect(question).not.toContain('Never write a URL');
+  });
+
+  it('marks the URLs the search read as [ref_n] and drops any other', () => {
+    const { text, pages } = citePages(
+      'Acme raised a round <https://news.example/acme?utm_source=openai>. ' +
+        'A rumour (https://made-up.example/x). Also https://www.wire.example/a/.',
+      [
+        { url: 'https://news.example/acme', title: 'Acme raises' },
+        { url: 'https://news.example/acme#top' },
+        { url: 'https://www.wire.example/a', title: 'Wire' },
+        { url: 'ftp://files.example/x' },
+      ],
+    );
+    expect(pages).toEqual([
+      {
+        index: 1,
+        title: 'Acme raises',
+        url: 'https://news.example/acme',
+        site: 'news.example',
+      },
+      {
+        index: 2,
+        title: 'Wire',
+        url: 'https://www.wire.example/a',
+        site: 'wire.example',
+      },
+    ]);
+    expect(text).toBe('Acme raised a round [ref_1]. A rumour . Also [ref_2]');
+  });
+});
+
+describe('the search through the model gateway', () => {
+  const searcher = (
+    provider: string,
+    model: MockLanguageModelV4,
+  ): WebSearcher => ({
+    kind: 'gateway',
+    service: 'svc',
+    model: 'm',
+    provider,
+    languageModel: () => Promise.resolve(model),
+  });
+  const answer = (text: string, sources: { url: string; title: string }[]) =>
+    new MockLanguageModelV4({
+      doGenerate: {
+        content: [
+          { type: 'text', text },
+          ...sources.map((source, i) => ({
+            type: 'source' as const,
+            sourceType: 'url' as const,
+            id: String(i),
+            ...source,
+          })),
+        ],
+        finishReason: { unified: 'stop', raw: 'stop' },
+        usage: {
+          inputTokens: { total: 12, noCache: 12, cacheRead: 0, cacheWrite: 0 },
+          outputTokens: { total: 5, text: 5, reasoning: 0 },
         },
-      }),
-    ).toEqual({ service: 'qwen', model: 'qwen3.8-flash', apiKey: 'key' });
-    expect(
-      webSearcher({ qwen: { provider: 'dashscope', options: {} } }),
-    ).toBeNull();
-    expect(webSearcher(undefined)).toBeNull();
+        warnings: [],
+      },
+    });
+
+  it("searches with the provider's own tool and cites the pages it read", async () => {
+    const model = answer('Hired a CFO <https://a.example/cfo>.', [
+      { url: 'https://a.example/cfo', title: 'New CFO' },
+    ]);
+    const result = await searchWeb(searcher('anthropic', model), 'question', {
+      system: 'method',
+    });
+    expect(result.text).toBe('Hired a CFO [ref_1].');
+    expect(result.pages).toEqual([
+      {
+        index: 1,
+        title: 'New CFO',
+        url: 'https://a.example/cfo',
+        site: 'a.example',
+      },
+    ]);
+    expect(result.usage).toEqual({ inputTokens: 12, outputTokens: 5 });
+    const call = model.doGenerateCalls[0];
+    expect(call?.tools?.map((tool) => tool.name)).toEqual(['web_search']);
+  });
+
+  it('asks without the tool when not searching, keeping the text', async () => {
+    const model = answer('{"events":[]} [ref_1]', []);
+    const result = await searchWeb(searcher('openai', model), 'reshape', {
+      search: false,
+    });
+    expect(result.text).toBe('{"events":[]} [ref_1]');
+    expect(model.doGenerateCalls[0]?.tools ?? []).toEqual([]);
+  });
+
+  it('says a model whose provider cannot search cannot, for good', async () => {
+    const model = answer('x', []);
+    const failure = await searchWeb(searcher('deepseek', model), 'q').catch(
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(WebSearchError);
+    expect((failure as WebSearchError).transient).toBe(false);
+    expect((failure as WebSearchError).message).toContain(
+      'cannot search the web',
+    );
+    expect(model.doGenerateCalls).toHaveLength(0);
   });
 });

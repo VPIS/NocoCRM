@@ -145,7 +145,7 @@ it('says when nothing can search, and offers no changes to a reader', () => {
   render(heading());
   expect(
     screen.getByText(
-      'Checking on the web needs the Qwen model service (DASHSCOPE_API_KEY).',
+      'Checking on the web needs a model service, set up on Agent team → Models.',
     ),
   ).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Check now' })).toBeNull();

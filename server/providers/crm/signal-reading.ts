@@ -61,13 +61,17 @@ export function dayBefore(today: string, days: number): string {
 // what counts and what to leave out) goes beside it as the system message
 // (company-signals.ts), never in it: the search is formed from this
 // question, and a method in it turned the search to the method's words.
-// Without one (`guided` false), the question says what to leave out.
+// Without one (`guided` false), the question says what to leave out. A
+// model that cites by URL (`urls`, web-research.ts's gateway search) is
+// asked for a report naming each event's pages, which its URLs then mark
+// as [ref_n] and a second, unsearched ask puts into the JSON.
 export function signalQuestion(
   company: CompanyFacts,
   today: string,
   known: readonly string[],
   chinese: boolean,
   guided = false,
+  cite: 'refs' | 'urls' = 'refs',
 ): string {
   const since = dayBefore(today, SIGNAL_WINDOW_DAYS);
   const facts = [
@@ -83,12 +87,16 @@ export function signalQuestion(
     guided
       ? ''
       : 'Leave out routine news: monthly sales or delivery figures, share price moves, awards, rankings, speeches, marketing campaigns, events about other companies with a similar name.',
-    'Every event must come from the search results: cite the pages that state it as [ref_n] in its "refs" (the numbers only). Give the date the event happened, not the date of the article, and leave out events before the window or without a date. Never write a URL. When nothing qualifies, return an empty list.',
+    cite === 'urls'
+      ? 'Every event must come from the search results: after each event, write the full URL of every page you found that states it, in angle brackets. Give the date the event happened, not the date of the article, and leave out events before the window or without a date. When nothing qualifies, say so.'
+      : 'Every event must come from the search results: cite the pages that state it as [ref_n] in its "refs" (the numbers only). Give the date the event happened, not the date of the article, and leave out events before the window or without a date. Never write a URL. When nothing qualifies, return an empty list.',
     known.length
       ? `Already known, do not report again: ${known.map((k) => `"${k}"`).join('; ')}.`
       : '',
     `Write "title" (one sentence) and "summary" (at most two sentences) in ${chinese ? 'Simplified Chinese' : 'English'}.`,
-    'Return only one JSON object: {"events":[{"type":"funding|hiring|leadership|business|risk","title":"...","summary":"...","date":"YYYY-MM-DD","refs":[1]}]}',
+    cite === 'urls'
+      ? 'Answer as a short report, one paragraph per event, giving its kind (funding, hiring, leadership, business or risk), its date (YYYY-MM-DD), its title and its summary.'
+      : 'Return only one JSON object: {"events":[{"type":"funding|hiring|leadership|business|risk","title":"...","summary":"...","date":"YYYY-MM-DD","refs":[1]}]}',
   ]
     .filter(Boolean)
     .join('\n');

@@ -18,6 +18,7 @@ import {
 } from './signal-reading.js';
 import { jsonValue } from './values.js';
 import {
+  citesUrls,
   searchWeb,
   WebSearchError,
   type WebAnswer,
@@ -497,6 +498,7 @@ export class CompanySignals {
       known.slice(0, KNOWN_NAMED).map((row) => toText(row.title)),
       settings.aiLanguage.startsWith('zh'),
       Boolean(method),
+      citesUrls(searcher) ? 'urls' : 'refs',
     );
     const keys = new Set(known.map((row) => toText(row.eventKey)));
     const answer = await this.ask(searcher, question, true, method);

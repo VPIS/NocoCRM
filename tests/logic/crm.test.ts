@@ -594,7 +594,12 @@ beforeAll(async () => {
     service,
     () =>
       web.on
-        ? { service: 'qwen', model: 'qwen3.8-flash', apiKey: 'key' }
+        ? {
+            kind: 'dashscope' as const,
+            service: 'qwen',
+            model: 'qwen3.8-flash',
+            apiKey: 'key',
+          }
         : null,
     {
       fetch: (async (_url: string, init: { body: string }) => {
@@ -11126,9 +11131,11 @@ describe("The assistant's conversations on the Agents plugin", () => {
       ],
       instructions: 'Our own rules.',
     });
-    // The company signals search with Qwen alone.
+    // The company signals: every chat model, those that can search the
+    // web first.
     expect(created[4]!.modelEntries).toEqual([
       { modelService: 'qwen', model: 'flash' },
+      { modelService: 'deepseek', model: 'chat' },
     ]);
     // Each its own skill, where the library has it.
     expect(attached).toEqual({

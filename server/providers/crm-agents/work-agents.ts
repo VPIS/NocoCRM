@@ -50,8 +50,8 @@ export type Work = (typeof WORKS)[number];
 
 // The model each work asks first when its service is configured
 // (server/config/ai.ts): DeepSeek's fast one for the work that needs no
-// web, Qwen's fast one for the company signals, which search with Qwen
-// alone (web-research.ts). A model that reasons at length (Qwen Max) spent
+// web, Qwen's fast one for the company signals, which search with their
+// agent's first model (web-research.ts). A model that reasons at length (Qwen Max) spent
 // minutes and thousands of tokens of thinking on each follow-up, which the
 // work does not need.
 const FIRST_MODELS: Record<
@@ -61,6 +61,9 @@ const FIRST_MODELS: Record<
   plain: { provider: 'deepseek', model: 'deepseek-flash' },
   web: { provider: 'alibaba', model: 'qwen3.8-flash' },
 };
+
+// The providers whose models can search the web (web-research.ts).
+const SEARCHING = new Set(['alibaba', 'openai', 'anthropic', 'google']);
 
 export const WORK_AGENTS: Record<
   Work,
@@ -239,8 +242,10 @@ export async function provisionWorkAgents(
     )?.value,
     'skillIds',
   );
-  // Which provider each model service is, for the company signals, which
-  // search with Qwen alone (web-research.ts).
+  // Which provider each model service is, for the company signals: every
+  // chat model, those whose provider can search the web first
+  // (web-research.ts), so the one asked can search unless an administrator
+  // puts another first.
   const providers = new Map(
     (await agents.online.services.list()).map(
       (service) => [service.name, service.provider] as const,
@@ -252,7 +257,15 @@ export async function provisionWorkAgents(
     // all of the work, which these defaults replace.
     const modelEntries =
       work === 'signals'
-        ? web.filter((entry) => providers.get(entry.modelService) === 'alibaba')
+        ? [
+            ...web.filter((entry) =>
+              SEARCHING.has(providers.get(entry.modelService) ?? ''),
+            ),
+            ...web.filter(
+              (entry) =>
+                !SEARCHING.has(providers.get(entry.modelService) ?? ''),
+            ),
+          ]
         : plain;
     const agent = await agents.agents.create(creator.id, {
       name: WORK_AGENTS[work].name,

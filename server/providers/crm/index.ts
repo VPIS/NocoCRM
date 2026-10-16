@@ -72,9 +72,10 @@ import {
   taskPreparerToken,
 } from './task-preparation.js';
 import { userRoleScopeRegistryToken } from '@nocobase/app-plugin-users/server/tokens';
+import { agentsToken } from '@nocobase/app-plugin-agents/server/tokens';
 import { aiAvailable, crmModel } from './ai-model.js';
 import { CompanySignals, companySignalsToken } from './company-signals.js';
-import { webSearcher } from './web-research.js';
+import type { WebSearcher } from './web-research.js';
 import type { CrmAiConfig } from '../../config/ai.js';
 import { lifecycleRuntimeToken } from '../lifecycles.js';
 
@@ -175,31 +176,50 @@ export default class CrmProvider extends ServiceProvider<Application> {
         ),
     );
     // The companies' news looked up on the web (company-signals.ts), with
-    // the configured Qwen service's search.
+    // the Company signals agent's model, whichever it is (web-research.ts).
     this.app.container.singleton(
       companySignalsToken,
       () =>
         new CompanySignals(
           this.app.container.resolve(crmToken),
-          // With the Company signals agent's model when it is a Qwen one
-          // (work-agents.ts), else the configured Qwen service's fast one.
-          async () => {
+          // With the Company signals agent's model (work-agents.ts): a Qwen
+          // one of a configured service through DashScope's own API, any
+          // other through the gateway with its provider's search; none
+          // while there is no model at all.
+          async (): Promise<WebSearcher | null> => {
+            const model = await crmModel(this.app.container, 'signals').catch(
+              () => null,
+            );
+            if (!model) return null;
             const services =
               this.app.config?.get<CrmAiConfig['llmServices']>(
                 'ai.llmServices',
               );
-            const fallback = webSearcher(services);
-            const model = await crmModel(this.app.container, 'signals').catch(
-              () => null,
-            );
-            const service = model ? services?.[model.modelService] : undefined;
-            const apiKey = service?.options?.apiKey;
-            return model &&
-              service?.provider === 'dashscope' &&
+            const configured = services?.[model.modelService];
+            const apiKey = configured?.options?.apiKey;
+            if (
+              configured?.provider === 'dashscope' &&
               typeof apiKey === 'string' &&
               apiKey
-              ? { service: model.modelService, model: model.model, apiKey }
-              : fallback;
+            )
+              return {
+                kind: 'dashscope',
+                service: model.modelService,
+                model: model.model,
+                apiKey,
+              };
+            const agents = this.app.container.resolve(agentsToken);
+            const provider =
+              (await agents.online.services.list().catch(() => [])).find(
+                (service) => service.name === model.modelService,
+              )?.provider ?? 'unknown';
+            return {
+              kind: 'gateway',
+              service: model.modelService,
+              model: model.model,
+              provider,
+              languageModel: () => agents.online.gateway.languageModel(model),
+            };
           },
           // A signal worth acting on reaches the company's open deals
           // through their daily pass (deal-signals.ts), not from the check.
