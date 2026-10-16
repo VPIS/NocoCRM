@@ -153,7 +153,9 @@ export function RouteOverlay({
                 className,
               )}
             >
-              <header className='shrink-0 space-y-2 border-b p-4 pr-12'>
+              {/* Application change: the description sits close under the
+                  title (space-y-1, the library's space-y-2). */}
+              <header className='shrink-0 space-y-1 border-b p-4 pr-12'>
                 <DialogTitle>{title}</DialogTitle>
                 {description != null && (
                   <DialogDescription>{description}</DialogDescription>
