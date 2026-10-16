@@ -38,3 +38,6 @@ database/*/collections/
 
 # NocoSolution (private, optional): cloned here by the start-of-work command in AGENTS.md.
 /nocosolution/
+
+# Local preview servers for the Claude desktop app, each developer's own.
+/.claude/launch.json

@@ -1732,8 +1732,8 @@ export function EvaluationFeedEntry({
 // The web findings on an evaluation: each field's value now and the one
 // found, with its source, to be written into the lead as picked. A field the
 // lead leaves empty is picked by default; one where the lead already holds a
-// different value is the person's to choose (NocoSolution: the AI never
-// overwrites what a person entered). Written once, then shown as done.
+// different value is the person's to choose (the AI never overwrites what
+// a person entered). Written once, then shown as done.
 function Findings({
   entry,
   entity,

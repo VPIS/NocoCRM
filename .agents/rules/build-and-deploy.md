@@ -20,7 +20,7 @@ Without `--tar` no archive is produced, which is what you want when the build is
 
 This application is deployed through NocoBase Studio from the archive `pnpm build --tar` writes, not as a Docker image: it keeps no `Dockerfile`, `.dockerignore`, image workflow, image smoke test or Compose playground, and the template's `Dockerfile` and `Dockerfile.dockerignore` are left out. Leave them out on a template upgrade unless a Docker deployment is wanted again.
 
-A release is deployed to Studio (the application `crm`, served at `https://studio.v2.test.nocobase.com/crm/`) by hand: a release is a commit `Release <version>` on `main` that sets `version` in `package.json`, pushed with the tag `v<version>` on it; build it with `pnpm build --target linux-x64 --node-version 24 --tar` and upload `storage/exports/dist.tar.gz` with `nb-studio deploy` (`@nocobase/studio-cli`), then check `/crm/api/healthz`. The tag-triggered GitHub workflow that did this, `.github/workflows/deploy-studio.yml` with `scripts/ci/deploy-studio.mjs`, was removed on 2026-10-16; nothing deploys on a push or a tag.
+A release is deployed to NocoBase Studio (the application `crm`) by hand: a release is a commit `Release <version>` on `main` that sets `version` in `package.json`, pushed with the tag `v<version>` on it; build it with `pnpm build --target linux-x64 --node-version 24 --tar` and upload `storage/exports/dist.tar.gz` with `nb-studio deploy` (`@nocobase/studio-cli`), then check the deployment's `/api/healthz`. The tag-triggered GitHub workflow that did this, `.github/workflows/deploy-studio.yml` with `scripts/ci/deploy-studio.mjs`, was removed on 2026-10-16; nothing deploys on a push or a tag.
 
 ## Building for another platform
 

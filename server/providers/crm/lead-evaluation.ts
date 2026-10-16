@@ -66,8 +66,8 @@ import { lang, pick } from '../../locales/crm-ai/index.js';
 // new lead is followed up at once, and again whenever someone asks. The
 // recommendation is an entry in the lead's activity feed (crmHistory, action `ai`),
 // written as the AI's own work (source `ai`) and waiting for a person
-// (`aiStatus` pending) — NocoSolution's suggestion card: the AI proposes,
-// the owner decides. Accepting applies it through CrmService as the person
+// (`aiStatus` pending), a suggestion card: the AI proposes, the owner
+// decides. Accepting applies it through CrmService as the person
 // who accepted, recorded as a change the AI proposed (source `assistant`).
 //
 // The run is one model call (crm/ai-model.ts) with the Lead follow-up

@@ -2,6 +2,11 @@
   "name": "crm",
   "displayName": "NocoCRM",
   "version": "1.0.0-beta.42",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nocobase/nococrm.git"
+  },
   "type": "module",
   "prettier": "@nocobase/dev-config/prettier",
   "engines": {

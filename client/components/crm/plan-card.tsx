@@ -32,8 +32,7 @@ import { InlineField } from './inline.js';
 import { Markdown } from './markdown.js';
 import { usePlanDecision, usePlans, type PlanView } from './plans.js';
 
-// A plan an agent proposed, as its decision card (NocoSolution frontend
-// standard §S4.5): what it changes, step by step, and the one choice it asks
+// A plan an agent proposed, as its decision card: what it changes, step by step, and the one choice it asks
 // for — carry it out, leaving steps out if need be, or void it. The same
 // card in the agent's conversation, the inbox and a record's page.
 

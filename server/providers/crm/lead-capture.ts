@@ -28,8 +28,8 @@ import { captureFormLabels } from '../../locales/crm-ai/lead-capture.js';
 // "New lead" with the AI: a salesperson pastes what they have (an email, a
 // chat, notes from a trade fair) and the CRM assistant turns it into one
 // lead per person, filling only what the text states. The result is a set
-// of prefilled forms the salesperson checks and submits (NocoSolution's
-// prefilled-form output: the AI never submits); fields it is unsure of come
+// of prefilled forms the salesperson checks and submits (the AI never
+// submits); fields it is unsure of come
 // back named, so the form can ask for them, and anything already in the CRM
 // that the lead may repeat is looked up here, not guessed by the model. The
 // salesperson may then tell the AI what to change: the same call with an
