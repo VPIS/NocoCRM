@@ -34,6 +34,7 @@ import {
   useMetadata,
 } from '../../components/crm/api.js';
 import { RecordLink } from '../../components/crm/common.js';
+import { ENTITY_ICONS } from '../../components/crm/entity-icons.js';
 import {
   CONVERSATION_POLL_MS,
   numberLabel,
@@ -338,6 +339,7 @@ function ConversationHeader({
   const numbers = useWhatsAppNumbers();
   const { contact, record } = conversation;
   const state = contact.state;
+  const RecordIcon = ENTITY_ICONS[record?.entity ?? 'contacts'];
   const mayCreateLead = Boolean(meta?.permissions.leads?.create);
   const overlay = (path: string) => ({
     pathname: `/crm/whatsapp/${encodeURIComponent(conversation.id)}/${path}`,
@@ -368,6 +370,8 @@ function ConversationHeader({
           ) : state === 'linked' && record ? (
             <span className='flex min-w-0 items-center gap-1'>
               {text('whatsapp.linkedTo')}
+              {/* The record's kind, as the menu marks it. */}
+              <RecordIcon aria-hidden className='ml-1 size-3.5 shrink-0' />
               <RecordLink
                 entity={record.entity}
                 record={{ id: record.id, name: record.name }}

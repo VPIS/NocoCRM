@@ -1,17 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Command as CommandPrimitive } from 'cmdk';
-import {
-  Building2,
-  UserRound,
-  Handshake,
-  ListChecks,
-  Radar,
-  RotateCw,
-  Search,
-  Sparkles,
-  SquareCheckBig,
-  type LucideIcon,
-} from 'lucide-react';
+import { RotateCw, Search, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '../ui/button.js';
@@ -46,22 +35,13 @@ import {
   useGlobalSearch,
   type GlobalSearch,
 } from './global-search-state.js';
+import { ENTITY_ICONS } from './entity-icons.js';
 import { useDebounced } from './record-search.js';
 import { SearchRow } from './search-results.js';
 
 // The global search's dialog and its menu entry (global-search.tsx holds
 // the state): a command palette over the page, finding records by keyword,
 // or asking the assistant, which opens its panel on the question.
-
-// Each kind's menu icon, beside its group of results.
-const KIND_ICONS: Record<Entity, LucideIcon> = {
-  leads: Radar,
-  opportunities: Handshake,
-  companies: Building2,
-  contacts: UserRound,
-  tasks: SquareCheckBig,
-  approvals: ListChecks,
-};
 
 interface SearchGroup {
   entity: Entity;
@@ -278,7 +258,8 @@ function SearchPanel({ search }: { search: GlobalSearch }): ReactElement {
           )
         )}
         {groups.map((group) => {
-          const Icon = KIND_ICONS[group.entity];
+          // Each kind's menu icon, beside its group of results.
+          const Icon = ENTITY_ICONS[group.entity];
           const list = toText(text(`entities.${group.entity}`));
           return (
             <CommandGroup
