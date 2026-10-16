@@ -276,6 +276,9 @@ export const adminWording = {
       'crm-agent-chat': ['Agent conversations', 'Agent 对话'],
       'crm-record': ['Record pages', '记录详情页'],
       'crm-decisions': ['AI suggestions', 'AI 建议'],
+      // The scheduler plugin's grant, `scheduler.schedules`, which Settings →
+      // Scheduled tasks declares: the dot in its id is a key separator.
+      scheduler: { schedules: ['Scheduled tasks', '定时任务'] },
     },
     unrestricted: [
       'This permission set is unrestricted: whoever holds it may do everything.',
