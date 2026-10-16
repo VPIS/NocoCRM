@@ -1,3 +1,7 @@
+import {
+  stepsToPageBefore,
+  useNoteHistoryEntry,
+} from '../components/crm/page-history.js';
 import { MoneyField } from '../components/crm/money-field.js';
 import { RecordWhatsAppPanel } from '../components/crm/whatsapp/record-tab.js';
 import {
@@ -1076,13 +1080,17 @@ export function DetailColumns({
               {/* In a drawer the frame's own padding already sets it off from
                   the drawer's bar, so the header adds none above. */}
               <header
-                className={`@3xl:col-start-1 @3xl:row-start-1 @3xl:pb-3 ${sidePad} ${
-                  inDrawer ? 'pt-0' : 'pt-5 @3xl:pt-4'
-                }`}
+                className={`@3xl:col-start-1 @3xl:row-start-1 ${
+                  intro ? '@3xl:pb-2' : '@3xl:pb-3'
+                } ${sidePad} ${inDrawer ? 'pt-0' : 'pt-5 @3xl:pt-4'}`}
               >
-                <DetailBack entity={entity} />
+                <DetailKind entity={entity} />
                 <div className='grid gap-2'>
                   <div className='flex items-start gap-2'>
+                    {/* The way back to the page before, ahead of the
+                        heading, at every width; not in a drawer, which
+                        closes, nor in the inbox's pane. */}
+                    {!inDrawer && !bare ? <DetailBack entity={entity} /> : null}
                     {/* Scrolled down with the intro, a long heading
                         keeps one line, cut with an ellipsis, so the
                         content gets the room; at the top it is whole. The
@@ -1165,7 +1173,10 @@ export function DetailColumns({
                     <div className='min-h-0 overflow-hidden'>
                       <div
                         ref={introRef}
-                        className={`pb-7 @3xl:max-h-[40vh] @3xl:overflow-y-auto @3xl:[scrollbar-gutter:stable] ${sidePad}`}
+                        // Its 4px at the top (taken off the header's) keep a
+                        // long text's editor's focus ring inside the box,
+                        // which clips at its edge.
+                        className={`pb-7 @3xl:max-h-[40vh] @3xl:overflow-y-auto @3xl:pt-1 @3xl:[scrollbar-gutter:stable] ${sidePad}`}
                       >
                         {intro}
                       </div>
@@ -1224,36 +1235,55 @@ export function AfterSlash({
   );
 }
 
-// Over a stacked record page (a phone, a narrow window): the way back to the
-// page before, and what kind of record this is. Back is the browser's, so it
-// returns wherever the reader came from; opened from a link, with nothing
-// before it in this tab, it goes to the object's list instead. The drawer has
-// its own bar with the kind and a close button, so it shows none.
-function DetailBack({ entity }: { entity: Entity }): ReactElement | null {
+// The way back to the page before, ahead of a record page's heading: back in
+// the browser's history past this record's other tabs and the drawers
+// opened meanwhile (page-history.ts), so it returns to the page the reader
+// came from as it was; opened from a link, with nothing before it in this
+// tab, the object's list instead.
+function DetailBack({ entity }: { entity: Entity }): ReactElement {
   const { t } = useTranslation();
-  const { text } = useCrmText();
   const navigate = useNavigate();
   const location = useLocation();
-  if (useRecordDrawer()?.inDrawer) return null;
+  useNoteHistoryEntry();
+  const label = toText(t('navigation.back'));
   return (
-    <div className='mb-2 flex items-center gap-2 text-sm text-muted-foreground @3xl:hidden'>
-      <button
-        type='button'
-        onClick={() =>
-          location.key === 'default'
-            ? void navigate(`/crm/${toText(entity)}`)
-            : void navigate(-1)
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            variant='ghost'
+            size='icon'
+            aria-label={label}
+            // Level with the heading's first line, past its own padding.
+            className='mt-1 -ml-2 shrink-0 text-muted-foreground hover:text-foreground'
+            onClick={() => {
+              const steps =
+                location.key === 'default'
+                  ? null
+                  : stepsToPageBefore(location.pathname);
+              if (steps === null) void navigate(`/crm/${toText(entity)}`);
+              else void navigate(steps);
+            }}
+          />
         }
-        className='inline-flex items-center gap-1 transition-colors hover:text-foreground'
       >
         <ArrowLeft className='size-4' />
-        {t('navigation.back')}
-      </button>
-      <span aria-hidden className='text-muted-foreground/60'>
-        ·
-      </span>
-      <span>{sentence(text(`entity.${toText(entity)}`))}</span>
-    </div>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+// Over a stacked record page (a phone, a narrow window), where the header's
+// breadcrumb is gone: what kind of record this is. The drawer has its own
+// bar with the kind, so it shows none.
+function DetailKind({ entity }: { entity: Entity }): ReactElement | null {
+  const { text } = useCrmText();
+  if (useRecordDrawer()?.inDrawer) return null;
+  return (
+    <p className='mb-1 text-sm text-muted-foreground @3xl:hidden'>
+      {sentence(text(`entity.${toText(entity)}`))}
+    </p>
   );
 }
 

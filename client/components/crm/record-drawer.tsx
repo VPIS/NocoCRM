@@ -1,3 +1,4 @@
+import { useNoteHistoryEntry } from './page-history.js';
 import {
   createContext,
   useCallback,
@@ -109,6 +110,8 @@ export function useRecordDrawerState({
       hostListeners.forEach((listener) => listener());
     };
   }, [host]);
+  // Each history entry noted, for a record page's Back (page-history.ts).
+  useNoteHistoryEntry();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const opened = toText(searchParams.get('open') ?? '');

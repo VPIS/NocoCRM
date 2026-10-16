@@ -1,3 +1,4 @@
+import { PencilLine } from 'lucide-react';
 import {
   LONG_TEXT_LIMIT,
   TEXT_LIMIT,
@@ -276,8 +277,8 @@ export function InlineField({
 
   // A title's part is inline text (see above); any other value a block.
   const Tag = titled ? 'span' : 'div';
-  if (!editing)
-    return (
+  if (!editing) {
+    const trigger = (
       // Not a <button>: a single click has to leave the text selectable so a
       // value can be read and copied without ever entering edit mode. Editing is
       // a deliberate gesture — double-click, or Enter / F2 with focus. No
@@ -336,6 +337,27 @@ export function InlineField({
         ) : null}
       </Tag>
     );
+    if (!titled) return trigger;
+    // A title's part shows a pencil after its words on hover or focus, as
+    // a record's particulars do on theirs: the words alone did not say the
+    // heading can be changed. Shown only then, so the parts of a heading
+    // ("name / company") keep their spacing.
+    return (
+      <span className='group/title'>
+        {trigger}
+        <button
+          type='button'
+          tabIndex={-1}
+          aria-label={toText(text('editValue'))}
+          title={toText(text('editValue'))}
+          onClick={startEditing}
+          className='ml-0.5 hidden size-6 place-items-center rounded-md align-middle text-muted-foreground transition-colors group-focus-within/title:inline-grid group-hover/title:inline-grid hover:bg-hover hover:text-foreground'
+        >
+          <PencilLine aria-hidden className='size-3.5' />
+        </button>
+      </span>
+    );
+  }
 
   const choices =
     choiceOverride ??

@@ -287,21 +287,34 @@ describe("the company page's churn reason", () => {
   });
 });
 
-describe('the way back on a phone', () => {
+describe('the way back', () => {
   beforeEach(() => {
     state.entity = 'contacts';
     state.record = { id: 'rec-1', name: '周晓', ownerId: 'rep', ...stamps };
     state.related = { opportunities: [] };
   });
 
-  it('names the kind of record and, opened from a link, goes back to its list', async () => {
+  it('leads the heading and, opened from a link, goes back to its list; a phone names the kind of record', async () => {
     renderPage();
     const back = screen.getByRole('button', {
       name: /返回|navigation.back|Back/,
     });
-    expect(back.parentElement?.textContent).toContain('联系人');
+    // Ahead of the heading, on its line.
+    const heading = screen.getAllByRole('heading', { level: 1 })[0];
+    expect(back.parentElement?.contains(heading)).toBe(true);
+    expect(screen.getByText('联系人')).toBeTruthy();
     await userEvent.click(back);
     expect(screen.getByTestId('where').textContent).toBe('/crm/contacts');
+  });
+
+  it('offers a pencil after the heading it may edit, which opens its editor', async () => {
+    renderPage();
+    const heading = screen.getAllByRole('heading', { level: 1 })[0];
+    const pencil = within(heading).getAllByRole('button', {
+      name: '编辑此项',
+    })[0];
+    await userEvent.click(pencil);
+    expect(within(heading).getByRole('textbox')).toBeTruthy();
   });
 });
 
