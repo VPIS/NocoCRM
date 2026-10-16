@@ -82,7 +82,13 @@ export function FilePreviewContent(
     case 'audio':
       return <audio controls src={url} className='w-full' />;
     case 'video':
-      return <video controls src={url} className='max-h-[70vh] max-w-full' />;
+      return (
+        <video
+          controls
+          src={url}
+          className='mx-auto block max-h-[70vh] max-w-full'
+        />
+      );
     case 'markdown':
       return <MarkdownPreview text={text} />;
     case 'text':
@@ -142,7 +148,8 @@ function ImagePreview(inputProps: {
     <img
       src={url}
       alt={file.filename}
-      className='max-h-[70vh] max-w-full object-contain'
+      // Centred in the dialog, narrower than it as most photos are.
+      className='mx-auto block max-h-[70vh] max-w-full object-contain'
       onError={() => setFailedUrl(url)}
     />
   );
