@@ -644,6 +644,9 @@ export default class CrmProvider extends ServiceProvider<Application> {
     // WhatsApp deliveries read, their media fetched within Meta's five
     // minutes, and the follow-ups of customers gone quiet started.
     every(10_000, () => whatsapp.process());
+    // The records' WhatsApp lines a day there were until 2026-10-16, as
+    // stretches of conversation; nothing to do once done.
+    void whatsapp.upgradeTimeline().catch(() => undefined);
   }
   public override async shutdown(): Promise<void> {
     // A follow-up running is handed back, to run again at the next start.

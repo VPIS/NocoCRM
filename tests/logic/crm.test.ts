@@ -11835,6 +11835,75 @@ describe('WhatsApp', () => {
     ).not.toBe(200);
   });
 
+  it('reads a customer’s messages as stretches of conversation on the timeline, a message joining the stretches it bridges', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Stretch Lee',
+      company: 'Stretch Co',
+      phone: '+44 7700 900789',
+      source: 'website',
+    });
+    const now = Date.now();
+    const daysAgo = (days: number) => new Date(now - days * 86_400_000);
+    const lines = async () =>
+      (
+        await database
+          .query()
+          .selectFrom('crmHistory')
+          .select(['changes', 'occurredAt'])
+          .where('entity', '=', 'leads')
+          .where('recordId', '=', lead.id)
+          .where('action', '=', 'whatsapp')
+          .orderBy('occurredAt')
+          .execute()
+      ).map((row) => JSON.parse(toText(row.changes)) as Row);
+    const from = { waId: '447700900789', name: 'Stretch' };
+    await deliver(
+      delivery(from, [
+        text('wamid.st-1', 'First', daysAgo(10)),
+        text('wamid.st-2', 'Next day', daysAgo(9)),
+        text('wamid.st-3', 'After five quiet days', daysAgo(4)),
+      ]),
+    );
+    await whatsapp.process();
+    // Five quiet days: two stretches.
+    expect((await lines()).map((line) => line.inbound)).toEqual([2, 1]);
+    // A message between them, under three days from each: one stretch.
+    await deliver(delivery(from, [text('wamid.st-4', 'Between', daysAgo(7))]));
+    await whatsapp.process();
+    const [line, ...rest] = await lines();
+    expect(rest).toEqual([]);
+    expect(line).toMatchObject({
+      inbound: 4,
+      outbound: 0,
+      lastFrom: 'customer',
+    });
+    expect(toText(line?.from).slice(0, 16)).toBe(
+      daysAgo(10).toISOString().slice(0, 16),
+    );
+    // A line a day, as there were until 2026-10-16, is written again as
+    // the stretches at start.
+    const customerId = toText(line?.waContactId);
+    await database
+      .query()
+      .insertInto('crmHistory')
+      .values({
+        id: randomUUID(),
+        entity: 'leads',
+        recordId: lead.id,
+        actorId: 'system',
+        action: 'whatsapp',
+        changes: JSON.stringify({ waContactId: customerId, inbound: 1 }),
+        source: 'whatsapp',
+        sourceKey: `${customerId}:2026-01-01`,
+        occurredAt: daysAgo(30).toISOString(),
+        createdAt: daysAgo(30).toISOString(),
+      })
+      .execute();
+    expect(await lines()).toHaveLength(2);
+    await whatsapp.upgradeTimeline();
+    expect((await lines()).map((l) => l.inbound)).toEqual([4]);
+  });
+
   it('starts the follow-up once the customer has been quiet, not at every message', async () => {
     const calls: { entity: string; id: string }[] = [];
     whatsapp.customerReplied = (target) => calls.push(target);

@@ -2366,10 +2366,21 @@ function WhatsAppEvent({
   event: Data;
   onOpen?: () => void;
 }): ReactElement {
-  const { text } = useCrmText();
+  const { text, language } = useCrmText();
+  // A stretch of conversation (whatsapp/service.ts, writeTimeline): its
+  // counts, who wrote last, and its first and last days when they differ.
   const day = (event.changes ?? {}) as Data;
   const inbound = Number(day.inbound) || 0;
   const total = inbound + (Number(day.outbound) || 0);
+  const date = (at: unknown) =>
+    new Intl.DateTimeFormat(language, {
+      month: 'short',
+      day: 'numeric',
+    }).format(new Date(toText(at)));
+  const span =
+    day.from && day.to && date(day.from) !== date(day.to)
+      ? `${date(day.from)} – ${date(day.to)}`
+      : '';
   const summary = [
     toText(
       total === 1
@@ -2391,6 +2402,7 @@ function WhatsAppEvent({
     <>
       {summary[0]}
       <span className='ml-2 text-muted-foreground'>{last}</span>
+      {span ? <span className='ml-2 text-muted-foreground'>{span}</span> : null}
     </>
   );
   return (
@@ -2398,7 +2410,10 @@ function WhatsAppEvent({
       <span className='shrink-0 text-muted-foreground'>
         {text('feed.whatsapp.exchanged')}
       </span>
-      <span className='min-w-0 truncate' title={`${summary[0]} · ${last}`}>
+      <span
+        className='min-w-0 truncate'
+        title={[summary[0], last, span].filter(Boolean).join(' · ')}
+      >
         {onOpen ? (
           <span
             role='button'

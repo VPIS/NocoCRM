@@ -130,13 +130,9 @@ export interface NumberLabel {
 export const whatsappToken: ServiceToken<WhatsAppService> =
   createServiceToken<WhatsAppService>('crm.whatsapp');
 
-const day = (at: string, timeZone: string): string =>
-  new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date(at));
+// How long a conversation may go quiet and still be the same stretch on
+// the records' timelines (writeTimeline).
+const STRETCH_GAP_MS = 3 * 86_400_000;
 
 const later = (a: unknown, b: string): string =>
   a && Date.parse(toText(a)) > Date.parse(b) ? toText(a) : b;
@@ -647,7 +643,6 @@ export class WhatsAppService {
   // from the app count as contact on the lead, as the customer's do; the
   // history touches nothing but the conversation and its timeline lines.
   private async receive(message: InboundMessage, now: Date): Promise<void> {
-    const { timeZone } = await this.service.settings();
     const number = await this.query
       .selectFrom('crmWaNumbers')
       .selectAll()
@@ -773,7 +768,7 @@ export class WhatsAppService {
         })
         .where('id', '=', toText(conversation.id))
         .execute();
-      await this.writeTimeline(query, contact, day(at, timeZone), timeZone);
+      await this.writeTimeline(query, contact, at);
       if (
         live &&
         contact.leadId &&
@@ -1070,88 +1065,61 @@ export class WhatsAppService {
 
   // The customer's line for a day on each record it reaches, written again
   // from that day's messages, so redelivery and relinking agree.
+  // A customer's messages on the records they reach read as stretches of
+  // conversation, as a mail thread does: one line a stretch, a new one when
+  // they or the team write again after three quiet days (STRETCH_GAP_MS).
+  // A message rewrites the line it falls in, joining the lines it bridges,
+  // from the messages in their span; the line's time is its last message.
   async writeTimeline(
     query: QueryAdapter,
     contact: Row,
-    businessDay: string,
-    timeZone: string,
+    at: string,
   ): Promise<void> {
     const contactId = toText(contact.id);
-    const sourceKey = `${contactId}:${businessDay}`;
     const targets = await this.targetsOf(query, contact);
     if (!targets.length) return;
-    const conversations = await query
-      .selectFrom('crmWaConversations')
-      .select('id')
-      .where('waContactId', '=', contactId)
-      .execute();
-    const messages = (
-      conversations.length
-        ? await query
-            .selectFrom('crmWaMessages')
-            .select(['direction', 'occurredAt', 'mediaId', 'conversationId'])
-            .where(
-              'conversationId',
-              'in',
-              conversations.map((c) => toText(c.id)),
-            )
-            .orderBy('occurredAt')
-            .execute()
-        : []
-    ).filter((m) => day(toText(m.occurredAt), timeZone) === businessDay);
-    const last = messages.at(-1);
-    if (!last) return;
-    const changes = {
-      waContactId: contactId,
-      conversationId: toText(last.conversationId),
-      day: businessDay,
-      name: displayName(contact),
-      inbound: messages.filter((m) => m.direction === 'in').length,
-      outbound: messages.filter((m) => m.direction === 'out').length,
-      lastFrom: last.direction === 'in' ? 'customer' : 'team',
-      files: messages.filter((m) => m.mediaId).length,
-    };
-    const occurredAt = toText(last.occurredAt);
-    for (const target of targets) {
-      const existing = await query
-        .selectFrom('crmHistory')
-        .select('id')
-        .where('entity', '=', target.entity)
-        .where('recordId', '=', target.id)
-        .where('action', '=', 'whatsapp')
-        .where('sourceKey', '=', sourceKey)
-        .executeTakeFirst();
-      if (existing)
-        await query
-          .updateTable('crmHistory')
-          .set({
-            changes: JSON.stringify(changes),
-            occurredAt,
-            createdAt: occurredAt,
-          })
-          .where('id', '=', toText(existing.id))
-          .execute();
-      else
-        await query
-          .insertInto('crmHistory')
-          .values({
-            id: randomUUID(),
-            entity: target.entity,
-            recordId: target.id,
-            actorId: 'system',
-            action: 'whatsapp',
-            changes: JSON.stringify(changes),
-            source: 'whatsapp',
-            sourceKey,
-            occurredAt,
-            createdAt: occurredAt,
-          })
-          .execute();
+    const time = Date.parse(at);
+    let from = time;
+    let to = time;
+    const joined = new Set<string>();
+    for (const line of await query
+      .selectFrom('crmHistory')
+      .select(['sourceKey', 'changes'])
+      .where('action', '=', 'whatsapp')
+      .where('sourceKey', 'like', `${contactId}:%`)
+      .execute()) {
+      const changes = jsonValue(line.changes) as Row | null;
+      const start = Date.parse(toText(changes?.from));
+      const end = Date.parse(toText(changes?.to));
+      if (
+        Number.isFinite(start) &&
+        Number.isFinite(end) &&
+        start - STRETCH_GAP_MS <= time &&
+        time <= end + STRETCH_GAP_MS
+      ) {
+        joined.add(toText(line.sourceKey));
+        from = Math.min(from, start);
+        to = Math.max(to, end);
+      }
     }
+    if (joined.size)
+      await query
+        .deleteFrom('crmHistory')
+        .where('action', '=', 'whatsapp')
+        .where('sourceKey', 'in', [...joined])
+        .execute();
+    const messages = await this.messagesOf(
+      query,
+      contactId,
+      new Date(from).toISOString(),
+      new Date(to).toISOString(),
+    );
+    await this.writeLine(query, contact, targets, messages);
   }
 
-  // Every day's line again, after a customer was linked to another record
-  // or unlinked: the old lines go, the records it reaches now get theirs.
+  // Every line again, after a customer was linked to another record or
+  // unlinked (or from the lines a day there were until 2026-10-16): the
+  // old lines go, the records it reaches now get one a stretch.
   async rewriteTimeline(query: QueryAdapter, contact: Row): Promise<void> {
     const contactId = toText(contact.id);
     await query
@@ -1159,25 +1127,125 @@ export class WhatsAppService {
       .where('action', '=', 'whatsapp')
       .where('sourceKey', 'like', `${contactId}:%`)
       .execute();
-    const { timeZone } = await this.service.settings(query);
+    const targets = await this.targetsOf(query, contact);
+    if (!targets.length) return;
+    let stretch: Row[] = [];
+    for (const message of await this.messagesOf(query, contactId)) {
+      const last = stretch.at(-1);
+      if (
+        last &&
+        Date.parse(toText(message.occurredAt)) -
+          Date.parse(toText(last.occurredAt)) >
+          STRETCH_GAP_MS
+      ) {
+        await this.writeLine(query, contact, targets, stretch);
+        stretch = [];
+      }
+      stretch.push(message);
+    }
+    await this.writeLine(query, contact, targets, stretch);
+  }
+
+  // The lines a day there were until 2026-10-16, written again as
+  // stretches once, at start: a customer with a line that has no span.
+  async upgradeTimeline(): Promise<void> {
+    const lines = await this.query
+      .selectFrom('crmHistory')
+      .select(['sourceKey', 'changes'])
+      .where('action', '=', 'whatsapp')
+      .execute();
+    const customers = new Set(
+      lines
+        .filter((line) => !(jsonValue(line.changes) as Row | null)?.from)
+        .map((line) => toText(line.sourceKey).split(':')[0]),
+    );
+    for (const id of customers) {
+      const contact = await this.query
+        .selectFrom('crmWaContacts')
+        .selectAll()
+        .where('id', '=', id)
+        .executeTakeFirst();
+      await this.service.database.transaction(async ({ query }) => {
+        if (contact) await this.rewriteTimeline(query, contact);
+        else
+          await query
+            .deleteFrom('crmHistory')
+            .where('action', '=', 'whatsapp')
+            .where('sourceKey', 'like', `${id}:%`)
+            .execute();
+      });
+    }
+  }
+
+  // A customer's messages, on every number, oldest first; within a span
+  // when one is given.
+  private async messagesOf(
+    query: QueryAdapter,
+    contactId: string,
+    from?: string,
+    to?: string,
+  ): Promise<Row[]> {
     const conversations = await query
       .selectFrom('crmWaConversations')
       .select('id')
       .where('waContactId', '=', contactId)
       .execute();
-    if (!conversations.length) return;
-    const times = await query
+    if (!conversations.length) return [];
+    let messages = query
       .selectFrom('crmWaMessages')
-      .select('occurredAt')
+      .select(['direction', 'occurredAt', 'mediaId', 'conversationId'])
       .where(
         'conversationId',
         'in',
         conversations.map((c) => toText(c.id)),
-      )
-      .execute();
-    const days = new Set(times.map((m) => day(toText(m.occurredAt), timeZone)));
-    for (const businessDay of days)
-      await this.writeTimeline(query, contact, businessDay, timeZone);
+      );
+    if (from && to)
+      messages = messages
+        .where('occurredAt', '>=', from)
+        .where('occurredAt', '<=', to);
+    return messages.orderBy('occurredAt').execute();
+  }
+
+  // One stretch's line on each record the customer reaches: its counts both
+  // ways, who wrote last, its span, keyed by its first message.
+  private async writeLine(
+    query: QueryAdapter,
+    contact: Row,
+    targets: readonly Target[],
+    messages: readonly Row[],
+  ): Promise<void> {
+    const first = messages[0];
+    const last = messages.at(-1);
+    if (!first || !last) return;
+    const contactId = toText(contact.id);
+    const changes = {
+      waContactId: contactId,
+      conversationId: toText(last.conversationId),
+      from: toText(first.occurredAt),
+      to: toText(last.occurredAt),
+      name: displayName(contact),
+      inbound: messages.filter((m) => m.direction === 'in').length,
+      outbound: messages.filter((m) => m.direction === 'out').length,
+      lastFrom: last.direction === 'in' ? 'customer' : 'team',
+      files: messages.filter((m) => m.mediaId).length,
+    };
+    const occurredAt = toText(last.occurredAt);
+    for (const target of targets)
+      await query
+        .insertInto('crmHistory')
+        .values({
+          id: randomUUID(),
+          entity: target.entity,
+          recordId: target.id,
+          actorId: 'system',
+          action: 'whatsapp',
+          changes: JSON.stringify(changes),
+          source: 'whatsapp',
+          sourceKey: `${contactId}:${toText(first.occurredAt)}`,
+          occurredAt,
+          createdAt: occurredAt,
+        })
+        .execute();
   }
 
   // ---- Media -------------------------------------------------------------
