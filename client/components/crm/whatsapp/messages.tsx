@@ -22,7 +22,7 @@ import { Button } from '#components/ui/button';
 import { Skeleton } from '#components/ui/skeleton';
 import { Spinner } from '#components/ui/spinner';
 import { useCrmText } from '../api.js';
-import type { WhatsAppMessage } from './api.js';
+import { dayIn, useBusinessZone, type WhatsAppMessage } from './api.js';
 
 // A conversation's messages, as the WhatsApp page's right pane and a
 // record's WhatsApp tab show them: oldest at the top, a day separator per
@@ -90,11 +90,6 @@ export function MessageSummary({
     </span>
   );
 }
-
-const dayKey = (at: string): string => {
-  const date = new Date(at);
-  return `${String(date.getFullYear())}-${String(date.getMonth())}-${String(date.getDate())}`;
-};
 
 // Whether a scroller is (nearly) at its bottom.
 const atBottom = (node: HTMLElement): boolean =>
@@ -172,11 +167,17 @@ export function WhatsAppMessages({
     }
     seenRef.current = { first, last, height: node.scrollHeight };
   }, [first, last, onSeeLatest]);
+  const zone = useBusinessZone();
+  const dayKey = (at: string) => dayIn(at, zone);
   const time = new Intl.DateTimeFormat(language, {
+    timeZone: zone,
     hour: '2-digit',
     minute: '2-digit',
   });
-  const date = new Intl.DateTimeFormat(language, { dateStyle: 'medium' });
+  const date = new Intl.DateTimeFormat(language, {
+    timeZone: zone,
+    dateStyle: 'medium',
+  });
   const team = toWords(text('whatsapp.team'));
   // Each message with what goes above it: the day's separator when the day
   // changes, the sender's name when another customer's run starts.

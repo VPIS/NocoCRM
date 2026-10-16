@@ -2374,8 +2374,10 @@ function WhatsAppEvent({
   const day = (event.changes ?? {}) as Data;
   const inbound = Number(day.inbound) || 0;
   const total = inbound + (Number(day.outbound) || 0);
+  const { data: meta } = useMetadata();
   const date = (at: unknown) =>
     new Intl.DateTimeFormat(language, {
+      timeZone: meta?.settings.timeZone ?? DEFAULT_TIME_ZONE,
       month: 'short',
       day: 'numeric',
     }).format(new Date(toText(at)));

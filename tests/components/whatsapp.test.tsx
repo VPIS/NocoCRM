@@ -137,6 +137,8 @@ beforeEach(() => {
     users: [],
     whatsapp: { configured: true },
     permissions: { leads: { create: false } },
+    // WhatsApp's times read in the CRM's zone.
+    settings: { timeZone: 'UTC' },
   };
   Element.prototype.scrollTo ??= () => undefined;
 });
@@ -181,6 +183,20 @@ describe('the messages', () => {
     // A deletion shows no words of it.
     expect(screen.getByText('This message was deleted')).toBeTruthy();
     expect(screen.queryByText('Taken back')).toBeNull();
+  });
+
+  it("read their times and days in the CRM's time zone, not the browser's", () => {
+    state.meta = { ...state.meta, settings: { timeZone: 'America/New_York' } };
+    render(
+      <WhatsAppMessages
+        messages={[message('m1', '2026-10-15T01:50:00.000Z')]}
+        more={false}
+        senderOf={() => 'Ana Souza'}
+      />,
+    );
+    // 21:50 on the 14th in New York, whatever zone the browser is in.
+    expect(screen.getByText('Oct 14, 2026')).toBeTruthy();
+    expect(screen.getByText(/09:50\sPM/)).toBeTruthy();
   });
 
   it('show a day separator, the media by its state, and who wrote each', () => {

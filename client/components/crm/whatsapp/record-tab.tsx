@@ -122,11 +122,14 @@ export function RecordWhatsAppPanel({
     // On the card's white, as the Mail tab's list is.
     <div
       data-slot='record-whatsapp'
-      className='flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xs'
+      className='flex flex-col overflow-clip rounded-xl border border-border bg-card shadow-xs'
     >
       {/* Whose conversation: line tabs over a rule, as the record's own
-          tabs are, each person with their count; one person, their name. */}
-      <div className='border-b border-border px-4'>
+          tabs are, each person with their count; one person, their name.
+          It stays at the top of the column while the card scrolls under
+          it (the card clips rather than hides its overflow, which would
+          make it the header's scroller). */}
+      <div className='sticky top-0 z-10 rounded-t-xl border-b border-border bg-card px-4'>
         {talking.length > 1 ? (
           <Tabs
             value={person ?? ''}

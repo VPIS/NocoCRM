@@ -40,7 +40,9 @@ import {
 import {
   LIST_POLL_MS,
   VIEWS,
+  dayIn,
   numberLabel,
+  useBusinessZone,
   useConversationsKey,
   useWhatsAppNumbers,
   viewOf,
@@ -252,6 +254,7 @@ function ConversationList({
   const { text, language } = useCrmText();
   const api = useCrmApi();
   const toaster = useToaster();
+  const zone = useBusinessZone();
   const [params] = useSearchParams();
   const key = useConversationsKey(view, numberId);
   const query = useInfiniteQuery({
@@ -293,16 +296,20 @@ function ConversationList({
       </div>
     );
   if (!rows.length) return <EmptyView view={view} />;
+  // In the CRM's time zone, as the conversation reads (useBusinessZone).
   const timeOf = (at: string | null): string => {
     if (!at) return '';
     const date = new Date(at);
-    const today = new Date();
-    return date.toDateString() === today.toDateString()
+    return dayIn(date, zone) === dayIn(new Date(), zone)
       ? new Intl.DateTimeFormat(language, {
+          timeZone: zone,
           hour: '2-digit',
           minute: '2-digit',
         }).format(date)
-      : new Intl.DateTimeFormat(language, { dateStyle: 'medium' }).format(date);
+      : new Intl.DateTimeFormat(language, {
+          timeZone: zone,
+          dateStyle: 'medium',
+        }).format(date);
   };
   const search = `?view=${view}${numberId ? `&number=${encodeURIComponent(numberId)}` : ''}${params.get('open') ? `&open=${params.get('open') ?? ''}` : ''}`;
   return (

@@ -42,6 +42,7 @@ import {
   useCrmText,
 } from '../../components/crm/api.js';
 import { ConfirmDialog } from '../../components/crm/confirm-dialog.js';
+import { useBusinessZone } from '../../components/crm/whatsapp/api.js';
 import { LoadFailure, TextField } from '../settings/shared.js';
 
 // The WhatsApp connection (/crm/whatsapp/connection, from the WhatsApp page's
@@ -432,6 +433,7 @@ function Numbers({
   onChanged: (next: Connection) => void;
 }): ReactElement {
   const { text, language } = useCrmText();
+  const zone = useBusinessZone();
   const api = useCrmApi();
   const toaster = useToaster();
   const [checking, setChecking] = useState<string>();
@@ -448,6 +450,7 @@ function Numbers({
   const time = (at: string | null) =>
     at
       ? new Intl.DateTimeFormat(language, {
+          timeZone: zone,
           dateStyle: 'medium',
           timeStyle: 'short',
         }).format(new Date(at))
@@ -787,6 +790,7 @@ function Status({
   refresh: () => void;
 }): ReactElement {
   const { text, language } = useCrmText();
+  const zone = useBusinessZone();
   const api = useCrmApi();
   const toaster = useToaster();
   const [busy, setBusy] = useState(false);
@@ -813,6 +817,7 @@ function Status({
   };
   const time = (at: string) =>
     new Intl.DateTimeFormat(language, {
+      timeZone: zone,
       dateStyle: 'medium',
       timeStyle: 'short',
     }).format(new Date(at));

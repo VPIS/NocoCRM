@@ -1,6 +1,7 @@
 import { useCan } from '@nocobase/app-plugin-authorization/client';
 import { useQuery } from '@tanstack/react-query';
-import { useCrmApi, useCrmScopeKey } from '../api.js';
+import { DEFAULT_TIME_ZONE } from '../../../../server/providers/crm/zone-time.js';
+import { useCrmApi, useCrmScopeKey, useMetadata } from '../api.js';
 
 // The company's WhatsApp numbers as the pages read them (server/routes/
 // whatsapp.ts): conversations and their messages.
@@ -109,6 +110,23 @@ export const CONVERSATION_POLL_MS = 10_000;
 export const TAB_POLL_MS = 30_000;
 
 export const WHATSAPP_PAGE = 'crm-whatsapp';
+
+// The CRM's time zone, in which WhatsApp's times and days read, as the
+// timeline's and the tasks' do, rather than the browser's.
+export function useBusinessZone(): string {
+  const { data: meta } = useMetadata();
+  return meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
+}
+
+// A day in a zone, to tell one day from the next.
+export function dayIn(at: string | Date, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(at));
+}
 
 export function useWhatsAppPage(): boolean {
   return useCan({
