@@ -469,7 +469,10 @@ export default function PermissionsDrawer(): ReactElement {
             holds only a title and a description. */}
         <div
           ref={tabsRef}
-          className='sticky -top-4 z-10 -mx-4 -mt-4 bg-popover px-4 pt-2'
+          // A band of the drawer's ground under the tabs (pb-3), taken back
+          // from the gap below (-mb-3), so what scrolls up passes under it
+          // rather than touching the tabs' rule.
+          className='sticky -top-4 z-10 -mx-4 -mt-4 -mb-3 bg-popover px-4 pt-2 pb-3'
         >
           <RouteTabs
             label={text('sets.permissionsOf', { name })}
