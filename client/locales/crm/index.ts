@@ -91,9 +91,6 @@ const wording = {
     suggestions: ['Suggested questions', '推荐问题'],
     q: {
       home: {
-        focus: ['What should I focus on today?', '今天我最该处理什么？'],
-        deals: ['Which opportunities need attention?', '哪些商机需要关注？'],
-        followUp: ['Who should I follow up with?', '我该跟进谁？'],
         analyze: ['Analyze sales and make a report', '分析销售情况并生成报告'],
       },
       leads: {
@@ -222,6 +219,11 @@ const wording = {
   save: ['Save', '保存'],
   saving: ['Saving…', '正在保存…'],
   cancel: ['Cancel', '取消'],
+  back: ['Back', '返回'],
+  // A field's name opening its text (a record's intro under its heading),
+  // as Markdown: the colon outside the bold in Chinese, where a closing
+  // `**` straight after full-width punctuation would not close.
+  fieldLead: ['**{{label}}:** ', '**{{label}}**：'],
   confirm: ['Confirm', '确认'],
   yes: ['Yes', '是'],
   no: ['No', '否'],
@@ -2068,6 +2070,7 @@ const wording = {
   showMore: ['Show more', '展开'],
   // A record's particular, copied as it reads from the button on its row.
   copyValue: ['Copy', '复制'],
+  editValue: ['Edit this value', '编辑此项'],
   copiedValue: ['Copied', '已复制'],
   refresh: ['Refresh', '刷新'],
   moreFields: ['More: {{fields}}', '更多：{{fields}}'],
@@ -2775,6 +2778,8 @@ const wording = {
     // The company's Signals card and a deal's company row
     // (company-signals.tsx): the latest few, the whole list in a dialog.
     viewAll: ['All signals ({{count}})', '查看全部 {{count}} 条'],
+    // With none yet the dialog is opened only to check for some.
+    openToCheck: ['Check for signals', '检查信号'],
     latest: ['Latest signal', '最近信号'],
     inAll: ['{{count}} in all', '共 {{count}} 条'],
     none: ['None yet', '暂无'],

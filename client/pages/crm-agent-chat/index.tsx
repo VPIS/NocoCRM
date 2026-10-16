@@ -10,7 +10,7 @@ import {
 import { Skeleton } from '#components/ui/skeleton';
 import { useConversationList } from '@nocobase/app-plugin-agents/client/chat';
 import type { ConversationDetail } from '@nocobase/app-plugin-agents/shared/conversations';
-import { Bot, MessagesSquare, Plus } from 'lucide-react';
+import { ArrowLeft, Bot, MessagesSquare, Plus } from 'lucide-react';
 import { lazy, Suspense, useRef, useState, type ReactElement } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { BackButton } from '../../components/back-button.js';
@@ -53,6 +53,19 @@ export default function AgentChatPage(): ReactElement {
   const isNew = params.conversationId === 'new';
   const openId = isNew ? null : (params.conversationId ?? null);
   const archived = searchParams.get('archived') === '1';
+  // Where the reader came from: the browser history's place when the page
+  // opened (the router keeps it as `idx`), so Back returns there past the
+  // conversations opened since; opened first, or with no place, the overview.
+  const [cameAt] = useState<number | null>(() => {
+    const idx = (window.history.state as { idx?: unknown } | null)?.idx;
+    return typeof idx === 'number' ? idx : null;
+  });
+  const goBack = () => {
+    const idx = (window.history.state as { idx?: unknown } | null)?.idx;
+    if (cameAt && typeof idx === 'number' && idx >= cameAt)
+      void navigate(-(idx - cameAt + 1));
+    else void navigate('/');
+  };
   const drawer = useRecordDrawerState();
   const [drawerLoaded, setDrawerLoaded] = useState(false);
   if (drawer.opened && !drawerLoaded) setDrawerLoaded(true);
@@ -249,7 +262,19 @@ export default function AgentChatPage(): ReactElement {
       value={{ open: drawer.open, close: drawer.close, inDrawer: false }}
     >
       <div className='flex h-full min-h-0 flex-col'>
-        <div className='shrink-0 border-b px-6 py-5 md:px-8'>
+        <div className='flex shrink-0 flex-col gap-3 border-b px-6 py-5 md:px-8'>
+          {/* Back to the page the reader came from, drawn as a record page's
+              Back is (back-button.tsx), which leads to a parent route
+              instead; this page has none. Narrow, an open conversation has
+              its own Back to the list instead. */}
+          <button
+            type='button'
+            className={`inline-flex w-fit items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground ${detailOpen ? 'max-lg:hidden' : ''}`}
+            onClick={goBack}
+          >
+            <ArrowLeft className='size-4' />
+            {text('back')}
+          </button>
           <PageHeader
             title={text('navigation.conversations')}
             actions={headerAction}

@@ -127,6 +127,14 @@ describe('LongTextField', () => {
 // A long text with room unfolds in place on a click and folds back on
 // another; a double-click, the field's edit, leaves it as it was.
 describe('FoldingText', () => {
+  it("opens with the field's name in bold, in Chinese with the colon after it", () => {
+    const { container } = render(
+      <FoldingText value='在展会上看了演示。' lead='**原始信息**：' />,
+    );
+    expect(container.querySelector('strong')?.textContent).toBe('原始信息');
+    expect(container.textContent).toBe('原始信息：在展会上看了演示。');
+  });
+
   it('unfolds on a click, folds on another, and stays put on a double-click', async () => {
     // Laid out as overflowing: taller than its five lines.
     vi.stubGlobal(

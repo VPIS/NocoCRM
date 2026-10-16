@@ -68,6 +68,7 @@ export function InlineField({
   placeholder,
   hint = false,
   longText = 'inline',
+  named = false,
 }: {
   entity: Entity;
   record: CrmRecord;
@@ -103,6 +104,9 @@ export function InlineField({
   // room (a lead's original message) previews five and unfolds in place on
   // a click (`fold`, FoldingText), a double-click editing as ever.
   longText?: 'inline' | 'popover' | 'fold';
+  // Folded, the text opens with the field's name, as a record's intro under
+  // its heading does, where no label stands beside it.
+  named?: boolean;
 }): ReactElement {
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
@@ -243,7 +247,10 @@ export function InlineField({
     return (
       <div className={`px-2 py-1.5 ${readText}`}>
         {folding ? (
-          <FoldingText value={toText(record[field.key])} />
+          <FoldingText
+            value={toText(record[field.key])}
+            lead={named ? toText(text('fieldLead', { label })) : undefined}
+          />
         ) : (
           <Value
             record={record}
@@ -280,6 +287,8 @@ export function InlineField({
         role='button'
         tabIndex={0}
         aria-label={label}
+        // What a row's pencil on hover opens (Copyable in crm-detail.tsx).
+        data-edit-trigger=''
         // A title's ground, cloned on each line it wraps to, keeps within its
         // line: taller, the second line's ground lay over the first line's
         // words. A block's padding is its own.
@@ -308,7 +317,10 @@ export function InlineField({
               )}
           </span>
         ) : folding ? (
-          <FoldingText value={toText(record[field.key])} />
+          <FoldingText
+            value={toText(record[field.key])}
+            lead={named ? toText(text('fieldLead', { label })) : undefined}
+          />
         ) : (
           <Value
             record={record}

@@ -453,13 +453,16 @@ export function SignalsCard({
           </p>
         )}
         {/* The whole list, with its sources, the check's switch and
-            "Check now": a quiet link under the rows. */}
+            "Check now": a quiet link under the rows, named for checking
+            while there is nothing to list. */}
         <button
           type='button'
           onClick={() => setDialog(true)}
           className='flex items-center gap-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground'
         >
-          {text('signals.viewAll', { count: data?.total ?? 0 })}
+          {data?.total
+            ? text('signals.viewAll', { count: data.total })
+            : text('signals.openToCheck')}
           <ChevronRight className='size-3.5' />
         </button>
       </div>

@@ -1,6 +1,4 @@
-import { Sparkles } from 'lucide-react';
 import { useRef, type ReactElement } from 'react';
-import { Button } from '../ui/button.js';
 import {
   Tooltip,
   TooltipContent,
@@ -8,18 +6,14 @@ import {
   TooltipTrigger,
 } from '../ui/tooltip.js';
 import { toText, useCrmText } from './api.js';
-import {
-  HOME_QUESTIONS,
-  useAskDraft,
-  useFocusReturn,
-} from './assistant-ask.js';
+import { useAskDraft, useFocusReturn } from './assistant-ask.js';
 import { AskComposer } from './assistant-ask-composer.js';
 import { useAgentReadiness } from './agent-chat/ask.js';
 
 // The overview's ask box: the first thing on the page, in its flow rather
-// than floating like the dock (which the overview does not show), with the
-// overview's suggested questions always laid out under it, always expanded
-// (assistant-ask-composer.tsx). Sending starts a conversation with the assistant that
+// than floating like the dock (which the overview does not show), always
+// expanded (assistant-ask-composer.tsx), with no suggested questions under
+// it (until 2026-10-16 there were three). Sending starts a conversation with the assistant that
 // sends the question with its files on the model picked, and opens the
 // panel on it. While the agents are still loading it is drawn disabled, so
 // nothing below it moves once the assistant is ready; while the assistant cannot answer the
@@ -50,7 +44,7 @@ export function AssistantAskBox(): ReactElement | null {
 
   return (
     <TooltipProvider>
-      <div className='flex flex-col gap-4'>
+      <div className='flex flex-col'>
         {unavailable ? (
           // Disabled controls take no pointer events, so the reason's
           // tooltip hangs on a wrapper around the box.
@@ -63,33 +57,6 @@ export function AssistantAskBox(): ReactElement | null {
         ) : (
           box
         )}
-        {/* The reason, when there is one, shows in the box right above, so
-            the chips carry no tooltip of their own. A chip sends its
-            question with the files attached, on the model picked. */}
-        <ul
-          aria-label={toText(text('dock.suggestions'))}
-          className='flex flex-wrap justify-center gap-2'
-        >
-          {HOME_QUESTIONS.map(({ key, prompt }) => {
-            const label = toText(text(`dock.q.${key}`));
-            return (
-              <li key={key}>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  disabled={disabled || draft.files.uploading}
-                  className='rounded-full font-normal'
-                  onClick={() =>
-                    draft.send(toText(text(prompt ?? `dock.q.${key}`)))
-                  }
-                >
-                  <Sparkles className='text-primary' />
-                  {label}
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
       </div>
     </TooltipProvider>
   );

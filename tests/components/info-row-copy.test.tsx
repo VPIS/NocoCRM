@@ -50,4 +50,26 @@ describe('InfoRow', () => {
     await userEvent.click(screen.getByRole('button', { name: /copy/i }));
     expect(writeText).toHaveBeenCalledWith('https://www.robam.com/zh');
   });
+
+  it('opens an editable value’s editor from its pencil, as a double-click or Enter does', async () => {
+    const opened = vi.fn();
+    render(
+      <dl>
+        <InfoRow field='phone' label='Phone'>
+          <div
+            role='button'
+            tabIndex={0}
+            data-edit-trigger=''
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') opened();
+            }}
+          >
+            13800005217
+          </div>
+        </InfoRow>
+      </dl>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /edit/i }));
+    expect(opened).toHaveBeenCalled();
+  });
 });

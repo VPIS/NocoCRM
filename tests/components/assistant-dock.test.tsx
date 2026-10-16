@@ -199,6 +199,27 @@ describe('the assistant dock', () => {
     ).toBeNull();
   });
 
+  it('closes on a press outside even when the page keeps focus, as the board does when it drags', async () => {
+    const user = userEvent.setup();
+    renderDock('/crm/opportunities');
+    await user.click(screen.getByRole('textbox'));
+    expect(
+      screen.getByRole('button', { name: english('dock.attach') }),
+    ).toBeTruthy();
+    // A board that starts a drag on a press: focus does not move.
+    const board = document.createElement('div');
+    board.addEventListener('mousedown', (event) => event.preventDefault());
+    document.body.append(board);
+    act(() => {
+      fireEvent.pointerDown(board);
+      fireEvent.mouseDown(board);
+    });
+    board.remove();
+    expect(
+      screen.queryByRole('button', { name: english('dock.attach') }),
+    ).toBeNull();
+  });
+
   it('keeps itself open while it holds a file, and sends the file with the record', async () => {
     const user = userEvent.setup();
     renderDock('/crm/leads/l1', { name: 'Tang Rui' });

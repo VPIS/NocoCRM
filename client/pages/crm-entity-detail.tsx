@@ -1069,8 +1069,8 @@ export default function EntityDetail({
     />
   );
   // What a deal or a company is, under its heading as a lead's original
-  // message: with neither heading nor label, five lines unfolding on a
-  // click, the editor's own 8px pulled out so the text lines up. Empty, it
+  // message: no heading, its first words the field's name, five lines
+  // unfolding on a click, the editor's own 8px pulled out so the text lines up. Empty, it
   // offers itself to whoever may write it.
   const descriptionIntro = (placeholderKey: string): ReactNode =>
     editable || toText(record.description).trim() ? (
@@ -1085,6 +1085,7 @@ export default function EntityDetail({
             label={text(fieldLabelKey(entity, 'description'))}
             placeholder={toText(text(placeholderKey))}
             longText='fold'
+            named
           />
         </Copyable>
       </div>

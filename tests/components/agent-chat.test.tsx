@@ -261,6 +261,7 @@ function renderAt(path: string): void {
             >
               <Route path=':conversationId' element={null} />
             </Route>
+            <Route path='/' element={<p>Overview page</p>} />
           </Routes>
         </I18nProvider>
       </MemoryRouter>
@@ -269,6 +270,12 @@ function renderAt(path: string): void {
 }
 
 describe('the agent conversations', () => {
+  it('goes back to the overview when it was opened first', async () => {
+    renderAt('/crm/agent-chat');
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
+    expect(await screen.findByText('Overview page')).toBeTruthy();
+  });
+
   it('starts with an empty state holding the only way to a new one', () => {
     renderAt('/crm/agent-chat');
     expect(screen.getByText('还没有对话')).toBeTruthy();

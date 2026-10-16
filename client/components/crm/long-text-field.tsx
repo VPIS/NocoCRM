@@ -179,7 +179,15 @@ export function LongTextField({
 // is left to the field around it, which edits. A click waits a moment so a
 // double-click does not unfold and fold it too, and selecting text does not
 // count as a click.
-export function FoldingText({ value }: { value: string }): ReactElement {
+export function FoldingText({
+  value,
+  lead,
+}: {
+  value: string;
+  // Markdown the first paragraph opens with (the field's name in bold, on
+  // a record's intro under its heading).
+  lead?: string;
+}): ReactElement {
   const [open, setOpen] = useState(false);
   const [overflows, setOverflows] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -221,7 +229,7 @@ export function FoldingText({ value }: { value: string }): ReactElement {
       }}
       onDoubleClick={() => clearTimeout(timerRef.current)}
     >
-      <Markdown compact>{value}</Markdown>
+      <Markdown compact>{lead ? `${lead}${value}` : value}</Markdown>
     </div>
   );
 }

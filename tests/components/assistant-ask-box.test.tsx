@@ -50,8 +50,6 @@ function asked(): Record<string, unknown>[] {
     files: message.attachmentIds ?? [],
   }));
 }
-const suggestion = (key: string) =>
-  screen.getByRole('button', { name: english(`dock.q.${key}`) });
 
 describe("the overview's ask box", () => {
   beforeEach(() => {
@@ -60,24 +58,11 @@ describe("the overview's ask box", () => {
     localStorage.clear();
   });
 
-  it('lays out its three questions and sends one with a click', async () => {
-    const user = userEvent.setup();
+  it('offers no suggested questions under it', () => {
     render(<AssistantAskBox />);
-    const list = screen.getByRole('list', {
-      name: english('dock.suggestions'),
-    });
-    expect(list.querySelectorAll('li')).toHaveLength(3);
-    await user.click(suggestion('home.deals'));
-    // One question at a time: the box waits until it went.
-    await waitFor(() => expect(asked()).toHaveLength(1));
-    await waitFor(() => expect(suggestion('home.followUp')).toBeEnabled());
-    await user.click(suggestion('home.followUp'));
-    await waitFor(() =>
-      expect(asked()).toEqual([
-        { text: english('dock.q.home.deals'), model: QWEN, files: [] },
-        { text: english('dock.q.home.followUp'), model: QWEN, files: [] },
-      ]),
-    );
+    expect(
+      screen.queryByRole('list', { name: english('dock.suggestions') }),
+    ).toBeNull();
   });
 
   it('sends what is typed with Enter, not while an input method composes, and clears itself', async () => {
@@ -96,7 +81,7 @@ describe("the overview's ask box", () => {
     );
   });
 
-  it('moves from the box through its tools to the questions with Tab', async () => {
+  it('moves from the box through its tools with Tab', async () => {
     const user = userEvent.setup();
     render(<AssistantAskBox />);
     await user.click(screen.getByRole('textbox'));
@@ -110,8 +95,6 @@ describe("the overview's ask box", () => {
     expect(
       screen.getByRole('combobox', { name: english('dock.model') }),
     ).toHaveFocus();
-    await user.tab();
-    expect(suggestion('home.focus')).toHaveFocus();
   });
 
   it('keeps its place disabled while the agents load', () => {
@@ -120,7 +103,6 @@ describe("the overview's ask box", () => {
     expect(
       screen.getByRole('textbox', { name: english('dock.placeholder') }),
     ).toBeDisabled();
-    expect(suggestion('home.focus')).toBeDisabled();
   });
 
   it('says why when the chat cannot start, and sends nothing', async () => {
@@ -131,8 +113,8 @@ describe("the overview's ask box", () => {
     expect(
       screen.getByRole('textbox', { name: english('agentPanel.notSetUp') }),
     ).toBeDisabled();
-    expect(suggestion('home.focus')).toBeDisabled();
-    await user.click(suggestion('home.focus'));
+    await user.click(screen.getByRole('textbox'));
+    await user.keyboard('Hello{Enter}');
     expect(chatFake.created).toHaveLength(0);
   });
 
@@ -196,7 +178,10 @@ describe("the overview's ask box", () => {
       screen.getByRole('combobox', { name: english('dock.model') }),
     );
     await user.click(await screen.findByRole('option', { name: 'GPT 5' }));
-    await user.click(suggestion('home.focus'));
+    await user.type(
+      screen.getByRole('textbox', { name: english('dock.placeholder') }),
+      'Today{Enter}',
+    );
     await waitFor(() =>
       expect(asked()[0]?.model).toEqual({
         modelService: 'openai',

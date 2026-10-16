@@ -16,14 +16,6 @@ import type { CurrentRecord } from './current-record.js';
 // (assistant-ask-box.tsx). They ask the assistant, the CRM's agent on the Agents
 // plugin, in its panel (agent-chat/).
 
-// The overview's suggested questions, as keys under `dock.q`; `prompt`
-// names another key of the crm locale to send instead of the label.
-export const HOME_QUESTIONS: readonly { key: string; prompt?: string }[] = [
-  { key: 'home.focus' },
-  { key: 'home.deals' },
-  { key: 'home.followUp' },
-];
-
 // When the panel closes, focus left inside it (or fallen to the page) comes
 // back to the box that `target` gives; focus the user has put elsewhere
 // stays.

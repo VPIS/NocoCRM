@@ -646,8 +646,9 @@ function LeadDetail({ id }: { id: string }): ReactElement {
       status={leadStatus}
       tabBar={tabBar}
       notice={<ErrorNotice error={error ?? loadError} />}
-      // What the lead wrote first, under the heading with neither heading
-      // nor label of its own, as a task's description leads its page.
+      // What the lead wrote first, under the heading with no heading of its
+      // own, its first words the field's name, as a task's description
+      // leads its page.
       // Its inline editor keeps 8px of its own on each side for the hover
       // fill; pulled out by them, the text lines up with the heading.
       // Empty, it offers itself to whoever may write it, and is left out
@@ -664,8 +665,10 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                 lookup={names}
                 label={text(fieldLabelKey('leads', 'message'))}
                 placeholder={toText(text('messagePlaceholder'))}
-                // Five lines unfolding in place on a click.
+                // Five lines unfolding in place on a click, opening with
+                // the field's name.
                 longText='fold'
+                named
               />
             </Copyable>
           </div>
@@ -4457,7 +4460,10 @@ const ROW_ACTION =
 
 // A value a button on hover copies as it reads (a particular, a lead's
 // original message): not while it is empty (a placeholder or a dash,
-// marked data-placeholder) or being edited.
+// marked data-placeholder) or being edited. One the reader may edit (its
+// InlineField marked data-edit-trigger) shows a pencil left of it too,
+// opening the editor in one click as a double-click does; a website's row
+// draws its own.
 export function Copyable({ children }: { children: ReactNode }): ReactElement {
   const { text } = useCrmText();
   const valueRef = useRef<HTMLDivElement>(null);
@@ -4484,9 +4490,26 @@ export function Copyable({ children }: { children: ReactNode }): ReactElement {
       .then(() => setCopied(true))
       .catch(() => undefined);
   };
+  const edit = (): void => {
+    valueRef.current
+      ?.querySelector<HTMLElement>('[data-edit-trigger]')
+      ?.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+      );
+  };
   return (
     <div className='group/row relative min-w-0'>
       <div ref={valueRef}>{children}</div>
+      <button
+        type='button'
+        aria-label={toText(text('editValue'))}
+        title={toText(text('editValue'))}
+        onClick={edit}
+        onDoubleClick={(event) => event.stopPropagation()}
+        className={`absolute right-8 hidden group-has-[[data-edit-trigger]]/row:group-focus-within/row:grid group-has-[[data-edit-trigger]]/row:group-hover/row:grid group-has-[input]/row:hidden! group-has-[textarea]/row:hidden! ${ROW_ACTION}`}
+      >
+        <PencilLine aria-hidden className='size-3.5' />
+      </button>
       <button
         type='button'
         aria-label={toText(text(copied ? 'copiedValue' : 'copyValue'))}

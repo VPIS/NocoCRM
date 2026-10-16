@@ -1,5 +1,5 @@
 import { Sparkles } from 'lucide-react';
-import { useRef, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useLocation } from 'react-router';
 import { useIsMobile } from '#hooks/use-mobile';
 import { Button } from '../ui/button.js';
@@ -107,6 +107,21 @@ export function AssistantDock(): ReactElement | null {
   const phoneRef = useRef<HTMLButtonElement>(null);
   const dockRef = useRef<HTMLDivElement>(null);
   useFocusReturn(() => (isMobile ? phoneRef.current : inputRef.current));
+  // A press outside closes it too, focus or not: a page that drags on a
+  // press (the board) keeps focus where it was, so no blur would come. Its
+  // model menu, outside it while open, keeps it open.
+  useEffect(() => {
+    if (!focused || modelMenu) return;
+    const outside = (event: PointerEvent): void => {
+      const target = event.target as Node | null;
+      if (target && dockRef.current?.contains(target)) return;
+      if (dockRef.current?.contains(document.activeElement))
+        (document.activeElement as HTMLElement | null)?.blur();
+      setFocused(false);
+    };
+    document.addEventListener('pointerdown', outside, true);
+    return () => document.removeEventListener('pointerdown', outside, true);
+  }, [focused, modelMenu]);
 
   if (
     readiness.state === 'loading' ||
