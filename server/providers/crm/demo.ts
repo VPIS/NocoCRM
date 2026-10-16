@@ -2016,13 +2016,15 @@ async function populate(
     result: ai.hworldLead,
     ...decided(-33, 10),
   });
+  // Run after Chen Lu's last WhatsApp messages went quiet (the SLA he asked
+  // for, the remote presentation), as a customer's reply starts one.
   await aiEntry(
     'opportunities',
     projects.hworldDeal,
     'pending',
-    at(-2, 15, 20),
+    at(-1, 21, 40),
     {
-      trigger: 'taskDone',
+      trigger: 'customerReplied',
       result: ai.hworldDeal,
     },
   );

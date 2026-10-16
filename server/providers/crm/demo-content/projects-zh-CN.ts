@@ -452,17 +452,18 @@ export const zhProjects: DemoProjects = {
       recommendation: 'advance',
       confidence: 'medium',
       stage: 'negotiation',
-      summary: '报价已发出、POC 通过、折扣审批在走，可以推进到谈判阶段。',
+      summary: '报价已发、POC 通过、折扣在审批，可以推进到谈判阶段。',
       brief:
-        'POC 在华住测试环境通过了性能和集群部署验证，报价单（企业版 + 三年运维，合计 72 万）两天前已发给陆晨。陆晨希望首年价格有空间，15% 折扣的审批已提交给李明，还在等待。明天的方案评审会采购邵佳会参加，她还不在商机的联系人里。',
+        'POC 和集群压测已由程浩确认通过，报价单（企业版 + 三年运维，合计 72 万）两天前已发给陆晨。陆晨昨晚在 WhatsApp 上确认评审会需要我们远程讲解，采购邵佳也会参加，并要求会前发一份运维服务的 SLA。15% 折扣的审批还在李明那里，三年运维能否写进主合同也还没和客户确认。会前要准备好对比材料和 SLA，会上问清邵佳的比价对象和采购节点。',
       reasons: [
-        'POC 通过，技术评估人程浩已确认（POC 演示）',
-        '报价单已发出，客户同意在评审会上过（报价单发送）',
-        '商务进入价格讨论，折扣审批已提交（审批）',
+        '陆晨昨晚确认评审会需要我们远程讲解，并要运维服务的 SLA（WhatsApp）',
+        'POC 和集群压测通过，程浩已确认性能满足要求（POC 演示、WhatsApp）',
+        '企业版加三年运维的报价单已发出，客户在内部评审（报价单发送）',
       ],
       risks: [
-        '折扣审批未批前不要对客户承诺 15%',
-        '采购邵佳第一次参与，可能带来新的比价要求',
+        '15% 折扣审批未批前，不能向客户承诺（审批）',
+        '采购邵佳会比价，比价对象还不清楚（WhatsApp）',
+        '三年运维写进主合同还没和客户确认',
       ],
       nextStep: {
         type: 'task',
@@ -470,13 +471,14 @@ export const zhProjects: DemoProjects = {
         inDays: 1,
       },
       prep: [
-        '准备两套报价：标准价和 15% 折扣 + 三年运维',
-        '整理同等规模连锁客户的实施周期',
+        '整理和其他方案的对比材料',
+        '准备三年运维服务的 SLA 文档',
+        '确认远程参会方式和讲解分工',
       ],
       questions: [
-        '采购这边的比价和决策流程是怎样的？',
-        '三年运维能否写进主合同？',
-        '一期上线时间的硬性要求是什么？',
+        '邵佳比价的是哪些平台或自建方案？',
+        '三年运维服务能否写进主合同？',
+        '采购和合同流程还有哪些节点？',
       ],
       email: null,
       updates: [
@@ -492,16 +494,29 @@ export const zhProjects: DemoProjects = {
       lostReason: null,
       revisitInDays: null,
       changes: [
-        '报价单已发出，金额更新为 72 万',
-        '折扣审批已提交，等待李明决定',
+        '陆晨要求会前发 SLA、评审会需要远程讲解，准备事项随之调整（WhatsApp）',
+        '阶段由提案推进到谈判：报价已发，折扣审批在走',
+        '折扣审批仍待批，保持中等信心',
       ],
-      approvals: [],
+      approvals: [
+        {
+          topic: 'contractTerms',
+          name: '华住集团 三年运维服务写进主合同',
+          description:
+            '报价单为企业版加三年运维服务，客户评审会要谈运维内容；标准是一年升级支持、服务按项目另行报价。三年运维写进主合同能锁定长期收入，也是首年 15% 折扣的理由。',
+        },
+      ],
       terms: [
         {
           topic: 'discount',
           term: '企业版首年 15% 折扣',
           status: 'pending',
           approval: '华住集团 企业版首年 15% 折扣',
+        },
+        {
+          topic: 'contractTerms',
+          term: '三年运维服务写进主合同',
+          status: 'needed',
         },
       ],
       contacts: [
@@ -513,7 +528,7 @@ export const zhProjects: DemoProjects = {
           jobTitle: '采购经理',
           phone: null,
           email: null,
-          reason: '陆晨说会拉采购邵佳参加下次评审（POC 演示）',
+          reason: '采购，会参加评审会并比价（WhatsApp）',
         },
       ],
     },

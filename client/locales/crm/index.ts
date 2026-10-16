@@ -2470,6 +2470,7 @@ const wording = {
     tab: ['WhatsApp', 'WhatsApp'],
     tabPeople: ['Messages with {{names}}', '与 {{names}} 的消息'],
     tabPeopleLabel: ['Whose conversation', '谁的对话'],
+    openConversation: ['Open conversation', '打开对话'],
     tabEmptyTitle: ['No WhatsApp messages yet', '还没有 WhatsApp 消息'],
     tabEmptyBody: [
       "Messages this record's people send to the company's WhatsApp number appear here.",

@@ -496,17 +496,18 @@ export const enProjects: DemoProjects = {
       confidence: 'medium',
       stage: 'negotiation',
       summary:
-        'The quotation is out, the proof of concept passed and the discount approval is under way: move it to negotiation.',
+        'The quotation is out, the proof of concept passed and the discount is in approval: move it to negotiation.',
       brief:
-        "The proof of concept in H World's test environment passed on performance and cluster deployment, and the quotation (Enterprise with three years of support, RMB 720,000) went to Chen Lu two days ago. He wants room on the first-year price; the 15% discount approval is with Daniel Brooks, still pending. Joy Shao from procurement joins tomorrow's solution review and is not yet among the deal's contacts.",
+        "Howard Cheng confirmed the proof of concept and the cluster load test, and the quotation (Enterprise with three years of support, RMB 720,000) went to Chen Lu two days ago. Last night on WhatsApp Chen Lu confirmed the review wants us to present remotely, said Joy Shao from procurement will join, and asked for the support SLA before the meeting. The 15% discount approval is still with Daniel Brooks, and whether the three years of support go into the main contract is not yet agreed with the customer. Before the meeting, prepare the comparison and the SLA; at it, find out what Joy Shao compares against and procurement's next steps.",
       reasons: [
-        'The proof of concept passed; Howard Cheng confirmed it (proof of concept)',
-        'The quotation is out and will be reviewed at the meeting (quotation sent)',
-        'Price is under discussion and the discount approval is submitted (approval)',
+        'Chen Lu confirmed last night that the review wants us to present remotely, and asked for the support SLA (WhatsApp)',
+        'The proof of concept and the load test passed; Howard Cheng confirmed the performance (proof of concept, WhatsApp)',
+        'The quotation for Enterprise with three years of support is out and under internal review (quotation sent)',
       ],
       risks: [
-        'Do not promise 15% before the approval is decided',
-        'Procurement joins for the first time and may ask for competing quotes',
+        'Do not promise 15% before the approval is decided (approval)',
+        'Joy Shao will compare prices; what against is unknown (WhatsApp)',
+        'The three years of support in the main contract are not yet agreed with the customer',
       ],
       nextStep: {
         type: 'task',
@@ -514,13 +515,14 @@ export const enProjects: DemoProjects = {
         inDays: 1,
       },
       prep: [
-        'Two quotations: list price, and 15% off with three years of support',
-        'Rollout times of chains of a similar size',
+        'A comparison with the other options',
+        'The SLA for the three years of support',
+        'How we join remotely and who presents what',
       ],
       questions: [
-        'How does procurement compare quotes and decide?',
+        'Which platforms or in-house options is Joy Shao comparing?',
         'Can the three years of support go into the main contract?',
-        'Is there a hard date for phase one?',
+        'What steps are left in procurement and contracting?',
       ],
       email: null,
       updates: [
@@ -537,16 +539,29 @@ export const enProjects: DemoProjects = {
       lostReason: null,
       revisitInDays: null,
       changes: [
-        'The quotation is out; the amount is now RMB 720,000',
-        'The discount approval is submitted, awaiting Daniel Brooks',
+        'Chen Lu asked for the SLA before the review and for us to present remotely; the preparation follows (WhatsApp)',
+        'From proposal to negotiation: the quotation is out and the discount in approval',
+        'The discount approval is still pending; confidence stays medium',
       ],
-      approvals: [],
+      approvals: [
+        {
+          topic: 'contractTerms',
+          name: 'H World: three years of support in the main contract',
+          description:
+            'The quotation is Enterprise with three years of support, and the review will discuss the support; the standard is one year of upgrades, with services quoted per project. Three years in the main contract lock in long-term revenue and justify the 15% first-year discount.',
+        },
+      ],
       terms: [
         {
           topic: 'discount',
           term: '15% off Enterprise in the first year',
           status: 'pending',
           approval: 'H World Enterprise first-year 15% discount',
+        },
+        {
+          topic: 'contractTerms',
+          term: 'Three years of support in the main contract',
+          status: 'needed',
         },
       ],
       contacts: [
@@ -559,7 +574,7 @@ export const enProjects: DemoProjects = {
           phone: null,
           email: null,
           reason:
-            'Chen Lu will bring Joy Shao from procurement to the next review (proof of concept)',
+            'Procurement; will join the review and compare prices (WhatsApp)',
         },
       ],
     },

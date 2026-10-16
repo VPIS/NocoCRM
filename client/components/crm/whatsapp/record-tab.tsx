@@ -1,6 +1,6 @@
 import { useToaster } from '@nocobase/app-client';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, PanelRight } from 'lucide-react';
 import { useState, type ReactElement } from 'react';
 import {
   Empty,
@@ -11,9 +11,12 @@ import {
 } from '#components/ui/empty';
 import { Tabs, TabsList, TabsTrigger } from '#components/ui/tabs';
 import { LoadFailure } from '../../../pages/settings/shared.js';
+import { Button } from '#components/ui/button';
+import { WhatsAppConversationDrawer } from './conversation-drawer.js';
 import { toText, useCrmApi, useCrmScopeKey, useCrmText } from '../api.js';
 import {
   TAB_POLL_MS,
+  useWhatsAppPage,
   type RecordMessages,
   type WhatsAppMessage,
 } from './api.js';
@@ -41,6 +44,9 @@ export function RecordWhatsAppPanel({
   const api = useCrmApi();
   const toaster = useToaster();
   const scopeKey = useCrmScopeKey();
+  const mayOpen = useWhatsAppPage();
+  // The conversation open in the drawer.
+  const [opened, setOpened] = useState<string | null>(null);
   // The person picked; the server's choice, the latest to write, until then.
   const [picked, setPicked] = useState<string>();
   const base = `${entity}/${encodeURIComponent(id)}/whatsappMessages`;
@@ -96,6 +102,9 @@ export function RecordWhatsAppPanel({
   const names = new Map(people.map((one) => [one.id, one.name]));
   // The people with messages, each a tab when there are two or more.
   const talking = people.filter((one) => one.messageCount > 0);
+  // The conversation the newest message shown is in (a person on two
+  // numbers has two; the WhatsApp page shows each).
+  const conversationId = query.data.messages.at(-1)?.conversationId ?? null;
   const loadEarlier = () => {
     const before = messages[0]?.occurredAt;
     if (!before) return;
@@ -119,17 +128,15 @@ export function RecordWhatsAppPanel({
       .finally(() => setLoadingEarlier(false));
   };
   return (
-    // On the card's white, as the Mail tab's list is.
-    <div
-      data-slot='record-whatsapp'
-      className='flex flex-col overflow-clip rounded-xl border border-border bg-card shadow-xs'
-    >
+    // On the card's white, as the Mail tab's list is: its head and its
+    // body each drawing their part of the card's border, so the head keeps
+    // its top edge and corners while it stays at the top of the column.
+    <div data-slot='record-whatsapp' className='flex flex-col'>
       {/* Whose conversation: line tabs over a rule, as the record's own
           tabs are, each person with their count; one person, their name.
-          It stays at the top of the column while the card scrolls under
-          it (the card clips rather than hides its overflow, which would
-          make it the header's scroller). */}
-      <div className='sticky top-0 z-10 rounded-t-xl border-b border-border bg-card px-4'>
+          It stays at the top of the column while the body scrolls under
+          it. */}
+      <div className='sticky top-0 z-10 flex min-h-14 items-center justify-between gap-3 rounded-t-xl border border-border bg-card px-4'>
         {talking.length > 1 ? (
           <Tabs
             value={person ?? ''}
@@ -137,11 +144,16 @@ export function RecordWhatsAppPanel({
           >
             <TabsList
               variant='line'
-              className='h-11 gap-4 p-0'
+              className='h-14 gap-4 p-0'
               aria-label={toText(text('whatsapp.tabPeopleLabel'))}
             >
               {talking.map((one) => (
-                <TabsTrigger key={one.id} value={one.id} className='px-0'>
+                <TabsTrigger
+                  key={one.id}
+                  value={one.id}
+                  // The active line on the head's rule, not under it.
+                  className='px-0 group-data-horizontal/tabs:after:bottom-[-2px]'
+                >
                   {one.name}
                   <span className='font-normal text-muted-foreground'>
                     {one.messageCount.toLocaleString(language)}
@@ -151,27 +163,46 @@ export function RecordWhatsAppPanel({
             </TabsList>
           </Tabs>
         ) : (
-          <p className='py-3 text-sm text-muted-foreground'>
+          <p className='text-sm text-muted-foreground'>
             {text('whatsapp.tabPeople', {
               names: names.get(person ?? '') ?? '',
             })}
           </p>
         )}
+        {/* The person's conversation, in a drawer over the page, for
+            whoever has the WhatsApp page its route asks for. */}
+        {conversationId && mayOpen ? (
+          <Button
+            variant='ghost'
+            size='sm'
+            className='shrink-0'
+            onClick={() => setOpened(conversationId)}
+          >
+            <PanelRight data-icon='inline-start' />
+            {text('whatsapp.openConversation')}
+          </Button>
+        ) : null}
       </div>
-      <WhatsAppMessages
-        key={person ?? ''}
-        className='max-h-[70dvh]'
-        messages={messages}
-        more={more}
-        loadingEarlier={loadingEarlier}
-        onLoadEarlier={loadEarlier}
-        senderOf={() => names.get(person ?? '') ?? ''}
-      />
-      {/* Under a rule, as the WhatsApp page's conversation ends, so the
+      <div className='flex flex-col overflow-hidden rounded-b-xl border-x border-b border-border bg-card shadow-xs'>
+        <WhatsAppMessages
+          key={person ?? ''}
+          className='max-h-[70dvh]'
+          messages={messages}
+          more={more}
+          loadingEarlier={loadingEarlier}
+          onLoadEarlier={loadEarlier}
+          senderOf={() => names.get(person ?? '') ?? ''}
+        />
+        {/* Under a rule, as the WhatsApp page's conversation ends, so the
           messages scrolling above do not run into it. */}
-      <p className='border-t border-border px-4 py-3 text-xs text-muted-foreground'>
-        {text('whatsapp.readOnlyNote')}
-      </p>
+        <p className='border-t border-border px-4 py-3 text-xs text-muted-foreground'>
+          {text('whatsapp.readOnlyNote')}
+        </p>
+      </div>
+      <WhatsAppConversationDrawer
+        conversationId={opened}
+        onClose={() => setOpened(null)}
+      />
     </div>
   );
 }

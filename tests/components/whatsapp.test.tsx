@@ -43,6 +43,10 @@ vi.mock('@nocobase/app-client', async (importOriginal) => ({
   // The unsaved-changes guard, whose provider the application shell gives.
   useNavigationGuard: () => undefined,
 }));
+// The WhatsApp page's grant, which opening a conversation asks for.
+vi.mock('@nocobase/app-plugin-authorization/client', () => ({
+  useCan: () => ({ can: true, isPending: false, error: undefined }),
+}));
 vi.mock('@nocobase/app-plugin-authentication/client', () => ({
   useAuthentication: () => ({ refresh: async () => undefined }),
 }));
@@ -530,35 +534,49 @@ describe("a record's WhatsApp tab", () => {
       },
     ];
     state.api.mockImplementation(async (path: string) =>
-      path.endsWith('?person=w2')
+      path === 'whatsapp/conversations/c1'
         ? {
             data: {
-              messages: [
-                {
-                  ...message('m2', '2026-10-14T08:00:00.000Z'),
-                  waContactId: 'w2',
-                },
-              ],
-              more: false,
-              people,
-              person: 'w2',
+              ...conversation,
+              contact: { ...customer, name: 'Bruno Lima' },
+              messages: [message('m2', '2026-10-14T08:00:00.000Z')],
             },
           }
-        : {
-            data: {
-              messages: [
-                {
-                  ...message('m1', '2026-10-14T09:00:00.000Z'),
-                  waContactId: 'w1',
-                },
-              ],
-              more: false,
-              people,
-              person: 'w1',
+        : path.endsWith('?person=w2')
+          ? {
+              data: {
+                messages: [
+                  {
+                    ...message('m2', '2026-10-14T08:00:00.000Z'),
+                    waContactId: 'w2',
+                  },
+                ],
+                more: false,
+                people,
+                person: 'w2',
+              },
+            }
+          : {
+              data: {
+                messages: [
+                  {
+                    ...message('m1', '2026-10-14T09:00:00.000Z'),
+                    waContactId: 'w1',
+                  },
+                ],
+                more: false,
+                people,
+                person: 'w1',
+              },
             },
-          },
     );
-    render(wrap(<RecordWhatsAppPanel entity='companies' id='co1' />));
+    render(
+      wrap(
+        <MemoryRouter>
+          <RecordWhatsAppPanel entity='companies' id='co1' />
+        </MemoryRouter>,
+      ),
+    );
     // The latest to write first, the other a tab away.
     expect(await screen.findByText('Message m1')).toBeTruthy();
     expect(screen.queryByText('Message m2')).toBe(null);
@@ -567,6 +585,20 @@ describe("a record's WhatsApp tab", () => {
     expect(state.api).toHaveBeenCalledWith(
       'companies/co1/whatsappMessages?person=w2',
     );
+    // The person's conversation, in a drawer over the page.
+    await user.click(
+      screen.getByRole('button', { name: crmEn.whatsapp.openConversation }),
+    );
+    const drawer = await screen.findByRole('dialog');
+    expect(
+      await within(drawer).findByRole('heading', { name: 'Bruno Lima' }),
+    ).toBeTruthy();
+    expect(
+      within(drawer)
+        .getByText(crmEn.openFullPage)
+        .closest('a')
+        ?.getAttribute('href'),
+    ).toBe('/crm/whatsapp/c1?view=all');
   });
 });
 
