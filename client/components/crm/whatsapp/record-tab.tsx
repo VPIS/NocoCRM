@@ -103,7 +103,8 @@ export function RecordWhatsAppPanel({
       .finally(() => setLoadingEarlier(false));
   };
   return (
-    <div className='flex flex-col'>
+    // On the card's white, as the Mail tab's list is.
+    <div className='flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xs'>
       <p className='px-4 pt-4 text-sm text-muted-foreground'>
         {text('whatsapp.tabPeople', {
           names: new Intl.ListFormat(language, {

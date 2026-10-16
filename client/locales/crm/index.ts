@@ -2370,6 +2370,21 @@ const wording = {
     lead: ['Lead', '线索'],
     contact: ['Contact', '联系人'],
     linkSubmit: ['Link', '关联'],
+    // Where a contact's messages also go (pages/crm-whatsapp/link.tsx).
+    reach: {
+      companyAndDeals: [
+        "The messages also show on {{company}}'s timeline and those of its {{count}} deals with this contact.",
+        '消息也会出现在 {{company}} 和这位联系人参与的 {{count}} 个商机的动态里。',
+      ],
+      company: [
+        "The messages also show on {{company}}'s timeline.",
+        '消息也会出现在 {{company}} 的动态里。',
+      ],
+      deals: [
+        'The messages also show on the timelines of the {{count}} deals with this contact.',
+        '消息也会出现在这位联系人参与的 {{count}} 个商机的动态里。',
+      ],
+    },
     chooseLead: ['Choose a lead', '请选择一条线索'],
     chooseContact: ['Choose a contact', '请选择一个联系人'],
     linked: ['Linked to “{{name}}”', '已关联到“{{name}}”'],

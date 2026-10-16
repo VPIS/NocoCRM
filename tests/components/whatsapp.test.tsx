@@ -1,10 +1,15 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import {
   createMemoryRouter,
   MemoryRouter,
+  Outlet,
   Route,
   RouterProvider,
   Routes,
@@ -50,6 +55,16 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => ({
   useCrmScopeKey: () => ['crm'],
   useMetadata: () => ({ data: state.meta }),
   useRefresh: () => async () => undefined,
+  // A picker names a record it was handed without asking here.
+  useRecord: () => ({ data: undefined }),
+  // Asked through the test's API, as the hook asks the application's.
+  useCrmQuery: (path: string, enabled = true) =>
+    useQuery({
+      queryKey: ['crm', path],
+      queryFn: () =>
+        (state.api(path) as Promise<{ data: unknown }>).then((r) => r.data),
+      enabled,
+    }),
 }));
 
 const { WhatsAppMessages } =
@@ -64,6 +79,8 @@ const { default: WhatsAppSettingsPage } =
   await import('../../client/pages/crm-whatsapp/connection.js');
 const { default: WhatsAppNumberDialog } =
   await import('../../client/pages/crm-whatsapp/number.js');
+const { default: LinkConversationDialog } =
+  await import('../../client/pages/crm-whatsapp/link.js');
 
 const message = (
   id: string,
@@ -396,6 +413,76 @@ describe('the workspace', () => {
     render(routes('/crm/whatsapp?view=mine'));
     expect(await screen.findByText(crmEn.whatsapp.empty.title)).toBeTruthy();
     expect(screen.getByText(crmEn.whatsapp.choose)).toBeTruthy();
+  });
+});
+
+describe('changing a link', () => {
+  it('says where a contact’s messages also go, and keeps the current contact when its kind is picked again', async () => {
+    const user = userEvent.setup();
+    const linked = {
+      ...conversation,
+      contact: { ...customer, state: 'linked' as const, contactId: 'k1' },
+      record: { entity: 'contacts' as const, id: 'k1', name: 'Ana Souza' },
+    };
+    state.api.mockImplementation(async (path: string) => {
+      if (path === 'whatsapp/conversations/c1') return { data: linked };
+      if (path === 'contacts/k1')
+        return {
+          data: {
+            record: { id: 'k1', companyId: 'co1' },
+            names: { co1: 'Souza Ltda' },
+            related: { opportunities: [{}, {}] },
+            relatedTotals: { opportunities: 2 },
+          },
+        };
+      if (path.startsWith('contacts') || path.startsWith('leads'))
+        return { data: [], meta: { total: 0, titles: {} } };
+      return {};
+    });
+    render(
+      wrap(
+        <RouterProvider
+          router={createMemoryRouter(
+            [
+              {
+                // The conversation's context alone: its header's record
+                // link needs the application shell.
+                path: '/crm/whatsapp/:conversationId',
+                element: (
+                  <Outlet
+                    context={{
+                      conversation: linked,
+                      settle: () => undefined,
+                      focusName: () => undefined,
+                    }}
+                  />
+                ),
+                children: [
+                  { path: 'link', element: <LinkConversationDialog /> },
+                ],
+              },
+            ],
+            { initialEntries: ['/crm/whatsapp/c1/link'] },
+          )}
+        />,
+      ),
+    );
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      await within(dialog).findByText(
+        crmEn.whatsapp.reach.companyAndDeals
+          .replace('{{company}}', 'Souza Ltda')
+          .replace('{{count}}', '2'),
+      ),
+    ).toBeTruthy();
+    await user.click(
+      within(dialog).getByRole('radio', { name: crmEn.whatsapp.lead }),
+    );
+    expect(within(dialog).queryByText('Ana Souza')).toBe(null);
+    await user.click(
+      within(dialog).getByRole('radio', { name: crmEn.whatsapp.contact }),
+    );
+    expect(await within(dialog).findByText('Ana Souza')).toBeTruthy();
   });
 });
 

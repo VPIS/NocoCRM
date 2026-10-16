@@ -1,9 +1,19 @@
 import { ApiClientError, useToaster } from '@nocobase/app-client';
 import { useRef, useState, type ReactElement } from 'react';
 import { useNavigate, useOutletContext, useSearchParams } from 'react-router';
-import { Field, FieldError, FieldLabel } from '#components/ui/field';
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from '#components/ui/field';
 import { RadioGroup, RadioGroupItem } from '#components/ui/radio-group';
-import { toText, useCrmApi, useCrmText } from '../../components/crm/api.js';
+import {
+  toText,
+  useCrmApi,
+  useCrmQuery,
+  useCrmText,
+} from '../../components/crm/api.js';
 import { RecordPicker } from '../../components/crm/record-picker.js';
 import type { Conversation } from '../../components/crm/whatsapp/api.js';
 import { FormDialog } from '../settings/shared.js';
@@ -115,8 +125,14 @@ export default function LinkConversationDialog(): ReactElement {
           aria-labelledby={`${FORM_ID}-to`}
           value={entity}
           onValueChange={(value) => {
-            setEntity(value === 'leads' ? 'leads' : 'contacts');
-            setPicked({ id: '', name: '' });
+            const next = value === 'leads' ? 'leads' : 'contacts';
+            setEntity(next);
+            // Back on the current link's kind, its record again.
+            setPicked(
+              record?.entity === next
+                ? { id: record.id, name: record.name }
+                : { id: '', name: '' },
+            );
             setMissing(false);
           }}
           className='flex gap-6'
@@ -159,7 +175,43 @@ export default function LinkConversationDialog(): ReactElement {
             )}
           </FieldError>
         ) : null}
+        {entity === 'contacts' && picked.id ? (
+          <ContactReach id={picked.id} />
+        ) : null}
       </Field>
     </FormDialog>
+  );
+}
+
+// Where a contact's messages go besides the contact: its company's timeline
+// and those of the deals naming it (the service's targetsOf), said before
+// linking so the choice is an informed one.
+function ContactReach({ id }: { id: string }): ReactElement | null {
+  const { text } = useCrmText();
+  const { data } = useCrmQuery<{
+    record: { companyId?: string | null };
+    names?: Record<string, string>;
+    related?: { opportunities?: unknown[] };
+    relatedTotals?: { opportunities?: number };
+  }>(`contacts/${encodeURIComponent(id)}`);
+  if (!data) return null;
+  const companyId = data.record.companyId;
+  const company = companyId ? data.names?.[companyId] : undefined;
+  const deals =
+    data.relatedTotals?.opportunities ??
+    data.related?.opportunities?.length ??
+    0;
+  if (!company && !deals) return null;
+  return (
+    <FieldDescription>
+      {text(
+        company && deals
+          ? 'whatsapp.reach.companyAndDeals'
+          : company
+            ? 'whatsapp.reach.company'
+            : 'whatsapp.reach.deals',
+        { company, count: deals },
+      )}
+    </FieldDescription>
   );
 }
