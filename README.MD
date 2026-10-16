@@ -1,32 +1,63 @@
 # NocoCRM
 
-A CRM for B2B sales built on [NocoBase 3](https://www.nocobase.com), the open-source enterprise application development platform built for AI: leads, companies, contacts, opportunities, tasks, approvals, a team workspace, in-app notifications, and an AI assistant that works from the records a user may see and proposes every change for the user to confirm.
+English | [中文](README.zh-CN.md)
 
-## What NocoCRM does
-
-- **Records.** Leads, companies, contacts, opportunities (with each contact's role and the sales stages from first contact to won, lost or paused), tasks (anything to do, with or without a time, a record or participants) and approvals (discounts, payment terms, contract terms and commitments), with lists, boards, record pages, timelines, notes (calls and meetings that took place) and attachments.
-- **Workspace.** Today's and overdue work, the pipeline and the month's trends, for the reader's own records or the team's.
-- **Lead conversion and duplicates.** A lead converts into a company, a contact and an opportunity, checked against existing ones; duplicate leads are found and merged.
-- **Roles and access.** Administrator, sales manager and salesperson, enforced per record and per field by the server.
-- **The AI assistant.** A chat panel on every page, Sales Expert, that answers from the records the user may read, reads attached files, and proposes changes as a plan the user confirms; it writes as that user, never beyond their permissions.
-- **AI follow-ups.** New leads, new opportunities, completed tasks and customers' replies get an AI follow-up card with the next step, the gaps, the fields to fill and the terms that need approval, decided under **Waiting on me**. Approvers get a review of each request, and a daily check picks up work that has gone quiet. Pasted text can be organised into new leads or an opportunity.
-- **Mail.** Each user connects their own mailbox (IMAP/SMTP, Gmail or Microsoft 365) and reads, writes and sends mail in the CRM. Lead, contact, company and opportunity pages show the user's mail with that customer, and every conversation with a record's people appears on its timeline by itself, as a summary the team sees while the messages stay in their owner's mailbox. An email the AI proposes as the next step opens in the composer, drafted, for the user to send.
-- **Sales skills.** The method the AI follows is in its skills, which an administrator edits on **Settings → Agent team → Skills**, and the business guidance (who you are, editions and prices, when to follow up and to ask for approval) on **Settings → System settings → Business guidance**.
-- **Languages.** The interface is in English or Chinese. The chat answers in the language of the question; what the AI writes on its own follows the **AI working language** setting.
+NocoCRM is a CRM for B2B sales teams, built on [NocoBase 3](https://www.nocobase.com). It keeps leads, companies, contacts, opportunities, tasks and approvals, and gives the team a set of AI agents: an assistant to talk to, and agents that follow up leads and deals, review approvals, prepare tasks and watch customers' companies. Every agent works within the permissions of the person it works for, and every change it suggests waits for a person to accept it.
 
 ## Built on NocoBase 3
 
-NocoBase 3 provides the NocoBase App Foundation, the application infrastructure coding agents need not rebuild, and NocoBase Solutions, complete applications to start from. NocoCRM is one of those Solutions: a NocoBase 3 application generated from NocoBase's application template, with its own data model, services, API and pages on top of the App Foundation, which supplies:
+NocoBase 3 is an application foundation for building business software with coding agents. Its App Foundation provides the infrastructure every business application needs, so an application does not build it again. NocoCRM is a NocoBase Solution: a complete application generated from the NocoBase application template, with its own data model, services, API and pages on top of the foundation.
 
-| From the App Foundation                    | Used by NocoCRM for                                                                          |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| Application server, database layer and CLI | The server, migrations, configuration, builds and deployment                                 |
-| Application template and UI Library        | Layouts, routing, theme, sign-in pages and the components every page is built from           |
-| Authentication, users and authorization    | Sign-in, user management, and the roles as permission sets with record and field permissions |
-| Agents plugin                              | The assistant, model services and their usage, the CRM's commands for agents, and skills     |
-| Notification and scheduler plugins         | The in-app inbox and the daily checks                                                        |
-| Mail plugin                                | Users' mailboxes: sync, reading, writing and sending                                         |
-| File and i18n plugins                      | Attachments and their previews, the interface languages                                      |
+| From NocoBase 3                                      | What NocoCRM uses it for                                                                                                                |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Application server, database layer and CLI           | The server, migrations and seeds, configuration, builds and deployment                                                                  |
+| Application template and UI Library                  | Layouts, routing, themes, sign-in pages, and the components every page is built from                                                    |
+| Authentication, users and API keys                   | Sign-in, user accounts and personal API keys                                                                                            |
+| Authorization (permission sets, record access rules) | The three roles, each record's visibility and edit rights, page grants, and the Permission sets settings                                |
+| Agents plugin                                        | Agents, conversations, skills, model services, usage, and the CRM's own commands for agents                                             |
+| Notification plugins                                 | The in-app inbox                                                                                                                        |
+| Lifecycle library                                    | The approvals' states and transitions, what each transition sets off, the approver rule, and the diagram on Settings → Approval process |
+| Scheduler                                            | The daily follow-up checks, task preparation and company signal checks                                                                  |
+| Mail plugin                                          | Each user's mailbox: sync, reading, writing and sending                                                                                 |
+| File and i18n plugins                                | Attachments and their previews, English and Chinese                                                                                     |
+| Database Explorer                                    | Read-only browsing of the application's collections                                                                                     |
+
+## Agents
+
+All of the CRM's AI is built on the Agents plugin, and runs on the model services configured for the application (see [Configuration](#configuration)).
+
+**Sales Expert.** A conversation box floats at the bottom of every page, the overview opens with one, and past conversations are on the Conversations page. Sales Expert answers from the records the person may read, reads attached files, and knows the record the person is looking at. When something should change, it proposes a plan (create a task, update a deal, move a lead on) that the person confirms step by step. It writes as that person and never beyond their permissions.
+
+**Agent work.** Five agents work in the background, each started by events and switched on or off by an administrator:
+
+| Agent                 | Started by                                                                                            | What it produces                                                                                   |
+| --------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Lead follow-up        | A new lead, a completed task, a customer's reply, a change at the company, a merge, and a daily check | The next step, a grade, the gaps, fields to fill, an email draft, or a recommendation to convert   |
+| Opportunity follow-up | A new deal, a completed task, a decided approval, a customer's reply, and a daily check               | The next step, the stage it should move to, its likelihood, and the terms that need approval       |
+| Approval review       | A submitted approval                                                                                  | A review for the approver: what is asked, against the business guidance, with a suggested decision |
+| Task preparation      | A daily check of the coming tasks                                                                     | A brief for each meeting or call: who takes part, what happened before, what to ask                |
+| Company signals       | A morning check of the companies with open deals or marked as watched, and Check now on a company     | News found on the web: funding, hiring, leadership changes, business moves and risks               |
+
+The follow-ups, reviews and briefs land in the owner's **Inbox → AI suggestions**, where each is accepted, edited or dismissed; nothing changes until the owner decides. A company signal is kept on the company's Signals tab and timeline and its owners are notified; an important one starts the follow-up of the company's open deals.
+
+**Records from any text.** Paste an email, a chat or a business card, and **Organise with AI** checks it against existing records, then turns it into new leads or an opportunity for you to review and save.
+
+**Making it yours.** The method each agent follows is a skill, edited on **Agent team → Skills**; the company's own facts (what it sells, its editions and prices, when to follow up, what needs approval) are the **business guidance** on **Agent team → Business guidance**. The agents, their models and the token usage are on **Agent team → Agents**, **Models** and **Usage**. What the agents write on their own follows the **AI working language** setting (English or Chinese); the assistant answers in the language it is asked in.
+
+## Other features
+
+- **Records.** Leads, companies, contacts, opportunities, tasks and approvals. Lists, boards, record pages and drawers, a timeline with comments and @-mentions, attachments and the change history.
+- **Overview.** Today's and overdue work, the pipeline and the latest conversations, for the reader's own records or the team's.
+- **Inbox.** AI suggestions waiting on the reader and the notifications: assignments, approvals, mentions, comments and task reminders, each kind switchable in the settings.
+- **Reports.** Key figures, revenue and forecast, losses and pace, lead sources and the team's results.
+- **Global search.** ⌘K / Ctrl+K searches every kind of record, and hands a question to the assistant.
+- **Leads.** Conversion into a company, a contact and an opportunity, checked against existing ones; duplicate leads found and merged.
+- **Mail.** Each person connects their own mailbox and sends and receives mail in the CRM; the conversations with a customer show on its records.
+- **WhatsApp.** The company's WhatsApp Business number is connected, and customers' messages are matched to leads and contacts and shown on their records.
+- **Approvals.** Who may decide approvals can be set.
+- **Roles.** Administrator, sales manager and salesperson, enforced per record by the server and adjustable on **Settings → Permission sets**.
+- **LinkedIn.** Leads, contacts and companies keep a LinkedIn address, used to find duplicates and filled by the AI when pasted text includes one.
+- **Languages.** The interface is in English or Chinese.
 
 ## Quick start
 
@@ -38,81 +69,69 @@ pnpm nocobase config init
 pnpm dev
 ```
 
-`config init` writes `config.yml` from `config.example.yml` with a freshly generated key under `secrets.keys` (keep it: what the application stores encrypted cannot be read without it); `pnpm dev` prints the URL to open, `http://127.0.0.1:13000/main/` by default. Sign in with the initial administrator set under `users.initialAdmin` in `config.yml` (`nocobase` / `admin123` unless changed; change it before the first start of a real deployment).
+`config init` writes `config.yml` from `config.example.yml` with a new master key under `secrets.keys`. Keep that key: what the application stores encrypted (model keys, mailbox credentials, WhatsApp tokens) cannot be read without it. `pnpm dev` prints the address to open, `http://127.0.0.1:13000/main/` by default. Sign in with the initial administrator from `config.yml` (`nocobase` / `admin123` unless changed; change it before a real deployment).
 
-A banner then offers the **demo data**, a sample dataset in English or Chinese imported from **Settings → System settings → Demo data** and removable there. It comes with its own sales accounts, whose password is the username followed by `123`:
+### Demo data
+
+A banner offers the **demo data**, imported and removed on **Settings → Demo data**, in English or Chinese. It brings sales accounts whose password is the username followed by `123`:
 
 | Language | Sales managers                                   | Salespeople                                        |
 | -------- | ------------------------------------------------ | -------------------------------------------------- |
 | English  | `daniel` (Daniel Brooks), `emily` (Emily Carter) | `sophie` (Sophie Bennett), `oliver` (Oliver Hayes) |
 | Chinese  | `liming` (李明), `zhaomin` (赵敏)                | `wangxiaofang` (王小芳), `chenxiaohao` (陈小浩)    |
 
-Each of them, and the administrator who imports, also gets a demo mailbox (`<username>@demo.example`) holding the customer conversations of the dataset, so the mailbox, the records' Mail tabs and the timeline work without connecting a real mailbox. A demo mailbox delivers nothing: mail to the dataset's own `.example` addresses is filed as sent, and mail to anyone else is refused. Removing the demo data removes the mailboxes.
+The administrator who imports it becomes a sales manager too, with records, approvals, AI suggestions and conversations of their own. Each account gets a demo mailbox (`<username>@demo.example`) holding the dataset's customer conversations, and a demo WhatsApp number holds a few customer chats, so mail and WhatsApp can be tried without connecting anything. Demo mail is never delivered outside the dataset's `.example` addresses. Removing the demo data removes all of it and disables the demo accounts.
 
-Other accounts are created on **Settings → User management**, where each gets one or more roles; there is no self-registration.
+### Roles
 
-| Role          | What it can do                                                                                |
-| ------------- | --------------------------------------------------------------------------------------------- |
-| Administrator | Configures the CRM and sees everything, but owns no records and approves nothing              |
-| Sales manager | Manages all sales data, assigns owners, approves requests, exports and edits the sales skills |
-| Salesperson   | Reads shared sales data, edits its own records and raises approvals                           |
+Accounts are created on **Settings → Users**, each with one or more roles; there is no self-registration.
 
-The roles can be adjusted on **Settings → Authorization → Permission Sets**.
+| Role          | What it can do                                                                                              |
+| ------------- | ----------------------------------------------------------------------------------------------------------- |
+| Administrator | Configures the CRM, its agents and its integrations, and sees everything                                    |
+| Sales manager | Views and edits all sales records, assigns owners, decides approvals and exports; deletes what they created |
+| Salesperson   | Views the team's records, edits their own and raises approvals                                              |
 
 ## Configuration
 
-`config.yml` is gitignored because it holds the secrets; `config.example.yml` documents every option. Change a value with `pnpm nocobase config set key=value`.
+`config.yml` holds the secrets and is not committed; `config.example.yml` documents every option. Change a value with `pnpm nocobase config set key=value`.
 
-**AI.** Declare at least one LLM service and give it a key from the environment (`DASHSCOPE_API_KEY`, `OPENAI_API_KEY` with `OPENAI_BASE_URL`, `DEEPSEEK_API_KEY` are mapped onto the services named `qwen`, `openai` and `deepseek`). At start, a service not yet on **Settings → Agent team → Models** is created there; after that it is managed on that page. The Agents plugin keeps the keys under the application's master keys, so `SECRETS_KEYS` must be set:
+**AI.** Give at least one model service a key through the environment: `DASHSCOPE_API_KEY` (Qwen), `DEEPSEEK_API_KEY` (DeepSeek), or `OPENAI_API_KEY` with `OPENAI_BASE_URL` (OpenAI or a compatible service). The services are declared in `server/config/ai.ts`; one without a key is left out, and with none the AI is off. On start, a service not yet on **Agent team → Models** is created there, and the page manages it afterwards. The assistant and the follow-up agents use DeepSeek first when it is configured; company signals need Qwen, which can search the web.
 
-```yaml
-ai:
-  llmServices:
-    qwen:
-      title: Qwen
-      provider: dashscope
-      enabledModels:
-        - label: Qwen3.8 Max
-          value: qwen3.8-max
-      enabled: true
-      sort: 5
-```
+**Notifications.** The in-app inbox needs the channel `inbox` (`notification.channels.inbox: { provider: in-app }`, already in `config.example.yml`). Each kind can be switched off on **Settings → General → Reminders**.
 
-The AI is on whenever there is a chat model to use. The assistant is the agent named Sales Expert on **Settings → Agent team → Agents** (DeepSeek's models first when DeepSeek is configured), and the background work (follow-ups, approval reviews, task preparation, organising text) follows the agent named Background AI there (Qwen's models first): its first model and its instructions. Each is created once; reorder their models there to change the default. There is no web search. The business guidance (**Settings → System settings → Business guidance**, shipped in `server/providers/crm/guidance.ts`) and the skills (**Settings → Agent team → Skills**, shipped in `ai/skills/`) hold the sales practice the AI follows; edit them to make it yours.
+**Mail.** Declare the mail servers people may connect under `mail.providers` (examples in `config.example.yml`); each person connects their mailbox from **Mailbox → Manage mail accounts**. Gmail and Microsoft 365 also need an OAuth client, with `<origin><base path>/mail/oauth/callback` as its redirect URL.
 
-**Notifications.** In-app notifications need the channel `inbox` (`notification.channels.inbox: { provider: in-app }`, already in `config.example.yml`), and are sent by the CRM itself; each kind (approvals, record changes, task reminders) can be switched off on **Settings → System settings → Reminders**. The Workflow plugin is disabled, as in the template it was generated from: its dependency and `server/config/workflow.ts` are kept, and an application that wants it registers it with `pnpm nocobase plugin register @nocobase/app-plugin-workflow` and restores the `workflow` import, type and entry in `server/config/index.ts`.
+**WhatsApp.** An administrator connects the company's number from **WhatsApp → Manage WhatsApp connection**, with the Meta app's secret and the number's access token, and registers the webhook address and verify token shown there in the Meta app.
 
-**Mail.** Declare the mail servers users may connect under `mail.providers` (examples in `config.example.yml`); each user then connects their mailbox on **Mail → Mail accounts**. Gmail and Microsoft 365 also need an OAuth client, with `<origin><base path>/mail/oauth/callback` registered as its redirect URL.
+**Where it is served.** `APP_BASE_PATH` is the mount path (`/main` by default) and `APP_PUBLIC_ORIGIN` the public origin without the path.
 
-**Where it is served.** `APP_BASE_PATH` is the mount path (`/main` by default) and `APP_PUBLIC_ORIGIN` the public origin, without the path. Set both in the environment of a deployment.
-
-**Database.** SQLite at `storage/crm.sqlite` by default; migrations run on startup. For PostgreSQL, add `@nocobase/db-postgres` and run `pnpm nocobase config init --dialect postgres --force`.
+**Database.** SQLite at `storage/crm.sqlite` by default; migrations run on start. For PostgreSQL, add `@nocobase/db-postgres` and run `pnpm nocobase config init --dialect postgres --force`.
 
 ## Deployment
 
-Build an archive for the server, which holds the code and its production dependencies but no configuration, database or uploads:
+Build an archive for the server. It holds the code and its production dependencies, but no configuration, database or uploads:
 
 ```bash
 pnpm build --target linux-x64 --tar   # writes storage/exports/dist.tar.gz
 ```
 
-- **On your own server, with the NocoBase app-installer (recommended).** The server needs Node.js 24 and a global pm2. The installer unpacks the archive into its own directory, writes `config.yml`, applies the migrations and runs the application under pm2; an upgrade backs up the SQLite databases first and rolls back when the new release fails to start.
+- **With the NocoBase app-installer (recommended).** The server needs Node.js 24 and a global pm2. The installer unpacks the archive, writes `config.yml`, applies the migrations and runs the application under pm2; an upgrade backs up the SQLite databases first and rolls back if the new release fails to start.
 
   ```bash
-  npx @nocobase/app-installer install /srv/nocobase/crm --archive dist.tar.gz --origin https://crm.example.com --base-path /crm
-  npx @nocobase/app-installer upgrade --dir /srv/nocobase/crm --archive dist.tar.gz
+  npx @nocobase/app-installer@beta install /srv/nocobase/crm --archive dist.tar.gz --origin https://crm.example.com --base-path /crm
+  npx @nocobase/app-installer@beta upgrade --dir /srv/nocobase/crm --archive dist.tar.gz
   ```
 
-- **By hand.** Unpack the archive, run `pnpm nocobase config init` and `pnpm nocobase config check` inside `dist/`, and run `node ./dist/server/standalone.js` under a service manager, with `config.yml` and `storage/` kept beside `dist/` across updates.
-- **NocoBase Hub.** Upload the archive to the application on a Hub, or deploy from the source checkout: add the Hub's App as a remote with `pnpm nocobase hub remote add origin <Hub URL>/apps/<App ID>`, save a Hub publishing key with `pnpm nocobase hub auth login`, then run `pnpm nocobase hub deploy`, which builds for the Hub's platform itself.
+- **By hand.** Unpack the archive, run `pnpm nocobase config init` and `pnpm nocobase config check` inside `dist/`, and run `node ./dist/server/standalone.js` under a service manager, keeping `config.yml` and `storage/` beside `dist/` across updates.
 
-To serve the client's static files from a CDN, build with its prefix, `CDN_BASE_URL=https://cdn.example.com/crm/v1/ pnpm build`, upload `dist/client/` there with its paths kept and CORS allowed for the application's origin, and keep the complete `dist/client/` on the server too, which still serves the HTML. Unset, the files load from the application as before.
+To serve the client's static files from a CDN, build with `CDN_BASE_URL=https://cdn.example.com/crm/v1/ pnpm build`, upload `dist/client/` there with its paths and CORS allowed for the application's origin, and keep `dist/client/` on the server too, which still serves the HTML.
 
-Behind a reverse proxy, keep the public host and protocol and pass WebSocket upgrades. After deploying, set the AI keys (`DASHSCOPE_API_KEY`, `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`, each optional: the Qwen, DeepSeek and OpenAI services are defined in the code, and one without its key is left out) and check `/<base path>/api/healthz`. Back up the database and `storage/` before upgrading.
+Behind a reverse proxy, keep the public host and protocol and pass WebSocket upgrades. After deploying, set the AI keys and check `<base path>/api/healthz`. Back up the database and `storage/` before upgrading.
 
 ## Development
 
-`AGENTS.md` is the guide for working on the code, with Claude Code or any other agent. The main commands:
+`AGENTS.md` is the guide for working on the code, with Claude Code or any other coding agent. The main commands:
 
 | Command                  | What it does                                |
 | ------------------------ | ------------------------------------------- |
