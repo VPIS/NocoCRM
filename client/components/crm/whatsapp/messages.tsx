@@ -5,6 +5,7 @@ import {
   Info,
   MapPin,
   Mic,
+  Paperclip,
   Reply,
   Smile,
   Video,
@@ -43,6 +44,7 @@ const KIND_ICONS: Record<string, LucideIcon> = {
   interactive: Reply,
   system: Info,
   unsupported: CircleHelp,
+  media_placeholder: Paperclip,
 };
 
 // A message that is not plain text: its kind's icon and word.
@@ -68,10 +70,17 @@ export function MessageSummary({
   text: string | null;
   caption: string | null;
 }): ReactElement {
-  const words = [body, caption].filter(Boolean).join(' ');
+  const { text } = useCrmText();
+  // Deleted on the app (the server's `revoked`): said so.
+  const words =
+    type === 'revoked'
+      ? toWords(text('whatsapp.revoked'))
+      : [body, caption].filter(Boolean).join(' ');
   return (
     <span className='flex min-w-0 items-center gap-1'>
-      {type === 'text' ? null : <MessageKind type={type} />}
+      {type === 'text' || type === 'revoked' ? null : (
+        <MessageKind type={type} />
+      )}
       {/* Cut where the row ends, whole on hover (T1.11). */}
       {words ? (
         <span className='min-w-0 truncate' title={words}>
@@ -229,8 +238,22 @@ export function WhatsAppMessages({
               >
                 <span className='sr-only'>{sender}: </span>
                 <Body message={message} sender={sender} onLoad={keepPinned} />
+                {/* The time, after where it came from when not the
+                    conversation as it happens (sent from the app, the
+                    history imported), and an edit. */}
                 <span className='self-end text-xs text-muted-foreground'>
-                  {time.format(new Date(message.occurredAt))}
+                  {[
+                    message.origin === 'businessApp' ||
+                    message.origin === 'imported'
+                      ? toWords(text(`whatsapp.origin.${message.origin}`))
+                      : '',
+                    message.editedAt && !message.revokedAt
+                      ? toWords(text('whatsapp.edited'))
+                      : '',
+                    time.format(new Date(message.occurredAt)),
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </span>
               </div>
             </div>
@@ -277,6 +300,11 @@ function Body({
   const plain = (value: string) => (
     <p className='break-words whitespace-pre-wrap'>{value}</p>
   );
+  // Deleted on the app: said so, its words gone.
+  if (message.revokedAt)
+    return (
+      <p className='text-muted-foreground italic'>{text('whatsapp.revoked')}</p>
+    );
   if (message.type === 'text') return plain(words);
   const kind = <MessageKind type={message.type} />;
   // A location, a reaction, a button's reply, a system message: its words

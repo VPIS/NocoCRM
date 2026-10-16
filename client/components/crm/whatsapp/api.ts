@@ -28,6 +28,9 @@ export interface WhatsAppMessage {
   replyTo: string | null;
   status: string | null;
   sentById: string | null;
+  // Edited or deleted by the team on the WhatsApp Business app.
+  editedAt?: string | null;
+  revokedAt?: string | null;
   occurredAt: string;
   // On a record's tab: whose message it is.
   waContactId?: string | null;

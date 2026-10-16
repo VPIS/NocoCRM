@@ -11,17 +11,26 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 
 export const GRAPH_BASE = 'https://graph.facebook.com/v25.0';
 
-// What a delivery tells of one customer's message.
+// What a delivery tells of one message of a conversation with a customer:
+// one the customer sent (`messages`), and with coexistence, a number also
+// used on the WhatsApp Business app, one the team sent from the app
+// (`smb_message_echoes`) and those of the chat history imported once after
+// onboarding (`history`), either way.
 export interface InboundMessage {
   readonly kind: 'message';
-  // The number it was sent to (Meta's phone number id).
+  // The number of the business (Meta's phone number id).
   readonly phoneNumberId: string;
   readonly waMessageId: string;
-  // Meta's business-scoped user id; every delivery carries one since April
-  // 2026, older ones only the number.
+  // `in` from the customer, `out` from the team.
+  readonly direction: 'in' | 'out';
+  // customer: a customer's message as it arrives; businessApp: the team's,
+  // sent from the app; imported: the history's, either way.
+  readonly origin: 'customer' | 'businessApp' | 'imported';
+  // The customer's ids, whoever wrote it. Meta's business-scoped user id;
+  // every delivery carries one since April 2026, older ones only the number.
   readonly userId?: string;
-  // The sender's number as Meta gives it (digits without "+"), absent for a
-  // customer who uses a username and has not shared it.
+  // The customer's number as Meta gives it (digits without "+"), absent
+  // for a customer who uses a username and has not shared it.
   readonly waId?: string;
   readonly username?: string;
   readonly profileName?: string;
@@ -41,6 +50,11 @@ export interface InboundMessage {
   // A system message telling that the customer changed their number: the
   // ids they now have.
   readonly changedTo?: { readonly userId?: string; readonly waId?: string };
+  // The team edited a message it sent from the app: the message, and its
+  // new words (`text`, `caption`).
+  readonly edits?: string;
+  // The team deleted a message it sent from the app.
+  readonly revokes?: string;
   readonly occurredAt: string;
 }
 
@@ -227,6 +241,95 @@ function instant(value: unknown, fallback: string): string {
 // The messages and status updates a webhook delivery carries, in its own
 // order (which need not be the order they happened in). Anything else it
 // holds (template and account updates) is left for later stages.
+// One message object as Meta gives it, in any of the three fields; `who`
+// is the customer's side of it.
+function readMessage(
+  message: Record<string, unknown>,
+  context: {
+    phoneNumberId: string;
+    receivedAt: string;
+    direction: 'in' | 'out';
+    origin: InboundMessage['origin'];
+    who: {
+      userId?: string;
+      waId?: string;
+      username?: string;
+      profileName?: string;
+    };
+  },
+): InboundMessage | undefined {
+  const waMessageId = text(message.id);
+  if (!waMessageId) return undefined;
+  let type = text(message.type) ?? 'unsupported';
+  let content = record(message[type]);
+  const system = record(message.system);
+  const interactive = record(message.interactive);
+  const reply =
+    record(interactive.button_reply).title ??
+    record(interactive.list_reply).title;
+  // An edit carries the message as it now reads, keyed by its own type.
+  const edit = type === 'edit' ? record(content.message) : undefined;
+  const edits = type === 'edit' ? text(content.original_message_id) : undefined;
+  const revokes =
+    type === 'revoke' ? text(content.original_message_id) : undefined;
+  if (edit) {
+    type = text(edit.type) ?? (edit.text ? 'text' : 'unsupported');
+    content = record(edit[type]);
+  }
+  return {
+    kind: 'message',
+    phoneNumberId: context.phoneNumberId,
+    waMessageId,
+    direction: context.direction,
+    origin: context.origin,
+    ...context.who,
+    type,
+    text:
+      type === 'text'
+        ? text(content.body)
+        : type === 'button'
+          ? text(content.text)
+          : type === 'interactive'
+            ? text(reply)
+            : type === 'reaction'
+              ? text(content.emoji)
+              : type === 'location'
+                ? [content.name, content.address]
+                    .map(text)
+                    .filter(Boolean)
+                    .join(', ') ||
+                  `${scalar(content.latitude) ?? ''}, ${scalar(content.longitude) ?? ''}`
+                : type === 'system'
+                  ? text(system.body)
+                  : undefined,
+    caption: MEDIA_TYPES.has(type) ? text(content.caption) : undefined,
+    media:
+      MEDIA_TYPES.has(type) && text(content.id)
+        ? {
+            id: text(content.id) ?? '',
+            mimeType: text(content.mime_type),
+            sha256: text(content.sha256),
+            filename: text(content.filename),
+            url: text(content.url),
+          }
+        : undefined,
+    replyTo:
+      type === 'reaction'
+        ? text(content.message_id)
+        : text(record(message.context).id),
+    changedTo:
+      type === 'system' && system.type === 'user_changed_number'
+        ? {
+            userId: text(system.new_user_id),
+            waId: text(system.new_wa_id) ?? text(system.wa_id),
+          }
+        : undefined,
+    ...(edits ? { edits } : {}),
+    ...(revokes ? { revokes } : {}),
+    occurredAt: instant(message.timestamp, context.receivedAt),
+  };
+}
+
 export function webhookEvents(
   payload: unknown,
   receivedAt: string,
@@ -234,16 +337,63 @@ export function webhookEvents(
   const events: WebhookEvent[] = [];
   const body = record(payload);
   if (body.object !== 'whatsapp_business_account') return events;
+  const push = (event: InboundMessage | undefined): void => {
+    if (event) events.push(event);
+  };
   for (const entry of list(body.entry))
     for (const change of list(entry.changes)) {
-      if (change.field !== 'messages') continue;
       const value = record(change.value);
       const phoneNumberId = text(record(value.metadata).phone_number_id);
       if (!phoneNumberId) continue;
+      // Coexistence: what the team sent from the WhatsApp Business app, to
+      // the customer the echo names.
+      if (change.field === 'smb_message_echoes') {
+        for (const message of list(value.message_echoes))
+          push(
+            readMessage(message, {
+              phoneNumberId,
+              receivedAt,
+              direction: 'out',
+              origin: 'businessApp',
+              who: {
+                userId: text(message.to_user_id),
+                waId: text(message.to),
+              },
+            }),
+          );
+        continue;
+      }
+      // Coexistence: the chat history, sent once after onboarding in
+      // chunks, a thread a customer (its id their number); a message from
+      // that number is the customer's, any other the team's. A business
+      // that declined to share it sends only errors.
+      if (change.field === 'history') {
+        for (const item of list(value.history))
+          for (const thread of list(item.threads)) {
+            const waId = text(thread.id);
+            for (const message of list(thread.messages)) {
+              const fromCustomer = !waId || text(message.from) === waId;
+              push(
+                readMessage(message, {
+                  phoneNumberId,
+                  receivedAt,
+                  direction: fromCustomer ? 'in' : 'out',
+                  origin: 'imported',
+                  who: {
+                    userId: text(
+                      fromCustomer ? message.from_user_id : message.to_user_id,
+                    ),
+                    waId,
+                  },
+                }),
+              );
+            }
+          }
+        continue;
+      }
+      if (change.field !== 'messages') continue;
       const people = list(value.contacts);
       for (const message of list(value.messages)) {
-        const waMessageId = text(message.id);
-        if (!waMessageId) continue;
         const from = text(message.from);
         const fromUser = text(message.from_user_id);
         // The sender's profile: the contact with the same id or number,
@@ -255,64 +405,20 @@ export function webhookEvents(
               (from && text(p.wa_id) === from),
           ) ?? (people.length === 1 ? people[0] : {});
         const profile = record(person.profile);
-        const type = text(message.type) ?? 'unsupported';
-        const content = record(message[type]);
-        const system = record(message.system);
-        const interactive = record(message.interactive);
-        const reply =
-          record(interactive.button_reply).title ??
-          record(interactive.list_reply).title;
-        events.push({
-          kind: 'message',
-          phoneNumberId,
-          waMessageId,
-          userId: fromUser ?? text(person.user_id),
-          waId: from ?? text(person.wa_id),
-          username: text(profile.username) ?? text(person.username),
-          profileName: text(profile.name),
-          type,
-          text:
-            type === 'text'
-              ? text(content.body)
-              : type === 'button'
-                ? text(content.text)
-                : type === 'interactive'
-                  ? text(reply)
-                  : type === 'reaction'
-                    ? text(content.emoji)
-                    : type === 'location'
-                      ? [content.name, content.address]
-                          .map(text)
-                          .filter(Boolean)
-                          .join(', ') ||
-                        `${scalar(content.latitude) ?? ''}, ${scalar(content.longitude) ?? ''}`
-                      : type === 'system'
-                        ? text(system.body)
-                        : undefined,
-          caption: MEDIA_TYPES.has(type) ? text(content.caption) : undefined,
-          media:
-            MEDIA_TYPES.has(type) && text(content.id)
-              ? {
-                  id: text(content.id) ?? '',
-                  mimeType: text(content.mime_type),
-                  sha256: text(content.sha256),
-                  filename: text(content.filename),
-                  url: text(content.url),
-                }
-              : undefined,
-          replyTo:
-            type === 'reaction'
-              ? text(content.message_id)
-              : text(record(message.context).id),
-          changedTo:
-            type === 'system' && system.type === 'user_changed_number'
-              ? {
-                  userId: text(system.new_user_id),
-                  waId: text(system.new_wa_id) ?? text(system.wa_id),
-                }
-              : undefined,
-          occurredAt: instant(message.timestamp, receivedAt),
-        });
+        push(
+          readMessage(message, {
+            phoneNumberId,
+            receivedAt,
+            direction: 'in',
+            origin: 'customer',
+            who: {
+              userId: fromUser ?? text(person.user_id),
+              waId: from ?? text(person.wa_id),
+              username: text(profile.username) ?? text(person.username),
+              profileName: text(profile.name),
+            },
+          }),
+        );
       }
       for (const status of list(value.statuses)) {
         const waMessageId = text(status.id);

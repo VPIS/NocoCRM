@@ -106,6 +106,14 @@ export const WhatsAppMessage = z
     replyTo: z.string().nullable(),
     status: z.string().nullable(),
     sentById: z.string().nullable(),
+    editedAt: z
+      .string()
+      .nullable()
+      .describe('When the team edited it on the WhatsApp Business app.'),
+    revokedAt: z
+      .string()
+      .nullable()
+      .describe('When the team deleted it on the WhatsApp Business app.'),
     occurredAt: z.string(),
   })
   .meta({ ref: 'CrmWhatsAppMessage' });
@@ -139,7 +147,11 @@ export const WhatsAppConversationRow = z.object({
   unreadCount: z.number(),
   last: z
     .object({
-      type: z.string(),
+      type: z
+        .string()
+        .describe(
+          "The message's type, or `revoked` for one the team deleted on the WhatsApp Business app (its words then null).",
+        ),
       text: z.string().nullable(),
       caption: z.string().nullable(),
       direction: z.string(),

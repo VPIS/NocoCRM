@@ -500,6 +500,12 @@ export class WhatsAppService {
     return done;
   }
 
+  // One message of a conversation: a customer's as it arrives, and with
+  // coexistence the team's sent from the WhatsApp Business app and the
+  // imported history's. Only a customer's live message counts as unread,
+  // tells its handler and starts a follow-up once quiet; the team's sent
+  // from the app count as contact on the lead, as the customer's do; the
+  // history touches nothing but the conversation and its timeline lines.
   private async receive(message: InboundMessage, now: Date): Promise<void> {
     const { timeZone } = await this.service.settings();
     const number = await this.query
@@ -511,17 +517,58 @@ export class WhatsAppService {
     // as failed with the reason, not lost.
     if (!number) throw new CrmError('unknownNumber', 404);
     await this.service.database.transaction(async ({ query }) => {
-      if (
+      // An edit or a deletion the team made on the app: applied to the
+      // message it names, when the CRM holds it.
+      if (message.edits || message.revokes) {
         await query
-          .selectFrom('crmWaMessages')
-          .select('id')
-          .where('waMessageId', '=', message.waMessageId)
-          .executeTakeFirst()
-      )
+          .updateTable('crmWaMessages')
+          .set(
+            message.edits
+              ? {
+                  ...(message.text !== undefined ? { text: message.text } : {}),
+                  ...(message.caption !== undefined
+                    ? { caption: message.caption }
+                    : {}),
+                  editedAt: message.occurredAt,
+                }
+              : { revokedAt: message.occurredAt },
+          )
+          .where('waMessageId', '=', toText(message.edits ?? message.revokes))
+          .execute();
         return;
+      }
+      const stored = await query
+        .selectFrom('crmWaMessages')
+        .select(['id', 'type'])
+        .where('waMessageId', '=', message.waMessageId)
+        .executeTakeFirst();
+      if (stored) {
+        // The history's media come after it, in a delivery of their own,
+        // to the placeholder it left.
+        if (toText(stored.type) === 'media_placeholder' && message.media) {
+          await query
+            .updateTable('crmWaMessages')
+            .set({
+              type: message.type,
+              caption: message.caption ?? null,
+              mediaId: message.media.id,
+              mediaMime: message.media.mimeType ?? null,
+              mediaSha256: message.media.sha256 ?? null,
+              mediaFilename: message.media.filename ?? null,
+              mediaStatus: 'pending',
+              mediaAttempts: 0,
+            })
+            .where('id', '=', toText(stored.id))
+            .execute();
+          this.pendingUrls.set(message.waMessageId, message.media.url);
+        }
+        return;
+      }
       const contact = await this.identify(query, message);
       const conversation = await this.conversationOf(query, number, contact);
       const at = message.occurredAt;
+      const inbound = message.direction === 'in';
+      const live = message.origin !== 'imported';
       await query
         .insertInto('crmWaMessages')
         .values({
@@ -529,8 +576,8 @@ export class WhatsAppService {
           waMessageId: message.waMessageId,
           conversationId: toText(conversation.id),
           numberId: toText(number.id),
-          direction: 'in',
-          origin: 'customer',
+          direction: message.direction,
+          origin: message.origin,
           type: message.type,
           text: message.text ?? null,
           caption: message.caption ?? null,
@@ -549,19 +596,24 @@ export class WhatsAppService {
       // this transaction is done.
       if (message.media)
         this.pendingUrls.set(message.waMessageId, message.media.url);
-      const recent = now.getTime() - Date.parse(at) < NEWS_MS;
+      // A customer's message as it arrives; not the team's, nor the
+      // history's.
+      const fresh = inbound && message.origin === 'customer';
+      const recent = fresh && now.getTime() - Date.parse(at) < NEWS_MS;
       const unread = Number(conversation.unreadCount ?? 0);
       await query
         .updateTable('crmWaConversations')
         .set({
-          lastInboundAt: later(conversation.lastInboundAt, at),
+          ...(inbound
+            ? { lastInboundAt: later(conversation.lastInboundAt, at) }
+            : {}),
           lastMessageAt: later(conversation.lastMessageAt, at),
           lastDirection:
             !conversation.lastMessageAt ||
             Date.parse(toText(conversation.lastMessageAt)) <= Date.parse(at)
-              ? 'in'
+              ? message.direction
               : toText(conversation.lastDirection),
-          unreadCount: unread + 1,
+          ...(fresh ? { unreadCount: unread + 1 } : {}),
           ...(recent && contact.state === 'linked'
             ? {
                 followUpDueAt: new Date(
@@ -574,7 +626,12 @@ export class WhatsAppService {
         .where('id', '=', toText(conversation.id))
         .execute();
       await this.writeTimeline(query, contact, day(at, timeZone), timeZone);
-      if (contact.leadId && contact.state === 'linked' && !contact.contactId) {
+      if (
+        live &&
+        contact.leadId &&
+        contact.state === 'linked' &&
+        !contact.contactId
+      ) {
         const owner = await this.ownerActor(
           query,
           'leads',
@@ -1280,11 +1337,25 @@ export class WhatsAppService {
     for (const id of ids) {
       const row = await this.query
         .selectFrom('crmWaMessages')
-        .select(['type', 'text', 'caption', 'direction', 'occurredAt'])
+        .select([
+          'type',
+          'text',
+          'caption',
+          'direction',
+          'occurredAt',
+          'revokedAt',
+        ])
         .where('conversationId', '=', id)
         .orderBy('occurredAt', 'desc')
         .executeTakeFirst();
-      if (row) map.set(id, row);
+      // One the team deleted on the app reads as deleted, its words gone.
+      if (row)
+        map.set(
+          id,
+          row.revokedAt
+            ? { ...row, type: 'revoked', text: null, caption: null }
+            : row,
+        );
     }
     return map;
   }
@@ -1647,6 +1718,8 @@ export class WhatsAppService {
         conversations.map((c) => toText(c.id)),
       )
       .where('occurredAt', '>=', since)
+      // A message the team deleted is not material.
+      .where('revokedAt', 'is', null)
       .orderBy('occurredAt', 'desc')
       .limit(limit)
       .execute();
@@ -1821,6 +1894,9 @@ function publicMessage(row: Row, basePath: string): Row {
     replyTo: row.replyTo ?? null,
     status: row.status ?? null,
     sentById: row.sentById ?? null,
+    // The team edited or deleted it on the WhatsApp Business app.
+    editedAt: row.editedAt ? toText(row.editedAt) : null,
+    revokedAt: row.revokedAt ? toText(row.revokedAt) : null,
     occurredAt: toText(row.occurredAt),
   };
 }

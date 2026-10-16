@@ -32,6 +32,26 @@ const value = (inner: Record<string, unknown>) => ({
   ],
 });
 
+// A delivery of another field (coexistence's echoes and history).
+const field = (name: string, inner: Record<string, unknown>) => ({
+  object: 'whatsapp_business_account',
+  entry: [
+    {
+      id: 'waba',
+      changes: [
+        {
+          field: name,
+          value: {
+            messaging_product: 'whatsapp',
+            metadata: { phone_number_id: '111', display_phone_number: '1555' },
+            ...inner,
+          },
+        },
+      ],
+    },
+  ],
+});
+
 describe("Meta's webhook deliveries", () => {
   it('accepts only the app secret’s signature of the raw body', () => {
     const body = new TextEncoder().encode('{"a":1}');
@@ -245,4 +265,105 @@ it('creates the WhatsApp tables and takes them away', async () => {
   } finally {
     await isolated.destroy();
   }
+});
+
+describe("Coexistence's deliveries", () => {
+  it("reads coexistence's echoes as the team's messages sent from the app, to the customer they name", () => {
+    const events = webhookEvents(
+      field('smb_message_echoes', {
+        message_echoes: [
+          {
+            from: '1555',
+            to: '4930123456789',
+            to_user_id: 'DE.9',
+            id: 'echo-1',
+            timestamp: '1792051200',
+            type: 'text',
+            text: { body: 'Gern, ich schicke es Ihnen.' },
+          },
+          {
+            from: '1555',
+            to: '4930123456789',
+            id: 'echo-2',
+            timestamp: '1792051300',
+            type: 'edit',
+            edit: {
+              original_message_id: 'echo-1',
+              message: { type: 'text', text: { body: 'Gern, anbei.' } },
+            },
+          },
+          {
+            from: '1555',
+            to: '4930123456789',
+            id: 'echo-3',
+            timestamp: '1792051400',
+            type: 'revoke',
+            revoke: { original_message_id: 'echo-1' },
+          },
+        ],
+      }),
+      at,
+    );
+    expect(events[0]).toMatchObject({
+      kind: 'message',
+      direction: 'out',
+      origin: 'businessApp',
+      waId: '4930123456789',
+      userId: 'DE.9',
+      type: 'text',
+      text: 'Gern, ich schicke es Ihnen.',
+    });
+    expect(events[1]).toMatchObject({ edits: 'echo-1', text: 'Gern, anbei.' });
+    expect(events[2]).toMatchObject({ revokes: 'echo-1' });
+  });
+
+  it("reads coexistence's history, either way by its thread's number, a file left as a placeholder, and nothing when declined", () => {
+    const events = webhookEvents(
+      field('history', {
+        history: [
+          {
+            metadata: { phase: 0, chunk_order: 1, progress: 100 },
+            threads: [
+              {
+                id: '4930123456789',
+                messages: [
+                  {
+                    from: '4930123456789',
+                    id: 'h-1',
+                    timestamp: '1780000000',
+                    type: 'text',
+                    text: { body: 'Hallo' },
+                    history_context: { status: 'READ' },
+                  },
+                  {
+                    from: '1555',
+                    to: '4930123456789',
+                    id: 'h-2',
+                    timestamp: '1780000100',
+                    type: 'media_placeholder',
+                  },
+                ],
+              },
+            ],
+          },
+          { errors: [{ code: 2593109 }] },
+        ],
+      }),
+      at,
+    );
+    expect(events).toHaveLength(2);
+    expect(events[0]).toMatchObject({
+      direction: 'in',
+      origin: 'imported',
+      waId: '4930123456789',
+      text: 'Hallo',
+    });
+    expect(events[1]).toMatchObject({
+      direction: 'out',
+      origin: 'imported',
+      waId: '4930123456789',
+      type: 'media_placeholder',
+    });
+    expect(events[1]).not.toHaveProperty('media', expect.anything());
+  });
 });

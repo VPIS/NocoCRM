@@ -11932,6 +11932,187 @@ describe('WhatsApp', () => {
     ).toHaveLength(1);
   });
 
+  it("keeps coexistence's echoes and history as the conversation's, telling and counting only the customer's live messages", async () => {
+    const waId = '4930555000111';
+    const coexistence = (name: string, inner: Record<string, unknown>) => ({
+      object: 'whatsapp_business_account',
+      entry: [
+        {
+          id: 'waba-1',
+          changes: [
+            {
+              field: name,
+              value: {
+                messaging_product: 'whatsapp',
+                metadata: {
+                  display_phone_number: '15550001111',
+                  phone_number_id: NUMBER,
+                },
+                ...inner,
+              },
+            },
+          ],
+        },
+      ],
+    });
+    const messageOf = async (waMessageId: string) =>
+      database
+        .query()
+        .selectFrom('crmWaMessages')
+        .selectAll()
+        .where('waMessageId', '=', waMessageId)
+        .executeTakeFirstOrThrow();
+    const before = (await outbox('manager', 'whatsappNew')).length;
+    // The customer writes: unread, and their handler told.
+    await deliver(
+      delivery({ waId, name: 'Co Ex' }, [text('wamid.co-1', 'Hi')]),
+    );
+    await whatsapp.process();
+    // The team answers from the app: kept, theirs, neither unread nor told.
+    await deliver(
+      coexistence('smb_message_echoes', {
+        message_echoes: [
+          {
+            from: '15550001111',
+            to: waId,
+            ...text('wamid.co-2', 'Hello, how can we help?'),
+          },
+        ],
+      }),
+    );
+    await whatsapp.process();
+    const reply = await messageOf('wamid.co-2');
+    expect(reply).toMatchObject({ direction: 'out', origin: 'businessApp' });
+    const conversation = await database
+      .query()
+      .selectFrom('crmWaConversations')
+      .selectAll()
+      .where('id', '=', toText(reply.conversationId))
+      .executeTakeFirstOrThrow();
+    expect(Number(conversation.unreadCount)).toBe(1);
+    expect(conversation.lastDirection).toBe('out');
+    expect((await outbox('manager', 'whatsappNew')).length).toBe(before + 1);
+    // The history, imported: either way, in the same conversation, neither
+    // unread nor told; its file a placeholder until its own delivery.
+    const old = new Date(Date.now() - 30 * 86_400_000);
+    await deliver(
+      coexistence('history', {
+        history: [
+          {
+            metadata: { phase: 0, chunk_order: 1, progress: 100 },
+            threads: [
+              {
+                id: waId,
+                messages: [
+                  { from: waId, ...text('wamid.co-h1', 'Earlier', old) },
+                  {
+                    from: '15550001111',
+                    to: waId,
+                    id: 'wamid.co-h2',
+                    timestamp: seconds(old),
+                    type: 'media_placeholder',
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    await whatsapp.process();
+    expect(await messageOf('wamid.co-h1')).toMatchObject({
+      direction: 'in',
+      origin: 'imported',
+      conversationId: reply.conversationId,
+    });
+    expect(await messageOf('wamid.co-h2')).toMatchObject({
+      direction: 'out',
+      origin: 'imported',
+      type: 'media_placeholder',
+    });
+    expect(
+      Number(
+        (
+          await database
+            .query()
+            .selectFrom('crmWaConversations')
+            .select('unreadCount')
+            .where('id', '=', toText(reply.conversationId))
+            .executeTakeFirstOrThrow()
+        ).unreadCount,
+      ),
+    ).toBe(1);
+    expect((await outbox('manager', 'whatsappNew')).length).toBe(before + 1);
+    // The placeholder's file arrives: the message takes it.
+    await deliver(
+      delivery({ waId }, [
+        {
+          id: 'wamid.co-h2',
+          timestamp: seconds(old),
+          type: 'image',
+          image: { id: 'media-co-h2', mime_type: 'image/jpeg' },
+        },
+      ]),
+    );
+    await whatsapp.process();
+    expect(await messageOf('wamid.co-h2')).toMatchObject({
+      type: 'image',
+      mediaId: 'media-co-h2',
+      direction: 'out',
+      origin: 'imported',
+    });
+    // The team edits, then deletes, its answer on the app.
+    await deliver(
+      coexistence('smb_message_echoes', {
+        message_echoes: [
+          {
+            from: '15550001111',
+            to: waId,
+            id: 'wamid.co-e1',
+            timestamp: seconds(new Date()),
+            type: 'edit',
+            edit: {
+              original_message_id: 'wamid.co-2',
+              message: {
+                type: 'text',
+                text: { body: 'Hello! How can we help?' },
+              },
+            },
+          },
+        ],
+      }),
+    );
+    await whatsapp.process();
+    const edited = await messageOf('wamid.co-2');
+    expect(edited.text).toBe('Hello! How can we help?');
+    expect(edited.editedAt).toBeTruthy();
+    await deliver(
+      coexistence('smb_message_echoes', {
+        message_echoes: [
+          {
+            from: '15550001111',
+            to: waId,
+            id: 'wamid.co-r1',
+            timestamp: seconds(new Date()),
+            type: 'revoke',
+            revoke: { original_message_id: 'wamid.co-2' },
+          },
+        ],
+      }),
+    );
+    await whatsapp.process();
+    expect((await messageOf('wamid.co-2')).revokedAt).toBeTruthy();
+    // Neither the edit nor the deletion is a message of its own.
+    expect(
+      await database
+        .query()
+        .selectFrom('crmWaMessages')
+        .select('id')
+        .where('waMessageId', 'in', ['wamid.co-e1', 'wamid.co-r1'])
+        .execute(),
+    ).toEqual([]);
+  });
+
   it('records a sent message’s status without going back', async () => {
     const conversation = await database
       .query()

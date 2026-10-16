@@ -2437,7 +2437,18 @@ const wording = {
       interactive: ['Reply', '选项回复'],
       system: ['System message', '系统消息'],
       unsupported: ['Unsupported message', '不支持的消息'],
+      // A file of the imported history whose content Meta did not send.
+      media_placeholder: ['File from the history', '历史文件'],
     },
+    // Where a message came from, beside its time: the team's sent from the
+    // WhatsApp Business app, the history imported once; and an edit or a
+    // deletion made there.
+    origin: {
+      businessApp: ['From the app', '手机发出'],
+      imported: ['Imported', '历史导入'],
+    },
+    edited: ['Edited', '已编辑'],
+    revoked: ['This message was deleted', '此消息已删除'],
     photoFrom: ['Photo from {{name}}', '来自 {{name}} 的图片'],
     download: ['Download {{file}}', '下载 {{file}}'],
     media: {

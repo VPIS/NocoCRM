@@ -118,6 +118,47 @@ beforeEach(() => {
 });
 
 describe('the messages', () => {
+  it("mark coexistence's messages by where they came from, an edit, and a deletion", () => {
+    render(
+      <WhatsAppMessages
+        messages={[
+          message('h1', '2026-09-01T08:00:00.000Z', {
+            origin: 'imported',
+            text: 'From the history',
+          }),
+          message('h2', '2026-09-01T08:05:00.000Z', {
+            direction: 'out',
+            origin: 'imported',
+            type: 'media_placeholder',
+            text: null,
+          }),
+          message('a1', '2026-10-15T08:00:00.000Z', {
+            direction: 'out',
+            origin: 'businessApp',
+            text: 'Answered on the phone',
+            editedAt: '2026-10-15T08:01:00.000Z',
+          }),
+          message('a2', '2026-10-15T08:02:00.000Z', {
+            direction: 'out',
+            origin: 'businessApp',
+            text: 'Taken back',
+            revokedAt: '2026-10-15T08:03:00.000Z',
+          }),
+        ]}
+        more={false}
+        loadingEarlier={false}
+        onLoadEarlier={() => undefined}
+        senderOf={() => 'Ana Souza'}
+      />,
+    );
+    expect(screen.getAllByText(/^Imported · /)).toHaveLength(2);
+    expect(screen.getByText(/^From the app · Edited · /)).toBeTruthy();
+    expect(screen.getByText('File from the history')).toBeTruthy();
+    // A deletion shows no words of it.
+    expect(screen.getByText('This message was deleted')).toBeTruthy();
+    expect(screen.queryByText('Taken back')).toBeNull();
+  });
+
   it('show a day separator, the media by its state, and who wrote each', () => {
     render(
       <WhatsAppMessages
