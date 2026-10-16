@@ -34,7 +34,18 @@ export default function CrmMailPage(): ReactElement {
     return () => slot.remove();
   }, [slot]);
   return (
-    <div ref={rootRef} className='contents'>
+    // The plugin's search row (the workspace's first row) kept to one line:
+    // its field labels and the participant hint are left to screen readers,
+    // the placeholders saying what goes in, and the row is shorter; and each
+    // message in the list previews one line, not two. Found by the plugin's
+    // structure and classes, as the button above is; a plugin update that
+    // changes them brings the plugin's own layout back. The list keeps as
+    // much room on its left as its scrollbar takes on its right, so a row,
+    // the selected one's outline most of all, sits evenly in its column.
+    <div
+      ref={rootRef}
+      className='contents [&_[data-slot=mail-workspace]>div:first-child]:py-2! [&_[data-slot=mail-workspace]>div:first-child_[data-slot=field-description]]:sr-only! [&_[data-slot=mail-workspace]>div:first-child_[data-slot=field-label]]:sr-only! [&_[data-slot=mail-workspace]_.divide-y>button>p.line-clamp-2]:line-clamp-1! [&_[data-slot=mail-workspace]_section:has(>.divide-y)]:[scrollbar-gutter:stable_both-edges]'
+    >
       <MailWorkspacePage />
       {createPortal(
         <Button
