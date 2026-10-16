@@ -22,8 +22,10 @@ export function PageHeader({
   if (frame)
     return description || actions ? (
       <header className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+        {/* As wide as the settings tabs' cards (max-w-4xl), so it lines up
+            with them rather than ending short of their edge. */}
         {description ? (
-          <p className='max-w-2xl text-sm leading-6 text-muted-foreground'>
+          <p className='max-w-4xl text-sm leading-6 text-muted-foreground'>
             {description}
           </p>
         ) : (
