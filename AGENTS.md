@@ -138,7 +138,7 @@ When the built-in mechanism genuinely cannot express what is being asked, changi
 | [.agents/rules/crm-assistant.md](.agents/rules/crm-assistant.md)                   | The assistant, its dock and panel, conversations, business guidance, plans, agents calling the CRM                    |
 | [.agents/rules/crm-ai-follow-ups.md](.agents/rules/crm-ai-follow-ups.md)           | Lead and deal follow-ups, approval review, task preparation, the background model                                     |
 | [.agents/rules/crm-agents-and-search.md](.agents/rules/crm-agents-and-search.md)   | The Agent work page and its switches, the global search                                                               |
-| [.agents/rules/crm-capture-and-merge.md](.agents/rules/crm-capture-and-merge.md)   | AI capture of leads and opportunities, duplicate leads and merging                                                    |
+| [.agents/rules/crm-capture-and-merge.md](.agents/rules/crm-capture-and-merge.md)   | AI capture of leads, opportunities and companies, duplicate leads and merging                                         |
 | [.agents/rules/crm-mail.md](.agents/rules/crm-mail.md)                             | Mailbox pages, a record's Mail tab, sending mail, mail in follow-ups                                                  |
 | [.agents/rules/crm-permissions.md](.agents/rules/crm-permissions.md)               | Roles, permission sets, resources, page grants, capabilities                                                          |
 | [.agents/rules/crm-server.md](.agents/rules/crm-server.md)                         | HTTP routes and errors, migrations, model services, notifications, attachments, titles, approval lifecycle, approvers |

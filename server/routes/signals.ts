@@ -10,6 +10,8 @@ import type { Hono } from 'hono';
 import { companySignalsToken } from '../providers/crm/company-signals.js';
 import type { CrmEnv } from './context.js';
 import {
+  CompanyProfile,
+  CompanyProfileInput,
   CompanySignals,
   CompanySignalsQuery,
   DecideSignalInput,
@@ -27,6 +29,26 @@ export function registerSignalRoutes(
 ): void {
   const signals = () => app.container.resolve(companySignalsToken);
   const tags = ['Companies'];
+  router.post(
+    '/companies/capture',
+    describeRoute({
+      tags,
+      summary: 'Look a new company up on the web',
+      operationId: 'captureCompany',
+      description:
+        "New company with the AI: searches the web for the company named and returns the form's values found, the fields it was unsure of, the pages it read and the companies the reader may see by that name. Saves nothing. Needs the right to create companies and the Company signals agent's model (without one, 400 FAILED_PRECONDITION with reason SIGNALS_UNAVAILABLE); a failed search is 503 UNAVAILABLE with reason SIGNALS_FAILED.",
+      responses: {
+        '200': dataResponse(CompanyProfile),
+        ...apiErrorResponses,
+        '503': apiErrorResponse(503),
+      },
+    }),
+    apiValidator('json', CompanyProfileInput),
+    async (c) =>
+      c.json({
+        data: await signals().profile(c.get('actor'), c.req.valid('json')),
+      }),
+  );
   router.get(
     '/companies/:companyId/signals',
     describeRoute({

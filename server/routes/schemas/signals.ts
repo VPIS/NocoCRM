@@ -5,6 +5,7 @@ import type {
   SignalView,
 } from '../../providers/crm/company-signals.js';
 import { SIGNAL_TYPES } from '../../providers/crm/signal-reading.js';
+import { LONG_TEXT_LIMIT } from '../../providers/crm/limits.js';
 import { PageQuery } from './common.js';
 
 // Company signals (company-signals.ts): what happened to a company, found
@@ -85,3 +86,32 @@ export const DecideSignalInput = z
       ),
   })
   .meta({ ref: 'CrmDecideSignalInput' });
+
+// New company with the AI (company-profile.ts): the company to look up.
+export const CompanyProfileInput = z
+  .strictObject({
+    name: z.string().min(1).max(255).describe('The company to look up.'),
+    note: z
+      .string()
+      .max(LONG_TEXT_LIMIT)
+      .optional()
+      .describe('What the person adds about it (its city, its website).'),
+  })
+  .meta({ ref: 'CrmCompanyProfileInput' });
+
+export const CompanyProfile = z
+  .object({
+    input: z
+      .record(z.string(), z.union([z.string(), z.number()]))
+      .describe(
+        "The company form's values found: name, website, linkedin, industry, employees, annualRevenue with currency, country, state (its code), city, address, description.",
+      ),
+    uncertain: z.array(z.string()).describe('The fields it was unsure of.'),
+    sources: z
+      .array(z.object({ title: z.string(), url: z.string(), site: z.string() }))
+      .describe('The pages it read, those cited first.'),
+    duplicates: z
+      .array(z.object({ id: z.string(), name: z.string() }))
+      .describe('Companies the reader may see by that name.'),
+  })
+  .meta({ ref: 'CrmCompanyProfile' });

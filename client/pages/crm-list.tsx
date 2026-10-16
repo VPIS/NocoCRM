@@ -5,6 +5,7 @@ import {
   DEFAULT_TIME_ZONE,
 } from '../../server/providers/crm/zone-time.js';
 import { OpportunityCaptureDialog } from '../components/crm/opportunity-capture.js';
+import { CompanyCaptureDialog } from '../components/crm/company-capture.js';
 import {
   PAGE_SIZE,
   useCrmScopeKey,
@@ -345,6 +346,8 @@ function EntityList({
   // The pasted text survives a switch to the form and back; closing either
   // dialog drops it.
   const [draft, setDraft] = useState('');
+  // New company with the AI: the name and what was added, kept likewise.
+  const [companyDraft, setCompanyDraft] = useState({ name: '', note: '' });
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<unknown>();
   const refresh = useRefresh();
@@ -668,9 +671,11 @@ function EntityList({
         <Button
           variant='contrast'
           onClick={() =>
-            // A new lead or opportunity starts with the AI while the
-            // assistant is on; the form is a tab away.
-            (entity === 'leads' || entity === 'opportunities') &&
+            // A new lead, opportunity or company starts with the AI while
+            // the assistant is on; the form is a tab away.
+            (entity === 'leads' ||
+              entity === 'opportunities' ||
+              entity === 'companies') &&
             meta?.assistant
               ? setCapturing(true)
               : setForm({ input: {} })
@@ -1615,6 +1620,25 @@ function EntityList({
           }}
         />
       )}
+      {capturing && entity === 'companies' && (
+        <CompanyCaptureDialog
+          draft={companyDraft}
+          onDraft={setCompanyDraft}
+          onClose={() => {
+            setCapturing(false);
+            setCompanyDraft({ name: '', note: '' });
+          }}
+          onForm={() => {
+            setCapturing(false);
+            // The name typed carries over into the form.
+            setForm({
+              input: companyDraft.name.trim()
+                ? { name: companyDraft.name.trim() }
+                : {},
+            });
+          }}
+        />
+      )}
       {capturing && entity === 'leads' && (
         <LeadCaptureDialog
           draft={draft}
@@ -1636,7 +1660,9 @@ function EntityList({
           id={form.id}
           titles={lookup}
           tabs={
-            (entity === 'leads' || entity === 'opportunities') &&
+            (entity === 'leads' ||
+              entity === 'opportunities' ||
+              entity === 'companies') &&
             !form.id &&
             meta?.assistant ? (
               <CaptureTabs
@@ -1651,6 +1677,7 @@ function EntityList({
           onClose={() => {
             setForm(undefined);
             setDraft('');
+            setCompanyDraft({ name: '', note: '' });
           }}
           andThen={
             entity === 'approvals'

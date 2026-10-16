@@ -7,7 +7,14 @@ import {
 } from '@nocobase/service-provider';
 import { readSkill, recordUse, sourceOf } from './ai-model.js';
 import { agentOn, agentSwitches, AGENT_TRIGGERS } from './agents.js';
-import type { Actor } from './authorization.js';
+import { compileFilter, conditions, type Actor } from './authorization.js';
+import {
+  profileJsonQuestion,
+  profileQuestion,
+  readProfile,
+  type CompanyProfile,
+} from './company-profile.js';
+import { sameCompany } from './lead-merge.js';
 import { CrmError, toText } from './schema.js';
 import type { CrmService } from './service.js';
 import {
@@ -307,6 +314,74 @@ export class CompanySignals {
       .where('id', '=', signalId)
       .execute();
     return view({ ...row, status, ...decided, updatedAt: now });
+  }
+
+  // New company with the AI (company-profile.ts): what the web says of the
+  // company named, read into the form, with the pages it read and the
+  // companies the reader may see by that name. For whoever may create a
+  // company; nothing is saved.
+  async profile(
+    actor: Actor,
+    input: { name: string; note?: string },
+  ): Promise<CompanyProfile & { duplicates: { id: string; name: string }[] }> {
+    await conditions(actor, 'companies', 'create');
+    const name = input.name.trim();
+    if (!name) throw new CrmError('required', 400, 'name');
+    const searcher = await this.searcher();
+    if (!searcher) throw new CrmError('signalsUnavailable', 409);
+    const settings = await this.service.settings();
+    try {
+      const answer = await this.ask(
+        searcher,
+        profileQuestion(
+          { name, note: (input.note ?? '').trim() },
+          // In the language the name was typed in, as a capture writes in
+          // its text's: a name in Chinese characters is looked up in
+          // Chinese, any other in the AI's language.
+          /\p{Script=Han}/u.test(name) || settings.aiLanguage.startsWith('zh'),
+          citesUrls(searcher) ? 'urls' : 'refs',
+        ),
+      );
+      let profile = readProfile(answer);
+      // An answer in prose: reshaped without searching, its [ref_n] marks
+      // still naming the first answer's pages.
+      if (!profile) {
+        const reshaped = await this.ask(
+          searcher,
+          profileJsonQuestion(answer.text),
+          false,
+        );
+        profile = readProfile({ ...reshaped, pages: answer.pages });
+      }
+      if (!profile) throw new CrmError('signalsFailed', 503);
+      // By the name asked and the one found, among the companies the
+      // reader may see.
+      const access = await conditions(actor, 'companies', 'read').catch(
+        () => null,
+      );
+      const duplicates = access
+        ? (
+            await this.service.database
+              .query()
+              .selectFrom('crmCompanies')
+              .select(['id', 'name'])
+              .where((eb) => compileFilter(eb, access.scope))
+              .execute()
+          )
+            .filter(
+              (row) =>
+                sameCompany(name, row.name) ||
+                sameCompany(profile?.input.name, row.name),
+            )
+            .slice(0, 5)
+            .map((row) => ({ id: toText(row.id), name: toText(row.name) }))
+        : [];
+      return { ...profile, duplicates };
+    } catch (error) {
+      throw error instanceof WebSearchError
+        ? new CrmError('signalsFailed', 503, undefined, error.message)
+        : error;
+    }
   }
 
   // Someone who may edit the company has it checked now, whether or not

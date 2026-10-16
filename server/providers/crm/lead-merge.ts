@@ -212,7 +212,7 @@ export async function leadDuplicates(
 // Two companies as one: the same name once the kind of company is left
 // off, or, for a name of four characters or more, one inside the other
 // (a name inside the same name followed by a word such as "Group").
-function sameCompany(a: unknown, b: unknown): boolean {
+export function sameCompany(a: unknown, b: unknown): boolean {
   const [x, y] = [companyKey(a), companyKey(b)].sort(
     (p, q) => p.length - q.length,
   );

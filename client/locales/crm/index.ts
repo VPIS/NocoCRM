@@ -467,8 +467,8 @@ const wording = {
     },
     // The company signals' check (company-signals.ts), its runs the checks.
     signals: {
-      title: ['Company signals', '客户信号'],
-      skill: ['Skill: Company signals', '技能：客户信号'],
+      title: ['Company signals', '公司信号'],
+      skill: ['Skill: Company signals', '技能：公司信号'],
       // In the agents' slots (company-signals.ts, overview).
       stats: {
         runs: ['Checks', '检查次数'],
@@ -1622,7 +1622,7 @@ const wording = {
       opportunities: ['Opportunity follow-up', '商机跟进'],
       approvals: ['Approval review', '审批助手'],
       tasks: ['Task assistant', '任务助手'],
-      signals: ['Company signals', '客户信号'],
+      signals: ['Company signals', '公司信号'],
     },
     // The agent doing a dialog's AI work, named in it
     // (components/crm/work-agent.tsx).
@@ -1793,6 +1793,33 @@ const wording = {
     ],
   },
   // New opportunity with the AI (opportunity-capture.tsx).
+  // New company with the AI (components/crm/company-capture.tsx).
+  companyCapture: {
+    name: ['Company name', '公司名称'],
+    namePlaceholder: [
+      'The name you know it by, e.g. H World Group',
+      '常用名称即可，例如：华住集团',
+    ],
+    note: ['What you know (optional)', '补充信息（可选）'],
+    notePlaceholder: [
+      'Its city, website or what it does, to tell it from others of the same name',
+      '城市、网址或主营业务等，帮助区分同名公司',
+    ],
+    searchHint: [
+      'The AI searches the web for its public information and fills the form; it takes about half a minute.',
+      'AI 会联网搜索公司的公开信息并填好表单，大约需要半分钟。',
+    ],
+    searching: ['Searching the web for the company…', '正在联网搜索公司信息…'],
+    filledNotice: [
+      'Filled from the web; check each value before creating.',
+      '已根据网上公开信息填写，创建前请逐项核对。',
+    ],
+    duplicates: ['Already in the CRM:', 'CRM 中已有同名公司：'],
+    sources: ['Sources', '参考来源'],
+    noSources: ['The search cited no page.', '这次搜索没有给出来源网页。'],
+    searchAgain: ['Search again', '重新搜索'],
+    create: ['Create company', '创建公司'],
+  },
   dealCapture: {
     placeholder: [
       'Paste anything: a customer email about buying more, a renewal, a tender notice, call notes. The AI fills in the opportunity, matches the company and its contacts, and you check it before saving.',

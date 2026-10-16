@@ -1835,6 +1835,96 @@ describe('CRM API security and domain rules', () => {
   // A check starts no deal follow-up of its own: the deals' daily pass takes
   // the news (deal-signals.ts). Each check is logged and listed on the Auto
   // follow-up page's Company signals tab.
+  it('looks a new company up on the web for its form, saving nothing', async () => {
+    const existing = await service.save(actor('rep'), 'companies', {
+      name: 'Profile Co',
+    });
+    const before = (
+      await service.list(actor('admin'), 'companies', { pageSize: 1 })
+    ).total;
+    web.calls = [];
+    web.answers.push({
+      text: JSON.stringify({
+        name: 'Profile Co Ltd',
+        website: 'https://profile.example.cn',
+        linkedin: 'not a link',
+        industry: 'technology',
+        employees: '201-500',
+        annualRevenue: 50000000,
+        currency: 'CNY',
+        country: 'CN',
+        state: '浙江省',
+        city: '杭州',
+        description: 'Makes office software for hotel chains.',
+        uncertain: ['employees', 'bogus'],
+        sources: [2],
+      }),
+      pages: [
+        {
+          index: 1,
+          title: 'Unrelated',
+          url: 'https://n.example.cn/x',
+          site: 'News',
+        },
+        {
+          index: 2,
+          title: 'About Profile Co',
+          url: 'https://profile.example.cn/about',
+          site: 'Profile',
+        },
+      ],
+    });
+    const response = await request('/companies/capture', 'rep', 'POST', {
+      name: 'Profile Co',
+      note: 'In Hangzhou',
+    });
+    expect(response.status).toBe(200);
+    const { data } = (await response.json()) as { data: Row };
+    expect(web.calls).toEqual([{ search: true }]);
+    // Each value of its field's kind; what is not, left out.
+    expect(data.input).toEqual({
+      name: 'Profile Co Ltd',
+      website: 'https://profile.example.cn',
+      industry: 'technology',
+      employees: '201-500',
+      annualRevenue: 50000000,
+      currency: 'CNY',
+      country: 'CN',
+      state: 'CN-33',
+      city: '杭州',
+      description: 'Makes office software for hotel chains.',
+    });
+    expect(data.uncertain).toEqual(['employees']);
+    expect((data.sources as Row[]).map((p) => p.url)).toEqual([
+      'https://profile.example.cn/about',
+    ]);
+    expect(data.duplicates).toContainEqual({
+      id: existing.id,
+      name: 'Profile Co',
+    });
+    // Nothing saved.
+    expect(
+      (await service.list(actor('admin'), 'companies', { pageSize: 1 })).total,
+    ).toBe(before);
+    expect(
+      (await request('/companies/capture', undefined, 'POST', { name: 'X' }))
+        .status,
+    ).toBe(401);
+    expect(
+      (await request('/companies/capture', 'outsider', 'POST', { name: 'X' }))
+        .status,
+    ).toBe(403);
+    // Without a model to search with, it says so.
+    web.on = false;
+    try {
+      await expect(
+        signals.profile(actor('rep'), { name: 'Profile Co' }),
+      ).rejects.toMatchObject({ code: 'signalsUnavailable' });
+    } finally {
+      web.on = true;
+    }
+  });
+
   it('logs each check and lists them, leaving the deals to their daily pass', async () => {
     const company = await service.save(actor('rep'), 'companies', {
       name: 'Acting Co',
