@@ -166,6 +166,8 @@ export function LocationField({
         nativeButton={false}
         aria-label={label}
         render={<div />}
+        // What a row's pencil opens (Copyable in crm-detail.tsx).
+        data-edit-trigger=''
         className='w-full cursor-pointer rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
       >
         {blank ? (

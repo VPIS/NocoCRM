@@ -97,6 +97,16 @@ export function LongTextField({
         nativeButton={false}
         aria-label={label}
         render={<div />}
+        // What a row's pencil opens (Copyable in crm-detail.tsx): with
+        // Enter or F2 the pop-up opens on its editor.
+        data-edit-trigger={editable ? '' : undefined}
+        onKeyDown={(event) => {
+          if (editable && (event.key === 'Enter' || event.key === 'F2')) {
+            event.preventDefault();
+            setOpen(true);
+            edit();
+          }
+        }}
         className='w-full cursor-pointer rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
       >
         {blank ? (

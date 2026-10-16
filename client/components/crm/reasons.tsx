@@ -231,6 +231,8 @@ export function StageField({
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label={text(`fields.${field}`)}
+          // What the row's pencil opens (Copyable in crm-detail.tsx).
+          data-edit-trigger=''
           className='flex w-full items-center rounded-md px-2 py-1.5 text-left transition-colors hover:bg-hover'
         >
           {trigger}

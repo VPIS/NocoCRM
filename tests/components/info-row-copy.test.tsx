@@ -72,4 +72,19 @@ describe('InfoRow', () => {
     await userEvent.click(screen.getByRole('button', { name: /edit/i }));
     expect(opened).toHaveBeenCalled();
   });
+
+  it('opens a menu value (a stage, a status) from its pencil with a click', async () => {
+    const opened = vi.fn();
+    render(
+      <dl>
+        <InfoRow field='stage' label='Stage'>
+          <button type='button' data-edit-trigger='' onClick={opened}>
+            Proposal
+          </button>
+        </InfoRow>
+      </dl>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /edit/i }));
+    expect(opened).toHaveBeenCalled();
+  });
 });

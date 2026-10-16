@@ -1413,6 +1413,8 @@ function LeadStatusField({
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={text('fields.status')}
+        // What the row's pencil opens (Copyable).
+        data-edit-trigger=''
         className='flex w-full items-center rounded-md px-2 py-1.5 text-left transition-colors hover:bg-hover'
       >
         {trigger}
@@ -4490,10 +4492,17 @@ export function Copyable({ children }: { children: ReactNode }): ReactElement {
       .then(() => setCopied(true))
       .catch(() => undefined);
   };
+  // A menu's button opens on a click; an inline value, which a click only
+  // selects in, and a pop-up's trigger open on Enter.
   const edit = (): void => {
-    valueRef.current
-      ?.querySelector<HTMLElement>('[data-edit-trigger]')
-      ?.dispatchEvent(
+    const trigger = valueRef.current?.querySelector<HTMLElement>(
+      '[data-edit-trigger]',
+    );
+    if (!trigger) return;
+    trigger.focus();
+    if (trigger instanceof HTMLButtonElement) trigger.click();
+    else
+      trigger.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
       );
   };
