@@ -171,14 +171,16 @@ export function AssistantDock(): ReactElement | null {
 
   return (
     <TooltipProvider>
-      {/* While the box is in use, a light veil over the main column under
-          it: a press beside the box lands on the veil and only closes the
-          box, rather than on the list or the board behind it. */}
+      {/* While the box is in use, a veil over the page under it, drawn as
+          a dialog's backdrop: a press beside the box lands on the veil and
+          only closes the box, rather than on the list or the board behind
+          it. */}
       {focused && !isMobile && !panelOpen ? (
         <div
           aria-hidden
           data-dock-veil=''
-          className='absolute inset-0 z-20 bg-background/50'
+          // Drawn as a dialog's backdrop (ui/dialog.tsx).
+          className='fixed inset-0 z-40 bg-black/10 duration-100 animate-in fade-in-0 supports-backdrop-filter:backdrop-blur-xs'
           // Closed on its own click, so the press's click lands here and
           // never reaches the row it covers.
           onClick={() => {
@@ -190,8 +192,12 @@ export function AssistantDock(): ReactElement | null {
       ) : null}
       <div
         // Over the bottom of the main column, below the header and every
-        // overlay, above a stacked record page's sticky tab bar (z-10).
-        className='pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-end px-4 md:justify-center'
+        // overlay, above a stacked record page's sticky tab bar (z-10);
+        // while in use, over its veil, which covers the header (z-40) as a
+        // dialog's backdrop does, every overlay (z-50) still above.
+        className={`pointer-events-none absolute inset-x-0 bottom-4 flex justify-end px-4 md:justify-center ${
+          focused && !isMobile ? 'z-40' : 'z-20'
+        }`}
         hidden={panelOpen}
       >
         {isMobile ? (

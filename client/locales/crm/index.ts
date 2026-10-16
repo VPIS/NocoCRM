@@ -1797,31 +1797,59 @@ const wording = {
   // The overview's questions under its ask box, from its attention figures
   // (pages/crm-dashboard.tsx), sent as they read.
   overviewAsk: {
-    overdueOpportunities: [
+    overdueOpportunities_one: [
+      'A deal is past its expected close: update it or let it go?',
+      '1 个商机已过预计成交日，该更新还是放弃？',
+    ],
+    overdueOpportunities_other: [
       '{{count}} deals are past their expected close: update them or let them go?',
       '{{count}} 个商机已过预计成交日，该更新还是放弃？',
     ],
-    closingSoon: [
+    closingSoon_one: [
+      'A deal is due to close soon: might it slip?',
+      '1 个商机即将到预计成交日，会不会落空？',
+    ],
+    closingSoon_other: [
       '{{count}} deals are due to close soon: which might slip?',
       '{{count}} 个商机即将到预计成交日，哪些可能落空？',
     ],
-    staleOpportunities: [
+    staleOpportunities_one: [
+      'A deal has stalled: how do I move it?',
+      '1 个商机很久没有进展，怎么推进？',
+    ],
+    staleOpportunities_other: [
       '{{count}} deals have stalled: which should move first?',
       '{{count}} 个商机很久没有进展，先推进哪个？',
     ],
-    uncontacted: [
+    uncontacted_one: [
+      'A new lead is not contacted yet: how should I reach out?',
+      '1 条新线索还没联系，怎么联系比较好？',
+    ],
+    uncontacted_other: [
       '{{count}} new leads not contacted yet: who first?',
       '{{count}} 条新线索还没联系，先联系谁？',
     ],
-    staleLeads: [
+    staleLeads_one: [
+      'A lead has gone quiet: still worth chasing?',
+      '1 条线索很久没跟进了，还值得跟吗？',
+    ],
+    staleLeads_other: [
       '{{count}} leads have gone quiet: still worth chasing?',
       '{{count}} 条线索很久没跟进了，还值得跟吗？',
     ],
-    staleCompanies: [
+    staleCompanies_one: [
+      'A company has gone quiet: how should we get back in touch?',
+      '1 家公司很久没有往来，怎么重新联系？',
+    ],
+    staleCompanies_other: [
       '{{count}} companies have gone quiet: whom should we reach out to?',
       '{{count}} 家公司很久没有往来，该联系谁？',
     ],
-    noContacts: [
+    noContacts_one: [
+      'A company has no contact yet: whom should I find?',
+      '1 家公司还没有联系人，该找谁？',
+    ],
+    noContacts_other: [
       '{{count}} companies have no contact yet: whom to find first?',
       '{{count}} 家公司还没有联系人，先找谁？',
     ],
