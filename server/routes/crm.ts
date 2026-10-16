@@ -15,6 +15,7 @@ import { entities } from '../providers/crm/schema.js';
 import { crmErrorHandler, crmGuard, type CrmEnv } from './context.js';
 import { registerOperationRoutes } from './operations.js';
 import { registerPlanRoutes } from './plans.js';
+import { registerRecordMailRoutes } from './record-mail.js';
 import { registerRecordRoutes } from './records.js';
 import { registerSignalRoutes } from './signals.js';
 import { registerWhatsAppRoutes } from './whatsapp.js';
@@ -47,6 +48,7 @@ export const crmRoutes: AppApiRouteContribution<Application> = defineApiRoutes(
     registerOperationRoutes(app, router);
     registerSignalRoutes(app, router);
     registerWhatsAppRoutes(app, router);
+    registerRecordMailRoutes(app, router);
     for (const entity of entities) registerRecordRoutes(app, router, entity);
 
     // A comment, changed or removed by its author (CrmService.editComment).

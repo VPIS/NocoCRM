@@ -713,6 +713,12 @@ export function registerWorkspaceRoutes(
       operationId: 'listDecisions',
       description:
         'The suggestions waiting on the reader: on the records they own, the approvals they decide and the tasks they own.',
+      // An agent reads them to propose deciding them in a plan
+      // (`suggestion.decide`, `approval.decide`).
+      ...runCommand(SEARCH_ACTION, {
+        command: 'suggestions list',
+        columns: ['id', 'entity', 'recordId', 'status', 'createdAt'],
+      }),
       responses: {
         '200': listResponse(Decision, DecisionsMeta),
         ...apiErrorResponses,

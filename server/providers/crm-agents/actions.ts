@@ -27,6 +27,11 @@ export const recordAction = (entity: Entity, verb: Verb): string =>
 export const PLAN_ACTION = 'crm.plans/create';
 // Commenting on a record one may read: a write, so a run proposes it.
 export const COMMENT_ACTION = 'crm.comments/create';
+// Setting the CRM's own AI agents to work on a record (a follow-up, a
+// review, a preparation, a company's signals): it changes no record, its
+// result being a suggestion the person still decides, so a run calls it
+// directly rather than in a plan.
+export const AI_WORK_ACTION = 'crm.aiWork/request';
 // Searching every kind of record one may read at once.
 export const SEARCH_ACTION = 'crm.search/view';
 // The colleagues a record may be given to or an approval sent to.
@@ -85,6 +90,14 @@ export function agentActionOptions(): AgentActionOption[] {
       groupTitle: text('agentActions.workspace'),
       title: text('agentActions.comment'),
       description: text('agentActions.throughPlan'),
+      defaultOn: true,
+    },
+    {
+      key: AI_WORK_ACTION,
+      group: 'crm.workspace',
+      groupTitle: text('agentActions.workspace'),
+      title: text('agentActions.aiWork'),
+      description: text('agentActions.aiWorkDescription'),
       defaultOn: true,
     },
     {

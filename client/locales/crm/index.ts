@@ -1583,6 +1583,11 @@ const wording = {
     search: ['Search records', '搜索记录'],
     colleagues: ['See colleagues', '查看同事'],
     comment: ['Comment on records', '评论记录'],
+    aiWork: ['Set the AI agents to work', '让 AI Agent 工作'],
+    aiWorkDescription: [
+      "Asks the CRM's agents for a follow-up, a review, a task's preparation or a company's signals; what they suggest waits for the person.",
+      '请 CRM 的 Agent 跟进、复核、准备任务或查公司信号；它们的建议仍由本人决定。',
+    ],
     planCreate: ['Suggest changes', '建议改动'],
     planCreateDescription: [
       'Suggests changes to records together, carried out once the person confirms them.',
@@ -1614,6 +1619,17 @@ const wording = {
   // The CRM's work agents' descriptions, the same on the Agents page and on
   // the Agent work page's card (server/providers/crm-agents/
   // work-agents.ts): what each does, then the other work it does.
+  // What an agent set to work from a conversation came to, told in that
+  // conversation (server/providers/crm-agents/ai-work-news.ts).
+  aiWork: {
+    news: {
+      ready: ['{{agent}} finished “{{title}}”', '{{agent}}已完成「{{title}}」'],
+      failed: [
+        '{{agent}} could not finish “{{title}}”',
+        '{{agent}}未能完成「{{title}}」',
+      ],
+    },
+  },
   agentWork: {
     // Their names, shown in the viewer's language while an administrator
     // has not renamed them.
@@ -2324,8 +2340,6 @@ const wording = {
       'Changes suggested by {{agent}} · {{time}}',
       '{{agent}} 建议的改动 · {{time}}',
     ],
-    fromConversation: ['from a conversation', '来自对话'],
-    waitingOnYou: ['Waiting on you', '等你决定'],
     status: {
       pending: ['Waiting', '待决定'],
       executing: ['Carrying out', '执行中'],
@@ -2334,6 +2348,7 @@ const wording = {
       stale: ['Not carried out', '未执行'],
       voided: ['Ignored', '已忽略'],
       expired: ['Expired', '已过期'],
+      superseded: ['Replaced', '已替换'],
     },
     op: {
       record: {
@@ -2346,9 +2361,36 @@ const wording = {
       approval: {
         submit: ['Submit approval', '提交审批'],
         withdraw: ['Withdraw approval', '撤回审批'],
+        approve: ['Approve', '批准'],
+        reject: ['Reject', '驳回'],
       },
+      suggestion: {
+        accept: [
+          'Accept the AI suggestion on {{entity}}',
+          '采纳{{entity}}的 AI 建议',
+        ],
+        dismiss: [
+          'Ignore the AI suggestion on {{entity}}',
+          '忽略{{entity}}的 AI 建议',
+        ],
+      },
+      mail: { send: ['Send email', '发送邮件'] },
     },
     comment: ['Comment', '评论'],
+    suggestion: ['Suggestion', 'AI 建议'],
+    nextTask: ['Next task', '下一步任务'],
+    mail: {
+      from: ['From', '发件人'],
+      to: ['To', '收件人'],
+      cc: ['Cc', '抄送'],
+      subject: ['Subject', '主题'],
+      later: [
+        'Sent from your mailbox once you carry this out.',
+        '执行后从你的邮箱发出。',
+      ],
+      sent: ['Sent', '已发送'],
+      notSent: ['Not sent: {{reason}}', '未发送：{{reason}}'],
+    },
     keepStep: ['Keep step {{step}}', '保留第 {{step}} 步'],
     execute_one: ['Carry out 1 change', '执行 1 项改动'],
     execute_other: ['Carry out {{count}} changes', '执行 {{count}} 项改动'],
@@ -2381,6 +2423,10 @@ const wording = {
         '未执行：涉及的记录在提出建议后被改动过。请让 Agent 重新提出。',
       ],
       expired: ['Expired after a day undecided', '超过一天未处理，已过期'],
+      superseded: [
+        'Replaced by newer suggested changes that do the same, so the two cannot both be carried out.',
+        '已被后来提出的同类改动替换，两者不会都执行。',
+      ],
     },
     news: {
       executed: ['“{{title}}” carried out', '「{{title}}」已执行'],
@@ -3162,6 +3208,11 @@ const wording = {
       'One of the suggested changes would be refused.',
       '建议的改动中有一项无法执行。',
     ],
+    noMailbox: [
+      'Connect a mailbox that can send mail first.',
+      '请先连接一个可以发信的邮箱。',
+    ],
+    mailFailed: ['The email could not be sent.', '邮件没能发出。'],
     taskNotOpen: [
       'Only an open task can be prepared.',
       '只有未完成的任务可以准备。',

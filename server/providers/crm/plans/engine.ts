@@ -3,7 +3,9 @@ import {
   createServiceToken,
   type ServiceToken,
 } from '@nocobase/service-provider';
+import type { MailService } from '@nocobase/app-plugin-mail/server';
 import type { QueryAdapter, Row } from '@nocobase/db';
+import { readEntry } from '../ai-entries.js';
 import type { Actor, ActorOrigin } from '../authorization.js';
 import { convertLead } from '../conversion.js';
 import {
@@ -12,8 +14,16 @@ import {
   beforeUpdate,
   type FollowUpWorkers,
 } from '../record-hooks.js';
-import { asEntity, CrmError, object, toText, type Entity } from '../schema.js';
+import {
+  asEntity,
+  CrmError,
+  definitions,
+  object,
+  toText,
+  type Entity,
+} from '../schema.js';
 import type { CrmService } from '../service.js';
+import type { TaskPreparer } from '../task-preparation.js';
 import { jsonValue } from '../values.js';
 
 /**
@@ -38,6 +48,9 @@ export const PLAN_OPS = [
   'task.recordOutcome',
   'approval.submit',
   'approval.withdraw',
+  'approval.decide',
+  'suggestion.decide',
+  'mail.send',
 ] as const;
 export type PlanOp = (typeof PLAN_OPS)[number];
 
@@ -72,11 +85,17 @@ export const PLAN_STATUSES = [
   'stale',
   'voided',
   'expired',
+  // A newer plan of the person's does what this one would (the same
+  // suggestion or approval decided, the same fields changed, mail to the
+  // same people): it waits no longer, so the two cannot both be carried out.
+  'superseded',
 ] as const;
 export type PlanStatus = (typeof PLAN_STATUSES)[number];
 
 // What a step does to a record, as the rehearsal found it.
 export interface StepCheck {
+  // An email's: the record it concerns, if any (its entity then only a
+  // placeholder).
   entity: Entity;
   id: string | null;
   name: string;
@@ -84,6 +103,42 @@ export interface StepCheck {
   // The record's `updatedAt` when rehearsed: a later one at execution means
   // someone changed it since, and the plan is stale.
   updatedAt?: string | null;
+  // An email a step sends, whole, as it goes out: from the person's own
+  // mailbox, to whom, what it says.
+  mail?: PlanMail;
+}
+
+export interface PlanMail {
+  from: string;
+  to: string[];
+  cc: string[];
+  subject: string;
+  text: string;
+}
+
+// What a plan works with besides the CRM: the AI's follow-ups a step
+// decides or starts, and the Mail plugin it sends with (each absent
+// without its plugin).
+export interface PlanWorkers extends FollowUpWorkers {
+  tasks?: () => TaskPreparer | undefined;
+  mail?: () => MailService | undefined;
+  // Brings the person's mail into the timeline once a plan sent some.
+  mailSent?: (userId: string) => Promise<unknown>;
+}
+
+// The mailbox an email goes from: the person's own, one that sends.
+interface Sender {
+  accountId: string;
+  identityId: string;
+  address: string;
+}
+
+// What a step runs with: the mailbox each email goes from, found before the
+// transaction opens (the Mail plugin reads outside it), and, carrying the
+// plan out, the step's row, which an email's delivery is written to.
+interface StepContext {
+  senders: Map<number, Sender>;
+  row?: { planId: string; id: string };
 }
 
 export interface PlanStepView {
@@ -154,7 +209,7 @@ export class CrmPlans {
 
   constructor(
     private readonly service: CrmService,
-    private readonly workers: FollowUpWorkers,
+    private readonly workers: PlanWorkers,
   ) {}
 
   // Rehearses the steps as the person, and keeps the plan when every one of
@@ -166,6 +221,10 @@ export class CrmPlans {
   ): Promise<PlanView> {
     if (!input.steps.length || input.steps.length > MAX_STEPS)
       throw new CrmError('invalidInput', 400, 'steps');
+    // The same plan proposed again in its conversation (a model repeating
+    // its command) is the one already waiting, not a second card.
+    const same = await this.waitingTwin(actor, input, source);
+    if (same) return same;
     const checks = await this.rehearse(actor, input.steps);
     const now = new Date();
     const id = randomUUID();
@@ -210,14 +269,93 @@ export class CrmPlans {
           })
           .execute();
       }
+      await this.supersede(query, actor, id, input.steps, now);
     });
     return this.get(actor, id);
+  }
+
+  // The person's other waiting plans that a new one conflicts with, marked
+  // replaced by it (`failure.supersededBy`), wherever they were proposed.
+  private async supersede(
+    query: QueryAdapter,
+    actor: Actor,
+    id: string,
+    steps: PlanStepInput[],
+    now: Date,
+  ): Promise<void> {
+    const keys = new Set(steps.flatMap(conflictKeys));
+    if (!keys.size) return;
+    const waiting = await query
+      .selectFrom('crmPlans')
+      .select(['id'])
+      .where('proposerUserId', '=', actor.id)
+      .where('status', '=', 'pending')
+      .where('id', '!=', id)
+      .execute();
+    for (const plan of waiting) {
+      const rows = await query
+        .selectFrom('crmPlanRows')
+        .select(['op', 'params'])
+        .where('planId', '=', plan.id)
+        .execute();
+      const conflicts = rows.some((row) =>
+        conflictKeys({
+          op: toText(row.op) as PlanOp,
+          params: json(row.params) ?? {},
+        }).some((key) => keys.has(key)),
+      );
+      if (!conflicts) continue;
+      await query
+        .updateTable('crmPlans')
+        .set({
+          status: 'superseded',
+          failure: JSON.stringify({ code: 'superseded', supersededBy: id }),
+          updatedAt: now.toISOString(),
+        })
+        .where('id', '=', plan.id)
+        .where('status', '=', 'pending')
+        .execute();
+    }
+  }
+
+  private async waitingTwin(
+    actor: Actor,
+    input: PlanInput,
+    source: PlanSource,
+  ): Promise<PlanView | null> {
+    if (!source.conversationId) return null;
+    const rows = await this.service.database
+      .query()
+      .selectFrom('crmPlans')
+      .select(['id'])
+      .where('proposerUserId', '=', actor.id)
+      .where('conversationId', '=', source.conversationId)
+      .where('status', '=', 'pending')
+      .where('title', '=', input.title.trim().slice(0, 255))
+      .execute();
+    const steps = JSON.stringify(
+      input.steps.map((step) => [step.op, step.ref ?? null, step.params]),
+    );
+    for (const row of rows) {
+      const plan = await this.load(toText(row.id));
+      if (
+        JSON.stringify(
+          plan.steps.map((step) => [step.op, step.ref, step.params]),
+        ) === steps
+      )
+        return plan;
+    }
+    return null;
   }
 
   // Runs every step in a transaction that is always rolled back: what each
   // would do, or the first one refused.
   async rehearse(actor: Actor, steps: PlanStepInput[]): Promise<StepCheck[]> {
     try {
+      const senders = await this.sendersOf(
+        actor,
+        steps.map((step, index) => ({ ...step, position: index + 1 })),
+      );
       await this.service.mutate(
         { ...actor, via: 'assistant' },
         async (prepared, query) => {
@@ -225,11 +363,11 @@ export class CrmPlans {
           const checks: StepCheck[] = [];
           for (const [index, step] of steps.entries())
             checks.push(
-              await this.runStep(prepared, query, step, index + 1, refs).catch(
-                (error: unknown) => {
-                  throw new StepRefused(index + 1, error);
-                },
-              ),
+              await this.runStep(prepared, query, step, index + 1, refs, {
+                senders,
+              }).catch((error: unknown) => {
+                throw new StepRefused(index + 1, error);
+              }),
             );
           throw new Rehearsed(checks);
         },
@@ -326,6 +464,17 @@ export class CrmPlans {
       throw new CrmError('conflict', 409);
     const stale = await this.staleStep(actor, steps);
     if (stale) return this.close(actor, plan, 'stale', stale);
+    // The mailboxes the emails go from, still the person's and sending.
+    let senders: Map<number, Sender>;
+    try {
+      senders = await this.sendersOf(actor, steps);
+    } catch (error) {
+      if (!(error instanceof StepRefused)) {
+        await this.reopen(id);
+        throw error;
+      }
+      return this.close(actor, plan, 'failed', failureOf(error));
+    }
     const origin: ActorOrigin = {
       kind: 'plan',
       planId: plan.id,
@@ -353,6 +502,7 @@ export class CrmPlans {
               { op: step.op, ref: step.ref ?? undefined, params: step.params },
               step.position,
               refs,
+              { senders, row: { planId: plan.id, id: step.id } },
             ).catch((error: unknown) => {
               throw new StepRefused(step.position, error);
             });
@@ -584,15 +734,118 @@ export class CrmPlans {
     };
   }
 
+  // The mailbox each email of the steps goes from, as the person: the one
+  // the step names, else their first that sends. Read before the
+  // transaction opens, the Mail plugin reading with connections of its own.
+  private async sendersOf(
+    actor: Actor,
+    steps: { op: PlanOp; params: Row; position: number }[],
+  ): Promise<Map<number, Sender>> {
+    const senders = new Map<number, Sender>();
+    for (const step of steps) {
+      if (step.op !== 'mail.send') continue;
+      try {
+        senders.set(step.position, await this.senderOf(actor, step.params));
+      } catch (error) {
+        throw new StepRefused(step.position, error);
+      }
+    }
+    return senders;
+  }
+
+  private async senderOf(actor: Actor, params: Row): Promise<Sender> {
+    const mail = this.workers.mail?.();
+    if (!mail) throw new CrmError('noMailbox', 409);
+    const context = { actorId: actor.id, locale: actor.locale };
+    const [accounts, providers] = await Promise.all([
+      mail.listAccounts(context),
+      mail.listProviders(),
+    ]);
+    // As the mail pages offer them (client mail.tsx, sendable).
+    const sending = accounts.filter(
+      (account) =>
+        account.status === 'active' &&
+        providers.some(
+          (provider) =>
+            provider.type === account.provider.type &&
+            provider.name === account.provider.name &&
+            provider.capabilities.send === true,
+        ),
+    );
+    const wanted = toText(params.accountId ?? '').trim();
+    const account = wanted
+      ? sending.find((item) => item.id === wanted)
+      : sending[0];
+    if (!account)
+      throw new CrmError('noMailbox', 409, wanted ? 'accountId' : undefined);
+    const identities = await mail.listIdentities(context, account.id);
+    const identity =
+      identities.find((item) => item.isPrimary && item.canSend) ??
+      identities.find((item) => item.canSend);
+    if (!identity) throw new CrmError('noMailbox', 409);
+    return {
+      accountId: account.id,
+      identityId: identity.id,
+      address: identity.address,
+    };
+  }
+
+  // Sends a confirmed plan's email once its changes are committed, as the
+  // person, and writes how that went on its step: sent (or queued by the
+  // provider), or failed, the rest of the plan standing either way.
+  private async sendMail(
+    actor: Actor,
+    sender: Sender,
+    mail: PlanMail,
+    row: { planId: string; id: string },
+  ): Promise<void> {
+    let result: Row;
+    let status: PlanStepView['status'] = 'done';
+    try {
+      const service = this.workers.mail?.();
+      if (!service) throw new CrmError('noMailbox', 409);
+      const submission = await service.sendMessage(
+        { actorId: actor.id, locale: actor.locale },
+        {
+          accountId: sender.accountId,
+          identityId: sender.identityId,
+          to: mail.to.map((address) => ({ address })),
+          cc: mail.cc.map((address) => ({ address })),
+          subject: mail.subject,
+          text: mail.text,
+          // One delivery per step, however often this runs.
+          idempotencyKey: `crm-plan:${row.planId}:${row.id}`,
+        },
+      );
+      if (['failed', 'cancelled'].includes(submission.status))
+        throw new CrmError('mailFailed', 502);
+      result = { submissionId: submission.id, delivery: submission.status };
+      await this.workers.mailSent?.(actor.id).catch(() => undefined);
+    } catch (error) {
+      status = 'failed';
+      result = {
+        code: error instanceof CrmError ? error.code : 'mailFailed',
+      };
+    }
+    await this.service.database
+      .query()
+      .updateTable('crmPlanRows')
+      .set({ status, result: JSON.stringify(result) })
+      .where('id', '=', row.id)
+      .execute();
+  }
+
   // One step, inside the transaction `query` belongs to, as `actor`; what
   // it does to its record. What the change starts besides (a follow-up, a
-  // notification) waits for the commit through the prepared actor.
+  // notification, an email) waits for the commit through the prepared
+  // actor.
   private async runStep(
     actor: Actor,
     query: QueryAdapter,
     step: PlanStepInput,
     position: number,
     refs: Map<string, string>,
+    context: StepContext,
   ): Promise<StepCheck> {
     const params = resolveRefs(step.params, refs);
     const remember = (id: string) => {
@@ -745,8 +998,252 @@ export class CrmPlans {
         );
         return checkOf('approvals', before, { status: record.status });
       }
+      // The approver's decision, with the comment the applicant reads; the
+      // CRM checks they are its approver, as on the approval's page.
+      case 'approval.decide': {
+        const id = toText(params.approvalId);
+        const decision = toText(params.decision);
+        if (decision !== 'approve' && decision !== 'reject')
+          throw new CrmError('invalidInput', 400, 'decision');
+        const comment = toText(params.comment ?? '').trim();
+        const before = await this.service.get(actor, 'approvals', id, query);
+        const record = await this.service.approvalAction(
+          actor,
+          id,
+          decision,
+          comment,
+          query,
+        );
+        const check = checkOf('approvals', before, { status: record.status });
+        if (comment)
+          check.changes.push({ field: 'comment', from: null, to: comment });
+        return check;
+      }
+      // A follow-up's or a task preparation's card decided as its own
+      // buttons would: accepting takes what the card proposes as it stands.
+      case 'suggestion.decide': {
+        const entity = toText(params.entity);
+        if (!['leads', 'opportunities', 'tasks'].includes(entity))
+          throw new CrmError('invalidInput', 400, 'entity');
+        const id = toText(params.recordId);
+        const decision = params.decision === 'dismiss' ? 'dismiss' : 'accept';
+        const before = await this.service.get(
+          actor,
+          entity as Entity,
+          id,
+          query,
+        );
+        const entry = await pendingSuggestion(
+          query,
+          entity,
+          id,
+          toText(params.entryId ?? ''),
+        );
+        const settings = await this.service.settings(query);
+        let taskId: unknown;
+        if (entity === 'tasks') {
+          const preparer = this.workers.tasks?.();
+          if (!preparer) throw new CrmError('aiDisabled', 409);
+          await preparer.decideIn(actor, query, settings, {
+            taskId: id,
+            entryId: entry.id,
+            decision,
+          });
+        } else if (entity === 'leads') {
+          const evaluator = this.workers.leads();
+          if (!evaluator) throw new CrmError('aiDisabled', 409);
+          const verdict = object(entry.ai.result);
+          taskId = (
+            await evaluator.decideIn(actor, query, settings, {
+              leadId: id,
+              entryId: entry.id,
+              decision,
+              // The web findings, all ticked as on the card.
+              fields: entry.ai.enrichedAt ? [] : fieldsOf(verdict.enrich),
+            })
+          ).ai.taskId;
+        } else {
+          const evaluator = this.workers.opportunities();
+          if (!evaluator) throw new CrmError('aiDisabled', 409);
+          const verdict = object(entry.ai.result);
+          taskId = (
+            await evaluator.decideIn(actor, query, settings, {
+              opportunityId: id,
+              entryId: entry.id,
+              decision,
+              // The card's own: every update and finding ticked, every
+              // approval kept with its default approver, every contact.
+              fields: [
+                ...fieldsOf(verdict.updates),
+                ...(entry.ai.enrichedAt ? [] : fieldsOf(verdict.enrich)),
+              ],
+              approvals: Array.isArray(verdict.approvals)
+                ? verdict.approvals.map((_, index) => ({ index }))
+                : [],
+            })
+          ).ai.taskId;
+        }
+        const after = await this.service.get(
+          actor,
+          entity as Entity,
+          id,
+          query,
+        );
+        const fields = new Set(
+          definitions[entity as Entity].fields.map((field) => field.key),
+        );
+        const check = checkOf(
+          entity as Entity,
+          before,
+          Object.fromEntries(
+            Object.entries(after).filter(([field]) => fields.has(field)),
+          ),
+        );
+        const task = taskId
+          ? await this.service
+              .get(actor, 'tasks', toText(taskId), query)
+              .catch(() => null)
+          : null;
+        check.changes = [
+          {
+            field: 'suggestion',
+            from: null,
+            to: toText(object(entry.ai.result).summary ?? ''),
+          },
+          ...check.changes,
+          ...(task
+            ? [{ field: 'nextTask', from: null, to: toText(task.name) }]
+            : []),
+        ];
+        return check;
+      }
+      // An email from the person's own mailbox, sent once the plan is
+      // carried out and committed; the record it concerns, if named, must
+      // be one they read.
+      case 'mail.send': {
+        const sender = context.senders.get(position);
+        if (!sender) throw new CrmError('noMailbox', 409);
+        const mail: PlanMail = {
+          from: sender.address,
+          to: addressesOf(params.to),
+          cc: addressesOf(params.cc),
+          subject: toText(params.subject ?? '').trim(),
+          text: toText(params.text ?? '').trim(),
+        };
+        if (!mail.to.length) throw new CrmError('required', 400, 'to');
+        if (!mail.subject) throw new CrmError('required', 400, 'subject');
+        if (!mail.text) throw new CrmError('required', 400, 'text');
+        const entity = params.entity ? asEntity(toText(params.entity)) : null;
+        const record =
+          entity && params.recordId
+            ? await this.service.get(
+                actor,
+                entity,
+                toText(params.recordId),
+                query,
+              )
+            : null;
+        const row = context.row;
+        if (row) after(() => this.sendMail(actor, sender, mail, row));
+        return {
+          entity: entity ?? 'contacts',
+          id: record ? toText(record.id) : null,
+          name: record ? toText(record.name) : '',
+          changes: [],
+          mail,
+        };
+      }
     }
   }
+}
+
+// The waiting suggestion a step decides: the one it names, else the
+// record's newest.
+async function pendingSuggestion(
+  query: QueryAdapter,
+  entity: string,
+  recordId: string,
+  entryId: string,
+) {
+  let select = query
+    .selectFrom('crmHistory')
+    .selectAll()
+    .where('entity', '=', entity)
+    .where('recordId', '=', recordId)
+    .where('action', '=', 'ai');
+  select = entryId
+    ? select.where('id', '=', entryId)
+    : select.where('aiStatus', '=', 'pending');
+  const row = await select.orderBy('createdAt', 'desc').executeTakeFirst();
+  if (!row) throw new CrmError('evaluationDecided', 409);
+  const entry = readEntry<Row>(row);
+  if (entry.status !== 'pending' || !entry.ai.result)
+    throw new CrmError('evaluationDecided', 409);
+  return entry;
+}
+
+// The fields a card's list proposes (`{ field }` each).
+function fieldsOf(items: unknown): string[] {
+  return Array.isArray(items)
+    ? items.map((item) => toText(object(item).field)).filter(Boolean)
+    : [];
+}
+
+// Addresses as a step gives them: a list, or one string split at commas.
+function addressesOf(value: unknown): string[] {
+  const items = Array.isArray(value)
+    ? value
+    : toText(value ?? '').split(/[,;]/u);
+  return items
+    .map((item) =>
+      typeof item === 'object' && item
+        ? toText(object(item).address ?? '')
+        : toText(item),
+    )
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+// What a step decides or changes that another plan's step must not do as
+// well: a field of a record, a suggestion, an approval's state, mail to an
+// address. A record a step creates conflicts with nothing, nor does a
+// comment; a value naming a record the plan creates (`$1`) is left out.
+function conflictKeys(step: Pick<PlanStepInput, 'op' | 'params'>): string[] {
+  const p = step.params;
+  const known = (...parts: unknown[]): string | null => {
+    const texts = parts.map((part) => toText(part ?? ''));
+    return texts.some((text) => !text || text.startsWith('$'))
+      ? null
+      : texts.join(':');
+  };
+  const keys: (string | null)[] = [];
+  switch (step.op) {
+    case 'record.update':
+      for (const field of Object.keys(object(p.values)))
+        keys.push(known(p.entity, p.id, field));
+      break;
+    case 'task.recordOutcome':
+      keys.push(known('tasks', p.taskId, 'status'));
+      break;
+    case 'lead.convert':
+      keys.push(known('leads', p.leadId, 'status'));
+      break;
+    case 'approval.submit':
+    case 'approval.withdraw':
+    case 'approval.decide':
+      keys.push(known('approvals', p.approvalId, 'status'));
+      break;
+    case 'suggestion.decide':
+      keys.push(known('suggestion', p.entity, p.recordId));
+      break;
+    case 'mail.send':
+      for (const address of [...addressesOf(p.to), ...addressesOf(p.cc)])
+        keys.push(known('mail', address.toLowerCase()));
+      break;
+    default:
+      break;
+  }
+  return keys.filter((key): key is string => Boolean(key));
 }
 
 // A later step names a record an earlier one created by `$<position>` or

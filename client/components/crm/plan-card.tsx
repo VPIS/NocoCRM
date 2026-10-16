@@ -2,14 +2,7 @@ import { Badge } from '#components/ui/badge';
 import { Button } from '#components/ui/button';
 import { Checkbox } from '#components/ui/checkbox';
 import { Spinner } from '#components/ui/spinner';
-import { useChatPanel } from '@nocobase/app-plugin-agents/client/chat';
-import {
-  ArrowRight,
-  Check,
-  ClipboardList,
-  MessagesSquare,
-  X,
-} from 'lucide-react';
+import { ArrowRight, Check, ClipboardList, X } from 'lucide-react';
 import {
   useEffect,
   useRef,
@@ -30,11 +23,12 @@ import {
 import { ErrorNotice, RecordLink, Value } from './common.js';
 import { InlineField } from './inline.js';
 import { Markdown } from './markdown.js';
-import { usePlanDecision, usePlans, type PlanView } from './plans.js';
+import { usePlanDecision, type PlanView } from './plans.js';
 
 // A plan an agent proposed, as its decision card: what it changes, step by step, and the one choice it asks
-// for — carry it out, leaving steps out if need be, or void it. The same
-// card in the agent's conversation, the inbox and a record's page.
+// for — carry it out, leaving steps out if need be, or void it. Shown in
+// the agent's conversation alone: a record's page no longer lists the plans
+// waiting on it, which crowded its particulars.
 
 type Step = PlanView['steps'][number];
 
@@ -49,21 +43,13 @@ const TONES: Record<
   stale: 'destructive',
   voided: 'muted',
   expired: 'muted',
+  superseded: 'muted',
 };
 
-export function PlanCard({
-  plan,
-  origin = true,
-}: {
-  plan: PlanView;
-  // Whether to link the conversation it came from (not inside it).
-  origin?: boolean;
-}): ReactElement {
+export function PlanCard({ plan }: { plan: PlanView }): ReactElement {
   const { text, language } = useCrmText();
   const { data: meta } = useMetadata();
   const { decide, revise, busy, error, gone } = usePlanDecision(plan);
-  // The conversation it came from opens in the assistant panel.
-  const chat = useChatPanel();
   const [skipped, setSkipped] = useState<Set<number>>(() => new Set());
   // Once decided here, focus goes to what came of it, the buttons being gone.
   const outcomeRef = useRef<HTMLParagraphElement>(null);
@@ -116,21 +102,6 @@ export function PlanCard({
             time: relativeTime(plan.createdAt, language, now, text('justNow')),
           })}
         </span>
-        {origin && plan.conversationId ? (
-          <button
-            type='button'
-            onClick={() =>
-              chat.openChat({
-                conversationId: plan.conversationId,
-                view: 'chat',
-              })
-            }
-            className='inline-flex items-center gap-1 underline-offset-4 hover:underline'
-          >
-            <MessagesSquare className='size-3.5' aria-hidden />
-            {text('plans.fromConversation')}
-          </button>
-        ) : null}
         <Badge variant={TONES[plan.status]} className='ml-auto'>
           {text(`plans.status.${plan.status}`)}
         </Badge>
@@ -253,6 +224,8 @@ function outcomeText(
       });
     case 'expired':
       return text('plans.outcome.expired');
+    case 'superseded':
+      return text('plans.outcome.superseded');
     default:
       return text('plans.status.executing');
   }
@@ -280,9 +253,13 @@ function PlanStep({
   // The record it changes, or the one it created once carried out.
   const recordId =
     check?.id ?? (step.result ? toText(step.result.id ?? '') || null : null);
-  const what = text(`plans.op.${step.op}`, {
-    entity: text(`entity.${entity}`),
-  });
+  // Deciding an approval or a suggestion reads as the decision itself.
+  const what = text(
+    step.op === 'approval.decide' || step.op === 'suggestion.decide'
+      ? `plans.op.${step.op.split('.')[0]}.${toText(step.params.decision)}`
+      : `plans.op.${step.op}`,
+    { entity: text(`entity.${entity}`) },
+  );
   const removed = step.status === 'removed' || (selectable && !kept);
   // The values a step that creates or updates a record writes may be changed.
   const editable =
@@ -319,6 +296,9 @@ function PlanStep({
             )
           ) : null}
         </div>
+        {check?.mail ? (
+          <StepMail mail={check.mail} step={step} removed={removed} />
+        ) : null}
         {check?.changes.length ? (
           <dl className='mt-2 flex flex-col gap-1 text-sm'>
             {check.changes.map((change) => (
@@ -327,8 +307,8 @@ function PlanStep({
                 className='flex items-baseline gap-3 break-words'
               >
                 <dt className='w-24 shrink-0 text-muted-foreground'>
-                  {change.field === 'comment'
-                    ? text('plans.comment')
+                  {['comment', 'suggestion', 'nextTask'].includes(change.field)
+                    ? text(`plans.${change.field}`)
                     : text(fieldLabelKey(entity, change.field), {
                         defaultValue: change.field,
                       })}
@@ -349,6 +329,56 @@ function PlanStep({
         ) : null}
       </div>
     </li>
+  );
+}
+
+// An email a step sends, whole, as it goes out: the person reads every
+// word before confirming. Once carried out, whether it went.
+function StepMail({
+  mail,
+  step,
+  removed,
+}: {
+  mail: NonNullable<NonNullable<Step['check']>['mail']>;
+  step: Step;
+  removed: boolean;
+}): ReactElement {
+  const { text } = useCrmText();
+  const rows: [string, string][] = [
+    ['from', mail.from],
+    ['to', mail.to.join(', ')],
+    ...(mail.cc.length ? [['cc', mail.cc.join(', ')] as [string, string]] : []),
+    ['subject', mail.subject],
+  ];
+  return (
+    <div className='mt-2 flex flex-col gap-2 text-sm'>
+      <dl className='flex flex-col gap-1'>
+        {rows.map(([key, value]) => (
+          <div key={key} className='flex items-baseline gap-3 break-words'>
+            <dt className='w-24 shrink-0 text-muted-foreground'>
+              {text(`plans.mail.${key}`)}
+            </dt>
+            <dd className='min-w-0 flex-1'>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className='rounded-md border border-border bg-muted/40 px-3 py-2 break-words whitespace-pre-wrap'>
+        {mail.text}
+      </p>
+      <p className='text-xs text-muted-foreground'>
+        {step.status === 'failed'
+          ? text('plans.mail.notSent', {
+              reason: text(`errors.${toText(step.result?.code ?? '')}`, {
+                defaultValue: text('errors.mailFailed'),
+              }),
+            })
+          : step.status === 'done'
+            ? text('plans.mail.sent')
+            : removed
+              ? null
+              : text('plans.mail.later')}
+      </p>
+    </div>
   );
 }
 
@@ -381,34 +411,33 @@ function StepValue({
         to={to}
       />
     );
-  const hadValue = from !== null && from !== undefined && from !== '';
+  const long = isLong(field, from, to);
   return (
-    <span className='flex min-w-0 items-baseline gap-x-1'>
-      {hadValue ? (
-        <>
-          <span className='shrink-0 text-muted-foreground line-through'>
-            <ChangeValue field={field} from={null} to={from} />
-          </span>
-          <ArrowRight
-            className='size-3 shrink-0 self-center text-muted-foreground'
-            aria-hidden
+    <Change
+      long={long}
+      old={
+        filled(from) ? (
+          <OldValue field={field} value={from} long={long} />
+        ) : null
+      }
+      next={
+        <span
+          className={long ? '-mx-2 -my-1 block' : '-mx-2 -my-1 min-w-36 flex-1'}
+        >
+          <InlineField
+            entity={entity}
+            record={{ id: '', [name]: to } as unknown as CrmRecord}
+            field={field}
+            label={toText(
+              text(fieldLabelKey(entity, name), { defaultValue: name }),
+            )}
+            editable
+            plain
+            onSave={async (value) => onRevise({ [name]: value })}
           />
-        </>
-      ) : null}
-      <span className='-mx-2 -my-1 min-w-0 flex-1'>
-        <InlineField
-          entity={entity}
-          record={{ id: '', [name]: to } as unknown as CrmRecord}
-          field={field}
-          label={toText(
-            text(fieldLabelKey(entity, name), { defaultValue: name }),
-          )}
-          editable
-          plain
-          onSave={async (value) => onRevise({ [name]: value })}
-        />
-      </span>
-    </span>
+        </span>
+      }
+    />
   );
 }
 
@@ -423,80 +452,113 @@ function ChangeValue({
   from: unknown;
   to: unknown;
 }): ReactElement {
-  const show = (value: unknown): ReactNode =>
-    value === null || value === undefined || value === '' ? (
-      <span className='text-muted-foreground'>—</span>
-    ) : (
+  const long = isLong(field, from, to);
+  return (
+    <Change
+      long={long}
+      old={
+        filled(from) ? (
+          <OldValue field={field} value={from} long={long} />
+        ) : null
+      }
+      next={
+        filled(to) ? (
+          <span className='min-w-0 break-words'>
+            <Value
+              field={field}
+              record={{ id: '', [field.key]: to } as unknown as CrmRecord}
+              plain
+            />
+          </span>
+        ) : (
+          <span className='text-muted-foreground'>—</span>
+        )
+      }
+    />
+  );
+}
+
+const filled = (value: unknown): boolean =>
+  value !== null && value !== undefined && value !== '';
+
+// A value that reads as a paragraph (a long text, or a value too long for a
+// line): its old value goes above the new one rather than beside it.
+function isLong(
+  field: Field | { key: string; type: string },
+  from: unknown,
+  to: unknown,
+): boolean {
+  return (
+    field.type === 'textarea' ||
+    [from, to].some(
+      (value) =>
+        typeof value === 'string' &&
+        (value.length > 40 || value.includes('\n')),
+    )
+  );
+}
+
+// The old value beside or above the new: struck through, wrapping where
+// the card ends; a paragraph as plain text (its Markdown marks left out),
+// two lines of it at most.
+function OldValue({
+  field,
+  value,
+  long,
+}: {
+  field: Field | { key: string; type: string };
+  value: unknown;
+  long: boolean;
+}): ReactElement {
+  if (long)
+    return (
+      <div className='line-clamp-2 break-words whitespace-pre-wrap text-muted-foreground line-through'>
+        {toText(value)
+          .replace(/\*\*|__|`/gu, '')
+          .replace(/^#{1,6}\s+/gmu, '')}
+      </div>
+    );
+  return (
+    <span className='max-w-full shrink-0 break-words text-muted-foreground line-through'>
       <Value
-        field={field.type === 'textarea' ? { ...field, type: 'text' } : field}
+        field={field}
         record={{ id: '', [field.key]: value } as unknown as CrmRecord}
         plain
       />
-    );
-  return (
-    <span className='inline-flex flex-wrap items-baseline gap-x-1'>
-      {from !== null && from !== undefined && from !== '' ? (
-        <>
-          <span className='text-muted-foreground line-through'>
-            {show(from)}
-          </span>
-          <ArrowRight
-            className='size-3 self-center text-muted-foreground'
-            aria-hidden
-          />
-        </>
-      ) : null}
-      <span>{show(to)}</span>
     </span>
   );
 }
 
-// Atop a record's particulars, where a lead's possible duplicates ask for
-// attention, so it shows on every tab: the plans waiting on the reader that
-// would change this record (frontend standard §S3.2). A plan decided here
-// stays, showing its outcome, until the page is left.
-export function WaitingPlans({
-  entity,
-  recordId,
+// Old → new on a line, wrapping as a whole where the card ends; a
+// paragraph's old value above the new one.
+function Change({
+  long,
+  old,
+  next,
 }: {
-  entity: Entity;
-  recordId: string;
-}): ReactElement | null {
-  const { text } = useCrmText();
-  const plans = usePlans({ target: `${entity}:${recordId}` });
-  // The plans seen waiting during this visit, kept once decided.
-  const [seen, setSeen] = useState<ReadonlySet<string>>(() => new Set());
-  const pending = (plans.data ?? [])
-    .filter((plan) => plan.status === 'pending')
-    .map((plan) => plan.id);
-  if (pending.some((id) => !seen.has(id)))
-    setSeen(new Set([...seen, ...pending]));
-  const shown = (plans.data ?? []).filter(
-    (plan) => plan.status === 'pending' || seen.has(plan.id),
-  );
-  if (plans.isLoading || !shown.length) return null;
-  const waiting = shown.filter((plan) => plan.status === 'pending');
-  return (
-    <section
-      className='flex flex-col gap-2'
-      aria-label={text('plans.waitingOnYou')}
-    >
-      <div className='flex items-baseline gap-2 px-1'>
-        <h2 className='text-sm font-medium'>
-          {text('plans.waitingOnYou')}
-          {waiting.length ? (
-            <>
-              <span className='sr-only'>: </span>
-              <span className='ml-1.5 text-muted-foreground tabular-nums'>
-                {waiting.length}
-              </span>
-            </>
-          ) : null}
-        </h2>
+  long: boolean;
+  old: ReactNode;
+  next: ReactNode;
+}): ReactElement {
+  if (long)
+    return (
+      <div className='flex min-w-0 flex-col gap-1'>
+        {old}
+        {next}
       </div>
-      {shown.map((plan) => (
-        <PlanCard key={plan.id} plan={plan} />
-      ))}
-    </section>
+    );
+  return (
+    <span className='flex min-w-0 flex-wrap items-baseline gap-x-1'>
+      {old ? (
+        <>
+          {old}
+          <ArrowRight
+            className='size-3 shrink-0 self-center text-muted-foreground'
+            aria-hidden
+          />
+        </>
+      ) : null}
+      {next}
+    </span>
   );
 }

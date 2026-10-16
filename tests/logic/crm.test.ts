@@ -106,8 +106,11 @@ import {
 import { secretsServiceToken } from '@nocobase/app-server/secrets';
 import { serverFileRepositoryManagerToken } from '@nocobase/app-plugin-file/server';
 import { createHmac } from 'node:crypto';
+import { watchAiWork } from '../../server/providers/crm/ai-watches.js';
+import { deliverAiWork } from '../../server/providers/crm-agents/ai-work-news.js';
 import {
   agentsToken,
+  type Agents,
   type CallerIdentity,
 } from '@nocobase/app-plugin-agents/server/tokens';
 import {
@@ -125,7 +128,12 @@ import { crmConversationRules } from '../../server/providers/crm-agents/rules.js
 import {
   nameAssistant,
   provisionAssistant,
+  refreshAssistantInstructions,
 } from '../../server/providers/crm-agents/assistant.js';
+import {
+  CRM_ASSISTANT_INSTRUCTIONS,
+  PREVIOUS_ASSISTANT_INSTRUCTIONS,
+} from '../../server/providers/crm-agents/preset.js';
 import { provisionSkills } from '../../server/providers/crm-agents/library.js';
 import {
   nameWorkAgents,
@@ -248,6 +256,10 @@ const web = {
 };
 let plans: CrmPlans;
 const planOutcomes: PlanOutcome[] = [];
+// What reached a conversation as news (a plan's outcome, the AI's work).
+const delivered: { conversationId: string; news: Record<string, unknown> }[] =
+  [];
+let fakeAgents: Agents;
 // The Mail plugin as the mail timeline sees it: each user's connected
 // mailboxes and the messages they hold, set by a test.
 type FakeMessage = {
@@ -470,13 +482,22 @@ beforeAll(async () => {
   // The Agents plugin as the CRM's routes use it: the gate, and where a
   // run's plan goes back to.
   const gate = crmActionGate(service);
-  container.instance(agentsToken, {
+  fakeAgents = {
     gate: { allowed: (identity: CallerIdentity) => gate.allowed(identity) },
-    tx: { read: () => null },
+    tx: { read: () => null, run: (fn: (tx: null) => unknown) => fn(null) },
     conversations: {
       homeOf: () => Promise.resolve({ id: 'conversation-1' }),
+      deliver: (
+        _tx: unknown,
+        conversationId: string,
+        news: Record<string, unknown>,
+      ) => {
+        delivered.push({ conversationId, news });
+        return Promise.resolve(null);
+      },
     },
-  } as unknown as ReturnType<typeof container.resolve<typeof agentsToken>>);
+  } as unknown as Agents;
+  container.instance(agentsToken, fakeAgents);
   plans = new CrmPlans(service, {
     leads: () => undefined,
     opportunities: () => undefined,
@@ -10392,11 +10413,12 @@ describe('agents and plans', () => {
     actions: string[],
     method = 'GET',
     body?: unknown,
+    user = 'rep',
   ): Promise<Response> =>
     router.request(path, {
       method,
       headers: {
-        'x-test-user': 'rep',
+        'x-test-user': user,
         'x-test-run-actions': actions.join(','),
         'Content-Type': 'application/json',
       },
@@ -10504,6 +10526,17 @@ describe('agents and plans', () => {
       'Planned Works',
       'Pat Planner',
     ]);
+    // Proposed again word for word in its conversation: the same card.
+    const twin = await asRun('/plans', ['crm.plans/create'], 'POST', {
+      title: 'Add Planned Works and its buyer',
+      summary: 'Met at the fair.',
+      steps: plan.steps.map((step) => ({
+        op: step.op,
+        ...(step.ref ? { ref: step.ref } : {}),
+        params: step.params,
+      })),
+    });
+    expect((await twin.json()).data.id).toBe(plan.id);
     // Rehearsed and rolled back: nothing exists yet.
     expect(
       (
@@ -10682,6 +10715,457 @@ describe('agents and plans', () => {
       search: 'Qzxrevised',
     });
     expect(created.data.map((lead) => lead.name)).toEqual(['Qzxrevised']);
+  });
+
+  it('decides an approval and a suggestion and sends an email in a plan the person confirms', async () => {
+    // An email needs a mailbox of the person's that sends.
+    const noMailbox = await asRun('/plans', ['crm.plans/create'], 'POST', {
+      title: 'Write to the buyer',
+      steps: [
+        {
+          op: 'mail.send',
+          params: {
+            to: ['buyer@example.com'],
+            subject: 'Quote',
+            text: 'Attached.',
+          },
+        },
+      ],
+    });
+    expect(noMailbox.status).toBe(400);
+    expect(await noMailbox.json()).toMatchObject({
+      error: {
+        reason: 'PLAN_STEP_REFUSED',
+        metadata: { detail: 'noMailbox' },
+      },
+    });
+
+    const sent: { actorId: string; input: Record<string, unknown> }[] = [];
+    let failing = false;
+    const mail = {
+      listAccounts: async ({ actorId }: { actorId: string }) =>
+        actorId === 'manager'
+          ? [
+              {
+                id: 'box-manager',
+                address: 'manager@example.com',
+                status: 'active',
+                provider: { type: 'smtp', name: 'smtp' },
+              },
+            ]
+          : [],
+      listProviders: async () => [
+        { type: 'smtp', name: 'smtp', capabilities: { send: true } },
+      ],
+      listIdentities: async () => [
+        {
+          id: 'identity-manager',
+          accountId: 'box-manager',
+          address: 'manager@example.com',
+          isPrimary: true,
+          canSend: true,
+        },
+      ],
+      sendMessage: async (
+        { actorId }: { actorId: string },
+        input: Record<string, unknown>,
+      ) => {
+        if (failing) throw new Error('relay down');
+        sent.push({ actorId, input });
+        return {
+          id: 'submission-1',
+          accountId: 'box-manager',
+          status: 'queued',
+        };
+      },
+    };
+    const synced: string[] = [];
+    const engine = new CrmPlans(service, {
+      leads: () => new LeadEvaluator(service, new ServiceContainer()),
+      opportunities: () => undefined,
+      mail: () => mail as never,
+      mailSent: async (userId) => {
+        synced.push(userId);
+      },
+    });
+    const source = {
+      agentId: 'agent-1',
+      agentName: 'AI',
+      runId: 'run-1',
+      conversationId: 'conversation-1',
+    };
+
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Planned approval company',
+    });
+    const opportunity = await service.save(actor('rep'), 'opportunities', {
+      name: 'Planned approval deal',
+      companyId: company.id,
+    });
+    const approval = await service.save(actor('rep'), 'approvals', {
+      name: 'Planned discount',
+      opportunityId: opportunity.id,
+      topic: 'discount',
+      description: 'Ten percent',
+      approverId: 'manager',
+    });
+    await service.approvalAction(actor('rep'), approval.id, 'submit');
+    const decideApproval = {
+      op: 'approval.decide' as const,
+      params: {
+        approvalId: approval.id,
+        decision: 'approve',
+        comment: 'Within the standard.',
+      },
+    };
+    // Only its approver decides an approval, in a plan as on its page.
+    await expect(
+      engine.create(
+        actor('rep'),
+        { title: 'Approve my own', steps: [decideApproval] },
+        source,
+      ),
+    ).rejects.toMatchObject({ code: 'planStepRefused', field: 'steps.1' });
+
+    const lead = await service.save(actor('manager'), 'leads', {
+      name: 'Planned nurture',
+      source: 'website',
+    });
+    await database
+      .query()
+      .insertInto('crmHistory')
+      .values({
+        id: 'planned-suggestion',
+        entity: 'leads',
+        recordId: lead.id,
+        actorId: 'manager',
+        action: 'ai',
+        source: 'ai',
+        aiStatus: 'pending',
+        ai: JSON.stringify({
+          kind: 'evaluation',
+          result: {
+            recommendation: 'nurture',
+            grade: 'C',
+            summary: 'Not buying this year.',
+            reasons: [],
+            edition: null,
+            invalidReason: null,
+            nextStep: null,
+            questions: [],
+            reviewInDays: 30,
+          },
+        }),
+        changes: JSON.stringify({}),
+        createdAt: new Date().toISOString(),
+      })
+      .execute();
+
+    const plan = await engine.create(
+      actor('manager'),
+      {
+        title: 'Approve, nurture and tell the buyer',
+        steps: [
+          decideApproval,
+          {
+            op: 'suggestion.decide',
+            params: { entity: 'leads', recordId: lead.id, decision: 'accept' },
+          },
+          {
+            op: 'mail.send',
+            params: {
+              to: ['buyer@example.com'],
+              subject: 'Your discount',
+              text: 'It is approved.',
+              entity: 'opportunities',
+              recordId: opportunity.id,
+            },
+          },
+        ],
+      },
+      source,
+    );
+    const [approved, accepted, email] = plan.steps;
+    expect(approved.check?.changes).toEqual([
+      { field: 'status', from: 'pending', to: 'approved' },
+      { field: 'comment', from: null, to: 'Within the standard.' },
+    ]);
+    expect(accepted.check?.changes).toEqual(
+      expect.arrayContaining([
+        { field: 'suggestion', from: null, to: 'Not buying this year.' },
+        { field: 'status', from: 'new', to: 'nurturing' },
+        expect.objectContaining({ field: 'nextTask' }),
+      ]),
+    );
+    expect(email.check).toMatchObject({
+      entity: 'opportunities',
+      id: opportunity.id,
+      name: 'Planned approval deal',
+      mail: {
+        from: 'manager@example.com',
+        to: ['buyer@example.com'],
+        cc: [],
+        subject: 'Your discount',
+        text: 'It is approved.',
+      },
+    });
+    // Rehearsed: nothing decided, nothing sent.
+    expect(
+      (await service.get(actor('manager'), 'approvals', approval.id)).status,
+    ).toBe('pending');
+    expect((await service.get(actor('manager'), 'leads', lead.id)).status).toBe(
+      'new',
+    );
+    expect(sent).toEqual([]);
+
+    const executed = await engine.execute(actor('manager'), plan.id, {
+      revision: plan.revision,
+    });
+    expect(executed.status).toBe('executed');
+    expect(
+      (await service.get(actor('manager'), 'approvals', approval.id)).status,
+    ).toBe('approved');
+    expect((await service.get(actor('manager'), 'leads', lead.id)).status).toBe(
+      'nurturing',
+    );
+    const entry = await database
+      .query()
+      .selectFrom('crmHistory')
+      .select('aiStatus')
+      .where('id', '=', 'planned-suggestion')
+      .executeTakeFirst();
+    expect(entry?.aiStatus).toBe('accepted');
+    // Sent once committed, as the person, from their mailbox, once.
+    expect(sent).toEqual([
+      {
+        actorId: 'manager',
+        input: expect.objectContaining({
+          accountId: 'box-manager',
+          identityId: 'identity-manager',
+          to: [{ address: 'buyer@example.com' }],
+          subject: 'Your discount',
+          text: 'It is approved.',
+          idempotencyKey: `crm-plan:${plan.id}:${email.id}`,
+        }),
+      },
+    ]);
+    expect(synced).toEqual(['manager']);
+    expect(executed.steps[2]).toMatchObject({
+      status: 'done',
+      result: { submissionId: 'submission-1', delivery: 'queued' },
+    });
+
+    // An email that does not go leaves the rest carried out and says so.
+    failing = true;
+    const unsent = await engine.create(
+      actor('manager'),
+      {
+        title: 'Remind the buyer',
+        steps: [
+          {
+            op: 'comment.create',
+            params: { entity: 'leads', id: lead.id, text: 'Reminded.' },
+          },
+          {
+            op: 'mail.send',
+            params: {
+              to: ['buyer@example.com'],
+              subject: 'Reminder',
+              text: 'Still interested?',
+            },
+          },
+        ],
+      },
+      source,
+    );
+    const after = await engine.execute(actor('manager'), unsent.id, {
+      revision: unsent.revision,
+    });
+    expect(after.status).toBe('executed');
+    expect(after.steps.map((step) => step.status)).toEqual(['done', 'failed']);
+    expect(after.steps[1].result).toEqual({ code: 'mailFailed' });
+  });
+
+  it('replaces a waiting plan with a newer one that would do the same', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Twice proposed',
+      source: 'website',
+    });
+    const propose = async (title: string, steps: unknown[]) =>
+      (
+        await (
+          await asRun('/plans', ['crm.plans/create'], 'POST', { title, steps })
+        ).json()
+      ).data as PlanOutcome['plan'];
+    const rename = (name: string) => ({
+      op: 'record.update',
+      params: { entity: 'leads', id: lead.id, values: { name } },
+    });
+    const first = await propose('Rename it', [rename('First name')]);
+    // A comment conflicts with nothing: the first still waits.
+    await propose('Note it', [
+      {
+        op: 'comment.create',
+        params: { entity: 'leads', id: lead.id, text: 'Called.' },
+      },
+    ]);
+    expect((await plans.get(actor('rep'), first.id)).status).toBe('pending');
+    // Changing the same field again replaces it.
+    const second = await propose('Rename it better', [rename('Second name')]);
+    expect(await plans.get(actor('rep'), first.id)).toMatchObject({
+      status: 'superseded',
+      failure: { code: 'superseded', supersededBy: second.id },
+    });
+    expect(second.status).toBe('pending');
+    const late = await request(`/plans/${first.id}/execute`, 'rep', 'POST', {
+      revision: first.revision,
+    });
+    expect(late.status).toBe(400);
+    expect((await late.json()).error.reason).toBe('PLAN_DECIDED');
+  });
+
+  it("lets a run set the CRM's agents to work directly and tells its conversation what they came to", async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Asked by the agent',
+      source: 'website',
+    });
+    // Without the action, refused; with it, the request reaches the route
+    // itself rather than being turned into a plan (no AI worker here).
+    expect(
+      (await asRun(`/leads/${lead.id}/evaluate`, [], 'POST', {})).status,
+    ).toBe(403);
+    const asked = await asRun(
+      `/leads/${lead.id}/evaluate`,
+      ['crm.aiWork/request'],
+      'POST',
+      {},
+    );
+    expect(asked.status).toBe(503);
+    expect((await asked.json()).error.reason).not.toBe('PLAN_REQUIRED');
+    expect((await heldActions(service, 'rep')).has('crm.aiWork/request')).toBe(
+      true,
+    );
+    expect(
+      (await heldActions(service, 'outsider')).has('crm.aiWork/request'),
+    ).toBe(false);
+
+    // A follow-up the run asked for, once finished, is told to its
+    // conversation once, with what it suggests.
+    delivered.length = 0;
+    await database
+      .query()
+      .insertInto('crmHistory')
+      .values({
+        id: 'watched-entry',
+        entity: 'leads',
+        recordId: lead.id,
+        actorId: 'rep',
+        action: 'ai',
+        source: 'ai',
+        aiStatus: 'pending',
+        ai: JSON.stringify({
+          kind: 'evaluation',
+          result: { recommendation: 'nurture', summary: 'Not this year.' },
+        }),
+        changes: JSON.stringify({}),
+        createdAt: new Date().toISOString(),
+      })
+      .execute();
+    await watchAiWork(database, {
+      id: 'watched-entry',
+      entity: 'leads',
+      recordId: lead.id,
+      userId: 'rep',
+      conversationId: 'conversation-9',
+    });
+    const tell = deliverAiWork(fakeAgents, service);
+    await tell('watched-entry');
+    await tell('watched-entry');
+    expect(delivered).toHaveLength(1);
+    expect(delivered[0]).toMatchObject({
+      conversationId: 'conversation-9',
+      news: {
+        notice: {
+          type: 'aiWork',
+          title: 'Asked by the agent',
+          params: { entity: 'leads', outcome: 'ready' },
+        },
+        input: { type: 'signal' },
+      },
+    });
+    expect((delivered[0].news.input as { text: string }).text).toContain(
+      'Not this year.',
+    );
+    // Work no conversation asked for tells no one.
+    await tell('unwatched-entry');
+    expect(delivered).toHaveLength(1);
+
+    // A company's signals: started at once, the search going on, and what
+    // it found told to the conversation.
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Searched Co',
+    });
+    web.answers.push({
+      text: JSON.stringify({
+        events: [
+          {
+            type: 'funding',
+            title: 'Searched Co raised a round.',
+            date: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10),
+            refs: [1],
+          },
+        ],
+      }),
+      pages: [
+        {
+          index: 1,
+          title: 'Round',
+          url: 'https://n.example.cn/r',
+          site: 'News',
+        },
+      ],
+    });
+    delivered.length = 0;
+    const started = await asRun(
+      `/companies/${company.id}/signals/request`,
+      ['crm.aiWork/request'],
+      'POST',
+    );
+    expect(started.status).toBe(202);
+    await vi.waitFor(() => expect(delivered).toHaveLength(1));
+    expect(delivered[0]).toMatchObject({
+      conversationId: 'conversation-1',
+      news: {
+        notice: {
+          type: 'aiWork',
+          params: { entity: 'companies', outcome: 'ready' },
+        },
+      },
+    });
+    expect((delivered[0].news.input as { text: string }).text).toContain(
+      'Searched Co raised a round.',
+    );
+    // Someone who may not edit the company is refused at once.
+    expect(
+      (
+        await asRun(
+          `/companies/${company.id}/signals/request`,
+          ['crm.aiWork/request'],
+          'POST',
+          undefined,
+          'outsider',
+        )
+      ).status,
+    ).toBe(403);
+
+    // A record's mail, read as the person from their own mailboxes.
+    expect((await request(`/leads/${lead.id}/mail`)).status).toBe(401);
+    expect((await request(`/leads/${lead.id}/mail`, 'outsider')).status).toBe(
+      403,
+    );
+    expect(
+      await (await asRun(`/leads/${lead.id}/mail`, ['crm.leads/view'])).json(),
+    ).toEqual({ data: [] });
   });
 });
 
@@ -10961,6 +11445,9 @@ describe("The assistant's conversations on the Agents plugin", () => {
     expect(lines.rules?.some((rule) => rule.includes('Europe/Berlin'))).toBe(
       true,
     );
+    // The mail it writes is signed by the person it works for.
+    const named = await rules({} as never, { ownerName: '赵敏' } as never);
+    expect(named.rules?.[0]).toContain('You work for 赵敏');
     expect(lines.rules?.some((rule) => rule.includes('web search'))).toBe(true);
     // The guidance's headings each lead a section.
     expect(lines.sections?.length).toBeGreaterThan(1);
@@ -11089,6 +11576,59 @@ describe("The assistant's conversations on the Agents plugin", () => {
       version: 1,
       agentId: 'agent-1',
     });
+  });
+
+  it('moves the assistant to the current instructions unless an administrator changed them', async () => {
+    const stored: Record<string, { instructions: string; revision: number }> = {
+      untouched: {
+        instructions: PREVIOUS_ASSISTANT_INSTRUCTIONS[0],
+        revision: 3,
+      },
+      edited: { instructions: 'Our own words.', revision: 1 },
+    };
+    const updates: { id: string; patch: Record<string, unknown> }[] = [];
+    const fakeAgents = {
+      agents: {
+        get: (id: string) => Promise.resolve({ id, ...stored[id] }),
+        update: (id: string, _by: null, patch: Record<string, unknown>) => {
+          updates.push({ id, patch });
+          return Promise.resolve({ id });
+        },
+      },
+    } as never;
+    const query = database.query();
+    const marker = await query
+      .selectFrom('crmSettings')
+      .select('value')
+      .where('id', '=', 'agents-noco-v1')
+      .executeTakeFirst();
+    const point = (agentId: string) =>
+      query
+        .updateTable('crmSettings')
+        .set({ value: JSON.stringify({ version: 1, agentId }) })
+        .where('id', '=', 'agents-noco-v1')
+        .execute();
+    try {
+      await point('untouched');
+      await refreshAssistantInstructions(fakeAgents, database);
+      await point('edited');
+      await refreshAssistantInstructions(fakeAgents, database);
+    } finally {
+      await query
+        .updateTable('crmSettings')
+        .set({ value: marker?.value })
+        .where('id', '=', 'agents-noco-v1')
+        .execute();
+    }
+    expect(updates).toEqual([
+      {
+        id: 'untouched',
+        patch: {
+          instructions: CRM_ASSISTANT_INSTRUCTIONS,
+          expectedRevision: 3,
+        },
+      },
+    ]);
   });
 
   it("names the work agents in the viewer's language while they keep the name they were made with", async () => {

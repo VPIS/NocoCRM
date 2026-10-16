@@ -31,8 +31,11 @@ import { latestOpportunityEvaluation } from '../providers/crm/opportunity-evalua
 import { CrmError, toText } from '../providers/crm/schema.js';
 import { latestPreparation } from '../providers/crm/task-preparation.js';
 import { resolveTitles } from '../providers/crm/titles.js';
-import { aiWorkers, runCommand, type CrmEnv } from './context.js';
-import { recordAction } from '../providers/crm-agents/actions.js';
+import { aiWorkers, runCommand, watchRunWork, type CrmEnv } from './context.js';
+import {
+  AI_WORK_ACTION,
+  recordAction,
+} from '../providers/crm-agents/actions.js';
 import {
   AiEntry,
   ApprovalActionInput,
@@ -333,7 +336,8 @@ export function registerOperationRoutes(
       summary: 'Have the AI follow a lead up',
       operationId: 'evaluateLead',
       description:
-        'Starts a follow-up, which runs in the background; or, with `revise`, redoes a waiting one as asked. Requires edit access to the lead.',
+        'Starts a follow-up by the Lead follow-up agent, which runs in the background; or, with `revise`, redoes a waiting one as asked. Requires edit access to the lead. Asked from a conversation, what it suggests is told back to that conversation once it is ready.',
+      ...runCommand(AI_WORK_ACTION, { command: 'leads request-follow-up' }),
       responses: {
         '201': dataResponse(AiEntry, 'The follow-up, running.'),
         ...apiErrorResponses,
@@ -359,6 +363,7 @@ export function registerOperationRoutes(
             : undefined,
         );
       if (!entry) throw new CrmError('assistantUnavailable', 409);
+      await watchRunWork(app, c, 'leads', leadId, entry.id);
       return c.json({ data: entry }, 201);
     },
   );
@@ -526,7 +531,10 @@ export function registerOperationRoutes(
       summary: 'Have the AI follow an opportunity up',
       operationId: 'evaluateOpportunity',
       description:
-        'Starts a follow-up, which runs in the background; or, with `revise`, redoes a waiting one as asked. Requires edit access to the opportunity.',
+        'Starts a follow-up by the Opportunity follow-up agent, which runs in the background; or, with `revise`, redoes a waiting one as asked. Requires edit access to the opportunity. Asked from a conversation, what it suggests is told back to that conversation once it is ready.',
+      ...runCommand(AI_WORK_ACTION, {
+        command: 'opportunities request-follow-up',
+      }),
       responses: {
         '201': dataResponse(AiEntry, 'The follow-up, running.'),
         ...apiErrorResponses,
@@ -558,6 +566,7 @@ export function registerOperationRoutes(
             : undefined,
         );
       if (!entry) throw new CrmError('assistantUnavailable', 409);
+      await watchRunWork(app, c, 'opportunities', opportunityId, entry.id);
       return c.json({ data: entry }, 201);
     },
   );
@@ -644,6 +653,9 @@ export function registerOperationRoutes(
       summary: "Get a task's latest AI preparation",
       operationId: 'getLatestTaskPreparation',
       description: 'For its owner only; null for anyone else.',
+      ...runCommand(recordAction('tasks', 'view'), {
+        command: 'tasks preparation',
+      }),
       responses: {
         '200': dataResponse(AiEntry.nullable(), 'Null when there is none.'),
         ...apiErrorResponses,
@@ -667,7 +679,10 @@ export function registerOperationRoutes(
       summary: 'Have the AI prepare a task',
       operationId: 'prepareTask',
       description:
-        'Its owner only, while it is open; with `revise`, redoes a waiting preparation as asked.',
+        'The Task preparation agent prepares it in the background, for its owner only, while it is open; with `revise`, redoes a waiting preparation as asked. Asked from a conversation, what it prepares is told back to that conversation once it is ready.',
+      ...runCommand(AI_WORK_ACTION, {
+        command: 'tasks request-preparation',
+      }),
       responses: {
         '201': dataResponse(AiEntry, 'The preparation, running.'),
         ...apiErrorResponses,
@@ -683,17 +698,19 @@ export function registerOperationRoutes(
     apiValidator('json', EvaluateInput),
     async (c) => {
       const body = c.req.valid('json');
+      const taskId = toText(c.req.valid('param').taskId);
       const entry = await ai
         .tasks()
         ?.request(
           c.get('actor'),
-          toText(c.req.valid('param').taskId),
+          taskId,
           undefined,
           body.revise
             ? { entryId: body.revise, instruction: body.instruction }
             : undefined,
         );
       if (!entry) throw new CrmError('assistantUnavailable', 409);
+      await watchRunWork(app, c, 'tasks', taskId, entry.id);
       return c.json({ data: entry }, 201);
     },
   );
@@ -880,6 +897,9 @@ export function registerOperationRoutes(
       summary: "Get an approval's latest AI review",
       operationId: 'getLatestApprovalReview',
       description: 'For its approver only; null for anyone else.',
+      ...runCommand(recordAction('approvals', 'view'), {
+        command: 'approvals review',
+      }),
       responses: {
         '200': dataResponse(AiEntry.nullable(), 'Null when there is none.'),
         ...apiErrorResponses,
@@ -903,7 +923,10 @@ export function registerOperationRoutes(
       summary: 'Have the AI review an approval',
       operationId: 'reviewApproval',
       description:
-        'Its approver only, while it is pending; with `revise`, redoes a waiting review as asked.',
+        'The Approval review agent reviews it in the background, for its approver only, while it is pending; with `revise`, redoes a waiting review as asked. Asked from a conversation, what it concludes is told back to that conversation once it is ready.',
+      ...runCommand(AI_WORK_ACTION, {
+        command: 'approvals request-review',
+      }),
       responses: {
         '201': dataResponse(AiEntry, 'The review, running.'),
         ...apiErrorResponses,
@@ -936,6 +959,7 @@ export function registerOperationRoutes(
             : undefined,
         );
       if (!entry) throw new CrmError('assistantUnavailable', 409);
+      await watchRunWork(app, c, 'approvals', approvalId, entry.id);
       return c.json({ data: entry }, 201);
     },
   );

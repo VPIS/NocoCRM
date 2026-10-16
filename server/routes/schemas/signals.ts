@@ -69,6 +69,9 @@ export const CompanySignalsQuery = z.object({
   }),
 });
 
+export const SignalCheckStarted = z.object({
+  started: z.literal(true),
+});
 export const SignalCheck: z.ZodType<CheckResult> = z
   .object({ found: z.array(Signal) })
   .meta({ ref: 'CrmSignalCheck' });

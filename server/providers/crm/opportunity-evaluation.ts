@@ -61,6 +61,7 @@ import {
   stages,
   toText,
   type CrmRecord,
+  type CrmSettings,
 } from './schema.js';
 import type { CrmService } from './service.js';
 import { contactTime } from './zone-time.js';
@@ -1329,6 +1330,8 @@ export class OpportunityEvaluator {
       .set({ aiStatus: status, ai: JSON.stringify(ai) })
       .where('id', '=', id)
       .execute();
+    // A conversation that asked for it hears what it came to.
+    await this.service.aiFinished?.(id).catch(() => undefined);
   }
 
   private async run(
@@ -1600,165 +1603,16 @@ export class OpportunityEvaluator {
     const settings = await this.service.settings();
     const decided = await this.service.mutate(
       { ...actor, via: 'assistant' },
-      async (prepared, query: QueryAdapter) => {
-        const opportunity = await this.service.get(
-          prepared,
-          'opportunities',
+      (prepared, query: QueryAdapter) =>
+        this.decideIn(prepared, query, settings, {
           opportunityId,
-          query,
-          'update',
-        );
-        const row = await query
-          .selectFrom('crmHistory')
-          .selectAll()
-          .where('id', '=', entryId)
-          .where('entity', '=', 'opportunities')
-          .where('recordId', '=', opportunityId)
-          .where('action', '=', 'ai')
-          .executeTakeFirst();
-        if (!row) throw new CrmError('notFound', 404);
-        const entry = readEntry<OpportunityVerdict>(row);
-        if (entry.status !== 'pending' || !entry.ai.result)
-          throw new CrmError('evaluationDecided', 409);
-        const verdict = entry.ai.result;
-        const zh = (prepared.locale ?? 'zh-CN').startsWith('zh');
-        const edited = editedPlan(plan);
-        const link = {
-          opportunityId,
-          ...(opportunity.companyId
-            ? { companyId: opportunity.companyId }
-            : {}),
-        };
-        const ownerId = toText(opportunity.ownerId || prepared.id);
-        let taskId: string | undefined;
-        let updatedFields: string[] = [];
-        if (decision === 'accept') {
-          const chosen = new Set(
-            Array.isArray(fields) ? fields.map(toText) : [],
-          );
-          // The updates picked and not already written (`enrich`).
-          const before = entry.ai.updatedFields ?? [];
-          const input: Row = updateInput(
-            verdict.updates.filter(
-              (update) =>
-                chosen.has(update.field) && !before.includes(update.field),
-            ),
-          );
-          updatedFields = [...before, ...Object.keys(input)];
-          if (verdict.recommendation === 'advance' && verdict.stage)
-            input.stage = verdict.stage;
-          else if (verdict.recommendation === 'pause') {
-            input.stage = 'paused';
-            input.pauseReason = verdict.pauseReason ?? 'other';
-            input.resumeAt = dayIn(
-              contactTime(verdict.resumeInDays ?? 30, settings.timeZone),
-              settings.timeZone,
-            );
-          } else if (verdict.recommendation === 'lose') {
-            input.stage = 'lost';
-            input.lostReason = verdict.lostReason ?? 'other';
-          }
-          if (Object.keys(input).length)
-            await this.service.save(
-              prepared,
-              'opportunities',
-              input,
-              opportunityId,
-              query,
-            );
-          if (
-            (verdict.recommendation === 'advance' ||
-              verdict.recommendation === 'continue') &&
-            verdict.nextStep
-          )
-            taskId = await applyStep(this.service, prepared, query, {
-              step: verdict.nextStep,
-              plan: verdict,
-              edited,
-              zh,
-              timeZone: settings.timeZone,
-              link,
-              ownerId,
-            });
-          else if (verdict.recommendation === 'pause')
-            taskId = await planTask(this.service, prepared, query, {
-              name: dealTaskNames.resume[lang(zh)],
-              inDays: verdict.resumeInDays ?? 30,
-              edited,
-              timeZone: settings.timeZone,
-              link,
-              ownerId,
-            });
-          else if (verdict.recommendation === 'lose' && verdict.revisitInDays)
-            taskId = await planTask(this.service, prepared, query, {
-              name: dealTaskNames.revisit[lang(zh)],
-              inDays: verdict.revisitInDays,
-              edited,
-              timeZone: settings.timeZone,
-              link,
-              ownerId,
-            });
-        }
-        // The approvals kept, created and submitted to their approvers, so
-        // the customer is promised nothing before they are decided.
-        const submittedApprovals =
-          decision === 'accept'
-            ? await this.submitApprovals(
-                prepared,
-                query,
-                opportunityId,
-                verdict.approvals ?? [],
-                approvals,
-              )
-            : [];
-        // The people kept: created as the company's contacts where they are
-        // not yet, and set on the deal in their role.
-        const keptContacts =
-          decision === 'accept'
-            ? await this.writeContacts(
-                prepared,
-                query,
-                opportunityId,
-                verdict.contacts ?? [],
-                contacts,
-              )
-            : [];
-        // The web findings still ticked, into the company, with the accept.
-        const written =
-          decision === 'accept' && !entry.ai.enrichedAt
-            ? await this.writeFindings(
-                prepared,
-                query,
-                opportunity,
-                entry,
-                new Set(Array.isArray(fields) ? fields.map(toText) : []),
-              ).catch((error: unknown) => {
-                // A company the person may not edit keeps its fields; the
-                // accept itself stands.
-                if (error instanceof CrmError && error.code === 'notFound')
-                  return null;
-                throw error;
-              })
-            : null;
-        const ai = {
-          ...entry.ai,
-          decidedById: prepared.id,
-          decidedAt: new Date().toISOString(),
-          ...(taskId ? { taskId } : {}),
-          ...(updatedFields.length ? { updatedFields } : {}),
-          ...(submittedApprovals.length ? { submittedApprovals } : {}),
-          ...(keptContacts.length ? { keptContacts } : {}),
-          ...(written ?? {}),
-        };
-        const status: EvaluationEntry['status'] =
-          decision === 'accept' ? 'accepted' : 'dismissed';
-        await query
-          .updateTable('crmHistory')
-          .set({ aiStatus: status, ai: JSON.stringify(ai) })
-          .where('id', '=', entryId)
-          .execute();
-        return { ...entry, status, ai };
-      },
+          entryId,
+          decision,
+          fields,
+          plan,
+          approvals,
+          contacts,
+        }),
     );
     // Its outcome recorded, the deal is followed up anew, reading it,
     // unless the person unticked that.
@@ -1777,6 +1631,186 @@ export class OpportunityEvaluator {
         'taskDone',
       );
     return decided;
+  }
+
+  // The decision inside a transaction already open: the card's, and a
+  // confirmed plan's step (plans/engine.ts).
+  async decideIn(
+    prepared: Actor,
+    query: QueryAdapter,
+    settings: CrmSettings,
+    input: {
+      opportunityId: string;
+      entryId: string;
+      decision: 'accept' | 'dismiss';
+      fields?: unknown;
+      plan?: unknown;
+      approvals?: unknown;
+      contacts?: unknown;
+    },
+  ): Promise<EvaluationEntry<OpportunityVerdict>> {
+    const {
+      opportunityId,
+      entryId,
+      decision,
+      fields,
+      plan,
+      approvals,
+      contacts,
+    } = input;
+    const opportunity = await this.service.get(
+      prepared,
+      'opportunities',
+      opportunityId,
+      query,
+      'update',
+    );
+    const row = await query
+      .selectFrom('crmHistory')
+      .selectAll()
+      .where('id', '=', entryId)
+      .where('entity', '=', 'opportunities')
+      .where('recordId', '=', opportunityId)
+      .where('action', '=', 'ai')
+      .executeTakeFirst();
+    if (!row) throw new CrmError('notFound', 404);
+    const entry = readEntry<OpportunityVerdict>(row);
+    if (entry.status !== 'pending' || !entry.ai.result)
+      throw new CrmError('evaluationDecided', 409);
+    const verdict = entry.ai.result;
+    const zh = (prepared.locale ?? 'zh-CN').startsWith('zh');
+    const edited = editedPlan(plan);
+    const link = {
+      opportunityId,
+      ...(opportunity.companyId ? { companyId: opportunity.companyId } : {}),
+    };
+    const ownerId = toText(opportunity.ownerId || prepared.id);
+    let taskId: string | undefined;
+    let updatedFields: string[] = [];
+    if (decision === 'accept') {
+      const chosen = new Set(Array.isArray(fields) ? fields.map(toText) : []);
+      // The updates picked and not already written (`enrich`).
+      const before = entry.ai.updatedFields ?? [];
+      const input: Row = updateInput(
+        verdict.updates.filter(
+          (update) =>
+            chosen.has(update.field) && !before.includes(update.field),
+        ),
+      );
+      updatedFields = [...before, ...Object.keys(input)];
+      if (verdict.recommendation === 'advance' && verdict.stage)
+        input.stage = verdict.stage;
+      else if (verdict.recommendation === 'pause') {
+        input.stage = 'paused';
+        input.pauseReason = verdict.pauseReason ?? 'other';
+        input.resumeAt = dayIn(
+          contactTime(verdict.resumeInDays ?? 30, settings.timeZone),
+          settings.timeZone,
+        );
+      } else if (verdict.recommendation === 'lose') {
+        input.stage = 'lost';
+        input.lostReason = verdict.lostReason ?? 'other';
+      }
+      if (Object.keys(input).length)
+        await this.service.save(
+          prepared,
+          'opportunities',
+          input,
+          opportunityId,
+          query,
+        );
+      if (
+        (verdict.recommendation === 'advance' ||
+          verdict.recommendation === 'continue') &&
+        verdict.nextStep
+      )
+        taskId = await applyStep(this.service, prepared, query, {
+          step: verdict.nextStep,
+          plan: verdict,
+          edited,
+          zh,
+          timeZone: settings.timeZone,
+          link,
+          ownerId,
+        });
+      else if (verdict.recommendation === 'pause')
+        taskId = await planTask(this.service, prepared, query, {
+          name: dealTaskNames.resume[lang(zh)],
+          inDays: verdict.resumeInDays ?? 30,
+          edited,
+          timeZone: settings.timeZone,
+          link,
+          ownerId,
+        });
+      else if (verdict.recommendation === 'lose' && verdict.revisitInDays)
+        taskId = await planTask(this.service, prepared, query, {
+          name: dealTaskNames.revisit[lang(zh)],
+          inDays: verdict.revisitInDays,
+          edited,
+          timeZone: settings.timeZone,
+          link,
+          ownerId,
+        });
+    }
+    // The approvals kept, created and submitted to their approvers, so
+    // the customer is promised nothing before they are decided.
+    const submittedApprovals =
+      decision === 'accept'
+        ? await this.submitApprovals(
+            prepared,
+            query,
+            opportunityId,
+            verdict.approvals ?? [],
+            approvals,
+          )
+        : [];
+    // The people kept: created as the company's contacts where they are
+    // not yet, and set on the deal in their role.
+    const keptContacts =
+      decision === 'accept'
+        ? await this.writeContacts(
+            prepared,
+            query,
+            opportunityId,
+            verdict.contacts ?? [],
+            contacts,
+          )
+        : [];
+    // The web findings still ticked, into the company, with the accept.
+    const written =
+      decision === 'accept' && !entry.ai.enrichedAt
+        ? await this.writeFindings(
+            prepared,
+            query,
+            opportunity,
+            entry,
+            new Set(Array.isArray(fields) ? fields.map(toText) : []),
+          ).catch((error: unknown) => {
+            // A company the person may not edit keeps its fields; the
+            // accept itself stands.
+            if (error instanceof CrmError && error.code === 'notFound')
+              return null;
+            throw error;
+          })
+        : null;
+    const ai = {
+      ...entry.ai,
+      decidedById: prepared.id,
+      decidedAt: new Date().toISOString(),
+      ...(taskId ? { taskId } : {}),
+      ...(updatedFields.length ? { updatedFields } : {}),
+      ...(submittedApprovals.length ? { submittedApprovals } : {}),
+      ...(keptContacts.length ? { keptContacts } : {}),
+      ...(written ?? {}),
+    };
+    const status: EvaluationEntry['status'] =
+      decision === 'accept' ? 'accepted' : 'dismissed';
+    await query
+      .updateTable('crmHistory')
+      .set({ aiStatus: status, ai: JSON.stringify(ai) })
+      .where('id', '=', entryId)
+      .execute();
+    return { ...entry, status, ai };
   }
 
   // The web findings the person picked on a card, into the deal's company,

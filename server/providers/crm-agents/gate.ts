@@ -8,6 +8,7 @@ import { capability, conditions, type Actor } from '../crm/authorization.js';
 import type { CrmService } from '../crm/service.js';
 import { entities } from '../crm/schema.js';
 import {
+  AI_WORK_ACTION,
   COLLEAGUES_ACTION,
   COLLECTION_ACTION,
   COMMENT_ACTION,
@@ -51,10 +52,13 @@ export async function heldActions(
       }
   for (const [name, key] of Object.entries(SALES_ACTIONS))
     if (await capability(actor, name)) held.add(key);
-  // Whoever reads a kind of record searches it and comments on it.
+  // Whoever reads a kind of record searches it and comments on it, and
+  // may set the AI agents to work on it (each route checks the record as
+  // its card's button does).
   if ([...held].some((action) => action.endsWith('/view'))) {
     held.add(SEARCH_ACTION);
     held.add(COMMENT_ACTION);
+    held.add(AI_WORK_ACTION);
   }
   held.add(COLLEAGUES_ACTION);
   // Whoever may create or change a record may have a change proposed to

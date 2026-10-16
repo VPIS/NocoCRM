@@ -35,6 +35,7 @@ import {
   sources,
   toText,
   type CrmRecord,
+  type CrmSettings,
 } from './schema.js';
 import { normalizePhone } from './phone.js';
 import type { CrmService } from './service.js';
@@ -1237,6 +1238,8 @@ export class LeadEvaluator {
       .set({ aiStatus: status, ai: JSON.stringify(ai) })
       .where('id', '=', id)
       .execute();
+    // A conversation that asked for it hears what it came to.
+    await this.service.aiFinished?.(id).catch(() => undefined);
   }
 
   private async run(
@@ -1460,113 +1463,14 @@ export class LeadEvaluator {
     const settings = await this.service.settings();
     const decided = await this.service.mutate(
       { ...actor, via: 'assistant' },
-      async (prepared, query: QueryAdapter) => {
-        const lead = await this.service.get(
-          prepared,
-          'leads',
+      (prepared, query: QueryAdapter) =>
+        this.decideIn(prepared, query, settings, {
           leadId,
-          query,
-          'update',
-        );
-        const row = await query
-          .selectFrom('crmHistory')
-          .selectAll()
-          .where('id', '=', entryId)
-          .where('entity', '=', 'leads')
-          .where('recordId', '=', leadId)
-          .where('action', '=', 'ai')
-          .executeTakeFirst();
-        if (!row) throw new CrmError('notFound', 404);
-        const entry = readEntry(row);
-        if (entry.status !== 'pending' || !entry.ai.result)
-          throw new CrmError('evaluationDecided', 409);
-        const verdict = entry.ai.result;
-        const zh = (prepared.locale ?? 'zh-CN').startsWith('zh');
-        let taskId: string | undefined;
-        const edited = editedPlan(plan);
-        const written =
-          decision === 'accept' &&
-          Array.isArray(fields) &&
-          fields.length &&
-          !entry.ai.enrichedAt &&
-          lead.status !== 'converted'
-            ? await this.writeFindings(
-                prepared,
-                query,
-                leadId,
-                entry,
-                new Set(fields.map(toText)),
-              )
-            : null;
-        if (decision === 'accept') {
-          if (verdict.recommendation === 'follow' && verdict.nextStep) {
-            taskId = await applyStep(this.service, prepared, query, {
-              step: verdict.nextStep,
-              plan: verdict,
-              edited,
-              zh,
-              timeZone: settings.timeZone,
-              link: { leadId },
-              ownerId: toText(lead.ownerId || prepared.id),
-            });
-          } else if (verdict.recommendation === 'nurture') {
-            await this.service.save(
-              prepared,
-              'leads',
-              { status: 'nurturing' },
-              leadId,
-              query,
-            );
-            // A review planned for when to look at it again; the lead,
-            // nurturing now, stays so.
-            // The CRM's interval when the verdict named none.
-            const reviewInDays =
-              verdict.reviewInDays ?? settings.nurtureReviewDays;
-            if (reviewInDays)
-              taskId = await planTask(this.service, prepared, query, {
-                // What is to be done, without the lead's name: the task
-                // is linked to it.
-                name: nurtureReviewName[lang(zh)],
-                inDays: reviewInDays,
-                edited,
-                timeZone: settings.timeZone,
-                link: { leadId },
-                ownerId: toText(lead.ownerId || prepared.id),
-              });
-          } else if (verdict.recommendation === 'convert') {
-            // The conversion is the person's, in its own dialog, with the
-            // opportunity proposed; accepting records it once done.
-            if (lead.status !== 'converted')
-              throw new CrmError('convertFirst', 409);
-          } else if (verdict.recommendation === 'invalid') {
-            await this.service.save(
-              prepared,
-              'leads',
-              {
-                status: 'invalid',
-                invalidReason: verdict.invalidReason ?? 'other',
-              },
-              leadId,
-              query,
-            );
-          }
-        }
-        const ai = {
-          ...entry.ai,
-          ...(written ?? {}),
-          decidedById: prepared.id,
-          decidedAt: new Date().toISOString(),
-          ...(taskId ? { taskId } : {}),
-        };
-        const status: EvaluationEntry['status'] =
-          decision === 'accept' ? 'accepted' : 'dismissed';
-        await query
-          .updateTable('crmHistory')
-          .set({ aiStatus: status, ai: JSON.stringify(ai) })
-          .where('id', '=', entryId)
-          .execute();
-        return { ...entry, status, ai };
-      },
+          entryId,
+          decision,
+          fields,
+          plan,
+        }),
     );
     // Its outcome recorded, the lead is followed up anew, reading it,
     // unless the person unticked that.
@@ -1579,6 +1483,128 @@ export class LeadEvaluator {
     )
       await followUpLead(this.service, this, actor, leadId, 'taskDone');
     return decided;
+  }
+
+  // The decision inside a transaction already open: the card's, and a
+  // confirmed plan's step (plans/engine.ts), which accepts with what the
+  // card proposes before the person changes anything.
+  async decideIn(
+    prepared: Actor,
+    query: QueryAdapter,
+    settings: CrmSettings,
+    input: {
+      leadId: string;
+      entryId: string;
+      decision: 'accept' | 'dismiss';
+      fields?: unknown;
+      plan?: unknown;
+    },
+  ): Promise<EvaluationEntry> {
+    const { leadId, entryId, decision, fields, plan } = input;
+    const lead = await this.service.get(
+      prepared,
+      'leads',
+      leadId,
+      query,
+      'update',
+    );
+    const row = await query
+      .selectFrom('crmHistory')
+      .selectAll()
+      .where('id', '=', entryId)
+      .where('entity', '=', 'leads')
+      .where('recordId', '=', leadId)
+      .where('action', '=', 'ai')
+      .executeTakeFirst();
+    if (!row) throw new CrmError('notFound', 404);
+    const entry = readEntry(row);
+    if (entry.status !== 'pending' || !entry.ai.result)
+      throw new CrmError('evaluationDecided', 409);
+    const verdict = entry.ai.result;
+    const zh = (prepared.locale ?? 'zh-CN').startsWith('zh');
+    let taskId: string | undefined;
+    const edited = editedPlan(plan);
+    const written =
+      decision === 'accept' &&
+      Array.isArray(fields) &&
+      fields.length &&
+      !entry.ai.enrichedAt &&
+      lead.status !== 'converted'
+        ? await this.writeFindings(
+            prepared,
+            query,
+            leadId,
+            entry,
+            new Set(fields.map(toText)),
+          )
+        : null;
+    if (decision === 'accept') {
+      if (verdict.recommendation === 'follow' && verdict.nextStep) {
+        taskId = await applyStep(this.service, prepared, query, {
+          step: verdict.nextStep,
+          plan: verdict,
+          edited,
+          zh,
+          timeZone: settings.timeZone,
+          link: { leadId },
+          ownerId: toText(lead.ownerId || prepared.id),
+        });
+      } else if (verdict.recommendation === 'nurture') {
+        await this.service.save(
+          prepared,
+          'leads',
+          { status: 'nurturing' },
+          leadId,
+          query,
+        );
+        // A review planned for when to look at it again; the lead,
+        // nurturing now, stays so.
+        // The CRM's interval when the verdict named none.
+        const reviewInDays = verdict.reviewInDays ?? settings.nurtureReviewDays;
+        if (reviewInDays)
+          taskId = await planTask(this.service, prepared, query, {
+            // What is to be done, without the lead's name: the task
+            // is linked to it.
+            name: nurtureReviewName[lang(zh)],
+            inDays: reviewInDays,
+            edited,
+            timeZone: settings.timeZone,
+            link: { leadId },
+            ownerId: toText(lead.ownerId || prepared.id),
+          });
+      } else if (verdict.recommendation === 'convert') {
+        // The conversion is the person's, in its own dialog, with the
+        // opportunity proposed; accepting records it once done.
+        if (lead.status !== 'converted')
+          throw new CrmError('convertFirst', 409);
+      } else if (verdict.recommendation === 'invalid') {
+        await this.service.save(
+          prepared,
+          'leads',
+          {
+            status: 'invalid',
+            invalidReason: verdict.invalidReason ?? 'other',
+          },
+          leadId,
+          query,
+        );
+      }
+    }
+    const ai = {
+      ...entry.ai,
+      ...(written ?? {}),
+      decidedById: prepared.id,
+      decidedAt: new Date().toISOString(),
+      ...(taskId ? { taskId } : {}),
+    };
+    const status: EvaluationEntry['status'] =
+      decision === 'accept' ? 'accepted' : 'dismissed';
+    await query
+      .updateTable('crmHistory')
+      .set({ aiStatus: status, ai: JSON.stringify(ai) })
+      .where('id', '=', entryId)
+      .execute();
+    return { ...entry, status, ai };
   }
 
   // Writes the findings picked from an entry into the lead (a province with

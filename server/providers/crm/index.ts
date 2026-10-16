@@ -31,7 +31,10 @@ import {
 import { CrmPlans, crmPlansToken } from './plans/engine.js';
 import { MailTimeline, mailTimelineToken } from './mail-timeline.js';
 import { WhatsAppService, whatsappToken } from './whatsapp/service.js';
-import { mailProviderRegistryToken } from '@nocobase/app-plugin-mail/server';
+import {
+  mailProviderRegistryToken,
+  mailServiceToken,
+} from '@nocobase/app-plugin-mail/server';
 import {
   DEMO_MAIL_ROW,
   createDemoMailProvider,
@@ -117,6 +120,13 @@ export default class CrmProvider extends ServiceProvider<Application> {
           leads: () => this.app.container.resolve(leadEvaluatorToken),
           opportunities: () =>
             this.app.container.resolve(opportunityEvaluatorToken),
+          tasks: () => this.app.container.resolve(taskPreparerToken),
+          mail: () =>
+            this.app.container.has(mailServiceToken)
+              ? this.app.container.resolve(mailServiceToken)
+              : undefined,
+          mailSent: (userId) =>
+            this.app.container.resolve(mailTimelineToken).syncUser(userId),
         }),
     );
     // New leads evaluated by the AI (lead-evaluation.ts).

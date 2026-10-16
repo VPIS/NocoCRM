@@ -2,7 +2,10 @@ import { MAX_MODEL_ENTRIES } from '@nocobase/app-plugin-agents/shared/agents';
 import type { Agents } from '@nocobase/app-plugin-agents/server/tokens';
 import type { DatabaseManager } from '@nocobase/db';
 import { listUsers } from '../crm/authorization.js';
-import { CRM_ASSISTANT_INSTRUCTIONS } from './preset.js';
+import {
+  CRM_ASSISTANT_INSTRUCTIONS,
+  PREVIOUS_ASSISTANT_INSTRUCTIONS,
+} from './preset.js';
 
 // @temporary(nocobase-official): an agent the application ships is created
 // from code once, at start, because the Agents plugin has no way to ship one
@@ -205,4 +208,97 @@ export async function renameAssistant(
       name: ASSISTANT_NAME,
       expectedRevision: agent.revision,
     });
+}
+
+// The assistant made with an earlier release's instructions, still word for
+// word as made, moved to the current ones at every start; once an
+// administrator has changed them, they stay as written.
+export async function refreshAssistantInstructions(
+  agents: Agents,
+  database: DatabaseManager,
+): Promise<void> {
+  const row = await database
+    .query()
+    .selectFrom('crmSettings')
+    .select('value')
+    .where('id', '=', ASSISTANT_MARKER)
+    .executeTakeFirst();
+  let agentId: unknown;
+  try {
+    agentId = (
+      (typeof row?.value === 'string' ? JSON.parse(row.value) : row?.value) as {
+        agentId?: unknown;
+      } | null
+    )?.agentId;
+  } catch {
+    return;
+  }
+  if (typeof agentId !== 'string' || !agentId) return;
+  const agent = await agents.agents.get(agentId).catch(() => null);
+  if (
+    agent?.instructions &&
+    PREVIOUS_ASSISTANT_INSTRUCTIONS.includes(agent.instructions)
+  )
+    await agents.agents
+      .update(agentId, null, {
+        instructions: CRM_ASSISTANT_INSTRUCTIONS,
+        expectedRevision: agent.revision,
+      })
+      .catch(() => undefined);
+}
+
+// An action the preset gained after the assistant was made, given to it
+// once (`marker` in crmSettings, written first so two instances starting
+// together give it once): an administrator who takes it away later keeps it
+// taken away.
+export async function grantAssistantAction(
+  agents: Agents,
+  database: DatabaseManager,
+  action: string,
+  marker: string,
+): Promise<void> {
+  const query = database.query();
+  const created = await query
+    .selectFrom('crmSettings')
+    .select('value')
+    .where('id', '=', ASSISTANT_MARKER)
+    .executeTakeFirst();
+  if (!created) return;
+  const given = await query
+    .selectFrom('crmSettings')
+    .select('id')
+    .where('id', '=', marker)
+    .executeTakeFirst();
+  if (given) return;
+  try {
+    await query
+      .insertInto('crmSettings')
+      .values({
+        id: marker,
+        value: JSON.stringify({ version: 1 }),
+        updatedAt: new Date(),
+      })
+      .execute();
+  } catch {
+    return;
+  }
+  let agentId: unknown;
+  try {
+    agentId = (
+      (typeof created.value === 'string'
+        ? JSON.parse(created.value)
+        : created.value) as { agentId?: unknown } | null
+    )?.agentId;
+  } catch {
+    return;
+  }
+  if (typeof agentId !== 'string' || !agentId) return;
+  const agent = await agents.agents.get(agentId).catch(() => null);
+  if (!agent || agent.actions.includes(action)) return;
+  await agents.agents
+    .update(agentId, null, {
+      actions: [...agent.actions, action],
+      expectedRevision: agent.revision,
+    })
+    .catch(() => undefined);
 }

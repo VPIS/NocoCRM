@@ -537,6 +537,8 @@ export class ApprovalReviewer {
       // A decision or a withdrawal meanwhile retired it: left so.
       .where('aiStatus', '=', 'running')
       .execute();
+    // A conversation that asked for it hears what it came to.
+    await this.service.aiFinished?.(id).catch(() => undefined);
   }
 
   private async run(

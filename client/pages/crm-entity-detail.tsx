@@ -1100,7 +1100,6 @@ export default function EntityDetail({
   ): ReactElement => (
     <DetailColumns
       entity={entity}
-      recordId={toText(id)}
       heading={heading}
       actions={actions.buttons}
       status={aiStatus}

@@ -8,6 +8,7 @@ import { ServiceProvider } from '@nocobase/service-provider';
 import { crmToken } from '../crm/index.js';
 import { crmPlansToken } from '../crm/plans/engine.js';
 import { deliverPlanOutcome } from './plan-news.js';
+import { deliverAiWork } from './ai-work-news.js';
 import { registerCrmSkill } from './skill.js';
 import { provisionSkills } from './library.js';
 import { SKILLS_DIR } from '../crm/ai-model.js';
@@ -20,6 +21,8 @@ import { registerContextKinds } from './context.js';
 import {
   nameAssistant,
   provisionAssistant,
+  refreshAssistantInstructions,
+  grantAssistantAction,
   renameAssistant,
 } from './assistant.js';
 import { crmConversationRules } from './rules.js';
@@ -28,6 +31,7 @@ import type { CrmSettings } from '../crm/schema.js';
 import { provisionModelServices } from './model-services.js';
 import {
   agentActionOptions,
+  AI_WORK_ACTION,
   COLLEAGUES_ACTION,
   COMMENT_ACTION,
   PLAN_ACTION,
@@ -39,7 +43,8 @@ import { CRM_ASSISTANT_INSTRUCTIONS } from './preset.js';
 import { entities } from '../crm/schema.js';
 
 // The actions a CRM agent starts from: view, create and edit on each object,
-// search, colleagues, comments and plans (deleting and deciding approvals are
+// search, colleagues, comments, plans and setting the AI agents to work on
+// a record (deleting and deciding approvals are
 // never granted, actions.ts).
 const PRESET_ACTIONS: readonly string[] = [
   ...entities.flatMap((entity) => [
@@ -51,6 +56,7 @@ const PRESET_ACTIONS: readonly string[] = [
   COLLEAGUES_ACTION,
   COMMENT_ACTION,
   PLAN_ACTION,
+  AI_WORK_ACTION,
 ];
 
 // The CRM on the Agents plugin: the business actions an agent may be given
@@ -106,6 +112,8 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
       agents,
       service,
     );
+    // What the AI agents did on a conversation's asking goes back to it.
+    service.aiFinished = deliverAiWork(agents, service);
     agents.conversations.sources.register({
       key: 'crm',
       title: { key: 'crm.agentConversationSource', ns: 'crm' },
@@ -138,6 +146,17 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
       this.app.container.resolve(databaseManagerToken),
     );
     await nameAssistant(this.app.container.resolve(databaseManagerToken));
+    await refreshAssistantInstructions(
+      agents,
+      this.app.container.resolve(databaseManagerToken),
+    );
+    // The assistant made before it could set the agents to work.
+    await grantAssistantAction(
+      agents,
+      this.app.container.resolve(databaseManagerToken),
+      AI_WORK_ACTION,
+      'crm-ai-work-action-v1',
+    );
     await provisionSkills(
       agents,
       this.app.container.resolve(databaseManagerToken),

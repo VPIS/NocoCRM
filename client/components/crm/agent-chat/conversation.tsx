@@ -209,7 +209,18 @@ export function Conversation({
       ? text(`plans.news.${toText(notice.params?.decision)}`, {
           title: notice.title,
         })
-      : null;
+      : notice.type === 'aiWork'
+        ? text(`aiWork.news.${toText(notice.params?.outcome)}`, {
+            title: notice.title,
+            agent: text(
+              `agentWork.names.${
+                notice.params?.entity === 'companies'
+                  ? 'signals'
+                  : toText(notice.params?.entity)
+              }`,
+            ),
+          })
+        : null;
   const shownAgent = conversation?.agent ?? agent;
   const name = shownAgent
     ? (agentText.name(shownAgent) ?? text('agentChat.agent'))
@@ -251,7 +262,7 @@ export function Conversation({
       key: `plan-${plan.id}`,
       at: plan.createdAt,
       rank: 1,
-      node: <PlanCard plan={plan} origin={false} />,
+      node: <PlanCard plan={plan} />,
     })),
     ...messages.pending.map((message) => ({
       key: message.clientId,

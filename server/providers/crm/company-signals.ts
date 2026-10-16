@@ -387,21 +387,32 @@ export class CompanySignals {
   // Someone who may edit the company has it checked now, whether or not
   // the daily check watches it.
   async checkNow(actor: Actor, companyId: string): Promise<CheckResult> {
+    return (await this.startCheck(actor, companyId)).done;
+  }
+
+  // A check asked for now: refused at once when the person may not edit
+  // the company or no model searches the web; otherwise started, `done`
+  // settling with what it finds (an agent's request waits on it in the
+  // background, the Signals tab's button at once).
+  async startCheck(
+    actor: Actor,
+    companyId: string,
+  ): Promise<{ done: Promise<CheckResult> }> {
     await this.service.get(actor, 'companies', companyId, undefined, 'update');
     const searcher = await this.searcher();
     if (!searcher) throw new CrmError('signalsUnavailable', 409);
     const company = await this.company(companyId);
     if (!company) throw new CrmError('notFound', 404);
-    try {
-      return await this.check(searcher, company, new Date(), {
+    return {
+      done: this.check(searcher, company, new Date(), {
         trigger: 'asked',
         actorId: actor.id,
-      });
-    } catch (error) {
-      throw error instanceof WebSearchError
-        ? new CrmError('signalsFailed', 503, undefined, error.message)
-        : error;
-    }
+      }).catch((error: unknown) => {
+        throw error instanceof WebSearchError
+          ? new CrmError('signalsFailed', 503, undefined, error.message)
+          : error;
+      }),
+    };
   }
 
   // The daily pass over the watched companies.

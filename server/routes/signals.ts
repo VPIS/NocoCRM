@@ -8,7 +8,11 @@ import {
 } from '@nocobase/app-server/router';
 import type { Hono } from 'hono';
 import { companySignalsToken } from '../providers/crm/company-signals.js';
-import type { CrmEnv } from './context.js';
+import { agentsToken } from '@nocobase/app-plugin-agents/server/tokens';
+import { crmToken } from '../providers/crm/index.js';
+import { AI_WORK_ACTION } from '../providers/crm-agents/actions.js';
+import { deliverSignalCheck } from '../providers/crm-agents/ai-work-news.js';
+import { runCommand, runConversationOf, type CrmEnv } from './context.js';
 import {
   CompanyProfile,
   CompanyProfileInput,
@@ -17,6 +21,7 @@ import {
   DecideSignalInput,
   Signal,
   SignalCheck,
+  SignalCheckStarted,
   WatchCompanyInput,
 } from './schemas/signals.js';
 
@@ -119,6 +124,50 @@ export function registerSignalRoutes(
           c.req.param('companyId'),
         ),
       }),
+  );
+  // The same check asked by an agent: answered at once, the web search
+  // going on in the background, and what it finds told back to the
+  // conversation that asked (crm-agents/ai-work-news.ts) as well as kept on
+  // the Signals tab.
+  router.post(
+    '/companies/:companyId/signals/request',
+    describeRoute({
+      tags,
+      summary: 'Start a check of a company for signals',
+      operationId: 'requestCompanySignals',
+      description:
+        'The Company signals agent searches the web for the company in the background and keeps the new signals found; asked from a conversation, what it finds is told back to it. Needs edit access to the company and a model service that searches (else 400 FAILED_PRECONDITION with reason SIGNALS_UNAVAILABLE).',
+      ...runCommand(AI_WORK_ACTION, { command: 'companies check-signals' }),
+      responses: {
+        '202': dataResponse(
+          SignalCheckStarted,
+          'Started; its signals follow on the Signals tab.',
+        ),
+        ...apiErrorResponses,
+        '404': apiErrorResponse(404),
+      },
+    }),
+    async (c) => {
+      const companyId = c.req.param('companyId');
+      const { done } = await signals().startCheck(c.get('actor'), companyId);
+      const conversationId = await runConversationOf(app, c.get('auth'));
+      const tell = (outcome: Parameters<typeof deliverSignalCheck>[3]) =>
+        conversationId && app.container.has(agentsToken)
+          ? deliverSignalCheck(
+              app.container.resolve(agentsToken),
+              app.container.resolve(crmToken),
+              { conversationId, companyId },
+              outcome,
+            )
+          : Promise.resolve();
+      void done
+        .then(
+          (result) => tell(result),
+          (error: unknown) => tell({ error }),
+        )
+        .catch(() => undefined);
+      return c.json({ data: { started: true } }, 202);
+    },
   );
   router.patch(
     '/signals/:signalId',

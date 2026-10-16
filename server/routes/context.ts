@@ -20,6 +20,7 @@ import {
   type CliRouteOptions,
   type OpenAPIV3_1,
 } from '@nocobase/app-server/router';
+import { databaseManagerToken } from '@nocobase/db';
 import type { ErrorHandler, MiddlewareHandler } from 'hono';
 import type { Actor } from '../providers/crm/authorization.js';
 import { leadEvaluatorToken } from '../providers/crm/lead-evaluation.js';
@@ -28,7 +29,11 @@ import { approvalReviewerToken } from '../providers/crm/approval-review.js';
 import { taskPreparerToken } from '../providers/crm/task-preparation.js';
 import { CrmError } from '../providers/crm/schema.js';
 import { CRM_ERROR_DOMAIN, toApiError } from './errors.js';
-import { PLAN_ACTION } from '../providers/crm-agents/actions.js';
+import {
+  AI_WORK_ACTION,
+  PLAN_ACTION,
+} from '../providers/crm-agents/actions.js';
+import { watchAiWork } from '../providers/crm/ai-watches.js';
 
 // What every CRM route shares: the signed-in user as the services' actor,
 // and the CRM's errors in the standard body.
@@ -81,7 +86,9 @@ export function crmGuard(app: Application) {
   // since the router only filters the commands it offers. A run never writes:
   // every change it asks for is refused with PLAN_REQUIRED, and it proposes
   // the change as a plan the person confirms (migration step 2: every agent
-  // starts at suggesting, guideline 3.5).
+  // starts at suggesting, guideline 3.5). Setting the CRM's AI agents to
+  // work on a record is called directly: it changes no record, and what the
+  // work suggests waits for the person.
   const run: MiddlewareHandler<CrmEnv> = async (c, next) => {
     const identity = runIdentityOf(c.get('auth'));
     if (!identity) return next();
@@ -98,7 +105,11 @@ export function crmGuard(app: Application) {
         message: `This agent may not ${action ?? 'call this route'}.`,
         metadata: { action: action ?? '' },
       });
-    if (!isReadingAction(action) && action !== PLAN_ACTION)
+    if (
+      !isReadingAction(action) &&
+      action !== PLAN_ACTION &&
+      action !== AI_WORK_ACTION
+    )
       throw new ApiError({
         status: 'FAILED_PRECONDITION',
         reason: 'PLAN_REQUIRED',
@@ -146,4 +157,45 @@ export function aiWorkers(app: Application) {
         ? container.resolve(taskPreparerToken)
         : undefined,
   };
+}
+
+// The conversation a request comes from, when an agent's run makes it: the
+// one its outcome goes back to (a consulted agent's, the asking one's).
+export async function runConversationOf(
+  app: Application,
+  auth: AuthEnv['Variables']['auth'],
+): Promise<string | null> {
+  const run = runIdentityOf(auth);
+  if (!run?.run || !app.container.has(agentsToken)) return null;
+  const agents = app.container.resolve(agentsToken);
+  const record = run.run.run;
+  const home = await agents.conversations.homeOf(agents.tx.read(), {
+    subject: { kind: record.subjectKind, id: record.subjectId },
+    actorUserId: record.actorUserId,
+    parentRunId: record.parentRunId,
+  });
+  return home?.id ?? null;
+}
+
+// AI work a run started on a record: noted, so its outcome goes back to the
+// run's conversation once it finishes (crm-agents/ai-work-news.ts).
+export async function watchRunWork(
+  app: Application,
+  c: {
+    get(key: 'auth'): AuthEnv['Variables']['auth'];
+    get(key: 'actor'): Actor;
+  },
+  entity: string,
+  recordId: string,
+  entryId: string,
+): Promise<void> {
+  const conversationId = await runConversationOf(app, c.get('auth'));
+  if (!conversationId) return;
+  await watchAiWork(app.container.resolve(databaseManagerToken), {
+    id: entryId,
+    entity,
+    recordId,
+    userId: c.get('actor').id,
+    conversationId,
+  });
 }

@@ -626,6 +626,10 @@ export class CrmService {
       id: string,
     ): Promise<void>;
   };
+  // Set by CrmAgentsProvider: an AI entry's run finished (a follow-up, a
+  // review, a preparation), so a conversation that asked for it is told
+  // (ai-watches.ts). Each worker calls it after writing the outcome.
+  aiFinished?: (entryId: string) => Promise<void>;
   // Set by CrmProvider: the settings were saved (the assistant's prompt
   // follows the AI language setting).
   settingsSaved?: (settings: CrmSettings) => void;

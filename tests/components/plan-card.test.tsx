@@ -64,8 +64,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
   };
 });
 
-const { PlanCard, WaitingPlans } =
-  await import('../../client/components/crm/plan-card.js');
+const { PlanCard } = await import('../../client/components/crm/plan-card.js');
 
 const step = (
   position: number,
@@ -133,6 +132,107 @@ beforeEach(() => {
 });
 
 describe('a plan card', () => {
+  it('shows a paragraph changed with its old text above, struck and plain', () => {
+    // The long text's fold measures itself.
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe(): void {}
+        disconnect(): void {}
+      },
+    );
+    renderWith(
+      <PlanCard
+        plan={plan({
+          steps: [
+            step(1, [
+              {
+                field: 'message',
+                from: '**目标**\n回顾最新进展，确认客户当前的需求和顾虑。',
+                to: '约到并打完电话',
+              },
+            ]),
+          ],
+        })}
+      />,
+    );
+    const old = screen.getByText(/回顾最新进展/u);
+    expect(old.className).toContain('line-through');
+    expect(old.className).toContain('line-clamp-2');
+    expect(old.textContent).not.toContain('**');
+  });
+
+  it('shows an email whole before it is sent, and whether it went', () => {
+    const email = {
+      ...step(1, [], 'mail.send'),
+      check: {
+        entity: 'opportunities' as const,
+        id: 'deal-1',
+        name: '年度采购',
+        changes: [],
+        mail: {
+          from: 'me@example.com',
+          to: ['buyer@example.com'],
+          cc: [],
+          subject: '报价已批准',
+          text: '您好，\n折扣已经批准。',
+        },
+      },
+    };
+    const approve = {
+      ...step(2, [{ field: 'status', from: 'pending', to: 'approved' }]),
+      op: 'approval.decide' as const,
+      params: { decision: 'approve' },
+      check: {
+        entity: 'approvals' as const,
+        id: 'approval-1',
+        name: '九折',
+        changes: [{ field: 'status', from: 'pending', to: 'approved' }],
+      },
+    };
+    renderWith(<PlanCard plan={plan({ steps: [email, approve] })} />);
+    const card = screen.getByRole('region', { name: '更新周晓的线索' });
+    expect(within(card).getByText('发送邮件')).toBeTruthy();
+    expect(within(card).getByText('buyer@example.com')).toBeTruthy();
+    expect(within(card).getByText('报价已批准')).toBeTruthy();
+    expect(within(card).getByText(/折扣已经批准/u)).toBeTruthy();
+    expect(within(card).getByText('执行后从你的邮箱发出。')).toBeTruthy();
+    // Deciding an approval reads as the decision.
+    expect(within(card).getByText('批准')).toBeTruthy();
+  });
+
+  it('says an email of a plan carried out was not sent', () => {
+    const email = {
+      ...step(1, [], 'mail.send'),
+      status: 'failed' as const,
+      result: { code: 'mailFailed' },
+      check: {
+        entity: 'contacts' as const,
+        id: null,
+        name: '',
+        changes: [],
+        mail: {
+          from: 'me@example.com',
+          to: ['buyer@example.com'],
+          cc: [],
+          subject: '提醒',
+          text: '还感兴趣吗？',
+        },
+      },
+    };
+    renderWith(
+      <PlanCard
+        plan={plan({
+          status: 'executed',
+          deciderUserId: 'rep',
+          decidedAt: new Date().toISOString(),
+          steps: [email],
+        })}
+      />,
+    );
+    expect(screen.getByText('未发送：邮件没能发出。')).toBeTruthy();
+  });
+
   it('shows each change from its old value to its new one, without hover', () => {
     renderWith(<PlanCard plan={plan()} />);
     const card = screen.getByRole('region', { name: '更新周晓的线索' });
@@ -189,10 +289,18 @@ describe('a plan card', () => {
     expect(screen.queryByRole('button', { name: '忽略' })).toBeNull();
   });
 
-  it('opens the conversation it came from in the assistant panel', async () => {
-    renderWith(<PlanCard plan={plan()} />);
-    await userEvent.click(screen.getByRole('button', { name: '来自对话' }));
-    expect(chatFake.opened).toEqual([{ conversationId: 'c1', view: 'chat' }]);
+  it('says a plan was replaced by a newer one', () => {
+    renderWith(
+      <PlanCard
+        plan={plan({
+          status: 'superseded',
+          failure: { code: 'superseded', supersededBy: 'p2' },
+        })}
+      />,
+    );
+    expect(screen.getByText('已替换')).toBeTruthy();
+    expect(screen.getByText(/已被后来提出的同类改动替换/u)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '忽略' })).toBeNull();
   });
 
   it('explains a stale plan', () => {
@@ -200,27 +308,5 @@ describe('a plan card', () => {
       <PlanCard plan={plan({ status: 'stale', failure: { position: 1 } })} />,
     );
     expect(screen.getByText(/涉及的记录在提出建议后被改动过/u)).toBeTruthy();
-  });
-});
-
-describe("a record's waiting plans", () => {
-  it('lead the particulars with their count, with no way to the inbox', async () => {
-    state.plans = [plan()];
-    renderWith(<WaitingPlans entity='leads' recordId='lead-1' />);
-    const block = await screen.findByRole('region', { name: '等你决定' });
-    expect(within(block).getByRole('heading', { level: 2 }).textContent).toBe(
-      '等你决定: 1',
-    );
-    // Decided here or in their conversation, never in the inbox.
-    expect(within(block).queryByRole('link', { name: /收件箱/u })).toBeNull();
-    expect(state.api).toHaveBeenCalledWith(
-      'plans?pageSize=100&target=leads%3Alead-1',
-    );
-  });
-
-  it('is absent when none waits', async () => {
-    renderWith(<WaitingPlans entity='leads' recordId='lead-1' />);
-    await waitFor(() => expect(state.api).toHaveBeenCalled());
-    expect(screen.queryByRole('region')).toBeNull();
   });
 });

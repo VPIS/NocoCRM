@@ -172,7 +172,6 @@ import { ConfirmDialog } from '../components/crm/confirm-dialog.js';
 import { useRecordBreadcrumb } from '../components/crm/record-breadcrumb.js';
 import { ConvertDialog } from '../components/crm/conversion.js';
 import { LeadDuplicates } from '../components/crm/lead-merge.js';
-import { WaitingPlans } from '../components/crm/plan-card.js';
 import { RecordMailPanel } from '../components/crm/record-mail.js';
 import { useColleaguesMail } from '../components/crm/colleagues-mail.js';
 import {
@@ -639,7 +638,6 @@ function LeadDetail({ id }: { id: string }): ReactElement {
   return (
     <DetailColumns
       entity='leads'
-      recordId={toText(id)}
       heading={heading}
       actions={leadActions}
       more={leadMore}
@@ -952,7 +950,6 @@ function LeadDetail({ id }: { id: string }): ReactElement {
 // the rest. The lead and the task pages share it.
 export function DetailColumns({
   entity,
-  recordId,
   heading,
   actions,
   more,
@@ -966,8 +963,6 @@ export function DetailColumns({
 }: {
   // The kind of record, named over the heading on a phone.
   entity: Entity;
-  // The record, whose plans waiting on the reader lead its particulars.
-  recordId?: string;
   heading: ReactNode;
   // Everything the reader can do with the record, on a row under the
   // heading.
@@ -1142,9 +1137,6 @@ export function DetailColumns({
                     inDrawer ? '@3xl:mr-4' : '@3xl:mr-2 @3xl:pt-4 md:@3xl:mr-3'
                   }`}
                 >
-                  {recordId ? (
-                    <WaitingPlans entity={entity} recordId={recordId} />
-                  ) : null}
                   {left}
                 </section>
               )}

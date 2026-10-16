@@ -41,7 +41,12 @@ import { whatsappOf, whatsappSection } from './whatsapp/service.js';
 import { domainOf, type MailTarget } from './mail-target.js';
 import { dealMailTarget } from './opportunity-evaluation.js';
 import { mergePlanDescription } from './plan.js';
-import { CrmError, toText, type CrmRecord } from './schema.js';
+import {
+  CrmError,
+  toText,
+  type CrmRecord,
+  type CrmSettings,
+} from './schema.js';
 import type { CrmService } from './service.js';
 import { doesTask } from './task-participants.js';
 import { endOfDay, isEndOfDay } from './zone-time.js';
@@ -625,6 +630,8 @@ export class TaskPreparer {
       .where('id', '=', id)
       .where('aiStatus', '=', 'running')
       .execute();
+    // A conversation that asked for it hears what it came to.
+    await this.service.aiFinished?.(id).catch(() => undefined);
   }
 
   private async run(
@@ -788,55 +795,68 @@ export class TaskPreparer {
   ): Promise<EvaluationEntry<TaskPreparation>> {
     if (!['accept', 'dismiss'].includes(decision))
       throw new CrmError('invalidInput', 400, 'decision');
-    const zh = (await this.service.settings()).aiLanguage.startsWith('zh');
-    return this.service.mutate(actor, async (prepared, query: QueryAdapter) => {
-      const row = await query
-        .selectFrom('crmHistory')
-        .selectAll()
-        .where('id', '=', entryId)
-        .where('entity', '=', 'tasks')
-        .where('recordId', '=', taskId)
-        .where('action', '=', 'ai')
-        .executeTakeFirst();
-      if (!row) throw new CrmError('notFound', 404);
-      const entry = readEntry<TaskPreparation>(row);
-      if (entry.status !== 'pending')
-        throw new CrmError('evaluationDecided', 409);
-      const task = await this.service.get(prepared, 'tasks', taskId, query);
-      // The people doing it; writing in also needs the right to edit the
-      // task, which the save checks.
-      if (!doesTask(task, prepared.id)) throw new CrmError('forbidden', 403);
-      const result = entry.ai.result;
-      if (decision === 'accept' && result)
-        await this.service.save(
-          { ...prepared, via: 'assistant' },
-          'tasks',
-          {
-            description: mergePlanDescription(
-              toText(task.description ?? ''),
-              {
-                prep: [...result.agenda, ...result.bring],
-                questions: result.questions,
-              },
-              zh,
-            ).slice(0, LONG_TEXT_LIMIT),
-          },
-          taskId,
-          query,
-        );
-      const status = decision === 'accept' ? 'accepted' : 'dismissed';
-      const ai = {
-        ...entry.ai,
-        decidedById: prepared.id,
-        decidedAt: new Date().toISOString(),
-      };
-      await query
-        .updateTable('crmHistory')
-        .set({ aiStatus: status, ai: JSON.stringify(ai) })
-        .where('id', '=', entryId)
-        .execute();
-      return { ...entry, status, ai };
-    });
+    const settings = await this.service.settings();
+    return this.service.mutate(actor, (prepared, query: QueryAdapter) =>
+      this.decideIn(prepared, query, settings, { taskId, entryId, decision }),
+    );
+  }
+
+  // The decision inside a transaction already open: the card's, and a
+  // confirmed plan's step (plans/engine.ts).
+  async decideIn(
+    prepared: Actor,
+    query: QueryAdapter,
+    settings: CrmSettings,
+    input: { taskId: string; entryId: string; decision: 'accept' | 'dismiss' },
+  ): Promise<EvaluationEntry<TaskPreparation>> {
+    const { taskId, entryId, decision } = input;
+    const zh = settings.aiLanguage.startsWith('zh');
+    const row = await query
+      .selectFrom('crmHistory')
+      .selectAll()
+      .where('id', '=', entryId)
+      .where('entity', '=', 'tasks')
+      .where('recordId', '=', taskId)
+      .where('action', '=', 'ai')
+      .executeTakeFirst();
+    if (!row) throw new CrmError('notFound', 404);
+    const entry = readEntry<TaskPreparation>(row);
+    if (entry.status !== 'pending')
+      throw new CrmError('evaluationDecided', 409);
+    const task = await this.service.get(prepared, 'tasks', taskId, query);
+    // The people doing it; writing in also needs the right to edit the
+    // task, which the save checks.
+    if (!doesTask(task, prepared.id)) throw new CrmError('forbidden', 403);
+    const result = entry.ai.result;
+    if (decision === 'accept' && result)
+      await this.service.save(
+        { ...prepared, via: 'assistant' },
+        'tasks',
+        {
+          description: mergePlanDescription(
+            toText(task.description ?? ''),
+            {
+              prep: [...result.agenda, ...result.bring],
+              questions: result.questions,
+            },
+            zh,
+          ).slice(0, LONG_TEXT_LIMIT),
+        },
+        taskId,
+        query,
+      );
+    const status = decision === 'accept' ? 'accepted' : 'dismissed';
+    const ai = {
+      ...entry.ai,
+      decidedById: prepared.id,
+      decidedAt: new Date().toISOString(),
+    };
+    await query
+      .updateTable('crmHistory')
+      .set({ aiStatus: status, ai: JSON.stringify(ai) })
+      .where('id', '=', entryId)
+      .execute();
+    return { ...entry, status, ai };
   }
 }
 

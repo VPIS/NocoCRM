@@ -94,6 +94,58 @@ const approvalStep = (op: 'approval.submit' | 'approval.withdraw') =>
     }),
   });
 
+const approvalDecideStep = z.strictObject({
+  op: z.literal('approval.decide'),
+  ref,
+  params: z.strictObject({
+    approvalId: id('approval'),
+    decision: z.enum(['approve', 'reject']),
+    comment: z.string().max(10000).optional().meta({
+      description: 'The decision comment, which the applicant reads.',
+    }),
+  }),
+});
+const suggestionStep = z.strictObject({
+  op: z.literal('suggestion.decide'),
+  ref,
+  params: z.strictObject({
+    entity: z.enum(['leads', 'opportunities', 'tasks']).meta({
+      description:
+        "A lead's or a deal's follow-up, or a task's preparation (an approval's review is decided with `approval.decide`).",
+    }),
+    recordId: id('record'),
+    entryId: z.string().optional().meta({
+      description:
+        "The suggestion's id; left out, the record's newest one waiting.",
+    }),
+    decision: z.enum(['accept', 'dismiss']).meta({
+      description:
+        'Accepting takes what the card proposes as it stands (every update, finding, approval and contact ticked; the next task as proposed); dismissing sets it aside.',
+    }),
+  }),
+});
+const address = z.email().max(320);
+const mailStep = z.strictObject({
+  op: z.literal('mail.send'),
+  ref,
+  params: z.strictObject({
+    to: z.array(address).min(1).max(50),
+    cc: z.array(address).max(50).optional(),
+    subject: z.string().trim().min(1).max(998),
+    text: z.string().trim().min(1).max(100000).meta({
+      description: 'The body, in plain text.',
+    }),
+    entity: entity.optional().meta({
+      description: 'The record the email concerns, shown on the card.',
+    }),
+    recordId: id('record').optional(),
+    accountId: z.string().optional().meta({
+      description:
+        "The person's mailbox to send from; left out, their first that sends.",
+    }),
+  }),
+});
+
 export const PlanStepInput = z
   .discriminatedUnion('op', [
     createStep,
@@ -103,6 +155,9 @@ export const PlanStepInput = z
     outcomeStep,
     approvalStep('approval.submit'),
     approvalStep('approval.withdraw'),
+    approvalDecideStep,
+    suggestionStep,
+    mailStep,
   ])
   .meta({ ref: 'CrmPlanStepInput' });
 
@@ -172,6 +227,16 @@ const StepView: z.ZodType<PlanStepView> = z.object({
         z.object({ field: z.string(), from: z.unknown(), to: z.unknown() }),
       ),
       updatedAt: z.string().nullable().optional(),
+      mail: z
+        .object({
+          from: z.string(),
+          to: z.array(z.string()),
+          cc: z.array(z.string()),
+          subject: z.string(),
+          text: z.string(),
+        })
+        .optional()
+        .meta({ description: 'The email a `mail.send` step sends, whole.' }),
     })
     .nullable()
     .meta({ description: 'What the rehearsal found the step would do.' }),
