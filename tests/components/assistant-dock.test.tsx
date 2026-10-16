@@ -160,6 +160,8 @@ describe('the assistant dock', () => {
     await user.keyboard('{Enter}');
     await waitFor(() => expect(asked()).toHaveLength(1));
     expect(asked()[0]?.text).toBe('逾期');
+    // Sent, the emptied box does not bring its suggestions back.
+    expect(screen.queryByRole('list')).toBeNull();
   });
 
   it('opens into the composer when clicked, and Tab goes through its tools to the suggestions', async () => {
@@ -287,6 +289,45 @@ describe('the assistant dock', () => {
     expect(
       screen.queryByRole('button', { name: english('dock.attach') }),
     ).toBeNull();
+  });
+
+  it('gets focus back, still one line, when the panel it opened closes', async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderDock('/crm/contacts');
+    const input = screen.getByRole('textbox');
+    await user.type(input, 'Who is new?');
+    await user.keyboard('{Enter}');
+    await waitFor(() => expect(asked()).toHaveLength(1));
+    // The panel takes focus, then closes.
+    chatFake.open = true;
+    act(() => {
+      (document.activeElement as HTMLElement | null)?.blur();
+      rerender(
+        <MemoryRouter initialEntries={['/crm/contacts']}>
+          <AssistantDock />
+        </MemoryRouter>,
+      );
+    });
+    chatFake.open = false;
+    act(() =>
+      rerender(
+        <MemoryRouter initialEntries={['/crm/contacts']}>
+          <AssistantDock />
+        </MemoryRouter>,
+      ),
+    );
+    const back = screen.getByRole('textbox');
+    expect(back).toHaveFocus();
+    // Not opened by itself: no tools, no suggestions.
+    expect(
+      screen.queryByRole('button', { name: english('dock.attach') }),
+    ).toBeNull();
+    expect(screen.queryByRole('list')).toBeNull();
+    // A press opens it.
+    await user.click(back);
+    expect(
+      screen.getByRole('button', { name: english('dock.attach') }),
+    ).toBeTruthy();
   });
 
   it('stays out of the way: agents loading, panel open, the overview, filled pages', () => {
