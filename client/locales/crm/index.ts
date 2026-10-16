@@ -1824,8 +1824,8 @@ const wording = {
     create: ['Create opportunity', '创建商机'],
   },
   settingsDescription: [
-    'Business defaults, reminders and the demo dataset.',
-    '配置业务选项、提醒和演示数据',
+    'Business defaults and reminders.',
+    '配置业务选项和提醒。',
   ],
   business: ['Business defaults', '业务配置'],
   reminders: ['Reminders', '提醒设置'],
@@ -2891,6 +2891,11 @@ const wording = {
     actorId: ['Operator', '操作人'],
     timeZone: ['Business timezone', '业务时区'],
     aiLanguage: ['AI working language', 'AI 工作语言'],
+    assistantDock: ['Ask box at the bottom of pages', '页面底部的 AI 对话框'],
+    assistantDockHint: [
+      'For everyone. Off, the AI is asked from the ✨ button at the top right.',
+      '对所有人生效。关闭后，从右上角的 ✨ 按钮使用 AI。',
+    ],
     decision: ['Decision', '处理'],
     comment: ['Comment', '意见'],
     taskReminderMinutes: [

@@ -16,6 +16,8 @@ import { crmEn } from '../../client/locales/crm/index.js';
 const state = vi.hoisted(() => ({
   panelOpen: false,
   mobile: false,
+  // The company's switch in Settings → General (assistantDock).
+  dock: true,
 }));
 
 // The crm locale's English text by its dotted key, with {{name}} filled in.
@@ -35,8 +37,11 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
   return {
     ...actual,
     useCrmText: () => ({ text: english, language: 'en-US' }),
-    // No workspace here: no background agent to leave out of the chat.
-    useMetadata: () => ({ data: undefined }),
+    // No workspace here but the dock's switch: no background agent to
+    // leave out of the chat.
+    useMetadata: () => ({
+      data: state.dock ? undefined : { settings: { assistantDock: false } },
+    }),
   };
 });
 // The assistant on the Agents plugin, with two models (tests/setup/agent-chat-fake).
@@ -260,6 +265,17 @@ describe('the assistant dock', () => {
     expect(
       screen.getByRole('textbox', { hidden: true }).closest('[hidden]'),
     ).toBeTruthy();
+  });
+
+  it('is not shown when the company switched it off', () => {
+    state.dock = false;
+    try {
+      renderDock('/crm/leads');
+      expect(screen.queryByRole('textbox')).toBeNull();
+      expect(screen.queryByRole('button')).toBeNull();
+    } finally {
+      state.dock = true;
+    }
   });
 
   it('says why when the chat cannot start, and sends nothing', async () => {

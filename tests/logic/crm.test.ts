@@ -856,6 +856,42 @@ describe('CRM API security and domain rules', () => {
       });
     }
   });
+  it("switches the assistant's ask box at the bottom of pages for everyone", async () => {
+    const settings = async (id: string) =>
+      (
+        (await (await request('/workspace', id)).json()) as {
+          data: { settings: { assistantDock: unknown } };
+        }
+      ).data.settings;
+    expect((await settings('rep')).assistantDock).toBe(true);
+    try {
+      expect(
+        (
+          await request('/systemSettings', 'admin', 'PUT', {
+            assistantDock: false,
+          })
+        ).status,
+      ).toBe(200);
+      // Every reader of the workspace sees it off.
+      expect((await settings('rep')).assistantDock).toBe(false);
+      expect(
+        (
+          await request('/systemSettings', 'admin', 'PUT', {
+            assistantDock: 'no',
+          })
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await request('/systemSettings', 'rep', 'PUT', {
+            assistantDock: true,
+          })
+        ).status,
+      ).toBe(403);
+    } finally {
+      await request('/systemSettings', 'admin', 'PUT', { assistantDock: true });
+    }
+  });
   it('allows shared reads, own updates, creator-only manager deletes and admin deletes', async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: 'Permission test',

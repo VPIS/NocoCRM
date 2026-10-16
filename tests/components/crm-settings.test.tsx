@@ -101,6 +101,31 @@ describe('the settings page', () => {
     expect(state.api.mock.lastCall?.[2]).not.toHaveProperty('currency');
   });
 
+  it("switches the AI ask box at the bottom of pages off with the business card's settings", async () => {
+    const user = userEvent.setup();
+    state.api.mockResolvedValue({ data: {} });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/settings/crm']}>
+          <SettingsPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const card = document.getElementById('settings-business') as HTMLElement;
+    const dock = within(card).getByRole('switch', {
+      name: crmEn.fields.assistantDock,
+    });
+    expect(dock.getAttribute('aria-checked')).toBe('true');
+    await user.click(dock);
+    await user.click(within(card).getByRole('button', { name: crmEn.save }));
+    expect(state.api).toHaveBeenLastCalledWith(
+      'systemSettings',
+      'PUT',
+      expect.objectContaining({ assistantDock: false, currency: 'USD' }),
+    );
+    expect(state.api.mock.lastCall?.[2]).not.toHaveProperty('notifyApprovals');
+  });
+
   it('shows the shipped business guidance, saves one written over it, and restores the default', async () => {
     const user = userEvent.setup();
     state.api.mockReset();

@@ -419,7 +419,10 @@ export class CrmService {
     ] as const)
       if (!Number.isFinite(value[key]) || value[key] < 0 || value[key] > 525600)
         throw new CrmError('invalidInput', 400, key);
-    for (const key of Object.values(notificationSwitches))
+    for (const key of [
+      ...Object.values(notificationSwitches),
+      'assistantDock',
+    ] as const)
       if (typeof value[key] !== 'boolean')
         throw new CrmError('invalidInput', 400, key);
     // Written over the shipped guidance; blank goes back to it.

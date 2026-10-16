@@ -9,7 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip.js';
-import { toText, useCrmText, type Entity } from './api.js';
+import { toText, useCrmText, useMetadata, type Entity } from './api.js';
 import { usePanelOpen, useAskDraft, useFocusReturn } from './assistant-ask.js';
 import { recordPin, useAgentReadiness, useDiscuss } from './agent-chat/ask.js';
 import { AskComposer } from './assistant-ask-composer.js';
@@ -93,6 +93,8 @@ export function AssistantDock(): ReactElement | null {
   const record = useCurrentRecord();
   const { pathname } = useLocation();
   const isMobile = useIsMobile();
+  // Switched off for the company in Settings → General (assistantDock).
+  const { data: meta } = useMetadata();
   const unavailable =
     readiness.state === 'unavailable' ? readiness.reason : undefined;
   const draft = useAskDraft(record, readiness.state !== 'ready');
@@ -106,7 +108,12 @@ export function AssistantDock(): ReactElement | null {
   const dockRef = useRef<HTMLDivElement>(null);
   useFocusReturn(() => (isMobile ? phoneRef.current : inputRef.current));
 
-  if (readiness.state === 'loading' || hiddenOn(pathname)) return null;
+  if (
+    readiness.state === 'loading' ||
+    hiddenOn(pathname) ||
+    meta?.settings.assistantDock === false
+  )
+    return null;
   const questions = questionsFor(pathname, record);
   const placeholder =
     unavailable ??

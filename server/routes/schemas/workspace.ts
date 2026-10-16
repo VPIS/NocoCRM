@@ -24,6 +24,9 @@ const SettingsShape = {
   staleDays: z.number().int(),
   nurtureReviewDays: z.number().int(),
   aiLanguage: z.enum(['en-US', 'zh-CN']),
+  assistantDock: z.boolean().meta({
+    description: "Whether pages show the assistant's ask box at their bottom.",
+  }),
   notifyApprovals: z.boolean(),
   notifyRecordChanges: z.boolean(),
   notifyComments: z.boolean(),

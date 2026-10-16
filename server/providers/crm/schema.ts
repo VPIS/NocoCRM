@@ -466,6 +466,10 @@ export interface CrmSettings {
   // assistant's prompt: `zh-CN` or `en-US`. The skills are English either
   // way. The chat always answers in the language the user writes in.
   aiLanguage: string;
+  // Whether every page but the overview shows the assistant's ask box at
+  // its bottom (assistant-dock.tsx), for the whole company; off, the
+  // header's ✨ button opens the assistant.
+  assistantDock: boolean;
   // Whether the CRM sends each kind of in-app message (service.ts,
   // queueMessage): approvals submitted, withdrawn and decided; records
   // changing hands and task participants told of a change; a colleague a
@@ -501,6 +505,7 @@ export const defaultSettings: CrmSettings = {
   staleDays: 14,
   nurtureReviewDays: 90,
   aiLanguage: 'en-US',
+  assistantDock: true,
   notifyApprovals: true,
   notifyRecordChanges: true,
   notifyComments: true,

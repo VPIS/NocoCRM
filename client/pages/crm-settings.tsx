@@ -24,7 +24,8 @@ interface SettingsResponse {
   settings: CrmSettings;
 }
 // What each card holds and saves.
-const BUSINESS = ['currency', 'timeZone', 'aiLanguage'] as const;
+const BUSINESS_FIELDS = ['currency', 'timeZone', 'aiLanguage'] as const;
+const BUSINESS = [...BUSINESS_FIELDS, 'assistantDock'] as const;
 const REMINDER_DAYS = [
   'taskReminderMinutes',
   'closeReminderDays',
@@ -194,7 +195,23 @@ function SettingsForm({
           <CardTitle>{text('business')}</CardTitle>
         </CardHeader>
         <CardContent className='space-y-6'>
-          {fields(BUSINESS)}
+          {fields(BUSINESS_FIELDS)}
+          {/* The assistant's ask box at the bottom of the pages
+              (assistant-dock.tsx), for everyone; the header's ✨ button
+              stays either way. */}
+          <div className='flex items-start justify-between gap-4 rounded-lg border border-border px-3 py-2.5'>
+            <div className='min-w-0 space-y-0.5'>
+              <p className='text-sm'>{text('fields.assistantDock')}</p>
+              <p className='text-xs text-muted-foreground'>
+                {text('fields.assistantDockHint')}
+              </p>
+            </div>
+            <Switch
+              checked={settings.assistantDock !== false}
+              onCheckedChange={(on) => set('assistantDock', on)}
+              aria-label={toText(text('fields.assistantDock'))}
+            />
+          </div>
           {saveCard('business', BUSINESS)}
         </CardContent>
       </Card>
