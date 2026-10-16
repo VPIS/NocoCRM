@@ -64,6 +64,7 @@ import { AutoLoadMore } from '../auto-load.js';
 import { ErrorNotice } from '../common.js';
 import { Markdown } from '../markdown.js';
 import { PlanCard } from '../plan-card.js';
+import { SuggestionCard } from './suggestion-card.js';
 import { usePlans } from '../plans.js';
 import { CRM_SOURCE, modelKey, useAgentModels } from './ask.js';
 import { Composer } from './composer.js';
@@ -238,24 +239,42 @@ export function Conversation({
   const archived = Boolean(conversation?.archivedAt);
   const loading = conversationId ? detail.isLoading : false;
 
+  // A suggestion's card once, under the first notice naming it.
+  const firstCards = new Set<string>();
+  const seenEntries = new Set<string>();
+  for (const message of messages.items) {
+    const card = suggestionOf(message);
+    if (!card || seenEntries.has(card.entryId)) continue;
+    seenEntries.add(card.entryId);
+    firstCards.add(message.id);
+  }
   const timeline = timelineOrder([
     ...messages.items.map((message) => ({
       key: message.id,
       at: message.createdAt,
       rank: 0,
       node: (
-        <MessageRow
-          message={message}
-          notice={(item) =>
-            noticeText(
-              agentsT,
-              item.metadata.notice,
-              item.content.content,
-              agentName,
-              newsText,
-            )
-          }
-        />
+        <>
+          <MessageRow
+            message={message}
+            notice={(item) =>
+              noticeText(
+                agentsT,
+                item.metadata.notice,
+                item.content.content,
+                agentName,
+                newsText,
+              )
+            }
+          />
+          {/* An AI agent's suggestion, as its card: decided here as in
+              the inbox. */}
+          {suggestionOf(message) && firstCards.has(message.id) ? (
+            <div className='mt-2'>
+              <SuggestionCard {...suggestionOf(message)!} />
+            </div>
+          ) : null}
+        </>
       ),
     })),
     ...shownPlans.map((plan) => ({
@@ -707,4 +726,35 @@ export function LiveLine({
       {text('agentChat.working', { agent: agentName, step })}
     </p>
   );
+}
+
+// The suggestion an AI agent's notice names (server/providers/crm-agents/
+// ai-work-news.ts), when it is a card to show: a lead's, a deal's, an
+// approval's or a task's, ready or shown; a failure or a company's signals
+// are their line alone.
+function suggestionOf(message: ConversationMessage): {
+  entity: 'leads' | 'opportunities' | 'approvals' | 'tasks';
+  recordId: string;
+  entryId: string;
+} | null {
+  if (message.role !== 'system') return null;
+  const notice = message.metadata.notice as
+    (Partial<NewsNotice> & { code?: string }) | undefined;
+  if (notice?.code !== 'news' || notice.type !== 'aiWork') return null;
+  const params = notice.params ?? {};
+  const entity = toText(params.entity);
+  const recordId = toText(params.recordId);
+  const entryId = toText(params.entryId);
+  if (
+    !['leads', 'opportunities', 'approvals', 'tasks'].includes(entity) ||
+    !recordId ||
+    !entryId ||
+    params.outcome === 'failed'
+  )
+    return null;
+  return {
+    entity: entity as 'leads' | 'opportunities' | 'approvals' | 'tasks',
+    recordId,
+    entryId,
+  };
 }

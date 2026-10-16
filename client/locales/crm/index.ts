@@ -1628,7 +1628,17 @@ const wording = {
         '{{agent}} could not finish “{{title}}”',
         '{{agent}}未能完成「{{title}}」',
       ],
+      shown: [
+        '{{agent}}’s suggestion on “{{title}}”',
+        '{{agent}}对「{{title}}」的建议',
+      ],
     },
+    // A suggestion shown in the conversation that was redone or followed
+    // up again elsewhere since.
+    replaced: [
+      'This suggestion on “{{title}}” has been replaced by a newer one, on the record and in the inbox.',
+      '「{{title}}」的这条建议已被新的建议替换，可在记录和收件箱中查看。',
+    ],
   },
   agentWork: {
     // Their names, shown in the viewer's language while an administrator

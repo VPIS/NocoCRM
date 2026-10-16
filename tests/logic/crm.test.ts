@@ -371,6 +371,9 @@ beforeAll(async () => {
     c.string('id');
     c.primary('id');
     c.string('conversationId');
+    // The notices a conversation shows (the AI's work told into it).
+    c.string('role').nullable();
+    c.json('metadata').nullable();
   });
   await database.builder().createCollection('user', (c) => {
     c.string('id');
@@ -11027,6 +11030,7 @@ describe('agents and plans', () => {
   it("lets a run set the CRM's agents to work directly and tells its conversation what they came to", async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: 'Asked by the agent',
+      company: 'Asking Co',
       source: 'website',
     });
     // Without the action, refused; with it, the request reaches the route
@@ -11087,7 +11091,7 @@ describe('agents and plans', () => {
       news: {
         notice: {
           type: 'aiWork',
-          title: 'Asked by the agent',
+          title: 'Asked by the agent / Asking Co',
           params: { entity: 'leads', outcome: 'ready' },
         },
         input: { type: 'signal' },
@@ -11099,6 +11103,94 @@ describe('agents and plans', () => {
     // Work no conversation asked for tells no one.
     await tell('unwatched-entry');
     expect(delivered).toHaveLength(1);
+
+    // A card already made, shown in the run's conversation as its card,
+    // the agent not woken; only the record's latest, and only from a run.
+    delivered.length = 0;
+    const shown = await asRun(
+      '/decisions/watched-entry/show',
+      ['crm.aiWork/request'],
+      'POST',
+    );
+    expect(await shown.json()).toEqual({ data: { shown: true } });
+    expect(delivered).toEqual([
+      {
+        conversationId: 'conversation-1',
+        news: {
+          notice: {
+            code: 'news',
+            type: 'aiWork',
+            title: 'Asked by the agent / Asking Co',
+            params: {
+              entity: 'leads',
+              recordId: lead.id,
+              entryId: 'watched-entry',
+              outcome: 'shown',
+            },
+          },
+        },
+      },
+    ]);
+    // Once in a conversation, it is not put there again.
+    await database
+      .query()
+      .insertInto('agConversationMessages')
+      .values({
+        id: 'shown-notice',
+        conversationId: 'conversation-1',
+        role: 'system',
+        metadata: JSON.stringify({
+          notice: (delivered[0].news as { notice: unknown }).notice,
+        }),
+      })
+      .execute();
+    await asRun(
+      '/decisions/watched-entry/show',
+      ['crm.aiWork/request'],
+      'POST',
+    );
+    expect(delivered).toHaveLength(1);
+    expect(
+      await (
+        await request('/decisions/watched-entry/show', 'rep', 'POST')
+      ).json(),
+    ).toEqual({ data: { shown: false } });
+    expect(
+      (
+        await asRun(
+          '/decisions/watched-entry/show',
+          ['crm.aiWork/request'],
+          'POST',
+          undefined,
+          'outsider',
+        )
+      ).status,
+    ).toBe(403);
+    await database
+      .query()
+      .insertInto('crmHistory')
+      .values({
+        id: 'newer-entry',
+        entity: 'leads',
+        recordId: lead.id,
+        actorId: 'rep',
+        action: 'ai',
+        source: 'ai',
+        aiStatus: 'pending',
+        ai: JSON.stringify({
+          kind: 'evaluation',
+          result: { summary: 'Later.' },
+        }),
+        changes: JSON.stringify({}),
+        createdAt: new Date(Date.now() + 1000).toISOString(),
+      })
+      .execute();
+    const older = await asRun(
+      '/decisions/watched-entry/show',
+      ['crm.aiWork/request'],
+      'POST',
+    );
+    expect(older.status).toBe(400);
 
     // A company's signals: started at once, the search going on, and what
     // it found told to the conversation.

@@ -65,11 +65,14 @@ import {
 } from '../providers/crm-agents/search-answers.js';
 import { array } from '../providers/crm/service.js';
 import { resolveTitles } from '../providers/crm/titles.js';
-import { runCommand, type CrmEnv } from './context.js';
+import { runCommand, runConversationOf, type CrmEnv } from './context.js';
 import {
+  AI_WORK_ACTION,
   COLLEAGUES_ACTION,
   SEARCH_ACTION,
 } from '../providers/crm-agents/actions.js';
+import { agentsToken } from '@nocobase/app-plugin-agents/server/tokens';
+import { showSuggestion } from '../providers/crm-agents/ai-work-news.js';
 import { demoServices } from './demo-services.js';
 import { CRM_ERROR_DOMAIN } from './errors.js';
 import { JsonObject, ListMeta } from './schemas/common.js';
@@ -732,6 +735,42 @@ export function registerWorkspaceRoutes(
         c.req.valid('query'),
       );
       return c.json({ data, meta });
+    },
+  );
+
+  // A suggestion put into the conversation of the agent that asks, as its
+  // card, for the person to decide there (crm-agents/ai-work-news.ts).
+  router.post(
+    '/decisions/:entryId/show',
+    describeRoute({
+      tags: ['Ai'],
+      summary: 'Show an AI suggestion in the conversation',
+      operationId: 'showDecision',
+      description:
+        "Puts the suggestion's card into the conversation of the agent that calls it, where the person decides it as in the inbox. Only the record's latest suggestion, and only one the reader may see; nothing without a conversation.",
+      ...runCommand(AI_WORK_ACTION, { command: 'suggestions show' }),
+      responses: {
+        '200': dataResponse(
+          z.object({ shown: z.boolean() }),
+          'Whether a conversation shows it now.',
+        ),
+        ...apiErrorResponses,
+        '404': apiErrorResponse(404),
+      },
+    }),
+    apiValidator('param', z.object({ entryId: z.string().min(1).max(64) })),
+    async (c) => {
+      const conversationId = await runConversationOf(app, c.get('auth'));
+      if (!conversationId || !app.container.has(agentsToken))
+        return c.json({ data: { shown: false } });
+      await showSuggestion(
+        app.container.resolve(agentsToken),
+        service,
+        c.get('actor'),
+        c.req.valid('param').entryId,
+        conversationId,
+      );
+      return c.json({ data: { shown: true } });
     },
   );
 

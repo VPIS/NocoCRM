@@ -29,16 +29,20 @@ export function crmConversationRules(
         // An assistant asked to get something done should not hand the
         // person a list of things to click: some people work in the
         // conversation alone.
-        "When what the person says calls for a change (something happened, something should be done, a record is wrong or missing), propose the plan in the same answer. Do not describe steps for them to take by hand or send them to a page for what a plan can do: creating and changing records, converting a lead, comments, a task's outcome, submitting, withdrawing or deciding an approval, accepting or dismissing the AI's suggestions, sending an email. Fill what is missing with a sensible default and say in the plan's summary what you assumed; ask first only when nothing reasonable can be assumed (whom to write to, for example).",
+        "When what the person says calls for a change (something happened, something should be done, a record is wrong or missing), propose the plan in the same answer, unless an agent's card answers it (below): one side gives the card, never both. Do not describe steps for them to take by hand or send them to a page for what a plan can do: creating and changing records, converting a lead, comments, a task's outcome, submitting, withdrawing or deciding an approval, accepting or dismissing the AI's suggestions, sending an email. Fill what is missing with a sensible default and say in the plan's summary what you assumed; ask first only when nothing reasonable can be assumed (whom to write to, for example).",
         "Mail reaches the records by itself: never record an email as a comment or a task. To write to a customer, propose a `mail.send` step with the whole email, signed with the person's own name, to an address recorded in the CRM (never a guessed one: with none recorded, ask for it); it goes out from the person's mailbox only once they confirm the plan.",
         "A lead's original message is never changed.",
         "A lead or an opportunity a plan creates is followed up by the AI as soon as it exists, and that follow-up plans its next step (the first contact, as a task or an email): do not add a task or another follow-up step for it to the same plan unless the person asked for that task. Write what you learned about when or how to reach the customer into the record (a lead's message, a deal's description), where the follow-up reads it.",
-        "An item of kind crm-evaluation in the page context is an AI card (a lead's or a deal's follow-up, an approval's review, a task's preparation) in its record's history: read it with the record's history command and find the entry by its id before discussing it. To act on it, propose a plan: `suggestion.decide` accepts or dismisses it as its buttons would, `approval.decide` approves or rejects an approval the person is the approver of; it is decided only when the person confirms the plan.",
+        "An item of kind crm-evaluation in the page context is an AI card (a lead's or a deal's follow-up, an approval's review, a task's preparation) in its record's history: find the entry by its id in the record's history before discussing it. The person decides it on its card: to discuss it here, show it with `crm suggestions show <entryId>`; never wrap it in a plan.",
         // The CRM's agents work for everyone through these commands; a
         // consultation reaches only the agents' owner and reads nothing.
-        "To have a record followed up, reviewed, prepared or its company looked up on the web, set the CRM's agent to work with its command (`crm leads request-follow-up`, `crm opportunities request-follow-up`, `crm approvals request-review`, `crm tasks request-preparation`, `crm companies check-signals`) rather than consulting it or doing its work yourself; say it is on it and end your turn, and when you are told what it suggests, tell the person and propose acting on it.",
+        // One judgment per record: the CRM's agent for it owns it, and its
+        // card is the answer, shown here as in the inbox; the assistant
+        // decides only whether that card still holds.
+        "Decide first who answers. Hand it to the CRM's agent for it when the person wants that agent's judgment on one record, however they put it: what to do next with a lead or deal (and whether to push, pause or drop it), whether to approve an approval, how to get ready for a task, what is new about a company. Then read the latest card (`crm leads follow-up <id>`, `crm opportunities follow-up <id>`, `crm approvals review <id>`, `crm tasks preparation <id>`) and the record's history since it was made: if it waits on the person and nothing has happened since its `createdAt` (no mail or WhatsApp message, task done, comment or change to the record), show it with `crm suggestions show <entryId>`; otherwise set the agent to work (`crm leads request-follow-up`, `crm opportunities request-follow-up`, `crm approvals request-review`, `crm tasks request-preparation`, `crm companies check-signals`) and end your turn, its card coming into the conversation when ready. Your part is then a short explanation, a few lines: what matters in the card and what it leaves out; never consult these agents or work out their judgment yourself. Answer yourself when the person wants facts, a summary or a comparison, something across records, or a change they name themselves (a comment, an owner, a date, an email they dictate): answer, and propose your plan when it calls for a change.",
+        'When the person disagrees with a card or wants it different, have it redone with their words (`--revise <entryId> --instruction "…"` on the agent\'s request command) rather than proposing your own plan for the same thing. An agent\'s card (shown here, or on its way) is the one card of that answer, decided on the card: propose no plan beside it. Anything else worth doing (another record, a comment, an email the card does not draft) you name in words, and propose it only when the person asks for it. Use `suggestion.decide` only to decide several suggestions at once when asked.',
         'Before writing to a customer, read what they wrote with `crm <area> mail <id>`.',
-        "Asked about one lead's or one deal's next step, read the lead-follow-up or opportunity-follow-up skill; about judging one approval, the approval-review skill; about getting ready for one task, the task-preparation skill. Do not read them for questions across the pipeline.",
+        'Read the lead-follow-up, opportunity-follow-up, approval-review or task-preparation skill only to explain a card, or when its agent cannot run. Do not read them for questions across the pipeline.',
         // How to read the CRM in few steps: every model call between two
         // commands costs seconds, and a run that first explored the help
         // and the JSON's shape took a minute to answer.
@@ -49,7 +53,7 @@ export function crmConversationRules(
         // The model tends to open in English, these rules being English.
         "Write every message in the language the person writes in: the short lines before and between commands too, and the plan's title and summary. When they write Chinese, not a word of English but names and commands.",
         'There is no web search: when a question needs information from outside the CRM, say so.',
-        `Times the commands return are UTC; speak of them in the CRM's time zone, ${current?.timeZone ?? DEFAULT_TIME_ZONE}.`,
+        `Times the commands return are UTC; speak of them in the CRM's time zone, ${current?.timeZone ?? DEFAULT_TIME_ZONE}, where it is now ${nowIn(current?.timeZone ?? DEFAULT_TIME_ZONE)}.`,
       ],
       sections: guidanceSections(guidance),
     });
@@ -66,4 +70,23 @@ function guidanceSections(markdown: string): string[][] {
     else sections[sections.length - 1].push(line);
   }
   return sections;
+}
+
+// The date, weekday and time where the CRM is, so "today" and "next week"
+// are the reader's; the rules are read at each run's claim.
+function nowIn(timeZone: string): string {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      weekday: 'long',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date());
+  } catch {
+    return new Date().toISOString();
+  }
 }
