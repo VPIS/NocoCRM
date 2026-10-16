@@ -83,10 +83,6 @@ const ai: AppConfigFactory<CrmAiConfig> = defineAppConfig({
       secret: true,
       required: false,
     }),
-    OPENAI_BASE_URL: envString('llmServices.openai.options.baseURL', {
-      description: "The OpenAI model service's base URL.",
-      required: false,
-    }),
     DEEPSEEK_API_KEY: envString('llmServices.deepseek.options.apiKey', {
       description: "The DeepSeek model service's API key.",
       secret: true,
