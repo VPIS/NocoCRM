@@ -1,5 +1,5 @@
 // Settings → Permission sets: the roles people hold. The list opens a set's
-// own page (its permissions and members, covering the list); a set is
+// own page (its permissions and members, in the list's place); a set is
 // created, renamed and deleted here. Built on the authorization plugin's
 // `/api/authorization/permissionSets`, which checks the settings item
 // `authorization.permission-sets` for every call.
@@ -14,7 +14,7 @@ import {
   Trash2Icon,
 } from 'lucide-react';
 import { useMemo, useRef, useState, type ReactElement } from 'react';
-import { Link, Outlet, useLocation } from 'react-router';
+import { Link, Outlet, useLocation, useResolvedPath } from 'react-router';
 
 import { PageContainer } from '#components/page-container';
 import { PageHeader } from '#components/page-header';
@@ -88,6 +88,14 @@ export default function PermissionSetsPage(): ReactElement {
     readonly set: PermissionSet | null;
   }>({ open: false, set: null });
   const link = (pathname: string) => ({ pathname, search: location.search });
+  // A set's own page takes the list's place under the Settings tabs, which
+  // stay; New and Rename open over the list.
+  const own = useResolvedPath('.');
+  const child = location.pathname
+    .slice(own.pathname.length)
+    .split('/')
+    .find(Boolean);
+  const setOpen = child !== undefined && child !== 'new' && child !== 'edit';
 
   let content: ReactElement;
   if (sets.error && !sets.data) {
@@ -210,6 +218,7 @@ export default function PermissionSetsPage(): ReactElement {
     );
   }
 
+  if (setOpen) return <Outlet context={outletContext} />;
   const target = deletion.set ? title(deletion.set) : '';
   return (
     <PageContainer>

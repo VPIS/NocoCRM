@@ -1,7 +1,7 @@
-// A permission set's own page (/settings/permission-sets/:setKey), covering
-// the list: its name and key, Rename and Delete in the header, and two
-// tabs, its permissions and its members. The header's trail leads back to
-// the list with its search, so there is no back button (guideline L6).
+// A permission set's own page (/settings/permission-sets/:setKey), in the
+// list's place under the Settings tabs (permission-sets/index.tsx): Back to
+// the list with its search, its name and key, Rename and Delete in the
+// header, and two tabs, its permissions and its members.
 import { usePageBreadcrumb, useToaster } from '@nocobase/app-client';
 import { useAuthorizationClient } from '@nocobase/app-plugin-authorization/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -24,9 +24,10 @@ import {
   useResolvedPath,
 } from 'react-router';
 
+import { BackButton } from '#components/back-button';
 import { PageContainer } from '#components/page-container';
+import { PageFrameContext } from '#components/page-frame';
 import { PageHeader } from '#components/page-header';
-import { RouteChildPage } from '#components/route-child-page';
 import { Badge } from '#components/ui/badge';
 import { Button } from '#components/ui/button';
 import {
@@ -155,62 +156,73 @@ export default function PermissionSetPage(): ReactElement {
     const remove = can('delete', set.data);
     body = (
       <>
-        <PageHeader
-          title={name}
-          description={
-            <span className='flex flex-wrap items-center gap-2'>
-              <code className='font-mono text-xs'>{set.data.key}</code>
-              {set.data.unrestricted ? (
-                <Badge variant='info'>{text('sets.kinds.unrestricted')}</Badge>
-              ) : set.data.protection ? (
-                <Badge variant='muted'>{text('sets.kinds.builtIn')}</Badge>
-              ) : null}
-            </span>
-          }
-          actions={
-            <>
-              {rename && tab ? (
-                <Button
-                  variant='outline'
-                  nativeButton={false}
-                  render={
-                    <Link
-                      to={{ pathname: `${tab}/edit`, search: location.search }}
-                      onClick={allowNavigation}
-                    />
-                  }
-                >
-                  <PencilIcon data-icon='inline-start' />
-                  {text('sets.rename')}
-                </Button>
-              ) : null}
-              {remove ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
+        {/* Under the Settings title and tabs, the set still names itself. */}
+        <PageFrameContext.Provider value={false}>
+          <PageHeader
+            title={name}
+            description={
+              <span className='flex flex-wrap items-center gap-2'>
+                <code className='font-mono text-xs'>{set.data.key}</code>
+                {set.data.unrestricted ? (
+                  <Badge variant='info'>
+                    {text('sets.kinds.unrestricted')}
+                  </Badge>
+                ) : set.data.protection ? (
+                  <Badge variant='muted'>{text('sets.kinds.builtIn')}</Badge>
+                ) : null}
+              </span>
+            }
+            actions={
+              <>
+                {rename && tab ? (
+                  <Button
+                    variant='outline'
+                    nativeButton={false}
                     render={
-                      <Button
-                        variant='outline'
-                        size='icon'
-                        aria-label={text('sets.more')}
+                      <Link
+                        to={{
+                          pathname: `${tab}/edit`,
+                          search: location.search,
+                        }}
+                        onClick={allowNavigation}
                       />
                     }
                   >
-                    <MoreHorizontalIcon />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align='end' className='w-auto min-w-40'>
-                    <DropdownMenuItem
-                      variant='destructive'
-                      onClick={() => setDeleting(true)}
+                    <PencilIcon data-icon='inline-start' />
+                    {text('sets.rename')}
+                  </Button>
+                ) : null}
+                {remove ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          variant='outline'
+                          size='icon'
+                          aria-label={text('sets.more')}
+                        />
+                      }
                     >
-                      <Trash2Icon />
-                      {text('sets.delete')}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : null}
-            </>
-          }
-        />
+                      <MoreHorizontalIcon />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align='end'
+                      className='w-auto min-w-40'
+                    >
+                      <DropdownMenuItem
+                        variant='destructive'
+                        onClick={() => setDeleting(true)}
+                      >
+                        <Trash2Icon />
+                        {text('sets.delete')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
+              </>
+            }
+          />
+        </PageFrameContext.Provider>
         <RouteTabs
           label={name}
           tabs={TABS.map((candidate) => ({
@@ -256,8 +268,9 @@ export default function PermissionSetPage(): ReactElement {
   }
 
   return (
-    <RouteChildPage>
-      <PageContainer>{body}</PageContainer>
-    </RouteChildPage>
+    <PageContainer>
+      <BackButton to={{ pathname: listPath, search: location.search }} />
+      {body}
+    </PageContainer>
   );
 }
