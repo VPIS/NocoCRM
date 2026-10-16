@@ -170,7 +170,9 @@ export function CompanyCaptureDialog({
       <DialogContent
         showCloseButton={false}
         className={`max-h-[90svh] overflow-y-auto ${
-          profile ? 'sm:max-w-6xl' : 'sm:max-w-xl'
+          // Before the search, wide enough for the title, the tabs and the
+          // agent's name on one line.
+          profile ? 'sm:max-w-6xl' : 'sm:max-w-[44rem]'
         }`}
       >
         <DialogHeader>

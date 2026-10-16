@@ -107,7 +107,7 @@ const { default: AgentsPage } =
 
 it('shows the company signals as an agent: its checks, the signals read, and each check opening its company', () => {
   render(
-    <MemoryRouter initialEntries={['/crm/agent-work/signals']}>
+    <MemoryRouter initialEntries={['/crm/agent-work/companies']}>
       <AgentsPage />
     </MemoryRouter>,
   );
@@ -136,4 +136,13 @@ it('shows the company signals as an agent: its checks, the signals read, and eac
     ).getAttribute('href'),
   ).toBe('/crm/companies/c1');
   expect(screen.getByText('Shanghai Electric names a new CIO.')).toBeTruthy();
+});
+
+it("opens the company work's tab from its former address", () => {
+  render(
+    <MemoryRouter initialEntries={['/crm/agent-work/signals']}>
+      <AgentsPage />
+    </MemoryRouter>,
+  );
+  expect(screen.getByText('Model: qwen · qwen3.8-flash')).toBeTruthy();
 });

@@ -467,7 +467,7 @@ const wording = {
     },
     // The company signals' check (company-signals.ts), its runs the checks.
     signals: {
-      title: ['Company signals', '公司信号'],
+      title: ['Company research', '公司情报'],
       skill: ['Skill: Company signals', '技能：公司信号'],
       // In the agents' slots (company-signals.ts, overview).
       stats: {
@@ -1585,8 +1585,8 @@ const wording = {
     comment: ['Comment on records', '评论记录'],
     aiWork: ['Set the AI agents to work', '让 AI Agent 工作'],
     aiWorkDescription: [
-      "Asks the CRM's agents for a follow-up, a review, a task's preparation or a company's signals; what they suggest waits for the person.",
-      '请 CRM 的 Agent 跟进、复核、准备任务或查公司信号；它们的建议仍由本人决定。',
+      "Asks the CRM's agents for a follow-up, a review, a task's preparation or a company's profile and news; what they suggest waits for the person.",
+      '请 CRM 的 Agent 跟进、复核、准备任务或查公司资料和动态；它们的建议仍由本人决定。',
     ],
     planCreate: ['Suggest changes', '建议改动'],
     planCreateDescription: [
@@ -1648,7 +1648,7 @@ const wording = {
       opportunities: ['Opportunity follow-up', '商机跟进'],
       approvals: ['Approval review', '审批助手'],
       tasks: ['Task assistant', '任务助手'],
-      signals: ['Company signals', '公司信号'],
+      signals: ['Company research', '公司情报'],
     },
     // The agent doing a dialog's AI work, named in it
     // (components/crm/work-agent.tsx).
@@ -1703,8 +1703,8 @@ const wording = {
       '在任务当天早上为负责人做准备：任务要达成什么、从记录的任务、评论和邮件看进展到哪一步、对方都有谁、要问的问题、要带的材料、风险和要点。只有任务负责人和参与人能看到。也负责完成任务时整理任务结果。',
     ],
     signals: [
-      "Looks on the web each morning for what happened lately at the companies with an open deal or marked as watched: funding, hiring at scale, new executives, major news and risks. It keeps each with its sources on the company's page and tells the people selling to it; the deals' daily pass then follows up the company's open deals for one worth acting on.",
-      '每天早上联网查看有进行中商机或被标记关注的公司最近发生了什么：融资、扩张招聘、高管变动、重大动态和风险。每条带出处记在公司页上，并通知公司和商机的负责人；值得跟进的，由随后的商机每日巡检跟进这家公司进行中的商机。',
+      "Looks companies up on the web. For a new company, it fills the form with the company's public particulars. Each morning, it looks at what happened lately at the companies with an open deal or marked as watched: funding, hiring at scale, new executives, major news and risks. It keeps each with its sources on the company's page and tells the people selling to it; the deals' daily pass then follows up the company's open deals for one worth acting on.",
+      '联网了解客户公司。新建公司时，查找公司的公开资料填好表单；每天早上，查看有进行中商机或被标记关注的公司最近发生了什么：融资、扩张招聘、高管变动、重大动态和风险。每条带出处记在公司页上，并通知公司和商机的负责人；值得跟进的，由随后的商机每日巡检跟进这家公司进行中的商机。',
     ],
   },
   // The agent whose model and instructions the CRM's background work

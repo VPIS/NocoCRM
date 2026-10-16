@@ -14,6 +14,7 @@ import { provisionSkills } from './library.js';
 import { SKILLS_DIR } from '../crm/ai-model.js';
 import {
   nameWorkAgents,
+  renameWorkAgents,
   provisionWorkAgents,
   retireBackgroundAgent,
 } from './work-agents.js';
@@ -170,6 +171,10 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
       this.app.container.resolve(databaseManagerToken),
     );
     // Those made before their names were translated.
+    await renameWorkAgents(
+      agents,
+      this.app.container.resolve(databaseManagerToken),
+    );
     await nameWorkAgents(this.app.container.resolve(databaseManagerToken));
     // The Background AI they replaced, gone with its recorded use.
     await retireBackgroundAgent(

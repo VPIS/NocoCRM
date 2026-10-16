@@ -20,6 +20,8 @@ description: How to look records up in the CRM with its commands, and how to pro
 - \`crm search --q <words>\` looks in every kind of record at once.
 - \`crm suggestions list\` gives the AI's suggestions waiting on the person (a lead's or a deal's follow-up, a task's preparation, an approval's review): each with its \`entity\`, \`recordId\`, its \`id\` and what it proposes (\`ai.result\`).
 - \`crm <area> mail <id>\` reads the mail the person exchanged with a lead's, contact's, company's or deal's people: each message's own words, newest first. Read it before writing back to a customer.
+- \`crm duplicates check --entity <leads|contacts|companies|opportunities>\` (with \`--name\`, \`--company\` or \`--company-id\`, \`--email\`, \`--phone\`) finds what a record about to be created would repeat. Run it before every plan that creates a lead, contact, company or opportunity.
+- \`crm companies look-up --name "<name>"\` (\`--note\` for what the person said about it) has the Company research agent look a new company up on the web; what it finds (the company form's values, the unsure ones, the pages, the companies by that name) comes to the conversation in a minute, and you propose the company with it.
 - \`crm colleagues list\` turns a person's name into the id \`ownerId\`, \`approverId\` and \`internalParticipants\` take.
 - \`crm docs <command>\` shows a command's fields, their types and allowed values. Read it before writing a step for that command.
 
@@ -33,7 +35,7 @@ The CRM's own agents do their work in the background, as their cards' buttons ha
 | \`crm opportunities request-follow-up <id>\` | Opportunity follow-up |
 | \`crm approvals request-review <id>\` | Approval review (the person must be its approver) |
 | \`crm tasks request-preparation <id>\` | Task assistant (the person must own the open task) |
-| \`crm companies check-signals <id>\` | Company signals: searches the web for the company's news |
+| \`crm companies check-signals <id>\` | Company research: searches the web for the company's news |
 
 - \`crm suggestions show <entryId>\` puts an existing card (the record's latest) into this conversation, where the person decides it as in the inbox.
 - Decide who answers: when the person wants an agent's judgment on one record (what to do next with a lead or deal, whether to approve, how to prepare a task, what is new about a company), the agent's card is the answer and yours a few lines of explanation: show the latest card when it waits and nothing happened on the record since it was made, otherwise set the agent to work. Facts, summaries, questions across records and changes the person names themselves you answer yourself, with your plan when a change is called for. With \`--revise <entryId> --instruction "<the person's words>"\`, a follow-up, review or preparation redoes the waiting card as the person says: do that when they disagree with it.

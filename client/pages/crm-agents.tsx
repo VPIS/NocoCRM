@@ -1,7 +1,7 @@
 import { useState, type ReactElement } from 'react';
 import { useCan } from '@nocobase/app-plugin-authorization/client';
 import { AgentAvatar } from '@nocobase/app-plugin-agents/client/chat';
-import { Link, useLocation } from 'react-router';
+import { Link, Navigate, useLocation } from 'react-router';
 import {
   Ban,
   CircleCheck,
@@ -83,6 +83,16 @@ const AGENTS: readonly AgentName[] = [
   'tasks',
   'signals',
 ];
+// Each tab's address: the kind of record its agent works on, the company
+// work's `companies` (its address was `signals` until 2026-10-16, when the
+// agent became Company research; that address leads here).
+const SLUGS: Record<AgentName, string> = {
+  leads: 'leads',
+  opportunities: 'opportunities',
+  approvals: 'approvals',
+  tasks: 'tasks',
+  signals: 'companies',
+};
 const ICONS: Record<AgentName, LucideIcon> = {
   leads: ScanSearch,
   opportunities: TrendingUp,
@@ -112,7 +122,10 @@ export default function AgentsPage(): ReactElement {
   const running = useRunningAgents();
   const nameOf = useWorkAgentNames();
   const agent =
-    AGENTS.find((name) => pathname.endsWith(`/agent-work/${name}`)) ?? 'leads';
+    AGENTS.find((name) => pathname.endsWith(`/agent-work/${SLUGS[name]}`)) ??
+    'leads';
+  if (pathname.endsWith('/agent-work/signals'))
+    return <Navigate replace to='/crm/agent-work/companies' />;
   return (
     <CrmFrame title={text('navigation.agentWork')}>
       {/* An agent with runs under way shows the AI's pulsing dot and their
@@ -126,7 +139,7 @@ export default function AgentsPage(): ReactElement {
           const off = meta?.agents?.[name]?.enabled === false;
           const agentName = nameOf(name);
           return {
-            to: `/crm/agent-work/${name}`,
+            to: `/crm/agent-work/${SLUGS[name]}`,
             label: agentName ?? text(`agents.${name}.title`),
             icon: ICONS[name],
             ...(agentName

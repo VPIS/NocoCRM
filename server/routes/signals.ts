@@ -11,7 +11,10 @@ import { companySignalsToken } from '../providers/crm/company-signals.js';
 import { agentsToken } from '@nocobase/app-plugin-agents/server/tokens';
 import { crmToken } from '../providers/crm/index.js';
 import { AI_WORK_ACTION } from '../providers/crm-agents/actions.js';
-import { deliverSignalCheck } from '../providers/crm-agents/ai-work-news.js';
+import {
+  deliverCompanyProfile,
+  deliverSignalCheck,
+} from '../providers/crm-agents/ai-work-news.js';
 import { runCommand, runConversationOf, type CrmEnv } from './context.js';
 import {
   CompanyProfile,
@@ -41,7 +44,7 @@ export function registerSignalRoutes(
       summary: 'Look a new company up on the web',
       operationId: 'captureCompany',
       description:
-        "New company with the AI: searches the web for the company named and returns the form's values found, the fields it was unsure of, the pages it read and the companies the reader may see by that name. Saves nothing. Needs the right to create companies and the Company signals agent's model (without one, 400 FAILED_PRECONDITION with reason SIGNALS_UNAVAILABLE); a failed search is 503 UNAVAILABLE with reason SIGNALS_FAILED.",
+        "New company with the AI: searches the web for the company named and returns the form's values found, the fields it was unsure of, the pages it read and the companies the reader may see by that name. Saves nothing. Needs the right to create companies and the Company research agent's model (without one, 400 FAILED_PRECONDITION with reason SIGNALS_UNAVAILABLE); a failed search is 503 UNAVAILABLE with reason SIGNALS_FAILED.",
       responses: {
         '200': dataResponse(CompanyProfile),
         ...apiErrorResponses,
@@ -53,6 +56,50 @@ export function registerSignalRoutes(
       c.json({
         data: await signals().profile(c.get('actor'), c.req.valid('json')),
       }),
+  );
+  // The same look-up asked by an agent about to create the company:
+  // answered at once, the search going on, and what it finds told back to
+  // the conversation that asked (crm-agents/ai-work-news.ts), for the agent
+  // to propose the company with it. Saves nothing.
+  router.post(
+    '/companies/lookUp',
+    describeRoute({
+      tags,
+      summary: 'Start looking a new company up on the web',
+      operationId: 'lookUpCompany',
+      description:
+        "The Company research agent searches the web for the company named, in the background, as New company with the AI does; asked from a conversation, the form's values found, the fields it was unsure of, the pages it read and the companies by that name already in the CRM are told back to it. Saves nothing. Needs the right to create companies and a model service that searches (else 400 FAILED_PRECONDITION with reason SIGNALS_UNAVAILABLE).",
+      ...runCommand(AI_WORK_ACTION, { command: 'companies look-up' }),
+      responses: {
+        '202': dataResponse(
+          SignalCheckStarted,
+          'Started; what it finds comes to the conversation.',
+        ),
+        ...apiErrorResponses,
+      },
+    }),
+    apiValidator('json', CompanyProfileInput),
+    async (c) => {
+      const input = c.req.valid('json');
+      const { done } = await signals().startProfile(c.get('actor'), input);
+      const conversationId = await runConversationOf(app, c.get('auth'));
+      const tell = (outcome: Parameters<typeof deliverCompanyProfile>[3]) =>
+        conversationId && app.container.has(agentsToken)
+          ? deliverCompanyProfile(
+              app.container.resolve(agentsToken),
+              conversationId,
+              input.name.trim(),
+              outcome,
+            )
+          : Promise.resolve();
+      void done
+        .then(
+          (profile) => tell(profile),
+          (error: unknown) => tell({ error }),
+        )
+        .catch(() => undefined);
+      return c.json({ data: { started: true } }, 202);
+    },
   );
   router.get(
     '/companies/:companyId/signals',
@@ -136,7 +183,7 @@ export function registerSignalRoutes(
       summary: 'Start a check of a company for signals',
       operationId: 'requestCompanySignals',
       description:
-        'The Company signals agent searches the web for the company in the background and keeps the new signals found; asked from a conversation, what it finds is told back to it. Needs edit access to the company and a model service that searches (else 400 FAILED_PRECONDITION with reason SIGNALS_UNAVAILABLE).',
+        'The Company research agent searches the web for the company in the background and keeps the new signals found; asked from a conversation, what it finds is told back to it. Needs edit access to the company and a model service that searches (else 400 FAILED_PRECONDITION with reason SIGNALS_UNAVAILABLE).',
       ...runCommand(AI_WORK_ACTION, { command: 'companies check-signals' }),
       responses: {
         '202': dataResponse(

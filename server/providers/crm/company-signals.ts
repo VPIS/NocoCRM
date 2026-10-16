@@ -320,6 +320,19 @@ export class CompanySignals {
   // company named, read into the form, with the pages it read and the
   // companies the reader may see by that name. For whoever may create a
   // company; nothing is saved.
+  // A look-up asked by an agent: refused at once when the person may not
+  // create companies, gives no name, or no model searches the web;
+  // otherwise started, `done` settling with what it finds.
+  async startProfile(
+    actor: Actor,
+    input: { name: string; note?: string },
+  ): Promise<{ done: ReturnType<CompanySignals['profile']> }> {
+    await conditions(actor, 'companies', 'create');
+    if (!input.name.trim()) throw new CrmError('required', 400, 'name');
+    if (!(await this.searcher())) throw new CrmError('signalsUnavailable', 409);
+    return { done: this.profile(actor, input) };
+  }
+
   async profile(
     actor: Actor,
     input: { name: string; note?: string },

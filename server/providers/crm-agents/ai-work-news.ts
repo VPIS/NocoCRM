@@ -116,9 +116,9 @@ export async function deliverSignalCheck(
   const ok = 'found' in outcome;
   const text = ok
     ? outcome.found.length
-      ? `The Company signals agent searched the web for ${about} and found ${toText(outcome.found.length)} new signal(s), now on the company's Signals tab:\n${JSON.stringify(outcome.found).slice(0, RESULT_LIMIT)}\nTell the person in a few lines what they mean for the business, in their language, and propose what to do about them in a plan if anything should be done.`
-      : `The Company signals agent searched the web for ${about} and found nothing new. Tell the person briefly.`
-    : `The Company signals agent could not search the web for ${about} (${outcome.error instanceof Error ? outcome.error.message : 'failed'}). Nothing changed; tell the person briefly.`;
+      ? `The Company research agent searched the web for ${about} and found ${toText(outcome.found.length)} new signal(s), now on the company's Signals tab:\n${JSON.stringify(outcome.found).slice(0, RESULT_LIMIT)}\nTell the person in a few lines what they mean for the business, in their language, and propose what to do about them in a plan if anything should be done.`
+      : `The Company research agent searched the web for ${about} and found nothing new. Tell the person briefly.`
+    : `The Company research agent could not search the web for ${about} (${outcome.error instanceof Error ? outcome.error.message : 'failed'}). Nothing changed; tell the person briefly.`;
   await agents.tx.run((tx) =>
     agents.conversations.deliver(tx, watch.conversationId, {
       notice: {
@@ -133,7 +133,11 @@ export async function deliverSignalCheck(
       },
       input: {
         type: 'signal',
-        actor: { kind: 'system', id: 'crm-ai-work', name: 'Company signals' },
+        actor: {
+          kind: 'system',
+          id: 'crm-ai-work',
+          name: 'Company research',
+        },
         text,
         payload: {
           entity: 'companies',
@@ -247,5 +251,53 @@ async function titleFor(
     entity,
     record,
     company ? { [companyId]: toText(company.name) } : {},
+  );
+}
+
+// A company looked up on the web for a plan that creates it (`crm
+// companies look-up`), told to the conversation that asked once the search
+// is done: the form's values found, those unsure, the pages read and the
+// companies by that name already in the CRM, for the agent to propose the
+// company with them.
+export async function deliverCompanyProfile(
+  agents: Agents,
+  conversationId: string,
+  name: string,
+  outcome:
+    | {
+        input: Record<string, unknown>;
+        uncertain: readonly string[];
+        sources: readonly { title: string; url: string }[];
+        duplicates: readonly { id: string; name: string }[];
+      }
+    | { error: unknown },
+): Promise<void> {
+  const ok = 'input' in outcome;
+  const text = ok
+    ? `The Company research agent looked "${name}" up on the web for the company you are to create. The company form's values it found: ${JSON.stringify(outcome.input)}. Fields it was unsure of: ${JSON.stringify(outcome.uncertain)}. Pages it read: ${JSON.stringify(outcome.sources.slice(0, 5))}. Companies by that name the person can already see: ${JSON.stringify(outcome.duplicates)}.\nIf one of those is the company, say so and do not create another; otherwise propose the plan that creates it with these values (with what the person asked for besides), saying in its summary which fields were unsure and that they come from the web.`
+    : `The Company research agent could not look "${name}" up on the web (${outcome.error instanceof Error ? outcome.error.message : 'failed'}). Propose the company with what you know instead, saying the web found nothing.`;
+  await agents.tx.run((tx) =>
+    agents.conversations.deliver(tx, conversationId, {
+      notice: {
+        code: 'news',
+        type: 'aiWork',
+        title: name,
+        params: { entity: 'companies', outcome: ok ? 'ready' : 'failed' },
+      },
+      input: {
+        type: 'signal',
+        actor: {
+          kind: 'system',
+          id: 'crm-ai-work',
+          name: 'Company research',
+        },
+        text,
+        payload: {
+          entity: 'companies',
+          lookup: name,
+          outcome: ok ? 'ready' : 'failed',
+        },
+      },
+    }),
   );
 }

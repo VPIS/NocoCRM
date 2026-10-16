@@ -91,10 +91,12 @@ export const WORK_AGENTS: Record<
     skill: 'task-preparation',
     task: 'preparing tasks for their owners and writing up what came of a task',
   },
+  // Named Company signals until 2026-10-16, when it also looked new
+  // companies up (renameWorkAgents moves an agent still so named).
   signals: {
-    name: 'Company signals',
+    name: 'Company research',
     skill: 'company-signals',
-    task: 'finding on the web what happened lately at the companies the team sells to',
+    task: "finding on the web what the team needs to know about the companies it sells to: a new company's particulars, and what happened lately at the companies it watches",
   },
 };
 
@@ -316,6 +318,35 @@ export async function nameWorkAgents(
         WORK_AGENTS[work].name,
         `crm.agentWork.names.${work}`,
       );
+  }
+}
+
+// A work agent still bearing a name the CRM gave it before, moved to the
+// current one (the plugin's update, so its history says so) and named in
+// the viewer's language again; one an administrator renamed keeps theirs.
+const FORMER_NAMES: Partial<Record<Work, readonly string[]>> = {
+  // Company intelligence: its name for a moment on 2026-10-16, before it
+  // was released.
+  signals: ['Company signals', 'Company intelligence'],
+};
+
+export async function renameWorkAgents(
+  agents: Agents,
+  database: DatabaseManager,
+): Promise<void> {
+  const ids = await workAgentIds(database);
+  for (const work of WORKS) {
+    const id = ids[work];
+    const former = FORMER_NAMES[work];
+    if (!id || !former) continue;
+    const agent = await agents.agents.get(id).catch(() => null);
+    if (!agent || !former.includes(agent.name)) continue;
+    await agents.agents
+      .update(id, null, {
+        name: WORK_AGENTS[work].name,
+        expectedRevision: agent.revision,
+      })
+      .catch(() => undefined);
   }
 }
 

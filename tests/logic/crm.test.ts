@@ -138,6 +138,7 @@ import { provisionSkills } from '../../server/providers/crm-agents/library.js';
 import {
   nameWorkAgents,
   provisionWorkAgents,
+  renameWorkAgents,
   retireBackgroundAgent,
   workAgentIds,
 } from '../../server/providers/crm-agents/work-agents.js';
@@ -10989,6 +10990,96 @@ describe('agents and plans', () => {
     expect(after.steps[1].result).toEqual({ code: 'mailFailed' });
   });
 
+  it('checks a record about to be created for duplicates, and looks a new company up on the web for the conversation', async () => {
+    await service.save(actor('rep'), 'leads', {
+      name: 'Dup Person',
+      company: 'Dup Works',
+      email: 'dup.person@dup.example',
+      source: 'website',
+    });
+    const company = await service.save(actor('rep'), 'companies', {
+      name: 'Dup Works',
+    });
+    const deal = await service.save(actor('rep'), 'opportunities', {
+      name: 'Dup deal',
+      companyId: company.id,
+    });
+    const check = async (query: string, actions = ['crm.search/view']) =>
+      asRun(`/duplicateCheck?${query}`, actions);
+    const leads = await (
+      await check('entity=leads&email=DUP.person@dup.example')
+    ).json();
+    expect(leads.data).toContainEqual(
+      expect.objectContaining({ entity: 'leads', matched: ['email'] }),
+    );
+    const companies = await (
+      await check('entity=companies&name=Dup%20Works')
+    ).json();
+    expect(companies.data).toContainEqual(
+      expect.objectContaining({ entity: 'companies', id: company.id }),
+    );
+    // A deal for a company: the company by its name, then its open deals.
+    const deals = await (
+      await check('entity=opportunities&company=Dup%20Works')
+    ).json();
+    expect(deals.data).toContainEqual(
+      expect.objectContaining({ entity: 'opportunities', id: deal.id }),
+    );
+    expect((await check('entity=leads&name=x', [])).status).toBe(403);
+    expect((await request('/duplicateCheck?entity=leads')).status).toBe(401);
+
+    // A new company looked up for a plan: started at once, what it finds
+    // told to the conversation.
+    web.answers.push({
+      text: JSON.stringify({
+        name: 'Looked Up Ltd',
+        website: 'https://looked.example.cn',
+        industry: 'technology',
+        uncertain: ['industry'],
+        sources: [1],
+      }),
+      pages: [
+        {
+          index: 1,
+          title: 'About',
+          url: 'https://looked.example.cn',
+          site: 'L',
+        },
+      ],
+    });
+    delivered.length = 0;
+    const started = await asRun(
+      '/companies/lookUp',
+      ['crm.aiWork/request'],
+      'POST',
+      { name: 'Looked Up', note: 'In Hangzhou' },
+    );
+    expect(started.status).toBe(202);
+    await vi.waitFor(() => expect(delivered).toHaveLength(1));
+    expect(delivered[0]).toMatchObject({
+      conversationId: 'conversation-1',
+      news: {
+        notice: {
+          type: 'aiWork',
+          title: 'Looked Up',
+          params: { entity: 'companies', outcome: 'ready' },
+        },
+      },
+    });
+    const told = (delivered[0].news.input as { text: string }).text;
+    expect(told).toContain('https://looked.example.cn');
+    expect(told).toContain('"industry"');
+    // Saving nothing.
+    expect(
+      (await service.list(actor('rep'), 'companies', { search: 'Looked Up' }))
+        .total,
+    ).toBe(0);
+    expect(
+      (await asRun('/companies/lookUp', [], 'POST', { name: 'Looked Up' }))
+        .status,
+    ).toBe(403);
+  });
+
   it('replaces a waiting plan with a newer one that would do the same', async () => {
     const lead = await service.save(actor('rep'), 'leads', {
       name: 'Twice proposed',
@@ -11965,7 +12056,7 @@ describe("The assistant's conversations on the Agents plugin", () => {
       'Opportunity follow-up',
       'Approval review',
       'Task assistant',
-      'Company signals',
+      'Company research',
     ]);
     expect(created[0]).toMatchObject({
       type: 'online',
@@ -11998,6 +12089,28 @@ describe("The assistant's conversations on the Agents plugin", () => {
       tasks: 'agent-4',
       signals: 'agent-5',
     });
+    // The company work's agent still bearing its former name is renamed;
+    // one an administrator renamed keeps theirs.
+    const renamed: { id: string; patch: unknown }[] = [];
+    const named = (name: string) =>
+      ({
+        agents: {
+          get: (id: string) => Promise.resolve({ id, name, revision: 2 }),
+          update: (id: string, _by: null, patch: unknown) => {
+            renamed.push({ id, patch });
+            return Promise.resolve({ id });
+          },
+        },
+      }) as never;
+    await renameWorkAgents(named('Company signals'), database);
+    expect(renamed).toEqual([
+      {
+        id: 'agent-5',
+        patch: { name: 'Company research', expectedRevision: 2 },
+      },
+    ]);
+    await renameWorkAgents(named('Our news desk'), database);
+    expect(renamed).toHaveLength(1);
     // Without a Background AI, each its own instructions, DeepSeek's
     // first.
     created.length = 0;

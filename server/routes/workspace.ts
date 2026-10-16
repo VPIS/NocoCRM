@@ -73,6 +73,7 @@ import {
 } from '../providers/crm-agents/actions.js';
 import { agentsToken } from '@nocobase/app-plugin-agents/server/tokens';
 import { showSuggestion } from '../providers/crm-agents/ai-work-news.js';
+import { checkDuplicates } from '../providers/crm/duplicate-check.js';
 import { demoServices } from './demo-services.js';
 import { CRM_ERROR_DOMAIN } from './errors.js';
 import { JsonObject, ListMeta } from './schemas/common.js';
@@ -134,6 +135,7 @@ export const WORKSPACE_PATHS = [
   'mailTimeline',
   'colleagues',
   'searchAnswers',
+  'duplicateCheck',
 ];
 
 const MAX_FILE = 20 * 1024 * 1024;
@@ -736,6 +738,63 @@ export function registerWorkspaceRoutes(
       );
       return c.json({ data, meta });
     },
+  );
+
+  // What a record about to be created may repeat (duplicate-check.ts): an
+  // agent checks before its plan creates a lead, contact, company or deal.
+  router.get(
+    '/duplicateCheck',
+    describeRoute({
+      tags: ['Workspace'],
+      summary: 'Check a new record for duplicates',
+      operationId: 'checkDuplicates',
+      description:
+        "The records the reader may see that a lead, contact, company or opportunity about to be created would repeat, as New lead, New opportunity and New company with the AI find them: for a lead, open leads by its person (email, phone, LinkedIn, or name with company) or company, and contacts and companies; for a contact, contacts by email, phone or LinkedIn; for a company, companies by name and their leads; for an opportunity, companies by name and the company's open deals. At most a few of each.",
+      ...runCommand(SEARCH_ACTION, { command: 'duplicates check' }),
+      responses: {
+        '200': dataResponse(
+          z.array(
+            z.object({
+              entity: z.enum([
+                'leads',
+                'contacts',
+                'companies',
+                'opportunities',
+              ]),
+              id: z.string(),
+              name: z.string(),
+              matched: z.array(z.string()).meta({
+                description:
+                  'What matched: email, phone, linkedin, person or company.',
+              }),
+              mergeable: z.boolean().optional(),
+              stage: z.string().optional(),
+            }),
+          ),
+        ),
+        ...apiErrorResponses,
+      },
+    }),
+    apiValidator(
+      'query',
+      z.object({
+        entity: z.enum(['leads', 'contacts', 'companies', 'opportunities']),
+        name: z.string().max(255).optional(),
+        company: z.string().max(255).optional(),
+        companyId: z.string().max(64).optional(),
+        email: z.string().max(320).optional(),
+        phone: z.string().max(64).optional(),
+        linkedin: z.string().max(500).optional(),
+      }),
+    ),
+    async (c) =>
+      c.json({
+        data: await checkDuplicates(
+          service,
+          c.get('actor'),
+          c.req.valid('query'),
+        ),
+      }),
   );
 
   // A suggestion put into the conversation of the agent that asks, as its
