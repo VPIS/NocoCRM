@@ -336,4 +336,4 @@ overrides:
   better-sqlite3: 13.0.3
   # The authorization core still asks for an older database package; one copy
   # keeps its connection types compatible with the rest of the tree.
-  '@nocobase/db': 1.0.0-beta.19
+  '@nocobase/db': 1.0.0-beta.20
