@@ -58,11 +58,28 @@ describe("the overview's ask box", () => {
     localStorage.clear();
   });
 
-  it('offers no suggested questions under it', () => {
-    render(<AssistantAskBox />);
+  it('offers no question of its own, only those the page gives, sending one with a click', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<AssistantAskBox />);
     expect(
       screen.queryByRole('list', { name: english('dock.suggestions') }),
     ).toBeNull();
+    unmount();
+    render(
+      <AssistantAskBox
+        questions={[
+          { key: 'closingSoon', text: '3 deals are due to close soon' },
+        ]}
+      />,
+    );
+    await user.click(
+      screen.getByRole('button', { name: '3 deals are due to close soon' }),
+    );
+    await waitFor(() =>
+      expect(asked()).toEqual([
+        { text: '3 deals are due to close soon', model: QWEN, files: [] },
+      ]),
+    );
   });
 
   it('sends what is typed with Enter, not while an input method composes, and clears itself', async () => {

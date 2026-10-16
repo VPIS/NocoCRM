@@ -1794,6 +1794,38 @@ const wording = {
   },
   // New opportunity with the AI (opportunity-capture.tsx).
   // New company with the AI (components/crm/company-capture.tsx).
+  // The overview's questions under its ask box, from its attention figures
+  // (pages/crm-dashboard.tsx), sent as they read.
+  overviewAsk: {
+    overdueOpportunities: [
+      '{{count}} deals are past their expected close: update them or let them go?',
+      '{{count}} 个商机已过预计成交日，该更新还是放弃？',
+    ],
+    closingSoon: [
+      '{{count}} deals are due to close soon: which might slip?',
+      '{{count}} 个商机即将到预计成交日，哪些可能落空？',
+    ],
+    staleOpportunities: [
+      '{{count}} deals have stalled: which should move first?',
+      '{{count}} 个商机很久没有进展，先推进哪个？',
+    ],
+    uncontacted: [
+      '{{count}} new leads not contacted yet: who first?',
+      '{{count}} 条新线索还没联系，先联系谁？',
+    ],
+    staleLeads: [
+      '{{count}} leads have gone quiet: still worth chasing?',
+      '{{count}} 条线索很久没跟进了，还值得跟吗？',
+    ],
+    staleCompanies: [
+      '{{count}} companies have gone quiet: whom should we reach out to?',
+      '{{count}} 家公司很久没有往来，该联系谁？',
+    ],
+    noContacts: [
+      '{{count}} companies have no contact yet: whom to find first?',
+      '{{count}} 家公司还没有联系人，先找谁？',
+    ],
+  },
   companyCapture: {
     name: ['Company name', '公司名称'],
     namePlaceholder: [

@@ -113,8 +113,10 @@ export function AssistantDock(): ReactElement | null {
   useEffect(() => {
     if (!focused || modelMenu) return;
     const outside = (event: PointerEvent): void => {
-      const target = event.target as Node | null;
+      const target = event.target as Element | null;
       if (target && dockRef.current?.contains(target)) return;
+      // The veil closes it on its click (below).
+      if (target?.closest?.('[data-dock-veil]')) return;
       if (dockRef.current?.contains(document.activeElement))
         (document.activeElement as HTMLElement | null)?.blur();
       setFocused(false);
@@ -169,6 +171,23 @@ export function AssistantDock(): ReactElement | null {
 
   return (
     <TooltipProvider>
+      {/* While the box is in use, a light veil over the main column under
+          it: a press beside the box lands on the veil and only closes the
+          box, rather than on the list or the board behind it. */}
+      {focused && !isMobile && !panelOpen ? (
+        <div
+          aria-hidden
+          data-dock-veil=''
+          className='absolute inset-0 z-20 bg-background/50'
+          // Closed on its own click, so the press's click lands here and
+          // never reaches the row it covers.
+          onClick={() => {
+            if (dockRef.current?.contains(document.activeElement))
+              (document.activeElement as HTMLElement | null)?.blur();
+            setFocused(false);
+          }}
+        />
+      ) : null}
       <div
         // Over the bottom of the main column, below the header and every
         // overlay, above a stacked record page's sticky tab bar (z-10).

@@ -105,6 +105,18 @@ const attentionCards: {
   { key: 'toSubmit', entity: 'approvals', metric: 'toSubmit', icon: FilePen },
 ];
 
+// The attention figures the ask box's questions come from, the most
+// pressing first (overviewAsk in the crm locale).
+const ASK_FROM = [
+  'overdueOpportunities',
+  'closingSoon',
+  'staleOpportunities',
+  'uncontacted',
+  'staleLeads',
+  'staleCompanies',
+  'noContacts',
+];
+
 // The task and approval cards open their record in the detail page's
 // drawer; its code loads only when a record is first opened.
 const RecordDrawer = lazy(() =>
@@ -128,6 +140,18 @@ export default function DashboardPage(): ReactElement {
   const data = query.data;
   const attention = (data?.attention ?? {}) as Data;
   const timeZone = meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
+  // Under the ask box, at most three questions the attention figures raise,
+  // the most pressing first, each only while its figure is above nought:
+  // what to judge about the lists the cards below open, which the inbox's
+  // suggestions, approvals and notices do not already ask.
+  const questions = ASK_FROM.filter((key) => Number(attention[key] ?? 0) > 0)
+    .slice(0, 3)
+    .map((key) => ({
+      key,
+      text: toText(
+        text(`overviewAsk.${key}`, { count: Number(attention[key]) }),
+      ),
+    }));
   // The page greets the user by the time of day rather than naming itself;
   // the menu, the breadcrumb and the window title still call it the
   // overview.
@@ -169,7 +193,7 @@ export default function DashboardPage(): ReactElement {
         {/* Outside the sections, so the sticky section row and the section
             ids are untouched; above the loading state and the error, so it
             keeps its place. */}
-        <AssistantAskBox />
+        <AssistantAskBox questions={questions} />
         {/* The latest conversations, under the box they start from. */}
         <RecentConversations />
         <ErrorNotice error={query.error} />

@@ -220,6 +220,19 @@ describe('the assistant dock', () => {
     ).toBeNull();
   });
 
+  it('veils the page while in use, a click on the veil closing it and reaching nothing below', async () => {
+    const user = userEvent.setup();
+    const { container } = renderDock('/crm/contacts');
+    await user.click(screen.getByRole('textbox'));
+    const veil = container.querySelector('[data-dock-veil]');
+    expect(veil).not.toBeNull();
+    await user.click(veil as Element);
+    expect(container.querySelector('[data-dock-veil]')).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: english('dock.attach') }),
+    ).toBeNull();
+  });
+
   it('keeps itself open while it holds a file, and sends the file with the record', async () => {
     const user = userEvent.setup();
     renderDock('/crm/leads/l1', { name: 'Tang Rui' });

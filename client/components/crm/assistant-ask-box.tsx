@@ -1,4 +1,6 @@
+import { Sparkles } from 'lucide-react';
 import { useRef, type ReactElement } from 'react';
+import { Button } from '../ui/button.js';
 import {
   Tooltip,
   TooltipContent,
@@ -12,13 +14,19 @@ import { useAgentReadiness } from './agent-chat/ask.js';
 
 // The overview's ask box: the first thing on the page, in its flow rather
 // than floating like the dock (which the overview does not show), always
-// expanded (assistant-ask-composer.tsx), with no suggested questions under
-// it (until 2026-10-16 there were three). Sending starts a conversation with the assistant that
+// expanded (assistant-ask-composer.tsx), with the questions the overview's
+// figures suggest under it (`questions`: none, rather than the same three
+// for everyone there were until 2026-10-16). Sending starts a conversation with the assistant that
 // sends the question with its files on the model picked, and opens the
 // panel on it. While the agents are still loading it is drawn disabled, so
 // nothing below it moves once the assistant is ready; while the assistant cannot answer the
 // reason is its placeholder and tooltip.
-export function AssistantAskBox(): ReactElement | null {
+export function AssistantAskBox({
+  questions = [],
+}: {
+  // Each a question in words, sent as it reads.
+  questions?: readonly { key: string; text: string }[];
+} = {}): ReactElement | null {
   const { text } = useCrmText();
   const readiness = useAgentReadiness();
   const disabled = readiness.state !== 'ready';
@@ -57,6 +65,30 @@ export function AssistantAskBox(): ReactElement | null {
         ) : (
           box
         )}
+        {/* The reason, when there is one, shows in the box right above, so
+            the chips carry no tooltip of their own. A chip sends its
+            question with the files attached, on the model picked. */}
+        {questions.length ? (
+          <ul
+            aria-label={toText(text('dock.suggestions'))}
+            className='mt-4 flex flex-wrap justify-center gap-2'
+          >
+            {questions.map((question) => (
+              <li key={question.key}>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  disabled={disabled || draft.files.uploading}
+                  className='rounded-full font-normal'
+                  onClick={() => draft.send(question.text)}
+                >
+                  <Sparkles className='text-primary' />
+                  {question.text}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
     </TooltipProvider>
   );
