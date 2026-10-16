@@ -5,6 +5,7 @@ import { Link } from 'react-router';
 import { Badge } from '../ui/badge.js';
 import { Button } from '../ui/button.js';
 import { ErrorNotice, Loading } from './common.js';
+import { ENTITY_ICONS } from './entity-icons.js';
 import { VerdictBadge } from './lead-evaluation.js';
 import { relativeTime, toText, useCrmText, type Entity } from './api.js';
 import {
@@ -107,14 +108,13 @@ export function DecisionList({
                   : 'bg-primary'
             }`}
           />
-          {/* Two lines: what it is about (its kind's tag, then its record)
-              with when, and then where it stands. */}
+          {/* Two lines: what it is about (its kind's menu icon, then its
+              record) with when, and then where it stands. */}
           <span className='grid min-w-0 flex-1 gap-1'>
             <span className='flex min-w-0 items-baseline gap-1.5'>
-              {/* Its kind as a grey tag, as the application's other tags. */}
-              <Badge variant='muted' className='shrink-0 self-center'>
-                {kindOf(entry)}
-              </Badge>
+              {/* Its kind as its menu icon, named on hover and to screen
+                  readers (entity-icons.ts). */}
+              <KindIcon entity={entry.entity} label={kindOf(entry)} />
               <span className='min-w-0 truncate text-sm font-medium'>
                 {nameOf(entry)}
               </span>
@@ -303,5 +303,21 @@ export function RecordPaneFrame({
         <RecordPane key={paneKey} entity={entity} id={recordId} focus={focus} />
       </Suspense>
     </div>
+  );
+}
+
+function KindIcon({
+  entity,
+  label,
+}: {
+  entity: Entity;
+  label: string;
+}): ReactElement {
+  const Icon = ENTITY_ICONS[entity];
+  return (
+    <span title={label} className='shrink-0 self-center text-muted-foreground'>
+      <Icon aria-hidden className='size-4' />
+      <span className='sr-only'>{label}</span>
+    </span>
   );
 }

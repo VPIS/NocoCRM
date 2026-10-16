@@ -207,6 +207,12 @@ describe("The inbox's AI suggestions", () => {
     // The handled ones under those waiting, without asking; no type filter
     // to pick, no mine/team switch, no keyboard hints.
     expect(screen.getByText('林悦')).toBeTruthy();
+    // Each says its kind by its menu icon, named on hover and to screen
+    // readers, not by a tag.
+    const kind = screen.getAllByTitle('线索')[0]!;
+    expect(kind.querySelector('svg')).toBeTruthy();
+    expect(kind.textContent).toBe('线索');
+    expect(kind.querySelector('.sr-only')).toBeTruthy();
     expect(screen.queryByRole('combobox')).toBeNull();
     expect(screen.queryByText('查看已处理的建议')).toBeNull();
     expect(screen.queryByRole('button', { name: '团队' })).toBeNull();
