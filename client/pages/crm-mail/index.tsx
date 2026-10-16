@@ -42,22 +42,22 @@ export default function CrmMailPage(): ReactElement {
     // changes them brings the plugin's own layout back. The list keeps as
     // much room on its left as its scrollbar takes on its right, so a row,
     // the selected one's outline most of all, sits evenly in its column.
+    // The plugin's header buttons (Compose, Sync) are its own, taller ones:
+    // they take the application's button size (h-8, an icon's side pl-2)
+    // and its fill inside the border (bg-clip-padding), without which the
+    // filled Compose reads taller than the outlined buttons beside it.
     <div
       ref={rootRef}
-      className='contents [&_[data-slot=mail-workspace]>div:first-child]:py-2! [&_[data-slot=mail-workspace]>div:first-child_[data-slot=field-description]]:sr-only! [&_[data-slot=mail-workspace]>div:first-child_[data-slot=field-label]]:sr-only! [&_[data-slot=mail-workspace]_.divide-y>button>p.line-clamp-2]:line-clamp-1! [&_[data-slot=mail-workspace]_section:has(>.divide-y)]:[scrollbar-gutter:stable_both-edges]'
+      className='contents [&_[data-slot=mail-workspace]>div:first-child]:py-2! [&_[data-slot=mail-workspace]>div:first-child_[data-slot=field-description]]:sr-only! [&_[data-slot=mail-workspace]>div:first-child_[data-slot=field-label]]:sr-only! [&_[data-slot=mail-workspace]_.divide-y>button>p.line-clamp-2]:line-clamp-1! [&_[data-slot=mail-workspace]_section:has(>.divide-y)]:[scrollbar-gutter:stable_both-edges] [&_header>div:last-child_:is(button,a)]:h-8! [&_header>div:last-child_:is(button,a)]:gap-1.5! [&_header>div:last-child_:is(button,a)]:pr-2.5! [&_header>div:last-child_:is(button,a)]:pl-2! [&_header>div:last-child_:is(button,a)]:bg-clip-padding'
     >
       <MailWorkspacePage />
       {createPortal(
         <Button
           variant='outline'
-          // The plugin's header buttons are its own, taller ones: this one
-          // takes their height and padding so the row lines up.
-          size='lg'
-          className='gap-2 px-4'
           render={<Link to='/crm/mail/accounts' />}
           nativeButton={false}
         >
-          <AtSign />
+          <AtSign data-icon='inline-start' />
           {toText(text('mailManageAccounts'))}
         </Button>,
         slot,
