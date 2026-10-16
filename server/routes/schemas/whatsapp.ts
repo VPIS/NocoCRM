@@ -258,10 +258,32 @@ export const LinkConversationInput = z.union([
   z.strictObject({ state: z.enum(['unlinked', 'dismissed', 'spam']) }),
 ]);
 
+export const RecordMessagesQuery = MessagesQuery.extend({
+  person: z
+    .string()
+    .optional()
+    .describe(
+      "Whose conversation, a customer of the record's (`people[].id`); the one who wrote last when left out.",
+    ),
+});
+
 export const RecordMessages = z.object({
   messages: z.array(
     WhatsAppMessage.and(z.object({ waContactId: z.string().nullable() })),
   ),
   more: z.boolean(),
-  people: z.array(WhatsAppCustomer),
+  people: z
+    .array(
+      WhatsAppCustomer.and(
+        z.object({
+          messageCount: z.number(),
+          lastMessageAt: z.string().nullable(),
+        }),
+      ),
+    )
+    .describe("The record's people on WhatsApp, the latest to write first."),
+  person: z
+    .string()
+    .nullable()
+    .describe('Whose conversation `messages` are: one person at a time.'),
 });

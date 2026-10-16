@@ -1193,9 +1193,11 @@ export function DetailColumns({
                     foot keeps room for the assistant's box over the page,
                     open as well as closed, so the last entry scrolls clear of
                     it, and its scrollbar's room is kept whether or not a tab
-                    scrolls, so switching tabs never re-wraps it. */}
+                    scrolls, so switching tabs never re-wraps it. The
+                    WhatsApp tab, whose messages scroll inside its card,
+                    keeps room for the closed box alone. */}
                 <div
-                  className={`min-w-0 @3xl:min-h-0 @3xl:flex-1 @3xl:overflow-y-auto @3xl:[scrollbar-gutter:stable] @3xl:pb-36 ${sidePad}`}
+                  className={`min-w-0 @3xl:min-h-0 @3xl:flex-1 @3xl:overflow-y-auto @3xl:[scrollbar-gutter:stable] @3xl:pb-36 @3xl:has-[[data-slot=record-whatsapp]]:pb-20 ${sidePad}`}
                   onScroll={scrollTab}
                 >
                   {right}

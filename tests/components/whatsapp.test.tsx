@@ -487,34 +487,70 @@ describe('changing a link', () => {
 });
 
 describe("a record's WhatsApp tab", () => {
-  it('lists its people’s messages with their names, or says there are none', async () => {
+  it('shows one person’s conversation at a time, a tab each when there are two, or says there are none', async () => {
+    const user = userEvent.setup();
     state.api.mockResolvedValueOnce({
-      data: { messages: [], more: false, people: [] },
+      data: { messages: [], more: false, people: [], person: null },
     });
     const { unmount } = render(
       wrap(<RecordWhatsAppPanel entity='leads' id='l1' />),
     );
     expect(await screen.findByText(crmEn.whatsapp.tabEmptyTitle)).toBeTruthy();
     unmount();
-    state.api.mockResolvedValueOnce({
-      data: {
-        messages: [
-          { ...message('m1', '2026-10-14T08:00:00.000Z'), waContactId: 'w1' },
-          { ...message('m2', '2026-10-14T09:00:00.000Z'), waContactId: 'w2' },
-        ],
-        more: false,
-        people: [
-          { ...customer, id: 'w1', name: 'Ana Souza' },
-          { ...customer, id: 'w2', name: 'Bruno Lima' },
-        ],
+    const people = [
+      {
+        ...customer,
+        id: 'w1',
+        name: 'Ana Souza',
+        messageCount: 1,
+        lastMessageAt: '2026-10-14T09:00:00.000Z',
       },
-    });
+      {
+        ...customer,
+        id: 'w2',
+        name: 'Bruno Lima',
+        messageCount: 1,
+        lastMessageAt: '2026-10-14T08:00:00.000Z',
+      },
+    ];
+    state.api.mockImplementation(async (path: string) =>
+      path.endsWith('?person=w2')
+        ? {
+            data: {
+              messages: [
+                {
+                  ...message('m2', '2026-10-14T08:00:00.000Z'),
+                  waContactId: 'w2',
+                },
+              ],
+              more: false,
+              people,
+              person: 'w2',
+            },
+          }
+        : {
+            data: {
+              messages: [
+                {
+                  ...message('m1', '2026-10-14T09:00:00.000Z'),
+                  waContactId: 'w1',
+                },
+              ],
+              more: false,
+              people,
+              person: 'w1',
+            },
+          },
+    );
     render(wrap(<RecordWhatsAppPanel entity='companies' id='co1' />));
-    expect(
-      await screen.findByText('Messages with Ana Souza and Bruno Lima'),
-    ).toBeTruthy();
-    // A company's tab names whose each run is.
-    expect(screen.getByText('Bruno Lima')).toBeTruthy();
+    // The latest to write first, the other a tab away.
+    expect(await screen.findByText('Message m1')).toBeTruthy();
+    expect(screen.queryByText('Message m2')).toBe(null);
+    await user.click(screen.getByRole('tab', { name: /Bruno Lima/ }));
+    expect(await screen.findByText('Message m2')).toBeTruthy();
+    expect(state.api).toHaveBeenCalledWith(
+      'companies/co1/whatsappMessages?person=w2',
+    );
   });
 });
 

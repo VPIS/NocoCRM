@@ -91,9 +91,15 @@ export interface Conversation {
   more: boolean;
 }
 export interface RecordMessages {
+  // One person's conversation (`person`), oldest first.
   messages: WhatsAppMessage[];
   more: boolean;
-  people: WhatsAppCustomer[];
+  // The record's people on WhatsApp, the latest to write first.
+  people: (WhatsAppCustomer & {
+    messageCount: number;
+    lastMessageAt: string | null;
+  })[];
+  person: string | null;
 }
 
 // How often the pages ask again: the list, the open conversation, a

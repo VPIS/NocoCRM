@@ -1742,13 +1742,22 @@ export class WhatsAppService {
   }
 
   // The messages of a record's people: a lead's, a contact's, a company's
-  // contacts', a deal's contacts'; newest last, a page before a time.
+  // contacts', a deal's contacts'. One person's at a time, the latest to
+  // write unless another is asked for, since the team's replies to two
+  // people interleaved would not say whom they answer; newest last, a page
+  // before a time. The people come with their counts, the latest first.
   async recordMessages(
     actor: Actor,
     entity: 'leads' | 'contacts' | 'companies' | 'opportunities',
     id: string,
-    options: { before?: string; pageSize: number },
-  ): Promise<{ messages: Row[]; more: boolean; people: Row[] }> {
+    options: { before?: string; pageSize: number; person?: string },
+  ): Promise<{
+    messages: Row[];
+    more: boolean;
+    people: Row[];
+    person: string | null;
+  }> {
+    const none = { messages: [], more: false, people: [], person: null };
     const record = await this.service.get(actor, entity, id);
     const query = this.query;
     let contacts = query
@@ -1771,29 +1780,68 @@ export class WhatsAppService {
           : (
               (jsonValue(record.contacts) as Row[] | null | undefined) ?? []
             ).map((row) => toText(row.contactId));
-      if (!ids.length) return { messages: [], more: false, people: [] };
+      if (!ids.length) return none;
       contacts = contacts.where('contactId', 'in', ids);
     }
-    const people = await contacts.execute();
-    if (!people.length) return { messages: [], more: false, people: [] };
+    const found = await contacts.execute();
+    if (!found.length) return none;
     const conversations = await query
       .selectFrom('crmWaConversations')
       .select(['id', 'waContactId'])
       .where(
         'waContactId',
         'in',
-        people.map((p) => toText(p.id)),
+        found.map((p) => toText(p.id)),
       )
       .execute();
-    if (!conversations.length)
-      return { messages: [], more: false, people: people.map(publicContact) };
     const whose = new Map(
       conversations.map((c) => [toText(c.id), toText(c.waContactId)]),
     );
+    const counts = whose.size
+      ? await query
+          .selectFrom('crmWaMessages')
+          .select(['conversationId'])
+          .select((eb) => [
+            eb.fn.countAll().as('count'),
+            eb.fn.max('occurredAt').as('last'),
+          ])
+          .where('conversationId', 'in', [...whose.keys()])
+          .groupBy('conversationId')
+          .execute()
+      : [];
+    const tally = new Map<string, { count: number; last: string | null }>();
+    for (const row of counts) {
+      const personId = whose.get(toText(row.conversationId)) ?? '';
+      const before = tally.get(personId) ?? { count: 0, last: null };
+      const last = row.last == null ? null : toText(row.last);
+      tally.set(personId, {
+        count: before.count + Number(row.count),
+        last: before.last && last && before.last > last ? before.last : last,
+      });
+    }
+    const people = found
+      .map((p) => ({
+        ...publicContact(p),
+        id: toText(p.id),
+        messageCount: tally.get(toText(p.id))?.count ?? 0,
+        lastMessageAt: tally.get(toText(p.id))?.last ?? null,
+      }))
+      .sort((a, b) =>
+        toText(b.lastMessageAt ?? '').localeCompare(
+          toText(a.lastMessageAt ?? ''),
+        ),
+      );
+    const person =
+      people.find((p) => p.id === options.person && p.messageCount)?.id ??
+      people.find((p) => p.messageCount)?.id ??
+      null;
+    const theirs = [...whose].filter(([, p]) => p === person).map(([c]) => c);
+    if (!person || !theirs.length)
+      return { messages: [], more: false, people, person };
     let messages = query
       .selectFrom('crmWaMessages')
       .selectAll()
-      .where('conversationId', 'in', [...whose.keys()])
+      .where('conversationId', 'in', theirs)
       .orderBy('occurredAt', 'desc')
       .limit(options.pageSize + 1);
     if (options.before)
@@ -1807,10 +1855,11 @@ export class WhatsAppService {
         .reverse()
         .map((row) => ({
           ...publicMessage(row, this.publicBasePath),
-          waContactId: whose.get(toText(row.conversationId)) ?? null,
+          waContactId: person,
         })),
       more: rows.length > options.pageSize,
-      people: people.map(publicContact),
+      people,
+      person,
     };
   }
 

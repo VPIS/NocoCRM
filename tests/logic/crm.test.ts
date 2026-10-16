@@ -6836,6 +6836,32 @@ describe('demo dataset', () => {
           ([key, people]) => key.startsWith(`${entity}:`) && people.size === 2,
         ),
       ).toBe(true);
+    // Its WhatsApp tab: one person's conversation at a time, the latest to
+    // write first, the other asked for by name.
+    const [dealKey] = [...peopleOn].find(
+      ([key, people]) => key.startsWith('opportunities:') && people.size === 2,
+    ) ?? [''];
+    const tab = async (person = '') =>
+      (
+        (await (
+          await request(
+            `/opportunities/${dealKey.split(':')[1]}/whatsappMessages${person ? `?person=${person}` : ''}`,
+            'admin',
+          )
+        ).json()) as {
+          data: { people: Row[]; person: string; messages: Row[] };
+        }
+      ).data;
+    const latest = await tab();
+    expect(latest.people).toHaveLength(2);
+    expect(latest.person).toBe(latest.people[0].id);
+    expect(latest.messages.every((m) => m.waContactId === latest.person)).toBe(
+      true,
+    );
+    const other = toText(latest.people[1].id);
+    const theirs = await tab(other);
+    expect(theirs.person).toBe(other);
+    expect(theirs.messages.length).toBe(Number(latest.people[1].messageCount));
     expect((await request('/demoData/remove', 'rep', 'POST', {})).status).toBe(
       403,
     );

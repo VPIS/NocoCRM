@@ -22,6 +22,7 @@ import {
   ConversationsQuery,
   LinkConversationInput,
   MessagesQuery,
+  RecordMessagesQuery,
   RecordMessages,
   AddWhatsAppNumber,
   NumberParams,
@@ -408,14 +409,14 @@ export function registerWhatsAppRoutes(
         summary: `List the WhatsApp messages of a record's people (${entity})`,
         operationId,
         description:
-          "A lead's, a contact's, a company's contacts', a deal's contacts', oldest first; for whoever may read the record.",
+          "A lead's, a contact's, a company's contacts', a deal's contacts': one person's at a time (`person`, else the latest to write), oldest first, with the record's people; for whoever may read the record.",
         responses: {
           '200': dataResponse(RecordMessages),
           ...apiErrorResponses,
           '404': apiErrorResponse(404),
         },
       }),
-      apiValidator('query', MessagesQuery),
+      apiValidator('query', RecordMessagesQuery),
       async (c) =>
         c.json({
           data: await whatsapp().recordMessages(
