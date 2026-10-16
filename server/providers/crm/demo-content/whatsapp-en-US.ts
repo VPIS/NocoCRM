@@ -167,5 +167,26 @@ export const enWhatsApp: DemoContent['whatsapp'] = {
         'Hi Leo, our openings are on the Careers page of our website, where you can apply directly. This number is for customer enquiries only. Thanks!',
       ],
     },
+    // H World's evaluator, about the POC's tests.
+    {
+      messages: [
+        "Hi, this is Howard Cheng from H World's data platform team. Chen asked me to work with you directly on the POC.",
+        'Hi Howard! The test environment logins are in your inbox. Message me here any time.',
+        "I'm in. Can single sign-on with our membership system be connected in the test environment first?",
+        'Yes, OIDC is supported. Just send me the test client ID and the callback address.',
+        "I've emailed you the parameters.",
+        'Single sign-on is connected. Try logging in with a membership account.',
+        'Logging in works. Smooth.',
+        "The load test script is ready. We'll simulate 2,000 hotels submitting inspections at the same time in the morning. Anything you need to do on your side?",
+        "We'll scale the cluster to three servers and I'll watch the logs during the test. The day after tomorrow at 9 pm?",
+        'OK.',
+        'Starting the load test.',
+        'I see it. Responses are all under 600 ms so far.',
+        "Same here, better than expected. Let's test with one server down.",
+        'One server is down; requests moved to the other two with no errors.',
+        "Good. I'll write up a report for Chen.",
+        'Thanks for your work! Let me know if the report needs our architecture diagram.',
+      ],
+    },
   ],
 };

@@ -213,6 +213,30 @@ export const demoWhatsAppSchedule: {
       ['out', -6, 13, 20],
     ],
   },
+  // H World's evaluator, the POC's tests, so its company and deal hold
+  // two people's messages.
+  {
+    customer: { hworld: 1 },
+    number: 0,
+    messages: [
+      ['in', -27, 14, 10],
+      ['out', -27, 14, 30],
+      ['in', -27, 16, 5],
+      ['out', -27, 16, 20],
+      ['in', -26, 10, 30],
+      ['out', -26, 15, 45],
+      ['in', -26, 16, 10],
+      ['in', -24, 21, 30],
+      ['out', -24, 21, 50],
+      ['in', -24, 22, 0],
+      ['in', -22, 21, 40],
+      ['out', -22, 21, 55],
+      ['in', -22, 22, 20],
+      ['out', -22, 22, 35],
+      ['in', -22, 22, 40],
+      ['out', -22, 22, 42],
+    ],
+  },
 ];
 
 export async function populateDemoWhatsApp(

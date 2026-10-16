@@ -243,10 +243,11 @@ function isImporting(value: unknown): boolean {
   return object(parsed).importing === true;
 }
 
-// A claim no import holds any more: claimed ten minutes ago or more and not
-// run by this process, as when the server was stopped mid-import (one that
-// fails takes its claim back). It counts as none: nothing shows it under
-// way, and a new import may claim the marker again.
+// A claim no import holds any more: last moved on ten minutes ago or more
+// and not run by this process, as when the server was stopped mid-import
+// (one that fails takes its claim back). It counts as none: nothing shows
+// it under way, and a new import takes back what it recorded (each step
+// keeps it in the claim) and claims the marker again.
 const STALE_IMPORT_MS = 10 * 60 * 1000;
 function abandoned(row: Row): boolean {
   if (!isImporting(row.value) || importPercent !== undefined) return false;
@@ -351,11 +352,23 @@ export async function populateDemo(
     .select(['value', 'updatedAt'])
     .where('id', '=', DEMO_MARKER)
     .executeTakeFirst();
-  if (claimed && abandoned(claimed))
+  if (claimed && abandoned(claimed)) {
+    // An import cut off: what its claim recorded goes first, as a removal
+    // would take it, so the new one does not write a second dataset.
+    const recorded = parseManifest(claimed.value);
+    if (recorded) {
+      if (mailboxes)
+        for (const { userId, accountId } of recorded.mailAccounts ?? [])
+          await mailboxes.remove(userId, accountId).catch(() => undefined);
+      if (chats && recorded.chats?.length)
+        await chats.remove(recorded.chats).catch(() => undefined);
+      await deleteRecords(service, recorded);
+    }
     await query
       .deleteFrom('crmSettings')
       .where('id', 'in', [DEMO_MARKER, DEMO_MAIL_ROW])
       .execute();
+  }
   try {
     await query
       .insertInto('crmSettings')
@@ -511,6 +524,20 @@ async function populate(
     records: [],
   };
   claim.manifest = manifest;
+  // Each step's progress, with what the import has written so far kept in
+  // its claim, so an import cut off (the server stopped mid-way) can be
+  // taken back by the next (populateDemo).
+  const progress = async (percent: number): Promise<void> => {
+    reached(percent);
+    await query
+      .updateTable('crmSettings')
+      .set({
+        value: JSON.stringify({ ...manifest, importing: true }),
+        updatedAt: new Date(),
+      })
+      .where('id', '=', DEMO_MARKER)
+      .execute();
+  };
   const track = (entity: string, record: Row): Row => {
     if (!manifest.records.some((r) => r.id === record.id))
       manifest.records.push({
@@ -1299,7 +1326,7 @@ async function populate(
 
   // Approvals are raised by whoever owns the deal. The importing
   // administrator, a sales manager for the demo, decides the sellers' and the
-  reached(35);
+  await progress(35);
   // manager's: two wait on them, one they have decided; their own go to the
   // manager. So the importer's inbox holds approvals to decide, each with the
   // AI's review, as well as approvals of their own waiting on someone else.
@@ -1430,7 +1457,7 @@ async function populate(
         .execute();
       return id;
     };
-  reached(45);
+  await progress(45);
   type ProjectCompany = typeof project.hworld.company;
   type ProjectPerson = (typeof project.hworld.people)[number];
   const projects = await service.mutate(owner, async (prepared, q) => {
@@ -1946,7 +1973,7 @@ async function populate(
   // H World's lead converted, GAC's follow-up accepted, New Hope's extension
   // ignored and an approval decided as the review advised. Written straight
   // in, so nothing runs a model; the agents' pages count them as runs.
-  reached(60);
+  await progress(60);
   const ai = project.ai;
   const aiEntry = async (
     entity: 'leads' | 'opportunities' | 'tasks' | 'approvals',
@@ -2099,7 +2126,7 @@ async function populate(
       },
     );
 
-  reached(65);
+  await progress(65);
   setDemoMailLanguage(language);
   // The demo mailboxes: the messages first, which the plugin reads as soon
   // as a mailbox connects, then a mailbox for each demo account and the
@@ -2384,10 +2411,10 @@ async function populate(
         .catch(() => undefined);
       if (accountId) manifest.mailAccounts.push({ userId, accountId });
       // The mailboxes take the longest, the plugin copying each one's mail.
-      reached(70 + Math.round(((index + 1) / owners.length) * 20));
+      await progress(70 + Math.round(((index + 1) / owners.length) * 20));
     }
   }
-  reached(90);
+  await progress(90);
 
   // The import queued a notification for every assignment; a demo inbox
   // full of "assigned to you" would drown what the demo is meant to show.
@@ -2444,7 +2471,7 @@ async function populate(
 
   // The importer's conversations with the assistant about their projects,
   // each a few minutes long, over the last days.
-  reached(95);
+  await progress(95);
   if (chats) {
     manifest.chats = [];
     const when: readonly [number, number][] = [

@@ -6754,8 +6754,9 @@ describe('demo dataset', () => {
         .execute(),
     ).toHaveLength(demoSignals.length);
     // The company's WhatsApp numbers, the demo's own (demo-whatsapp.ts),
-    // with their conversations: four with demo records, which carry their
-    // lines, three with people nobody linked, one of them set aside. They
+    // with their conversations: five with demo records, which carry their
+    // lines (H World's two people both on its company and deal), three
+    // with people nobody linked, one of them set aside. They
     // are never the connection's, and the records offer their WhatsApp tab.
     const waNumbers = await database
       .query()
@@ -6774,7 +6775,7 @@ describe('demo dataset', () => {
       '+1 555 010 0199',
       '+44 7700 900123',
     ]);
-    expect(view.demoNumbers.map((n) => n.conversations)).toEqual([5, 2]);
+    expect(view.demoNumbers.map((n) => n.conversations)).toEqual([6, 2]);
     await expect(
       whatsapp.updateNumber(view.demoNumbers[0].id, {}),
     ).rejects.toMatchObject({ code: 'notFound' });
@@ -6792,6 +6793,7 @@ describe('demo dataset', () => {
       .execute();
     expect(waConversations.map((row) => toText(row.state)).sort()).toEqual([
       'dismissed',
+      'linked',
       'linked',
       'linked',
       'linked',
@@ -6815,6 +6817,25 @@ describe('demo dataset', () => {
         waCustomers.includes(toText(row.sourceKey).split(':')[0]),
       );
     expect((await waLines()).length).toBeGreaterThan(4);
+    // A company and a deal with two people's messages (H World's).
+    const peopleOn = new Map<string, Set<string>>();
+    for (const line of await database
+      .query()
+      .selectFrom('crmHistory')
+      .select(['entity', 'recordId', 'sourceKey'])
+      .where('action', '=', 'whatsapp')
+      .execute()) {
+      const customer = toText(line.sourceKey).split(':')[0];
+      if (!waCustomers.includes(customer)) continue;
+      const key = `${toText(line.entity)}:${toText(line.recordId)}`;
+      peopleOn.set(key, (peopleOn.get(key) ?? new Set()).add(customer));
+    }
+    for (const entity of ['companies', 'opportunities'])
+      expect(
+        [...peopleOn].some(
+          ([key, people]) => key.startsWith(`${entity}:`) && people.size === 2,
+        ),
+      ).toBe(true);
     expect((await request('/demoData/remove', 'rep', 'POST', {})).status).toBe(
       403,
     );
@@ -7181,6 +7202,49 @@ describe("a record's timeline and its tasks", () => {
     ]);
     expect([first.status, second.status].sort()).toEqual([200, 400]);
     expect(await count('companies')).toBe(companies + 11);
+    expect(
+      (await request('/demoData/remove', 'admin', 'POST', {})).status,
+    ).toBe(200);
+    expect(await count('companies')).toBe(companies);
+  });
+  it('takes back an import cut off mid-way before importing again, from what its claim recorded', async () => {
+    const count = async (entity: string): Promise<number> =>
+      (await service.list(actor('admin'), entity as never, { pageSize: 1 }))
+        .total;
+    const companies = await count('companies');
+    // What an import stopped mid-way leaves: a company it wrote, recorded in
+    // its claim, last moved on long ago.
+    const left = await service.save(actor('manager'), 'companies', {
+      name: 'Left Behind Ltd',
+    });
+    const longAgo = new Date(Date.now() - 11 * 60 * 1000);
+    await database
+      .query()
+      .insertInto('crmSettings')
+      .values({
+        id: DEMO_MARKER,
+        value: JSON.stringify({
+          version: 8,
+          importing: true,
+          records: [
+            { entity: 'companies', id: left.id, name: 'Left Behind Ltd' },
+          ],
+        }),
+        updatedAt: longAgo,
+      })
+      .execute();
+    // Under way no more: the page offers an import, which takes it back.
+    const status = (await (await request('/demoData', 'admin')).json()) as {
+      data: Row;
+    };
+    expect(status.data).toMatchObject({ present: false, importing: null });
+    expect(
+      (await request('/demoData/import', 'admin', 'POST', {})).status,
+    ).toBe(200);
+    expect(await count('companies')).toBe(companies + 11);
+    await expect(
+      service.get(actor('manager'), 'companies', toText(left.id)),
+    ).rejects.toMatchObject({ code: 'notFound' });
     expect(
       (await request('/demoData/remove', 'admin', 'POST', {})).status,
     ).toBe(200);
