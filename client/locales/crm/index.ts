@@ -1179,7 +1179,7 @@ const wording = {
     statuses: {
       superseded: ['Replaced', '已被新建议替代'],
       running: ['AI working', 'AI 跟进中'],
-      pending: ['Pending', '待处理'],
+      pending: ['Waiting', '待处理'],
       accepted: ['Accepted', '已采纳'],
       dismissed: ['Ignored', '已忽略'],
       failed: ['Not finished', '未完成'],
