@@ -6,7 +6,6 @@ import { convertLead } from './conversion.js';
 import {
   CrmError,
   type CrmSettings,
-  defaultSettings,
   definitions,
   object,
   stages,
@@ -536,7 +535,7 @@ async function populate(
   const adopted = Object.fromEntries(
     Object.entries(demoSettings(language)).filter(
       ([key, value]) =>
-        before[key as DemoSetting] === defaultSettings[key as DemoSetting] &&
+        before[key as DemoSetting] === service.defaults[key as DemoSetting] &&
         before[key as DemoSetting] !== value,
     ),
   ) as Partial<Pick<CrmSettings, DemoSetting>>;

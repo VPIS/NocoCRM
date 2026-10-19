@@ -228,13 +228,25 @@ export class CrmService {
   // The versions of what an administrator sets on a lifecycle: the
   // approver rule.
   private readonly parameters: LifecycleParameterStore;
+  // The settings a company has not chosen: `defaultSettings`, the AI's
+  // language that of the application (`i18n.defaultLocale`,
+  // APP_DEFAULT_LOCALE), so a deployment that starts in Chinese has its AI
+  // write Chinese until an administrator picks otherwise.
+  public readonly defaults: CrmSettings;
   constructor(
     public readonly database: DatabaseManager,
     public readonly authz: AppAuthorization,
     lifecycles?: LifecycleRuntime,
+    options: { defaultLocale?: string } = {},
   ) {
     this.lifecycles = lifecycles ?? createLifecycleRuntime(database);
     this.parameters = lifecycleParameterStore(database);
+    this.defaults = {
+      ...defaultSettings,
+      aiLanguage: options.defaultLocale?.startsWith('zh')
+        ? 'zh-CN'
+        : defaultSettings.aiLanguage,
+    };
   }
   async settings(
     query: QueryAdapter = this.database.query(),
@@ -288,7 +300,7 @@ export class CrmService {
     )
       stored.notifyComments = false;
     return {
-      ...defaultSettings,
+      ...this.defaults,
       ...stored,
       options: defaultSettings.options,
     };

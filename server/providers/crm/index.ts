@@ -109,6 +109,12 @@ export default class CrmProvider extends ServiceProvider<Application> {
           this.app.container.resolve(databaseManagerToken),
           this.app.container.resolve(authorizationToken),
           this.app.container.resolve(lifecycleRuntimeToken),
+          {
+            defaultLocale: toText(
+              this.app.config?.get<{ defaultLocale?: string }>('i18n')
+                ?.defaultLocale ?? '',
+            ),
+          },
         ),
     );
     // Changes an agent proposes, carried out once a person confirms them

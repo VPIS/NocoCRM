@@ -889,6 +889,44 @@ describe('CRM API security and domain rules', () => {
       });
     }
   });
+  it("writes the AI's work in the application's language until a language is chosen", async () => {
+    const chinese = new CrmService(database, authorization, undefined, {
+      defaultLocale: 'zh-CN',
+    });
+    const english = new CrmService(database, authorization, undefined, {
+      defaultLocale: 'en-US',
+    });
+    // A company's own choice stands whatever the application's language.
+    expect(
+      (
+        await request('/systemSettings', 'admin', 'PUT', {
+          aiLanguage: 'zh-CN',
+        })
+      ).status,
+    ).toBe(200);
+    const chosen = (await service.settings()).aiLanguage;
+    expect(chosen).toBe('zh-CN');
+    expect((await english.settings()).aiLanguage).toBe(chosen);
+    // Before anyone chose, the application's language decides; the row is
+    // removed inside a transaction rolled back after.
+    const rollback = new Error('rollback');
+    await database
+      .transaction(async ({ query }) => {
+        await query
+          .deleteFrom('crmSettings')
+          .where('id', '=', 'business')
+          .execute();
+        expect((await chinese.settings(query)).aiLanguage).toBe('zh-CN');
+        expect((await english.settings(query)).aiLanguage).toBe('en-US');
+        expect((await service.settings(query)).aiLanguage).toBe('en-US');
+        expect(chinese.defaults.aiLanguage).toBe('zh-CN');
+        throw rollback;
+      })
+      .catch((error: unknown) => {
+        if (error !== rollback) throw error;
+      });
+    expect((await service.settings()).aiLanguage).toBe(chosen);
+  });
   it("switches the assistant's ask box at the bottom of pages for everyone", async () => {
     const settings = async (id: string) =>
       (
