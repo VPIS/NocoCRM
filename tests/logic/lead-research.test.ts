@@ -116,6 +116,28 @@ describe('what a look-up leaves on the card', () => {
     });
   });
 
+  it('keeps every page it cites, however many, and a few it did not', () => {
+    const many = Array.from({ length: 50 }, (_, i) => ({
+      index: i + 1,
+      title: `Page ${String(i + 1)}`,
+      url: `https://p.example/${String(i + 1)}`,
+      site: 'p',
+    }));
+    // Cites the last 30 of 50.
+    const text = many
+      .slice(20)
+      .map((page) => `[ref_${String(page.index)}]`)
+      .join(' ');
+    const kept = keptResearch({ text, pages: many }, new Date());
+    expect(kept.pages.map((page) => page.index)).toEqual(
+      many.slice(20).map((page) => page.index),
+    );
+    // Citing few: up to 20 in all.
+    const few = keptResearch({ text: '[ref_5]', pages: many }, new Date());
+    expect(few.pages).toHaveLength(20);
+    expect(few.pages[0]?.index).toBe(5);
+  });
+
   it('offers a value from the web only with a page the look-up read', () => {
     const found = [
       { field: 'website', value: 'https://acme.example', source: 'ref_2' },

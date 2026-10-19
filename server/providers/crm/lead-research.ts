@@ -21,8 +21,11 @@ export const RESEARCH_FRESH_MS = 90 * DAY;
 export const NEWS_FRESH_MS = 30 * DAY;
 // The developments a look-up asks about, back from today.
 export const NEWS_WINDOW_DAYS = 90;
-// The look-up's answer as kept on the card.
+// The look-up's answer as kept on the card: its text, every page it cites
+// (a DeepSeek look-up cited 42), and pages it read without citing them
+// only up to a few.
 const TEXT_MAX = 6000;
+const CITED_MAX = 80;
 const PAGES_MAX = 20;
 
 // The triggers that always look the company up: a person changed which
@@ -185,7 +188,8 @@ export function researchQuestion(
 }
 
 // The look-up as the card keeps it: the answer within its length, the pages
-// it read, those it cites first.
+// it cites, so each of its marks links its page, then others it read while
+// there are fewer than 20.
 export function keptResearch(
   answer: { text: string; pages: readonly WebPage[] },
   at: Date,
@@ -198,10 +202,14 @@ export function keptResearch(
     at: at.toISOString(),
     text,
     pages: [
-      ...answer.pages.filter((page) => cited.has(page.index)),
+      ...answer.pages
+        .filter((page) => cited.has(page.index))
+        .slice(0, CITED_MAX),
       ...answer.pages.filter((page) => !cited.has(page.index)),
     ]
-      .slice(0, PAGES_MAX)
+      .filter(
+        (_page, i) => i < Math.max(PAGES_MAX, Math.min(cited.size, CITED_MAX)),
+      )
       .map(({ index, title, url, site }) => ({ index, title, url, site })),
   };
 }
