@@ -292,14 +292,22 @@ export function demoServices(app: Application): {
           const items = await query
             .selectFrom('notificationInAppItems')
             .select(['id', 'userId', 'target'])
-            .where('target', 'like', '%/crm/%')
+            // A record's page, /<entity>/<id>, or under /crm as a notice
+            // sent before 2026-10-19 names it.
+            .where((eb) =>
+              eb.or(
+                Object.keys(RECORD_TABLES).map((entity) =>
+                  eb('target', 'like', `%/${entity}/%`),
+                ),
+              ),
+            )
             .execute();
           const byTable = new Map<string, Set<string>>();
           const targets = items.flatMap((item) => {
             const target = (jsonValue(item.target) ?? {}) as {
               path?: unknown;
             };
-            const match = /^\/crm\/([a-z]+)\/([^/?#]+)/.exec(
+            const match = /^(?:\/crm)?\/([a-z]+)\/([^/?#]+)/.exec(
               toText(target.path),
             );
             const table = match ? RECORD_TABLES[match[1] ?? ''] : undefined;

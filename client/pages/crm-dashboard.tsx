@@ -162,7 +162,7 @@ export default function DashboardPage(): ReactElement {
     ? text(`greeting.${part}`, { name: user.name })
     : text(`greetingAlone.${part}`);
   const openList = (entity: Entity, metric: string): void =>
-    void navigate(`/crm/${toText(entity)}?metric=${metric}`);
+    void navigate(`/${toText(entity)}?metric=${metric}`);
 
   // A section of the page, under a heading of its own, set apart from what
   // is above it as the latest conversations are from the ask box.

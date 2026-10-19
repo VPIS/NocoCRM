@@ -21,7 +21,7 @@ export default function NewLeadFromConversation(): ReactElement {
     useOutletContext<ConversationContext>();
   const back = () =>
     void navigate({
-      pathname: `/crm/whatsapp/${encodeURIComponent(conversation.id)}`,
+      pathname: `/whatsapp/${encodeURIComponent(conversation.id)}`,
       search: params.toString() ? `?${params.toString()}` : '',
     });
   return (

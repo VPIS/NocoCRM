@@ -29,11 +29,9 @@ describe('RecordLink', () => {
       </MemoryRouter>,
     );
     const link = screen.getByRole('link', { name: /Acme/ });
-    expect(link).toHaveAttribute('href', '/crm/companies/acc-1');
+    expect(link).toHaveAttribute('href', '/companies/acc-1');
     fireEvent.click(link);
-    expect(screen.getByTestId('where')).toHaveTextContent(
-      '/crm/companies/acc-1',
-    );
+    expect(screen.getByTestId('where')).toHaveTextContent('/companies/acc-1');
   });
 
   it('opens the drawer on a plain click and keeps the href for new tabs', () => {
@@ -49,7 +47,7 @@ describe('RecordLink', () => {
       </MemoryRouter>,
     );
     const link = screen.getByRole('link', { name: /Acme/ });
-    expect(link).toHaveAttribute('href', '/crm/companies/acc-1');
+    expect(link).toHaveAttribute('href', '/companies/acc-1');
     fireEvent.click(link);
     expect(open).toHaveBeenCalledWith('companies', 'acc-1');
     // The page did not navigate: the drawer took the click.

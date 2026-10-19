@@ -681,7 +681,7 @@ function TaskTableRow({
     <TableRow
       className='cursor-pointer border-border'
       onClick={openOnRowClick(
-        `/crm/tasks/${toText(task.id)}`,
+        `/tasks/${toText(task.id)}`,
         (path) => void navigate(path),
       )}
     >

@@ -117,7 +117,7 @@ vi.mock('../../client/components/crm/common.js', async (importOriginal) => ({
   }: {
     entity: string;
     record: { id: string; name: string };
-  }) => <a href={`/crm/${entity}/${record.id}`}>{record.name}</a>,
+  }) => <a href={`/${entity}/${record.id}`}>{record.name}</a>,
 }));
 const { default: AgentsPage } =
   await import('../../client/pages/crm-agents.js');
@@ -132,7 +132,7 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 
 it('shows the company signals as an agent: its checks, the signals read, and each check opening its company', () => {
   render(
-    <MemoryRouter initialEntries={['/crm/agent-work/companies']}>
+    <MemoryRouter initialEntries={['/agent-work/companies']}>
       <AgentsPage />
     </MemoryRouter>,
     { wrapper },
@@ -160,13 +160,13 @@ it('shows the company signals as an agent: its checks, the signals read, and eac
     (
       screen.getByText('Shanghai Electric').closest('a') as HTMLAnchorElement
     ).getAttribute('href'),
-  ).toBe('/crm/companies/c1');
+  ).toBe('/companies/c1');
   expect(screen.getByText('Shanghai Electric names a new CIO.')).toBeTruthy();
 });
 
 it("opens the company work's tab from its former address", () => {
   render(
-    <MemoryRouter initialEntries={['/crm/agent-work/signals']}>
+    <MemoryRouter initialEntries={['/agent-work/signals']}>
       <AgentsPage />
     </MemoryRouter>,
     { wrapper },

@@ -34,7 +34,7 @@ export function RecentConversations(): ReactElement | null {
           {text('recentChats')}
         </h2>
         <Link
-          to='/crm/agent-chat'
+          to='/agent-chat'
           className='text-sm text-muted-foreground transition-colors hover:text-foreground'
         >
           {text('viewAllChats')}

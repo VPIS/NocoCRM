@@ -141,7 +141,7 @@ function Where(): ReactElement {
   return <output data-testid='where'>{useLocation().pathname}</output>;
 }
 
-function renderPage(path = '/crm/opportunities/opp-1'): void {
+function renderPage(path = '/opportunities/opp-1'): void {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -150,7 +150,7 @@ function renderPage(path = '/crm/opportunities/opp-1'): void {
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route
-            path='/crm/:entity/:id/*'
+            path='/:entity/:id/*'
             element={
               <>
                 <EntityDetail entity='opportunities' id='opp-1' />
@@ -270,7 +270,7 @@ describe('the opportunity page', () => {
       expect(tab.textContent).toBe('动态');
     await userEvent.click(screen.getAllByRole('tab', { name: /联系人/ })[0]);
     expect(screen.getByTestId('where').textContent).toBe(
-      '/crm/opportunities/opp-1/contacts',
+      '/opportunities/opp-1/contacts',
     );
   });
 

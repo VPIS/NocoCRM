@@ -15,7 +15,7 @@ export default function CrmMailAccountsPage(): ReactElement {
   return (
     <>
       <div className='px-6 pt-6 md:px-8 md:pt-8'>
-        <BackButton to='/crm/mail' />
+        <BackButton to='/mail' />
       </div>
       <div className='-mt-4 pb-24 md:-mt-6'>
         <MailAccountsPage />

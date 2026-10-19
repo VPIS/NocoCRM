@@ -110,7 +110,7 @@ function renderSearch(extra?: ReactNode, open = true) {
   });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/crm/tasks']}>
+      <MemoryRouter initialEntries={['/tasks']}>
         <SidebarProvider defaultOpen={open}>
           <GlobalSearchProvider>
             <SearchHeaderButton />
@@ -189,7 +189,7 @@ describe('the global search', () => {
     ).toBe(true);
     // The first result is selected; Enter opens it.
     await user.keyboard('{Enter}');
-    expect(screen.getByTestId('where').textContent).toBe('/crm/leads/l1');
+    expect(screen.getByTestId('where').textContent).toBe('/leads/l1');
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
@@ -223,9 +223,7 @@ describe('the global search', () => {
         }),
       ),
     );
-    expect(screen.getByTestId('where').textContent).toBe(
-      '/crm/leads?search=orbit',
-    );
+    expect(screen.getByTestId('where').textContent).toBe('/leads?search=orbit');
     pressShortcut();
     const again = await screen.findByRole('dialog');
     await user.click(

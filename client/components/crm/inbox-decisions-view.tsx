@@ -293,7 +293,7 @@ export function RecordPaneFrame({
           // content's right edge does below.
           className='-mr-2.5'
           nativeButton={false}
-          render={<Link to={`/crm/${entity}/${recordId}/history${search}`} />}
+          render={<Link to={`/${entity}/${recordId}/history${search}`} />}
         >
           <Maximize2 />
           {text('openFullPage')}

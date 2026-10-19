@@ -711,7 +711,7 @@ export default function EntityDetail({
               form.entity !== entity
             ) {
               if (drawer) drawer.open(form.entity, toText(r.id));
-              else void navigate(`/crm/${toText(form.entity)}/${toText(r.id)}`);
+              else void navigate(`/${toText(form.entity)}/${toText(r.id)}`);
             }
           }}
           andThen={
@@ -890,7 +890,7 @@ export default function EntityDetail({
                 // Leave first: refreshing while still on the page refetches
                 // the record that no longer exists.
                 if (drawer?.inDrawer) drawer.close();
-                else void navigate(`/crm/${toText(entity)}`);
+                else void navigate(`/${toText(entity)}`);
                 void refresh();
               } catch (e) {
                 setError(e);

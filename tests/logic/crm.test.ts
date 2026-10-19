@@ -3138,7 +3138,7 @@ describe('CRM API security and domain rules', () => {
       title: '任务时间快到了',
       body: expect.stringContaining('即将开始的会议'),
       // A route without the deployment prefix, which the router adds.
-      target: { type: 'route', path: `/crm/tasks/${meeting.id}` },
+      target: { type: 'route', path: `/tasks/${meeting.id}` },
     });
     // A lead is named by person and company, as the pages name it.
     await service.enqueue(
@@ -7297,7 +7297,7 @@ describe('demo dataset', () => {
           updatedAt: new Date().toISOString(),
           target: JSON.stringify({
             type: 'route',
-            path: `/crm/leads/${toText(demoLead?.id)}`,
+            path: `/leads/${toText(demoLead?.id)}`,
           }),
         },
         {
@@ -7308,7 +7308,7 @@ describe('demo dataset', () => {
           updatedAt: new Date().toISOString(),
           target: JSON.stringify({
             type: 'route',
-            path: `/crm/leads/${toText(kept.id)}`,
+            path: `/leads/${toText(kept.id)}`,
           }),
         },
         {
@@ -7319,7 +7319,7 @@ describe('demo dataset', () => {
           updatedAt: new Date().toISOString(),
           target: JSON.stringify({
             type: 'route',
-            path: '/crm/accounts/gone-company',
+            path: '/accounts/gone-company',
           }),
         },
       ])

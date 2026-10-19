@@ -53,9 +53,9 @@ import {
 import { MessageSummary } from '../../components/crm/whatsapp/messages.js';
 import { WhatsAppFailure } from '../../components/crm/whatsapp/failure.js';
 
-// The WhatsApp page (/crm/whatsapp): the company numbers' conversations with
+// The WhatsApp page (/whatsapp): the company numbers' conversations with
 // customers, an inbox of two panes as the Mail workspace is — the list on
-// the left, the conversation open beside it (/crm/whatsapp/:conversationId,
+// the left, the conversation open beside it (/whatsapp/:conversationId,
 // its own route, pages/crm-whatsapp/conversation.tsx). Which conversations
 // the list shows is its tab and, with two numbers or more, its number, both
 // kept in the address (?view=, ?number=). One awaiting a reply (the customer
@@ -101,7 +101,7 @@ export default function WhatsAppPage(): ReactElement {
               <Button
                 variant='outline'
                 nativeButton={false}
-                render={<Link to='/crm/whatsapp/connection' />}
+                render={<Link to='/whatsapp/connection' />}
               >
                 <Plug data-icon='inline-start' />
                 {text('whatsapp.manageConnection')}
@@ -326,7 +326,7 @@ function ConversationList({
           return (
             <li key={row.id}>
               <Link
-                to={`/crm/whatsapp/${encodeURIComponent(row.id)}${search}`}
+                to={`/whatsapp/${encodeURIComponent(row.id)}${search}`}
                 aria-current={open ? 'page' : undefined}
                 className={`flex flex-col gap-1 rounded-md p-2 text-sm transition-colors hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
                   open ? 'bg-muted' : ''
@@ -447,7 +447,7 @@ function EmptyView({ view }: { view: ConversationView }): ReactElement {
             <Button
               variant='outline'
               nativeButton={false}
-              render={<Link to='/crm/whatsapp/connection' />}
+              render={<Link to='/whatsapp/connection' />}
             >
               {text('whatsapp.manageConnection')}
             </Button>

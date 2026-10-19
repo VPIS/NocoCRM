@@ -52,7 +52,7 @@ import {
 import { ConfirmAction } from '../settings/shared.js';
 import { WhatsAppFailure } from '../../components/crm/whatsapp/failure.js';
 
-// One conversation beside the list (/crm/whatsapp/:conversationId): the
+// One conversation beside the list (/whatsapp/:conversationId): the
 // customer, what they are linked to, and their messages, newest at the
 // bottom, asked again every few seconds. A customer linked to no record is
 // linked to a lead or a contact (…/link), made a lead (…/new-lead), set
@@ -157,7 +157,7 @@ export default function ConversationPane(): ReactElement {
   const gone = () => {
     toaster.show({ type: 'error', title: toText(text('whatsapp.gone')) });
     refreshLists();
-    void navigate(`/crm/whatsapp${listSearch}`);
+    void navigate(`/whatsapp${listSearch}`);
   };
   const [busy, setBusy] = useState<string>();
   const [confirmSpam, setConfirmSpam] = useState(false);
@@ -221,7 +221,7 @@ export default function ConversationPane(): ReactElement {
   };
   const back = (
     <div className='px-4 pt-3 md:hidden'>
-      <BackButton to={`/crm/whatsapp${listSearch}`} />
+      <BackButton to={`/whatsapp${listSearch}`} />
     </div>
   );
   if (query.error && !query.data)
@@ -233,7 +233,7 @@ export default function ConversationPane(): ReactElement {
             error={query.error}
             what='conversation'
             onRetry={() => void query.refetch()}
-            back={`/crm/whatsapp${listSearch}`}
+            back={`/whatsapp${listSearch}`}
           />
         </div>
       </div>
@@ -273,7 +273,7 @@ export default function ConversationPane(): ReactElement {
             error={query.error}
             what='conversation'
             onRetry={() => void query.refetch()}
-            back={`/crm/whatsapp${listSearch}`}
+            back={`/whatsapp${listSearch}`}
           />
         </div>
       ) : null}
@@ -342,7 +342,7 @@ function ConversationHeader({
   const RecordIcon = ENTITY_ICONS[record?.entity ?? 'contacts'];
   const mayCreateLead = Boolean(meta?.permissions.leads?.create);
   const overlay = (path: string) => ({
-    pathname: `/crm/whatsapp/${encodeURIComponent(conversation.id)}/${path}`,
+    pathname: `/whatsapp/${encodeURIComponent(conversation.id)}/${path}`,
     search,
   });
   return (

@@ -752,7 +752,7 @@ function CaptureReview({
                 )}
               </Badge>
               <Link
-                to={`/crm/leads/${active.createdId}`}
+                to={`/leads/${active.createdId}`}
                 target='_blank'
                 className='text-primary hover:underline'
               >
@@ -967,7 +967,7 @@ export function CaptureNotice({
             <span key={`${d.entity}:${d.id}`}>
               {index > 0 && (language.startsWith('zh') ? '、' : ', ')}
               <Link
-                to={`/crm/${d.entity}/${d.id}`}
+                to={`/${d.entity}/${d.id}`}
                 target='_blank'
                 className='underline underline-offset-2'
               >

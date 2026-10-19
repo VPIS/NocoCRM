@@ -60,8 +60,7 @@ export default function InboxPage(): ReactElement {
     const focus = data.comment?.id || data.comment?.thread;
     const search = focus ? `?focus=${encodeURIComponent(focus)}` : '';
     setTimeout(
-      () =>
-        void navigate(`/crm/${data.entity ?? ''}/${data.recordId}${search}`),
+      () => void navigate(`/${data.entity ?? ''}/${data.recordId}${search}`),
     );
   };
   return (

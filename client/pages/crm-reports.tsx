@@ -82,7 +82,7 @@ export default function ReportsPage(): ReactElement {
   const funnel = rows(data?.funnel);
   const maxCount = Math.max(1, ...funnel.map((r) => Number(r.count)));
   const openList = (entity: Entity, metric: string): void =>
-    void navigate(`/crm/${toText(entity)}?metric=${metric}`);
+    void navigate(`/${toText(entity)}?metric=${metric}`);
   // The assistant writes the analysis in a new conversation in its panel; offered
   // while it can take it.
   const analyze = (): void => {
@@ -306,7 +306,7 @@ export default function ReportsPage(): ReactElement {
                   <CardTitle className='text-base'>{text('funnel')}</CardTitle>
                   <Link
                     className='text-xs text-muted-foreground underline-offset-4 hover:underline'
-                    to='/crm/opportunities'
+                    to='/opportunities'
                   >
                     {text('more')} ↗
                   </Link>

@@ -166,7 +166,7 @@ function Where(): ReactElement {
   return <output data-testid='where'>{useLocation().pathname}</output>;
 }
 
-function renderPage(path = `/crm/${state.entity}/rec-1`): void {
+function renderPage(path = `/${state.entity}/rec-1`): void {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -174,9 +174,9 @@ function renderPage(path = `/crm/${state.entity}/rec-1`): void {
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
-          <Route path='/crm/:entity' element={<Where />} />
+          <Route path='/:entity' element={<Where />} />
           <Route
-            path='/crm/:entity/:id/*'
+            path='/:entity/:id/*'
             element={
               <>
                 <EntityDetail entity={state.entity as 'companies'} id='rec-1' />
@@ -304,7 +304,7 @@ describe('the way back', () => {
     expect(back.parentElement?.contains(heading)).toBe(true);
     expect(screen.getByText('联系人')).toBeTruthy();
     await userEvent.click(back);
-    expect(screen.getByTestId('where').textContent).toBe('/crm/contacts');
+    expect(screen.getByTestId('where').textContent).toBe('/contacts');
   });
 
   it('offers a pencil after the heading it may edit, which opens its editor', async () => {

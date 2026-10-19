@@ -68,7 +68,7 @@ import {
 // trigger switched on or off by an administrator), how its runs fared over
 // the last week or month, and its runs, newest first, each opening its
 // record, automatic or asked for. The tab is the path's last segment
-// (/crm/agent-work/<agent>; /crm/agents/<agent> before, which leads here),
+// (/agent-work/<agent>; /crm/agents/<agent> before, which leads here),
 // the first when there is none.
 
 // The company signals' check (company-signals.ts) last: its runs are checks
@@ -145,7 +145,7 @@ export default function AgentsPage(): ReactElement {
     AGENTS.find((name) => pathname.endsWith(`/agent-work/${SLUGS[name]}`)) ??
     'leads';
   if (pathname.endsWith('/agent-work/signals'))
-    return <Navigate replace to='/crm/agent-work/companies' />;
+    return <Navigate replace to='/agent-work/companies' />;
   return (
     <CrmFrame title={text('navigation.agentWork')}>
       {/* An agent with runs under way shows the AI's pulsing dot and their
@@ -159,7 +159,7 @@ export default function AgentsPage(): ReactElement {
           const off = meta?.agents?.[name]?.enabled === false;
           const agentName = nameOf(name);
           return {
-            to: `/crm/agent-work/${SLUGS[name]}`,
+            to: `/agent-work/${SLUGS[name]}`,
             label: agentName ?? text(`agents.${name}.title`),
             icon: ICONS[name],
             ...(agentName

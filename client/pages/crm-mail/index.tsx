@@ -54,7 +54,7 @@ export default function CrmMailPage(): ReactElement {
       {createPortal(
         <Button
           variant='outline'
-          render={<Link to='/crm/mail/accounts' />}
+          render={<Link to='/mail/accounts' />}
           nativeButton={false}
         >
           <AtSign data-icon='inline-start' />

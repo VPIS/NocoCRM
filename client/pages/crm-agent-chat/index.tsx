@@ -120,12 +120,12 @@ export default function AgentChatPage(): ReactElement {
   const created = (conversation: ConversationDetail): void => {
     setFresh((current) => ({ ...current, id: conversation.id }));
     void navigate(
-      `/crm/agent-chat/${encodeURIComponent(conversation.id)}${archived ? '?archived=1' : ''}`,
+      `/agent-chat/${encodeURIComponent(conversation.id)}${archived ? '?archived=1' : ''}`,
       { replace: true },
     );
   };
   const archivedOne = (): void => {
-    void navigate('/crm/agent-chat');
+    void navigate('/agent-chat');
     // The open conversation left the view: on to the list.
     requestAnimationFrame(() => listRef.current?.focus());
   };
@@ -133,7 +133,7 @@ export default function AgentChatPage(): ReactElement {
   const newButton = (
     <Button
       variant='contrast'
-      render={<Link to='/crm/agent-chat/new' />}
+      render={<Link to='/agent-chat/new' />}
       nativeButton={false}
     >
       <Plus />
@@ -282,7 +282,7 @@ export default function AgentChatPage(): ReactElement {
               {/* Narrow, the list and the conversation take turns. */}
               <div className='mb-2 lg:hidden'>
                 <BackButton
-                  to={`/crm/agent-chat${archived ? '?archived=1' : ''}`}
+                  to={`/agent-chat${archived ? '?archived=1' : ''}`}
                 />
               </div>
               {detail}

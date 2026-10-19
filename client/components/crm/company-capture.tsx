@@ -150,7 +150,7 @@ export function CompanyCaptureDialog({
       );
       await refresh();
       onClose();
-      void navigate(`/crm/companies/${toText(data.id)}`);
+      void navigate(`/companies/${toText(data.id)}`);
     } catch (e) {
       setError(e);
       setBusy(undefined);
@@ -290,7 +290,7 @@ export function CompanyCaptureDialog({
                               {index > 0 &&
                                 (language.startsWith('zh') ? '、' : ', ')}
                               <Link
-                                to={`/crm/companies/${d.id}`}
+                                to={`/companies/${d.id}`}
                                 target='_blank'
                                 className='underline underline-offset-2'
                               >

@@ -2550,7 +2550,7 @@ async function populate(
                   kind,
                   id: toText(about.id),
                   title: toText(about.name),
-                  path: `/crm/${kind}/${toText(about.id)}`,
+                  path: `/${kind}/${toText(about.id)}`,
                 },
               }
             : {}),

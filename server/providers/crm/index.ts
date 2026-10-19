@@ -842,7 +842,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
                     body: t('body', { title, name: toText(row.name) }),
                     target: {
                       type: 'route',
-                      path: `/crm/whatsapp/${toText(row.recordId)}`,
+                      path: `/whatsapp/${toText(row.recordId)}`,
                     },
                   },
                 },
@@ -900,7 +900,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
                     // A company's news opens its page with the whole list of
                     // its signals (the Signals card's dialog, which /signals
                     // opens).
-                    path: `/crm/${toText(row.entity)}/${toText(row.recordId)}${
+                    path: `/${toText(row.entity)}/${toText(row.recordId)}${
                       row.event === 'signal'
                         ? '/signals'
                         : row.event === 'whatsapp'

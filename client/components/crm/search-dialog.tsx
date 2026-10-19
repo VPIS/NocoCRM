@@ -275,7 +275,7 @@ function SearchPanel({ search }: { search: GlobalSearch }): ReactElement {
                 <CommandItem
                   key={toText(row.id)}
                   value={`${group.entity}:${toText(row.id)}`}
-                  onSelect={() => go(`/crm/${group.entity}/${toText(row.id)}`)}
+                  onSelect={() => go(`/${group.entity}/${toText(row.id)}`)}
                 >
                   <SearchRow
                     entity={group.entity}
@@ -290,7 +290,7 @@ function SearchPanel({ search }: { search: GlobalSearch }): ReactElement {
                   value={`${group.entity}:all`}
                   onSelect={() =>
                     go(
-                      `/crm/${group.entity}?${new URLSearchParams({ search: q }).toString()}`,
+                      `/${group.entity}?${new URLSearchParams({ search: q }).toString()}`,
                     )
                   }
                   className='text-muted-foreground'

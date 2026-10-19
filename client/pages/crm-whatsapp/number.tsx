@@ -19,7 +19,7 @@ import {
 import { FormDialog, TextField } from '../settings/shared.js';
 import type { Connection, ConnectionContext } from './connection.js';
 
-// Add a WhatsApp number (/crm/whatsapp/connection/numbers/new) or change one
+// Add a WhatsApp number (/whatsapp/connection/numbers/new) or change one
 // (…/numbers/:numberId), over the connection page: Meta's ids for it, how it
 // is connected (coexistence, the number staying in the WhatsApp Business
 // app, or the Cloud API alone) and its access token, sealed on the server

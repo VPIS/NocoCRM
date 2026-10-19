@@ -131,7 +131,7 @@ describe('the settings page', () => {
     state.api.mockReset();
     state.api.mockResolvedValue({ data: {} });
     render(
-      <MemoryRouter initialEntries={['/crm/guidance']}>
+      <MemoryRouter initialEntries={['/guidance']}>
         <GuidancePage />
       </MemoryRouter>,
     );

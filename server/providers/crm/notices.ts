@@ -131,7 +131,11 @@ export async function noticesOf(
       .catch(() => []);
     for (const item of items) {
       const target = (jsonValue(item.target) ?? {}) as Row;
-      const match = /^\/crm\/([a-z]+)\/([^/?#]+)/.exec(toText(target.path));
+      // A record's page, /<entity>/<id>, or /crm/<entity>/<id> as a notice
+      // sent before 2026-10-19 names it.
+      const match = /^(?:\/crm)?\/([a-z]+)\/([^/?#]+)/.exec(
+        toText(target.path),
+      );
       if (!match || !CRM_ENTITIES.has(match[1] ?? '')) continue;
       notices.push({
         notificationId: toText(item.notificationId),

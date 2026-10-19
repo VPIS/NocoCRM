@@ -59,7 +59,7 @@ export function selectedNavigationId(
       ) ??
     // Application change: the template falls back to the longest menu path
     // containing the URL only when no route matches, so a page without a
-    // menu entry of its own (the CRM's record page, /crm/leads/:id) left the
+    // menu entry of its own (the CRM's record page, /leads/:id) left the
     // menu without a selection. It now falls back whenever the matched pages
     // carry no entry, never to the root: every URL starts with "/", and a
     // page like the notifications would otherwise select the home entry.

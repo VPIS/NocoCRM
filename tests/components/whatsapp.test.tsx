@@ -278,7 +278,7 @@ describe('the workspace', () => {
     wrap(
       <MemoryRouter initialEntries={[path]}>
         <Routes>
-          <Route path='/crm/whatsapp' element={<WhatsAppPage />}>
+          <Route path='/whatsapp' element={<WhatsAppPage />}>
             <Route path=':conversationId' element={<ConversationPane />} />
           </Route>
         </Routes>
@@ -326,11 +326,11 @@ describe('the workspace', () => {
 
   it('lists the conversations with their state and opens one beside the list', async () => {
     respond();
-    render(routes('/crm/whatsapp/c1?view=unlinked'));
+    render(routes('/whatsapp/c1?view=unlinked'));
     const list = await screen.findByRole('list');
     const row = within(list).getByRole('link', { name: /Ana Souza/ });
     expect(row.getAttribute('aria-current')).toBe('page');
-    expect(row.getAttribute('href')).toBe('/crm/whatsapp/c1?view=unlinked');
+    expect(row.getAttribute('href')).toBe('/whatsapp/c1?view=unlinked');
     expect(within(row).getByText(crmEn.whatsapp.state.unlinked)).toBeTruthy();
     expect(within(row).getByText(crmEn.whatsapp.kind.image)).toBeTruthy();
     // The customer wrote last: it awaits a reply.
@@ -341,9 +341,7 @@ describe('the workspace', () => {
       await screen.findByRole('heading', { name: 'Ana Souza' }),
     ).toBeTruthy();
     const link = screen.getByText(crmEn.whatsapp.link).closest('a');
-    expect(link?.getAttribute('href')).toBe(
-      '/crm/whatsapp/c1/link?view=unlinked',
-    );
+    expect(link?.getAttribute('href')).toBe('/whatsapp/c1/link?view=unlinked');
     expect(screen.queryByText(crmEn.whatsapp.newLead)).toBe(null);
     expect(screen.getByText('Message m1')).toBeTruthy();
     // The number's connection, from the page's header, for an administrator.
@@ -352,7 +350,7 @@ describe('the workspace', () => {
         .getByText(crmEn.whatsapp.manageConnection)
         .closest('a')
         ?.getAttribute('href'),
-    ).toBe('/crm/whatsapp/connection');
+    ).toBe('/whatsapp/connection');
     expect(screen.getByText(crmEn.whatsapp.readOnlyNote)).toBeTruthy();
   });
 
@@ -382,14 +380,14 @@ describe('the workspace', () => {
         ) => Promise<unknown>,
       ),
     );
-    render(routes('/crm/whatsapp?view=all'));
+    render(routes('/whatsapp?view=all'));
     const list = await screen.findByRole('list');
     expect(await within(list).findByText('Abroad')).toBeTruthy();
     expect(
       screen.getByRole('combobox', { name: crmEn.whatsapp.numberFilter }),
     ).toBeTruthy();
     // Picked from the address: the list asks for that number's alone.
-    render(routes('/crm/whatsapp?view=all&number=n2'));
+    render(routes('/whatsapp?view=all&number=n2'));
     await waitFor(() =>
       expect(state.api).toHaveBeenCalledWith(
         'whatsapp/conversations?view=all&numberId=n2&page=1&pageSize=50',
@@ -400,7 +398,7 @@ describe('the workspace', () => {
   it('sets a customer aside at once, and offers to restore them', async () => {
     const user = userEvent.setup();
     respond();
-    render(routes('/crm/whatsapp/c1'));
+    render(routes('/whatsapp/c1'));
     await user.click(
       await screen.findByRole('button', {
         name: 'Actions for Ana Souza',
@@ -430,7 +428,7 @@ describe('the workspace', () => {
       },
     });
     // All by default, and for an old address naming the Mine there was.
-    render(routes('/crm/whatsapp?view=mine'));
+    render(routes('/whatsapp?view=mine'));
     expect(await screen.findByText(crmEn.whatsapp.empty.title)).toBeTruthy();
     expect(screen.getByText(crmEn.whatsapp.choose)).toBeTruthy();
   });
@@ -467,7 +465,7 @@ describe('changing a link', () => {
               {
                 // The conversation's context alone: its header's record
                 // link needs the application shell.
-                path: '/crm/whatsapp/:conversationId',
+                path: '/whatsapp/:conversationId',
                 element: (
                   <Outlet
                     context={{
@@ -482,7 +480,7 @@ describe('changing a link', () => {
                 ],
               },
             ],
-            { initialEntries: ['/crm/whatsapp/c1/link'] },
+            { initialEntries: ['/whatsapp/c1/link'] },
           )}
         />,
       ),
@@ -598,7 +596,7 @@ describe("a record's WhatsApp tab", () => {
         .getByText(crmEn.openFullPage)
         .closest('a')
         ?.getAttribute('href'),
-    ).toBe('/crm/whatsapp/c1?view=all');
+    ).toBe('/whatsapp/c1?view=all');
   });
 });
 
@@ -673,7 +671,7 @@ describe('the connection settings', () => {
           router={createMemoryRouter(
             [
               {
-                path: '/crm/whatsapp/connection',
+                path: '/whatsapp/connection',
                 element: <WhatsAppSettingsPage />,
                 children: [
                   { path: 'numbers/new', element: <WhatsAppNumberDialog /> },
@@ -689,7 +687,7 @@ describe('the connection settings', () => {
   it('asks for the app secret until it is stored, and lists the numbers with their mode', async () => {
     const user = userEvent.setup();
     respond();
-    page('/crm/whatsapp/connection');
+    page('/whatsapp/connection');
     const save = await screen.findByRole('button', {
       name: crmEn.whatsappSettings.save,
     });
@@ -715,7 +713,7 @@ describe('the connection settings', () => {
         .getByText(crmEn.whatsappSettings.addNumber)
         .closest('a')
         ?.getAttribute('href'),
-    ).toBe('/crm/whatsapp/connection/numbers/new');
+    ).toBe('/whatsapp/connection/numbers/new');
     await user.click(screen.getByRole('button', { name: crmEn.remove }));
     expect(
       await screen.findByText(crmEn.whatsappSettings.removeInUse),
@@ -756,7 +754,7 @@ describe('the connection settings', () => {
   it('adds a number, coexistence by default, asking for its id and token', async () => {
     const user = userEvent.setup();
     respond();
-    page('/crm/whatsapp/connection/numbers/new');
+    page('/whatsapp/connection/numbers/new');
     const dialog = await screen.findByRole('dialog');
     await user.click(
       within(dialog).getByRole('button', {

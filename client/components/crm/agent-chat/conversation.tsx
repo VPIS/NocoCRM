@@ -193,7 +193,7 @@ export function Conversation({
           {...(onBack
             ? { onClick: onBack }
             : {
-                render: <Link to='/crm/agent-chat' />,
+                render: <Link to='/agent-chat' />,
                 nativeButton: false,
               })}
         >

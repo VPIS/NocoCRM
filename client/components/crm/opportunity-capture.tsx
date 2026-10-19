@@ -290,7 +290,7 @@ export function OpportunityCaptureDialog({
       );
       await refresh();
       onClose();
-      void navigate(`/crm/opportunities/${toText(data.id)}`);
+      void navigate(`/opportunities/${toText(data.id)}`);
     } catch (e) {
       setError(e);
       setBusy(undefined);
@@ -419,7 +419,7 @@ export function OpportunityCaptureDialog({
                               {index > 0 &&
                                 (language.startsWith('zh') ? '、' : ', ')}
                               <Link
-                                to={`/crm/opportunities/${d.id}`}
+                                to={`/opportunities/${d.id}`}
                                 target='_blank'
                                 className='underline underline-offset-2'
                               >

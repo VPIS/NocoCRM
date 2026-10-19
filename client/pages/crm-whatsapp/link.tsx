@@ -93,7 +93,7 @@ export default function LinkConversationDialog(): ReactElement {
         toaster.show({ type: 'error', title: toText(text('whatsapp.gone')) });
         settle();
         void navigate({
-          pathname: '/crm/whatsapp',
+          pathname: '/whatsapp',
           search: params.toString() ? `?${params.toString()}` : '',
         });
         return false;

@@ -252,7 +252,7 @@ function renderAt(path: string): void {
         <I18nProvider runtime={runtime}>
           <Routes>
             <Route
-              path='/crm/agent-chat'
+              path='/agent-chat'
               element={
                 <>
                   <AgentChatPage />
@@ -272,7 +272,7 @@ function renderAt(path: string): void {
 
 describe('the agent conversations', () => {
   it('collapses into the side panel, back to the overview when it was opened first', async () => {
-    renderAt('/crm/agent-chat');
+    renderAt('/agent-chat');
     expect(screen.getByRole('heading', { name: '全部对话' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '收起' }));
     expect(await screen.findByText('Overview page')).toBeTruthy();
@@ -280,28 +280,28 @@ describe('the agent conversations', () => {
   });
 
   it('starts with an empty state holding the only way to a new one', () => {
-    renderAt('/crm/agent-chat');
+    renderAt('/agent-chat');
     expect(screen.getByText('还没有对话')).toBeTruthy();
     // A link drawn as a button: the only one, in the empty state.
     const start = screen.getAllByRole('button', { name: '新建对话' });
     expect(start).toHaveLength(1);
-    expect(start[0]).toHaveAttribute('href', '/crm/agent-chat/new');
+    expect(start[0]).toHaveAttribute('href', '/agent-chat/new');
   });
 
   it('offers the archived ones from the empty state once every conversation is archived', async () => {
     state.archived = [conversation('c9', '旧对话')];
-    renderAt('/crm/agent-chat');
+    renderAt('/agent-chat');
     expect(screen.getByText('还没有对话')).toBeTruthy();
     await userEvent.click(screen.getByRole('button', { name: '显示已归档' }));
     expect(screen.getByTestId('where').textContent).toBe(
-      '/crm/agent-chat?archived=1',
+      '/agent-chat?archived=1',
     );
     expect(screen.getByRole('link', { name: /旧对话/u })).toBeTruthy();
   });
 
   it('lists the conversations, none open until one is picked', () => {
     state.open = [conversation('c1', '展会线索'), conversation('c2', '月报')];
-    renderAt('/crm/agent-chat');
+    renderAt('/agent-chat');
     const list = screen.getByRole('navigation', { name: '对话' });
     expect(within(list).getAllByRole('link')).toHaveLength(2);
     expect(screen.getByText('选择一个对话，或新建一个')).toBeTruthy();
@@ -309,10 +309,10 @@ describe('the agent conversations', () => {
 
   it('says when nothing is archived and hides the archived list again', async () => {
     state.open = [conversation('c1', '展会线索')];
-    renderAt('/crm/agent-chat?archived=1');
+    renderAt('/agent-chat?archived=1');
     expect(screen.getByText('没有已归档的对话')).toBeTruthy();
     await userEvent.click(screen.getByRole('button', { name: '隐藏已归档' }));
-    expect(screen.getByTestId('where').textContent).toBe('/crm/agent-chat');
+    expect(screen.getByTestId('where').textContent).toBe('/agent-chat');
   });
 
   it('places the plans of a conversation among its messages, by time', async () => {
@@ -346,7 +346,7 @@ describe('the agent conversations', () => {
         steps: [],
       },
     ];
-    renderAt('/crm/agent-chat/c1');
+    renderAt('/agent-chat/c1');
     const card = await screen.findByRole('region', { name: '新增线索周晓' });
     const asked = screen.getByText('把周晓加成线索');
     const answered = screen.getByText('计划已提出，等你确认。');
@@ -362,7 +362,7 @@ describe('the agent conversations', () => {
 
   it('sends on Enter, never on Shift+Enter or while composing', async () => {
     state.open = [conversation('c1', '展会线索')];
-    renderAt('/crm/agent-chat/c1');
+    renderAt('/agent-chat/c1');
     const box = screen.getByRole('textbox', { name: '问任何问题…' });
     await userEvent.type(box, '本周新线索有几条');
     fireEvent.keyDown(box, { key: 'Enter', isComposing: true, keyCode: 229 });
@@ -384,7 +384,7 @@ describe('the agent conversations', () => {
       (_input: unknown, options?: { onSuccess?: () => void }) =>
         options?.onSuccess?.(),
     );
-    renderAt('/crm/agent-chat/c1');
+    renderAt('/agent-chat/c1');
     // Behind the conversation's "…" menu.
     await userEvent.click(screen.getByRole('button', { name: '对话操作' }));
     await userEvent.click(
@@ -394,11 +394,11 @@ describe('the agent conversations', () => {
       { id: 'c1', archived: true },
       expect.anything(),
     );
-    expect(screen.getByTestId('where').textContent).toBe('/crm/agent-chat');
+    expect(screen.getByTestId('where').textContent).toBe('/agent-chat');
   });
 
   it('starts a first conversation without the empty list or a second way to start one', () => {
-    renderAt('/crm/agent-chat/new');
+    renderAt('/agent-chat/new');
     expect(screen.queryByRole('navigation')).toBeNull();
     expect(screen.queryByText('没有已归档的对话')).toBeNull();
     expect(screen.queryByRole('button', { name: '新建对话' })).toBeNull();
@@ -435,10 +435,10 @@ describe('the agent conversations', () => {
     );
     render(
       <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={['/crm/agent-chat/new']}>
+        <MemoryRouter initialEntries={['/agent-chat/new']}>
           <I18nProvider runtime={runtime}>
             <Routes>
-              <Route path='/crm/agent-chat' element={<AgentChatPage />}>
+              <Route path='/agent-chat' element={<AgentChatPage />}>
                 <Route path=':conversationId' element={null} />
               </Route>
             </Routes>
@@ -453,7 +453,7 @@ describe('the agent conversations', () => {
   it('asks for an agent first when there is none', () => {
     state.agents = [];
     state.open = [conversation('c1', '展会线索')];
-    renderAt('/crm/agent-chat/new');
+    renderAt('/agent-chat/new');
     expect(screen.getByText('还没有 Agent')).toBeTruthy();
     expect(screen.getByRole('button', { name: '管理 Agent' })).toHaveAttribute(
       'href',
@@ -472,7 +472,7 @@ describe('the agent conversations', () => {
         },
       },
     ];
-    renderAt('/crm/agent-chat/new');
+    renderAt('/agent-chat/new');
     await userEvent.type(
       screen.getByRole('textbox', { name: '问任何问题…' }),
       '你好',

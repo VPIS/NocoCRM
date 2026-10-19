@@ -172,10 +172,10 @@ function DrawerHost({ children }: { children: ReactNode }): ReactElement {
 
 export default function CrmListPage(): ReactElement {
   const location = useLocation();
-  // The segment after /crm: on the way to a record page or the action
-  // centre this component can render once more with the new location, and
-  // the last segment would then be an id or "actions".
-  const entity = location.pathname.split('/').filter(Boolean)[1] as Entity;
+  // The path's first segment: on the way to a record page this component
+  // can render once more with the new location, and the last segment would
+  // then be an id.
+  const entity = location.pathname.split('/').filter(Boolean)[0] as Entity;
   // "?metric=stale" opens the list already filtered by that card;
   // "?status=pending" with that status filter applied.
   const params = new URLSearchParams(location.search);
@@ -1096,7 +1096,7 @@ function EntityList({
                         <TableRow
                           className='cursor-pointer border-border'
                           onClick={openOnRowClick(
-                            `/crm/${entity}/${toText(record.id)}`,
+                            `/${entity}/${toText(record.id)}`,
                             (path) => void navigate(path),
                           )}
                         >
@@ -1270,7 +1270,7 @@ function EntityList({
                     )}`}
                     data-board-card=''
                     onClick={openOnRowClick(
-                      `/crm/${entity}/${toText(record.id)}`,
+                      `/${entity}/${toText(record.id)}`,
                       (path) => void navigate(path),
                     )}
                     draggable={

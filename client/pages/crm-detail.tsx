@@ -40,6 +40,7 @@ import {
   useSearchParams,
 } from 'react-router';
 import { Sheet, SheetContent, SheetTitle } from '../components/ui/sheet.js';
+import { recordOf } from '../components/crm/record-route.js';
 import {
   Tooltip,
   TooltipContent,
@@ -202,12 +203,15 @@ const drawerEntities: Entity[] = [
 
 export default function CrmDetailPage(): ReactElement {
   const params = useParams();
+  const { pathname } = useLocation();
   const { opened, open, close } = useRecordDrawerState();
-  const entity = params.entity as Entity;
-  const key = `${toText(params.entity)}/${toText(params.id)}`;
+  // The kind is the route's own (one a kind, record-route.ts), read from the
+  // path; the id is the route's parameter.
+  const entity = recordOf(pathname)?.entity;
+  const key = `${toText(entity)}/${toText(params.id)}`;
   // The route can render once more with empty params while it is being left
   // (after a delete); without both there is nothing to load.
-  if (!params.entity || !params.id) return <></>;
+  if (!entity || !params.id) return <></>;
   return (
     <RecordDrawerContext.Provider value={{ open, close, inDrawer: false }}>
       {entity === 'leads' ? (
@@ -296,7 +300,7 @@ export function RecordDrawer({
                 variant='ghost'
                 size='sm'
                 nativeButton={false}
-                render={<Link to={`/crm/${toText(entity)}/${toText(id)}`} />}
+                render={<Link to={`/${toText(entity)}/${toText(id)}`} />}
               >
                 <Maximize2 />
                 {text('openFullPage')}
@@ -686,7 +690,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
               // refresh refetches a lead that no longer exists.
               if (keptId !== toText(id)) {
                 if (drawer?.inDrawer) drawer.close();
-                else void navigate(`/crm/leads/${keptId}`);
+                else void navigate(`/leads/${keptId}`);
               }
               void refresh();
             }}
@@ -929,7 +933,7 @@ function LeadDetail({ id }: { id: string }): ReactElement {
                       // Leave first: refreshing while still on the page
                       // refetches the record that no longer exists.
                       if (drawer?.inDrawer) drawer.close();
-                      else void navigate('/crm/leads');
+                      else void navigate('/leads');
                       void refresh();
                     } catch (e) {
                       setError(e);
@@ -1261,7 +1265,7 @@ function DetailBack({ entity }: { entity: Entity }): ReactElement {
                 location.key === 'default'
                   ? null
                   : stepsToPageBefore(location.pathname);
-              if (steps === null) void navigate(`/crm/${toText(entity)}`);
+              if (steps === null) void navigate(`/${toText(entity)}`);
               else void navigate(steps);
             }}
           />

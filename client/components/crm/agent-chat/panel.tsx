@@ -47,7 +47,7 @@ import { ConversationList } from './conversation-list.js';
 // narrower, full screen on a phone). Its state is the plugin's
 // (`useChatPanel`: open, the conversation or a new one, the history view,
 // pins, drafts, ⌘J); the conversation and its list are the ones the full
-// page (/crm/agent-chat) shows.
+// page (/agent-chat) shows.
 
 // The record drawer's code loads only when a plan step's record is first
 // opened from the panel on a page that hosts no drawer of its own.
@@ -68,7 +68,7 @@ export function CrmAgentChatProvider({
   return (
     <ChatProvider
       available={signedIn}
-      conversationPath={(id) => `/crm/agent-chat/${encodeURIComponent(id)}`}
+      conversationPath={(id) => `/agent-chat/${encodeURIComponent(id)}`}
     >
       {children}
       {signedIn ? <AgentPanel /> : null}

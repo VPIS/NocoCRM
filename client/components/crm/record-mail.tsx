@@ -244,7 +244,7 @@ export function RecordMailPanel({
         <Button
           size='sm'
           variant='outline'
-          render={<Link to='/crm/mail/accounts' />}
+          render={<Link to='/mail/accounts' />}
           nativeButton={false}
         >
           {toText(text('mail.connect'))}

@@ -8,13 +8,9 @@ import {
   useSyncExternalStore,
   type MouseEvent,
 } from 'react';
-import {
-  useLocation,
-  useNavigate,
-  useParams,
-  useSearchParams,
-} from 'react-router';
+import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { toText, type Entity } from './api.js';
+import { recordOf } from './record-route.js';
 
 // A detail page (and the workspace) opens the records it links to in a
 // drawer over itself, so the reader keeps their place. The page provides this; links inside
@@ -52,7 +48,7 @@ export function useRecordLink(
   id: string,
 ): { to: string; onClick?: (event: MouseEvent<HTMLAnchorElement>) => void } {
   const drawer = useRecordDrawer();
-  const to = `/crm/${toText(entity)}/${toText(id)}`;
+  const to = `/${toText(entity)}/${toText(id)}`;
   if (!drawer) return { to };
   return {
     to,
@@ -118,7 +114,7 @@ export function useRecordDrawerState({
   const open = useCallback<RecordDrawerApi['open']>(
     (target, id) => {
       if (window.matchMedia('(max-width: 767px)').matches) {
-        void navigate(`/crm/${toText(target)}/${toText(id)}`);
+        void navigate(`/${toText(target)}/${toText(id)}`);
         return;
       }
       setSearchParams((previous) => {
@@ -140,7 +136,7 @@ export function useRecordDrawerState({
 }
 
 // A detail page's tab is the last segment of its address
-// (/crm/companies/<id>/contacts, the record route's child), so a link or a
+// (/companies/<id>/contacts, the record route's child), so a link or a
 // reload opens it and Back returns to the tab before. A record in the drawer
 // keeps its tab to itself and leaves the page's alone. The address says "history" and "contacts" where the pages' own names
 // are historyTab and opportunityContacts.
@@ -159,9 +155,14 @@ export function resolveTab(
 }
 export function useDetailTab(): [string | undefined, (tab: string) => void] {
   const inDrawer = useRecordDrawer()?.inDrawer ?? false;
-  const params = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  // The record page's kind, id and tab, read from the path (record-route.ts):
+  // the kind is the route's own, and the tab the child route's segment,
+  // which the record page's own params do not carry.
+  const record = recordOf(location.pathname);
+  const entity = record?.entity;
+  const id = record?.id;
   const [local, setLocal] = useState<string>();
   const setTab = useCallback(
     (name: string) => {
@@ -170,15 +171,14 @@ export function useDetailTab(): [string | undefined, (tab: string) => void] {
         setLocal(slug);
         return;
       }
+      if (!entity || !id) return;
       void navigate({
-        pathname: `/crm/${toText(params.entity)}/${toText(params.id)}/${slug}`,
+        pathname: `/${entity}/${id}/${slug}`,
         search: location.search,
       });
     },
-    [inDrawer, navigate, params.entity, params.id, location.search],
+    [inDrawer, navigate, entity, id, location.search],
   );
-  // Read from the path: the tab is the child route's segment, which the
-  // record page's own params do not carry.
-  const pageTab = location.pathname.split('/')[4] || undefined;
+  const pageTab = record?.tab;
   return [inDrawer ? local : pageTab, setTab];
 }

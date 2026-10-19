@@ -2,7 +2,10 @@ import {
   defineAppRoutes,
   type AppClientRouteContribution,
 } from '@nocobase/app-client/plugins';
-import type { AppClientRouteComponentLoader } from '@nocobase/app-client/plugins';
+import type {
+  AppClientRouteComponentLoader,
+  AppClientRoutePageDefinition,
+} from '@nocobase/app-client/plugins';
 import {
   agentsRoute,
   modelsRoute,
@@ -30,6 +33,7 @@ import {
 } from 'lucide-react';
 
 import { WhatsAppLogo } from '#components/crm/whatsapp/logo';
+import { RECORD_ENTITIES } from '#components/crm/record-route';
 
 // One of the Agents plugin's pages, drawn in the CRM's look
 // (components/crm/plugin-page.tsx): its component is loaded as the plugin
@@ -65,6 +69,20 @@ const page = (name: string) =>
     action: 'access',
   }) as const;
 
+// The /crm addresses' segments below /crm, each a level of its own.
+const LEGACY_DEPTH = 5;
+function legacySegments(level: number): AppClientRoutePageDefinition[] {
+  if (level > LEGACY_DEPTH) return [];
+  return [
+    {
+      name: `crm-legacy-redirect-${String(level)}`,
+      path: `:segment${String(level)}`,
+      componentLoader: () => import('./pages/crm-legacy-redirect.js'),
+      children: legacySegments(level + 1),
+    },
+  ];
+}
+
 const appRoutes: AppClientRouteContribution = defineAppRoutes([
   {
     auth: 'required',
@@ -95,7 +113,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     ['approvals', ListChecks],
   ].map(([entity, icon]) => ({
     name: `crm-${String(entity)}`,
-    path: `/crm/${String(entity)}`,
+    path: `/${String(entity)}`,
     auth: 'required' as const,
     authz: page(`crm-${String(entity)}`),
     navigation: {
@@ -116,7 +134,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         ['contacts', UserRound],
       ].map(([entity, icon]) => ({
         name: `crm-${String(entity)}`,
-        path: `/crm/${String(entity)}`,
+        path: `/${String(entity)}`,
         auth: 'required' as const,
         authz: page(`crm-${String(entity)}`),
         navigation: {
@@ -133,7 +151,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         componentLoader: () => import('./pages/crm-reports.js'),
         name: 'crm-reports',
         navigation: { title: 'crm.navigation.reports', icon: ChartLine },
-        path: '/crm/reports',
+        path: '/reports',
       },
     ],
   },
@@ -149,7 +167,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     children: [
       {
         name: 'crm-mail',
-        path: '/crm/mail',
+        path: '/mail',
         auth: 'required',
         authz: page('mail.workspace'),
         navigation: { title: 'crm.navigation.mailbox', icon: Mail },
@@ -159,7 +177,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       // the menu keeps Mailbox marked while it is shown.
       {
         name: 'crm-mail-accounts',
-        path: '/crm/mail/accounts',
+        path: '/mail/accounts',
         auth: 'required',
         authz: page('mail.workspace'),
         componentLoader: () => import('./pages/crm-mail/accounts.js'),
@@ -170,7 +188,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       // its API checks (server/routes/whatsapp.ts).
       {
         name: 'crm-whatsapp',
-        path: '/crm/whatsapp',
+        path: '/whatsapp',
         auth: 'required',
         authz: page('crm-whatsapp'),
         navigation: { title: 'crm.navigation.whatsapp', icon: WhatsAppLogo },
@@ -203,7 +221,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       // settings' administrators', as its API checks.
       {
         name: 'crm-whatsapp-connection',
-        path: '/crm/whatsapp/connection',
+        path: '/whatsapp/connection',
         auth: 'required',
         authz: {
           resource: { type: 'settings', id: 'crm' },
@@ -245,7 +263,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     children: [
       {
         name: 'crm-agent-chat',
-        path: '/crm/agent-chat',
+        path: '/agent-chat',
         auth: 'required',
         authz: page('crm-agent-chat'),
         // No menu entry: the overview lists the latest conversations and
@@ -261,14 +279,14 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         ],
       },
       // Agent work: the work agents on one page, a tab each, their switches
-      // and their runs, /crm/agent-work/<agent> naming the tab (the page
+      // and their runs, /agent-work/<agent> naming the tab (the page
       // draws it, as a record page draws its own; pages/crm-record-tab.tsx
-      // renders nothing), and /crm/agent-work opening on the first. Once
+      // renders nothing), and /agent-work opening on the first. Once
       // Auto follow-up at /crm/agents, which still leads here; its route
       // and page grant keep the name `crm-agents`, which stored grants name.
       {
         name: 'crm-agents',
-        path: '/crm/agent-work',
+        path: '/agent-work',
         auth: 'required',
         authz: page('crm-agents'),
         navigation: { title: 'crm.navigation.agentWork', icon: Workflow },
@@ -286,7 +304,7 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       // settings, so it checks what they check.
       {
         name: 'crm-guidance',
-        path: '/crm/guidance',
+        path: '/guidance',
         auth: 'required',
         authz: {
           resource: { type: 'settings', id: 'crm' },
@@ -313,60 +331,36 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       },
     ],
   },
-  {
-    name: 'crm-record',
-    path: '/crm/:entity/:id',
-    auth: 'required',
+  // A record's page, one route a kind (a single /:entity/:id would take
+  // /settings/users and the like for records); a tab has an address of its
+  // own (/companies/<id>/contacts), read by useDetailTab, the page drawing
+  // it (pages/crm-record-tab.tsx). record-route.ts reads the kind and id
+  // from the address.
+  ...RECORD_ENTITIES.map((entity) => ({
+    name: `crm-record-${entity}`,
+    path: `/${entity}/:id`,
+    auth: 'required' as const,
     authz: page('crm-record'),
     componentLoader: () => import('./pages/crm-detail.js'),
-    // A tab has an address of its own (/crm/companies/<id>/contacts), read by
-    // useDetailTab; the page draws the tab, see pages/crm-record-tab.tsx.
     children: [
       {
-        name: 'crm-record-tab',
+        name: `crm-record-${entity}-tab`,
         path: ':tab',
         componentLoader: () => import('./pages/crm-record-tab.js'),
       },
     ],
-  },
-  // Auto follow-up became Agent work: its old addresses lead to the new
-  // ones, whose route checks access.
+  })),
+  // The pages' addresses from when they sat under /crm, and older names
+  // (accounts, Auto follow-up), lead to theirs now: /crm and a segment a
+  // level below it, as deep as the deepest page (/crm/whatsapp/connection/
+  // numbers/<id>), the routes taking no wildcard.
   {
-    name: 'crm-agents-redirect',
-    path: '/crm/agents',
+    name: 'crm-legacy-redirect',
+    path: '/crm',
     auth: 'required',
     authz: 'skip',
-    componentLoader: () => import('./pages/crm-agent-work-redirect.js'),
-    children: [
-      {
-        name: 'crm-agents-redirect-tab',
-        path: ':agent',
-        componentLoader: () => import('./pages/crm-agent-work-redirect.js'),
-      },
-    ],
-  },
-  // Accounts became companies: the old list, record and tab addresses lead
-  // to the new ones, whose own routes check access.
-  {
-    name: 'crm-accounts-redirect',
-    path: '/crm/accounts',
-    auth: 'required',
-    authz: 'skip',
-    componentLoader: () => import('./pages/crm-companies-redirect.js'),
-    children: [
-      {
-        name: 'crm-accounts-redirect-record',
-        path: ':id',
-        componentLoader: () => import('./pages/crm-companies-redirect.js'),
-        children: [
-          {
-            name: 'crm-accounts-redirect-tab',
-            path: ':tab',
-            componentLoader: () => import('./pages/crm-companies-redirect.js'),
-          },
-        ],
-      },
-    ],
+    componentLoader: () => import('./pages/crm-legacy-redirect.js'),
+    children: legacySegments(1),
   },
   // Waiting on me became the inbox's AI suggestions: its old address, from
   // links and bookmarks, opens them there. The route keeps the page grant

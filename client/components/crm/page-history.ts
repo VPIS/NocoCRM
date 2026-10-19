@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router';
+import { recordOf } from './record-route.js';
 
 // What each entry of this tab's history showed, by the router's place in it
 // (`window.history.state.idx`): the page, a record's page whatever its tab,
@@ -30,13 +31,11 @@ function placeNow(): number | null {
   return typeof idx === 'number' ? idx : null;
 }
 
-// A record's page whatever its tab (/crm/<entity>/<id>/<tab>); any other
+// A record's page whatever its tab (/<entity>/<id>/<tab>); any other
 // page by its path.
 export function pageOf(pathname: string): string {
-  const parts = pathname.split('/');
-  return parts[1] === 'crm' && parts.length > 4
-    ? parts.slice(0, 4).join('/')
-    : pathname;
+  const record = recordOf(pathname);
+  return record ? `/${record.entity}/${record.id}` : pathname;
 }
 
 export function useNoteHistoryEntry(): void {

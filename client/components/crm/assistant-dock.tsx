@@ -42,14 +42,14 @@ import { useCurrentRecord, type CurrentRecord } from './current-record.js';
 function hiddenOn(pathname: string): boolean {
   return (
     pathname === '/' ||
-    pathname === '/crm/mail' ||
+    pathname === '/mail' ||
     pathname === '/inbox' ||
     pathname.startsWith('/inbox/') ||
-    pathname === '/crm/whatsapp' ||
-    pathname.startsWith('/crm/whatsapp/') ||
+    pathname === '/whatsapp' ||
+    pathname.startsWith('/whatsapp/') ||
     // The agents' conversations have a composer of their own.
-    pathname === '/crm/agent-chat' ||
-    pathname.startsWith('/crm/agent-chat/') ||
+    pathname === '/agent-chat' ||
+    pathname.startsWith('/agent-chat/') ||
     pathname.startsWith('/settings/')
   );
 }
@@ -69,12 +69,12 @@ const RECORD_QUESTIONS: Record<string, readonly string[]> = {
   approvals: ['approval.decide'],
 };
 const PAGE_QUESTIONS: Record<string, readonly string[]> = {
-  '/crm/leads': ['leads.first', 'leads.quiet'],
-  '/crm/opportunities': ['opportunities.closing', 'opportunities.risk'],
-  '/crm/companies': ['companies.quiet'],
-  '/crm/contacts': ['contacts.quiet'],
-  '/crm/tasks': ['tasks.overdue', 'tasks.week'],
-  '/crm/approvals': ['approvals.waiting'],
+  '/leads': ['leads.first', 'leads.quiet'],
+  '/opportunities': ['opportunities.closing', 'opportunities.risk'],
+  '/companies': ['companies.quiet'],
+  '/contacts': ['contacts.quiet'],
+  '/tasks': ['tasks.overdue', 'tasks.week'],
+  '/approvals': ['approvals.waiting'],
 };
 
 function questionsFor(

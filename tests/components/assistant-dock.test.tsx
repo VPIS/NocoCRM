@@ -99,7 +99,7 @@ describe('the assistant dock', () => {
 
   it("shows the page's suggested questions when focused, and sends one with a click", async () => {
     const user = userEvent.setup();
-    renderDock('/crm/leads');
+    renderDock('/leads');
     const input = screen.getByRole('textbox', {
       name: english('dock.placeholder'),
     });
@@ -128,7 +128,7 @@ describe('the assistant dock', () => {
 
   it("asks about the page's record, its kind named in the placeholder, and clears itself", async () => {
     const user = userEvent.setup();
-    renderDock('/crm/leads/l1', { name: 'Tang Rui' });
+    renderDock('/leads/l1', { name: 'Tang Rui' });
     const input = screen.getByRole('textbox', {
       name: 'Ask anything about this lead…',
     });
@@ -153,7 +153,7 @@ describe('the assistant dock', () => {
 
   it('sends with Enter, but not while an input method is composing', async () => {
     const user = userEvent.setup();
-    renderDock('/crm/tasks');
+    renderDock('/tasks');
     const input = screen.getByRole('textbox');
     await user.type(input, '逾期');
     fireEvent.keyDown(input, { key: 'Enter', keyCode: 229, isComposing: true });
@@ -166,7 +166,7 @@ describe('the assistant dock', () => {
 
   it('opens into the composer when clicked, and Tab goes through its tools to the suggestions', async () => {
     const user = userEvent.setup();
-    renderDock('/crm/leads');
+    renderDock('/leads');
     // One line: no files or model until it is used.
     expect(
       screen.queryByRole('button', { name: english('dock.attach') }),
@@ -203,7 +203,7 @@ describe('the assistant dock', () => {
 
   it('closes on a press outside even when the page keeps focus, as the board does when it drags', async () => {
     const user = userEvent.setup();
-    renderDock('/crm/opportunities');
+    renderDock('/opportunities');
     await user.click(screen.getByRole('textbox'));
     expect(
       screen.getByRole('button', { name: english('dock.attach') }),
@@ -224,7 +224,7 @@ describe('the assistant dock', () => {
 
   it('veils the page while in use, a click on the veil closing it and reaching nothing below', async () => {
     const user = userEvent.setup();
-    const { container } = renderDock('/crm/contacts');
+    const { container } = renderDock('/contacts');
     await user.click(screen.getByRole('textbox'));
     const veil = container.querySelector('[data-dock-veil]');
     expect(veil).not.toBeNull();
@@ -237,7 +237,7 @@ describe('the assistant dock', () => {
 
   it('keeps itself open while it holds a file, and sends the file with the record', async () => {
     const user = userEvent.setup();
-    renderDock('/crm/leads/l1', { name: 'Tang Rui' });
+    renderDock('/leads/l1', { name: 'Tang Rui' });
     await user.click(screen.getByRole('textbox'));
     await user.upload(
       screen.getByTestId('ask-files'),
@@ -256,7 +256,7 @@ describe('the assistant dock', () => {
 
   it('keeps the text when Esc closes the suggestions', async () => {
     const user = userEvent.setup();
-    renderDock('/crm/leads');
+    renderDock('/leads');
     const input = screen.getByRole('textbox');
     await user.click(input);
     expect(screen.getByRole('list')).toBeTruthy();
@@ -275,12 +275,12 @@ describe('the assistant dock', () => {
     document.body.append(header);
     act(() => header.focus());
     chatFake.open = true;
-    const { rerender } = renderDock('/crm/contacts');
+    const { rerender } = renderDock('/contacts');
     header.remove();
     chatFake.open = false;
     act(() =>
       rerender(
-        <MemoryRouter initialEntries={['/crm/contacts']}>
+        <MemoryRouter initialEntries={['/contacts']}>
           <AssistantDock />
         </MemoryRouter>,
       ),
@@ -293,7 +293,7 @@ describe('the assistant dock', () => {
 
   it('gets focus back, still one line, when the panel it opened closes', async () => {
     const user = userEvent.setup();
-    const { rerender } = renderDock('/crm/contacts');
+    const { rerender } = renderDock('/contacts');
     const input = screen.getByRole('textbox');
     await user.type(input, 'Who is new?');
     await user.keyboard('{Enter}');
@@ -303,7 +303,7 @@ describe('the assistant dock', () => {
     act(() => {
       (document.activeElement as HTMLElement | null)?.blur();
       rerender(
-        <MemoryRouter initialEntries={['/crm/contacts']}>
+        <MemoryRouter initialEntries={['/contacts']}>
           <AssistantDock />
         </MemoryRouter>,
       );
@@ -311,7 +311,7 @@ describe('the assistant dock', () => {
     chatFake.open = false;
     act(() =>
       rerender(
-        <MemoryRouter initialEntries={['/crm/contacts']}>
+        <MemoryRouter initialEntries={['/contacts']}>
           <AssistantDock />
         </MemoryRouter>,
       ),
@@ -332,7 +332,7 @@ describe('the assistant dock', () => {
 
   it('stays out of the way: agents loading, panel open, the overview, filled pages', () => {
     chatFake.loading = true;
-    const loading = renderDock('/crm/leads');
+    const loading = renderDock('/leads');
     expect(screen.queryByRole('textbox')).toBeNull();
     loading.unmount();
 
@@ -340,24 +340,24 @@ describe('the assistant dock', () => {
     // The overview has an ask box of its own.
     for (const path of [
       '/',
-      '/crm/mail',
+      '/mail',
       '/inbox',
-      '/crm/whatsapp',
-      '/crm/whatsapp/c1',
-      '/crm/whatsapp/connection',
-      '/crm/agent-chat',
-      '/crm/agent-chat/c1',
+      '/whatsapp',
+      '/whatsapp/c1',
+      '/whatsapp/connection',
+      '/agent-chat',
+      '/agent-chat/c1',
     ]) {
       const page = renderDock(path);
       expect(screen.queryByRole('textbox')).toBeNull();
       page.unmount();
     }
-    const accounts = renderDock('/crm/mail/accounts');
+    const accounts = renderDock('/mail/accounts');
     expect(screen.getByRole('textbox')).toBeTruthy();
     accounts.unmount();
 
     chatFake.open = true;
-    renderDock('/crm/leads');
+    renderDock('/leads');
     // Hidden, not unmounted, so text being typed survives.
     expect(screen.queryByRole('textbox')).toBeNull();
     expect(
@@ -368,7 +368,7 @@ describe('the assistant dock', () => {
   it('is not shown when the company switched it off', () => {
     state.dock = false;
     try {
-      renderDock('/crm/leads');
+      renderDock('/leads');
       expect(screen.queryByRole('textbox')).toBeNull();
       expect(screen.queryByRole('button')).toBeNull();
     } finally {
@@ -388,7 +388,7 @@ describe('the assistant dock', () => {
         },
       },
     ];
-    renderDock('/crm/leads');
+    renderDock('/leads');
     const reason = english('agentChat.offline.modelUnavailable');
     const input = screen.getByRole('textbox', { name: reason });
     expect(input).toBeDisabled();
@@ -400,7 +400,7 @@ describe('the assistant dock', () => {
   it('is a round button on a phone that opens a new conversation from the record', async () => {
     const user = userEvent.setup();
     state.mobile = true;
-    renderDock('/crm/leads/l1', { name: 'Tang Rui' });
+    renderDock('/leads/l1', { name: 'Tang Rui' });
     expect(screen.queryByRole('textbox')).toBeNull();
     await user.click(
       screen.getByRole('button', { name: english('dock.open') }),
@@ -427,13 +427,13 @@ describe('the assistant dock', () => {
       );
     }
     const { rerender } = render(
-      <MemoryRouter initialEntries={['/crm/leads/l1']}>
+      <MemoryRouter initialEntries={['/leads/l1']}>
         <Swap first />
       </MemoryRouter>,
     );
     act(() =>
       rerender(
-        <MemoryRouter initialEntries={['/crm/leads/l1']}>
+        <MemoryRouter initialEntries={['/leads/l1']}>
           <Swap first={false} />
         </MemoryRouter>,
       ),

@@ -52,7 +52,7 @@ export function WhatsAppConversationDrawer({
               nativeButton={false}
               render={
                 <Link
-                  to={`/crm/whatsapp/${encodeURIComponent(conversationId)}?view=all`}
+                  to={`/whatsapp/${encodeURIComponent(conversationId)}?view=all`}
                 />
               }
             >
