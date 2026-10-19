@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID } from 'node:crypto';
+import { servedLocale } from '../served-locale.js';
 import { loggingToken } from '@nocobase/app-server/logging';
 import type { QueryAdapter, Row } from '@nocobase/db';
 import { secretsServiceToken } from '@nocobase/app-server/secrets';
@@ -980,7 +981,7 @@ export class WhatsAppService {
       .executeTakeFirst();
     return crmActor(this.service.authz, {
       id: ownerId,
-      locale: preference?.locale === 'zh-CN' ? 'zh-CN' : 'en-US',
+      locale: servedLocale(preference?.locale),
     });
   }
 

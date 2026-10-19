@@ -9,6 +9,7 @@ import {
   orderRecords,
 } from './list-order.js';
 import { resolveTitles } from './titles.js';
+import { servedLocale } from './served-locale.js';
 import { doesTask } from './task-participants.js';
 import {
   hasCurrency,
@@ -642,7 +643,7 @@ export class CrmService {
       .select('locale')
       .where('id', '=', userId)
       .executeTakeFirst();
-    return preference?.locale === 'zh-CN' ? 'zh-CN' : 'en-US';
+    return servedLocale(preference?.locale);
   }
   async rememberLocale(actor: Actor): Promise<void> {
     const query = this.database.query();

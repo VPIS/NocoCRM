@@ -12,7 +12,7 @@ import { Choice, MultiChoice } from './form.js';
 import { LIGHT_FOCUS } from './focus.js';
 import { DatePicker } from '../date-picker.js';
 import { format } from 'date-fns';
-import { enUS, zhCN } from 'date-fns/locale';
+import { dateLocale } from './date-locale.js';
 import { RecordMultiPicker, RecordPicker } from './record-picker.js';
 import { CountryChoice, SubdivisionChoice } from './geography.js';
 import { Value } from './common.js';
@@ -582,7 +582,7 @@ export function InlineField({
           className='w-full'
           disabled={saving}
           value={localDay(draft)}
-          locale={language.startsWith('zh') ? zhCN : enUS}
+          locale={dateLocale(language)}
           placeholder={toText(text('taskTime.pickDate'))}
           onChange={(picked) => {
             draftRef.current = picked ? format(picked, 'yyyy-MM-dd') : '';

@@ -50,6 +50,7 @@ import {
   approvalsSettled,
 } from './feedback.js';
 import { agentOn } from './agents.js';
+import { servedLocale } from './served-locale.js';
 import {
   provisionCrm,
   registerCrmResources,
@@ -801,7 +802,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
             .executeTakeFirst();
           const recipient: Actor = {
             id: toText(row.recipientId),
-            locale: preference?.locale === 'zh-CN' ? 'zh-CN' : 'en-US',
+            locale: servedLocale(preference?.locale),
             scope: service.authz.for({
               principal: { type: 'user', id: toText(row.recipientId) },
               subjects: [{ type: 'authenticated', id: '*' }],
