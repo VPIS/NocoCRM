@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import type { ReactNode } from 'react';
@@ -89,6 +90,22 @@ vi.mock('../../client/components/crm/waiting-count.js', () => ({
 vi.mock('@nocobase/app-plugin-authorization/client', () => ({
   useCan: () => ({ can: false }),
 }));
+// The page asks for the scheduler's daily tasks only with the scheduler's
+// page grant, which the reader here lacks: the client is never called.
+vi.mock(
+  '../../client/pages/settings/scheduled-tasks/types.js',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('../../client/pages/settings/scheduled-tasks/types.js')
+    >()),
+    // Keyed by the signed-in account, which no provider gives here.
+    useSchedulesKey: () => ['schedules'],
+  }),
+);
+vi.mock('@nocobase/app-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@nocobase/app-client')>()),
+  useApiClient: () => ({ request: vi.fn() }),
+}));
 vi.mock('../../client/components/crm/common.js', async (importOriginal) => ({
   ...(await importOriginal<
     typeof import('../../client/components/crm/common.js')
@@ -105,11 +122,20 @@ vi.mock('../../client/components/crm/common.js', async (importOriginal) => ({
 const { default: AgentsPage } =
   await import('../../client/pages/crm-agents.js');
 
+const wrapper = ({ children }: { children: ReactNode }) => (
+  <QueryClientProvider
+    client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+  >
+    {children}
+  </QueryClientProvider>
+);
+
 it('shows the company signals as an agent: its checks, the signals read, and each check opening its company', () => {
   render(
     <MemoryRouter initialEntries={['/crm/agent-work/companies']}>
       <AgentsPage />
     </MemoryRouter>,
+    { wrapper },
   );
   // Named as its agent, on its tab and its card, with the model it asks.
   expect(screen.getAllByText('Market watch').length).toBeGreaterThan(1);
@@ -143,6 +169,7 @@ it("opens the company work's tab from its former address", () => {
     <MemoryRouter initialEntries={['/crm/agent-work/signals']}>
       <AgentsPage />
     </MemoryRouter>,
+    { wrapper },
   );
   expect(screen.getByText('Model: qwen · qwen3.8-flash')).toBeTruthy();
 });
