@@ -21,6 +21,8 @@ vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) =>
 
 const state = vi.hoisted(() => ({
   api: vi.fn(),
+  // Whether there is a model to ask (the workspace's `assistant`).
+  assistant: true,
   approval: { approverId: 'boss', status: 'pending' } as Record<
     string,
     unknown
@@ -32,7 +34,9 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
     await importOriginal<typeof import('../../client/components/crm/api.js')>();
   const metadata = {
     userId: 'boss',
-    assistant: true,
+    get assistant() {
+      return state.assistant;
+    },
     settings: { ...defaultSettings, timeZone: 'Asia/Shanghai' },
     definitions,
     users: [{ id: 'boss', name: '李明', roles: [], disabled: false }],
@@ -86,6 +90,7 @@ beforeEach(() => {
   state.api.mockReset();
   state.api.mockResolvedValue({ data: {} });
   state.approval = { approverId: 'boss', status: 'pending' };
+  state.assistant = true;
 });
 
 describe('the approval review card', () => {
@@ -111,6 +116,27 @@ describe('the approval review card', () => {
       'POST',
       { decision: 'approve', comment: '同意。' },
     );
+  });
+
+  it('is decided as it is without a model to ask, its redo box gone', () => {
+    const card = () =>
+      render(
+        <ReviewPanel
+          entry={entry}
+          approvalId='approval-1'
+          approvalName='九折申请'
+          onChanged={() => Promise.resolve()}
+          inFeed
+        />,
+      );
+    const first = card();
+    expect(screen.getByPlaceholderText('告诉 AI 怎么改')).toBeTruthy();
+    first.unmount();
+    state.assistant = false;
+    card();
+    expect(screen.getByText('折扣在标准之内，建议批准。')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /按建议批准/ })).toBeTruthy();
+    expect(screen.queryByPlaceholderText('告诉 AI 怎么改')).toBeNull();
   });
 
   it('offers only Discuss to anyone but the approver', () => {

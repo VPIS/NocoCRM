@@ -10,7 +10,7 @@ import type {
   InboxCollectionInput,
   InboxCollectionState,
 } from '../../extensions/nocobase-inbox/model.js';
-import { useCrmText, useMetadata } from './api.js';
+import { useCrmText } from './api.js';
 import {
   DECISIONS_CATEGORY,
   DECISION_PARAM,
@@ -33,12 +33,13 @@ export function useCrmInboxRegistry(): {
   key: string;
 } {
   const { text } = useCrmText();
-  const { data: meta } = useMetadata();
   const { can } = useCan({
     resource: { type: 'page', id: 'crm-decisions' },
     action: 'access',
   });
-  const shown = meta?.assistant === true && can;
+  // What the AI suggested shows with or without a model to ask now: a
+  // deployment without one (an external demo) shows the demo's.
+  const shown = can;
   const label = text('inbox.suggestions');
   const registry = useMemo<InboxRegistry>(
     () => ({

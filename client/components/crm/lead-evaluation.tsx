@@ -301,7 +301,7 @@ export function EvaluationStatus({
   const label = useVerdictLabel();
   const { data: entry } = useCrmQuery<EvaluationEntry | null>(
     `${entity}/${recordId}/evaluations/latest`,
-    Boolean(meta?.assistant),
+    true,
     // While the AI works, look again every few seconds.
     { refetchInterval: (data) => (data?.status === 'running' ? 4000 : false) },
   );
@@ -315,7 +315,9 @@ export function EvaluationStatus({
   }, [entry?.status, refresh]);
   // Before the first evaluation it shows nothing (EvaluateButton asks
   // for one); after, it reports the latest and asks for another.
-  if (!meta?.assistant || !entry) return null;
+  // What the AI concluded shows with or without a model to ask now;
+  // asking again is the request's (useFollowUpRequest), which needs one.
+  if (!meta || !entry) return null;
   const verdict = entry.ai.result;
   // On the AI's tint whatever it stands at, its dot saying where; at work,
   // the AI's state tag's words, as on a list's row (ai-state-tag.tsx).
@@ -991,8 +993,8 @@ export function VerdictPanel({
           the fields their writing. */}
       {entry.status === 'pending' && verdict && (
         <div className='grid gap-3 border-t border-border pt-3'>
-          {/* First, redoing it in a sentence. */}
-          {editable && (
+          {/* First, redoing it in a sentence, which needs a model. */}
+          {editable && meta?.assistant && (
             <div className='flex'>
               {/* Redo the card in a sentence: another channel, another time,
               something the AI did not know. Questions that change nothing

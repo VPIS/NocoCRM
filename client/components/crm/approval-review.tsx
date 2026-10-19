@@ -311,7 +311,7 @@ export function ReviewPanel({
           whose hover says what that is. */}
       {entry.status === 'pending' && review && (
         <div className='grid gap-3 border-t border-border pt-3'>
-          {deciding && (
+          {deciding && meta.assistant && (
             <form
               className='flex min-w-0 items-end gap-2'
               onSubmit={(event) => {
@@ -481,7 +481,7 @@ export function ReviewStatus({
   const [error, setError] = useState<unknown>();
   const { data: entry } = useCrmQuery<ReviewEntry | null>(
     `approvals/${approvalId}/reviews/latest`,
-    Boolean(meta?.assistant),
+    true,
     { refetchInterval: (data) => (data?.status === 'running' ? 4000 : false) },
   );
   const { data: approval } = useCrmQuery<{ record: Record<string, unknown> }>(
@@ -493,12 +493,14 @@ export function ReviewStatus({
       void refresh();
     lastStatusRef.current = entry?.status;
   }, [entry?.status, refresh]);
-  if (!meta?.assistant) return null;
+  if (!meta) return null;
   const record = approval?.record;
   // The review is the approver's alone (the server returns none to anyone
   // else), and so is asking for one.
   const mayAsk =
-    record?.status === 'pending' && record.approverId === meta.userId;
+    meta.assistant === true &&
+    record?.status === 'pending' &&
+    record.approverId === meta.userId;
   const review = entry?.ai.result;
   const ask = (): void => {
     setBusy(true);

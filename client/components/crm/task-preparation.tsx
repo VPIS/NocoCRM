@@ -278,7 +278,7 @@ export function PrepPanel({
           whose hover says what that does. */}
       {entry.status === 'pending' && prep && (
         <div className='grid gap-3 border-t border-border pt-3'>
-          {deciding && (
+          {deciding && meta.assistant && (
             <form
               className='flex min-w-0 items-end gap-2'
               onSubmit={(event) => {
@@ -398,7 +398,7 @@ export function PrepStatus({
   const mine = Boolean(meta && doesTask(task, meta.userId));
   const { data: entry } = useCrmQuery<PrepEntry | null>(
     `tasks/${taskId}/preparations/latest`,
-    Boolean(meta?.assistant) && mine,
+    mine,
     { refetchInterval: (data) => (data?.status === 'running' ? 4000 : false) },
   );
   const lastStatusRef = useRef(entry?.status);
@@ -407,10 +407,11 @@ export function PrepStatus({
       void refresh();
     lastStatusRef.current = entry?.status;
   }, [entry?.status, refresh]);
-  if (!meta?.assistant || !mine) return null;
+  if (!meta || !mine) return null;
   // Only an open task with a record to prepare from is theirs to ask
-  // about.
+  // about, and only while there is a model to ask.
   const mayAsk =
+    meta.assistant === true &&
     task.status === 'open' &&
     Boolean(task.leadId || task.companyId || task.opportunityId);
   if (!entry && !mayAsk && !error) return null;

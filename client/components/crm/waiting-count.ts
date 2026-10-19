@@ -23,12 +23,12 @@ import {
 // data refreshes; the unread count follows the in-app plugin's realtime
 // events.
 export function useInboxCount(): number {
-  const { data: meta } = useMetadata();
   const { can } = useCan({
     resource: { type: 'page', id: 'crm-decisions' },
     action: 'access',
   });
-  const shown = meta?.assistant === true && can;
+  // Counted with or without a model to ask now, as the inbox shows them.
+  const shown = can;
   const { data } = useCrmQuery<{ count: number; running?: number }>(
     'decisions/count',
     shown,

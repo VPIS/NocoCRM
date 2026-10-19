@@ -14,7 +14,12 @@ vi.mock('@nocobase/app-plugin-agents/client/chat', async (importOriginal) =>
   ),
 );
 
-const state = vi.hoisted(() => ({ api: vi.fn(), assign: true }));
+const state = vi.hoisted(() => ({
+  api: vi.fn(),
+  assign: true,
+  // Whether there is a model to ask (the workspace's `assistant`).
+  assistant: true,
+}));
 // No mail here: the Mail plugin needs the application root, which these
 // tests do not mount.
 // The email step has tests of its own (email-step.test.tsx).
@@ -92,7 +97,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
       data: {
         userId: 'manager',
         assign: state.assign,
-        assistant: true,
+        assistant: state.assistant,
         settings: { ...defaultSettings, timeZone: 'Asia/Shanghai' },
         definitions,
         users: [
@@ -150,6 +155,7 @@ beforeEach(() => {
   state.api.mockReset();
   state.api.mockResolvedValue({ data: {} });
   state.assign = true;
+  state.assistant = true;
 });
 
 describe('the task a follow-up card creates', () => {
@@ -261,6 +267,36 @@ describe('the task a follow-up card creates', () => {
     );
     expect(screen.queryByText('将创建的任务')).toBeNull();
     expect(screen.getByText('下一步：')).toBeTruthy();
+  });
+});
+
+describe('a follow-up card without a model to ask', () => {
+  it('is shown and decided as it is, without asking the AI to redo it', async () => {
+    const card = () =>
+      render(
+        <VerdictPanel
+          entry={entry}
+          recordId='lead-1'
+          editable
+          onChanged={() => Promise.resolve()}
+        />,
+      );
+    const first = card();
+    expect(screen.getByPlaceholderText('告诉 AI 怎么改')).toBeTruthy();
+    first.unmount();
+    state.assistant = false;
+    card();
+    // What the AI concluded, and taking it or leaving it, stay.
+    expect(screen.getByText('将创建的任务')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '全部采纳' })).toBeTruthy();
+    // Redoing it would ask a model there is none of.
+    expect(screen.queryByPlaceholderText('告诉 AI 怎么改')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: '全部采纳' }));
+    expect(state.api).toHaveBeenCalledWith(
+      'leads/lead-1/evaluations/entry-1/decide',
+      'POST',
+      expect.objectContaining({ decision: 'accept' }),
+    );
   });
 });
 

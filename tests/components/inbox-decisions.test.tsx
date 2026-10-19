@@ -24,6 +24,8 @@ const state = vi.hoisted(() => ({
   plans: [] as unknown[],
   can: true,
   wide: true,
+  // Whether there is a model to ask (the workspace's `assistant`).
+  assistant: true,
   request: vi.fn(),
 }));
 
@@ -74,7 +76,9 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
     await importOriginal<typeof import('../../client/components/crm/api.js')>();
   const metadata = {
     userId: 'rep',
-    assistant: true,
+    get assistant() {
+      return state.assistant;
+    },
     settings: { ...defaultSettings, timeZone: 'Asia/Shanghai' },
     definitions,
     users: [{ id: 'rep', name: '赵敏', roles: [], disabled: false }],
@@ -131,6 +135,7 @@ let runtime: I18nRuntime;
 beforeEach(async () => {
   state.can = true;
   state.wide = true;
+  state.assistant = true;
   state.api.mockReset();
   state.decisions = {
     data: [entry('e1', '周晓'), entry('e2', '林悦', 'accepted')],
@@ -269,6 +274,16 @@ describe("The inbox's AI suggestions", () => {
     const item = (await screen.findByText('源码交付条款')).closest('button')!;
     expect(item.textContent).toContain('已撤回');
     expect(within(item).getByText(/建议有条件批准/u)).toBeTruthy();
+  });
+
+  it('shows what the AI suggested without a model to ask, as an external demo does', async () => {
+    state.assistant = false;
+    renderAt('/inbox');
+    expect(await screen.findByText('panel e1')).toBeTruthy();
+    expect(screen.getAllByRole('tab')[0]!.textContent).toContain(
+      'AI suggestions',
+    );
+    expect(screen.getByText('林悦')).toBeTruthy();
   });
 
   it('is notifications alone without the page grant', async () => {
