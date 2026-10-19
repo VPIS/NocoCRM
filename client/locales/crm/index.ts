@@ -2013,7 +2013,7 @@ const wording = {
   clearDate: ['Clear', '清除'],
   demoData: ['Demo data', '演示数据'],
   demoDescription: [
-    'A dataset of NocoBase selling its own licences and services to fictional customers, in Chinese or in English: leads, companies, contacts, opportunities, tasks and approvals, mail in demo mailboxes and conversations on two demo WhatsApp numbers, dated relative to the day it is imported. Importing creates the demo companies below when they do not exist; the password is the username followed by 123.',
+    'A dataset of NocoBase selling its own licences and services to fictional customers, in Chinese or in English: leads, companies, contacts, opportunities, tasks and approvals, mail in demo mailboxes and conversations on two demo WhatsApp numbers, dated relative to the day it is imported. Importing creates the demo accounts below when they do not exist; the password is the username followed by 123.',
     '一套以 NocoBase 自己的销售（商业授权与服务，客户均为虚构）为背景的演示数据，有中文和英文两种，包含线索、公司、联系人、商机、任务和审批，以及演示邮箱里的往来邮件和两个演示 WhatsApp 号码上的对话，日期以导入当天为基准。导入时会自动创建下列演示账号（已存在的直接使用），密码为用户名加 123。',
   ],
   demoLanguage: ['Demo data language', '演示数据语言'],

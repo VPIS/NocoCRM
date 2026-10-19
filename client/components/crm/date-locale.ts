@@ -1,7 +1,25 @@
 import type { Locale } from 'date-fns';
-import { enUS, zhCN, zhTW } from 'date-fns/locale';
 import {
+  de,
+  enUS,
+  es,
+  fr,
+  id,
+  ja,
+  ptBR,
+  vi,
+  zhCN,
+  zhTW,
+} from 'date-fns/locale';
+import {
+  de as dayDe,
   enUS as dayEnUS,
+  es as dayEs,
+  fr as dayFr,
+  id as dayId,
+  ja as dayJa,
+  ptBR as dayPtBR,
+  vi as dayVi,
   zhCN as dayZhCN,
   zhTW as dayZhTW,
   type DayPickerLocale,
@@ -13,6 +31,13 @@ const DATE_LOCALES: Record<string, Locale> = {
   'en-US': enUS,
   'zh-CN': zhCN,
   'zh-TW': zhTW,
+  'ja-JP': ja,
+  'es-ES': es,
+  'pt-BR': ptBR,
+  'fr-FR': fr,
+  'de-DE': de,
+  'vi-VN': vi,
+  'id-ID': id,
 };
 export const dateLocale = (language: string): Locale =>
   DATE_LOCALES[language] ?? enUS;
@@ -22,6 +47,13 @@ const DAY_PICKER_LOCALES: Record<string, DayPickerLocale> = {
   'en-US': dayEnUS,
   'zh-CN': dayZhCN,
   'zh-TW': dayZhTW,
+  'ja-JP': dayJa,
+  'es-ES': dayEs,
+  'pt-BR': dayPtBR,
+  'fr-FR': dayFr,
+  'de-DE': dayDe,
+  'vi-VN': dayVi,
+  'id-ID': dayId,
 };
 export const dayPickerLocale = (language: string): DayPickerLocale =>
   DAY_PICKER_LOCALES[language] ?? dayEnUS;

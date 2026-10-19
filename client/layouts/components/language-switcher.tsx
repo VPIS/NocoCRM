@@ -13,29 +13,34 @@ import {
 } from '#components/ui/dropdown-menu';
 import { cn } from 'cn';
 
-// Application change: the two Chinese scripts named as scripts. The
-// framework names a language with Intl.DisplayNames, by its region when
-// two share it ("Chinese (China)", "Chinese (Taiwan)"), and offers no
-// option to name them otherwise; a reader picks a script, not a region, so
-// these are named by their script's tag instead, each in itself.
+// Application change: each language named as a reader looking for it
+// expects. The framework names a language with Intl.DisplayNames, by its
+// region when two share it ("Chinese (China)", "Chinese (Taiwan)"), in
+// lower case where the language writes its name so mid-sentence
+// ("español", "français"), and Indonesian as "Indonesia", the country, and
+// offers no option to name them otherwise. The two Chinese are named by
+// script (their tags here, each named in itself), Indonesian by its own
+// name, and every name starts with a capital, as a menu item does.
 const SCRIPT_TAGS: Readonly<Record<string, string>> = {
   'zh-CN': 'zh-Hans',
   'zh-TW': 'zh-Hant',
+};
+const OWN_NAMES: Readonly<Record<string, string>> = {
+  'id-ID': 'Bahasa Indonesia',
 };
 const labelOf = (definition: {
   readonly locale: string;
   readonly label: string;
 }): string => {
   const tag = SCRIPT_TAGS[definition.locale];
-  if (!tag) return definition.label;
-  try {
-    return (
-      new Intl.DisplayNames([tag], { type: 'language' }).of(tag) ??
-      definition.label
-    );
-  } catch {
-    return definition.label;
-  }
+  let name = OWN_NAMES[definition.locale] ?? definition.label;
+  if (tag)
+    try {
+      name = new Intl.DisplayNames([tag], { type: 'language' }).of(tag) ?? name;
+    } catch {
+      // The framework's name stands.
+    }
+  return name.charAt(0).toLocaleUpperCase(definition.locale) + name.slice(1);
 };
 
 export interface LanguageSwitcherProps {
