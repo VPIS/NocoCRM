@@ -117,6 +117,7 @@ function ApproverRuleForm({ rule }: { rule: ApproverRule }): ReactElement {
             label={toText(text('approvalFlow.approvers.people'))}
             value={people}
             onChange={setPeople}
+            searchable
             // A disabled user already named stays visible, to be taken off.
             choices={users
               .filter((user) => !user.disabled || people.includes(user.id))
