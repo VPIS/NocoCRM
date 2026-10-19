@@ -193,9 +193,10 @@ export default class CrmProvider extends ServiceProvider<Application> {
         new CompanySignals(
           this.app.container.resolve(crmToken),
           // With the Company signals agent's model (work-agents.ts): a Qwen
-          // one of a configured service through DashScope's own API, any
-          // other through the gateway with its provider's search; none
-          // while there is no model at all.
+          // one of a configured service through DashScope's own API, a
+          // DeepSeek one of a configured service through the gateway with
+          // DeepSeek's Search API, any other through the gateway with its
+          // provider's search; none while there is no model at all.
           async (): Promise<WebSearcher | null> => {
             const model = await crmModel(this.app.container, 'signals').catch(
               () => null,
@@ -219,6 +220,18 @@ export default class CrmProvider extends ServiceProvider<Application> {
                 apiKey,
               };
             const agents = this.app.container.resolve(agentsToken);
+            if (
+              configured?.provider === 'deepseek' &&
+              typeof apiKey === 'string' &&
+              apiKey
+            )
+              return {
+                kind: 'deepseek',
+                service: model.modelService,
+                model: model.model,
+                apiKey,
+                languageModel: () => agents.online.gateway.languageModel(model),
+              };
             const provider =
               (await agents.online.services.list().catch(() => [])).find(
                 (service) => service.name === model.modelService,

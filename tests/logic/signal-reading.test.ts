@@ -281,3 +281,140 @@ describe('the search through the model gateway', () => {
     expect(model.doGenerateCalls).toHaveLength(0);
   });
 });
+
+describe('the search through DeepSeek', () => {
+  const usage = {
+    inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
+    outputTokens: { total: 4, text: 4, reasoning: 0 },
+  };
+  const searching = (query: string) => ({
+    content: [
+      {
+        type: 'tool-call' as const,
+        toolCallId: 'c1',
+        toolName: 'web_search',
+        input: JSON.stringify({ query }),
+      },
+    ],
+    finishReason: { unified: 'tool-calls' as const, raw: 'tool_calls' },
+    usage,
+    warnings: [],
+  });
+  const answering = (text: string) => ({
+    content: [{ type: 'text' as const, text }],
+    finishReason: { unified: 'stop' as const, raw: 'stop' },
+    usage,
+    warnings: [],
+  });
+  const searcher = (model: MockLanguageModelV4): WebSearcher => ({
+    kind: 'deepseek',
+    service: 'deepseek',
+    model: 'deepseek-flash',
+    apiKey: 'sk-test',
+    languageModel: () => Promise.resolve(model),
+  });
+  // DeepSeek's Search API: each call answers with the next response.
+  const searchApi = (...responses: Response[]) => {
+    const calls: { url: string; body: unknown; auth: string | null }[] = [];
+    const fetcher = ((url: string, init: RequestInit) => {
+      calls.push({
+        url,
+        body: JSON.parse(String(init.body)),
+        auth: new Headers(init.headers).get('Authorization'),
+      });
+      return Promise.resolve(responses.shift() ?? Response.json({}));
+    }) as typeof fetch;
+    return { fetcher, calls };
+  };
+
+  it("searches with DeepSeek's Search API, numbering the pages it returns", async () => {
+    const model = new MockLanguageModelV4({
+      doGenerate: [
+        searching('Acme funding'),
+        answering('{"website":"https://acme.example","sources":[1]}'),
+      ],
+    });
+    const api = searchApi(
+      Response.json({
+        results: [
+          {
+            title: 'Acme raises a round',
+            url: 'https://news.example/acme',
+            site_name: 'Example News',
+            date: '2026-10-18T16:00:00+00:00',
+            summary: 'Acme raised 10 million.',
+          },
+          { title: 'Not a page', url: 'ftp://nope' },
+        ],
+      }),
+    );
+    const result = await searchWeb(searcher(model), 'Look up Acme', {
+      fetch: api.fetcher,
+      system: 'method',
+    });
+    // The answer stays as written: a website in it is data.
+    expect(result.text).toBe(
+      '{"website":"https://acme.example","sources":[1]}',
+    );
+    expect(result.pages).toEqual([
+      {
+        index: 1,
+        title: 'Acme raises a round',
+        url: 'https://news.example/acme',
+        site: 'Example News',
+      },
+    ]);
+    expect(result.usage).toEqual({ inputTokens: 20, outputTokens: 8 });
+    expect(api.calls).toEqual([
+      {
+        url: 'https://api.deepseek.com/v1/tools/search',
+        body: { query: 'Acme funding', count: 6 },
+        auth: 'Bearer sk-test',
+      },
+    ]);
+    // The first turn must search, with the model's reasoning off; the
+    // model reads each page under its number.
+    const [first, second] = model.doGenerateCalls;
+    expect(first?.toolChoice).toEqual({ type: 'required' });
+    expect(first?.tools?.map((tool) => tool.name)).toEqual(['web_search']);
+    expect(first?.reasoning).toBe('none');
+    expect(JSON.stringify(second?.prompt)).toContain(
+      '[ref_1] Acme raises a round',
+    );
+  });
+
+  it('fails the question when its searches failed and found nothing', async () => {
+    const model = new MockLanguageModelV4({
+      doGenerate: [searching('Acme'), answering('{}')],
+    });
+    const api = searchApi(
+      Response.json(
+        { error: { message: 'Authentication Fails' } },
+        { status: 401 },
+      ),
+    );
+    const failure = await searchWeb(searcher(model), 'Look up Acme', {
+      fetch: api.fetcher,
+    }).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(WebSearchError);
+    expect((failure as WebSearchError).transient).toBe(false);
+    expect((failure as WebSearchError).message).toContain(
+      'Authentication Fails',
+    );
+  });
+
+  it('asks without the search when not searching', async () => {
+    const model = new MockLanguageModelV4({
+      doGenerate: [answering('{"events":[]}')],
+    });
+    const api = searchApi();
+    const result = await searchWeb(searcher(model), 'reshape', {
+      search: false,
+      fetch: api.fetcher,
+    });
+    expect(result.text).toBe('{"events":[]}');
+    expect(result.pages).toEqual([]);
+    expect(model.doGenerateCalls[0]?.tools ?? []).toEqual([]);
+    expect(api.calls).toEqual([]);
+  });
+});

@@ -62,8 +62,15 @@ const FIRST_MODELS: Record<
   web: { provider: 'alibaba', model: 'qwen3.8-flash' },
 };
 
-// The providers whose models can search the web (web-research.ts).
-const SEARCHING = new Set(['alibaba', 'openai', 'anthropic', 'google']);
+// The providers whose models can search the web (web-research.ts); a
+// DeepSeek service through DeepSeek's Search API since 2026-10-19.
+const SEARCHING = new Set([
+  'alibaba',
+  'deepseek',
+  'openai',
+  'anthropic',
+  'google',
+]);
 
 export const WORK_AGENTS: Record<
   Work,
