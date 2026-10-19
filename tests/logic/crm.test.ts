@@ -10,6 +10,7 @@ import { reports } from '../../server/providers/crm/reports.js';
 import {
   agentOn,
   agentOverview,
+  agentSwitches,
   saveAgentSwitch,
 } from '../../server/providers/crm/agents.js';
 import {
@@ -441,6 +442,12 @@ beforeAll(async () => {
       subject: { type: 'user', id },
     });
   service = new CrmService(database, authorization);
+  // The daily passes are off until an administrator switches them on; the
+  // tests of those passes find them on.
+  for (const agent of ['leads', 'opportunities', 'tasks', 'signals'] as const)
+    await saveAgentSwitch(service, actor('admin'), agent, {
+      triggers: { daily: true },
+    });
   const container = new ServiceContainer();
   const required = (): MiddlewareHandler => async (c, next) => {
     const id = c.req.header('x-test-user');
@@ -10256,6 +10263,31 @@ describe('overview reports', () => {
 // reader may read.
 describe('agents', () => {
   it('switches agents and their triggers, for administrators only', async () => {
+    // Nothing switched yet: every agent and trigger on but the daily passes.
+    const stored = await database
+      .query()
+      .selectFrom('crmSettings')
+      .select('value')
+      .where('id', '=', 'agents')
+      .executeTakeFirstOrThrow();
+    await database
+      .query()
+      .deleteFrom('crmSettings')
+      .where('id', '=', 'agents')
+      .execute();
+    const defaults = await agentSwitches(service);
+    await database
+      .query()
+      .insertInto('crmSettings')
+      .values({ id: 'agents', value: stored.value, updatedAt: new Date() })
+      .execute();
+    for (const agent of ['leads', 'opportunities', 'tasks', 'signals'] as const)
+      expect(defaults[agent]).toMatchObject({
+        enabled: true,
+        triggers: { daily: false },
+      });
+    expect(defaults.leads.triggers.created).toBe(true);
+    expect(defaults.approvals.triggers.submitted).toBe(true);
     expect(
       (
         await request('/aiAgents/leads/switches', 'rep', 'PUT', {

@@ -576,6 +576,10 @@ const wording = {
           '新线索超时未联系、跟进中的线索停滞、培育中的线索复查到期。',
         ],
       },
+      dailySchedule: [
+        'The same switch as the scheduled task “{{title}}”.',
+        '与定时任务「{{title}}」是同一个开关。',
+      ],
       dailyTasks: {
         hint: [
           "Today's open tasks with a time of day that concern a lead, an opportunity or a company, each once.",

@@ -299,10 +299,14 @@ export default class CrmProvider extends ServiceProvider<Application> {
         title: words.leadTarget,
         validate: isObject,
         // Read on the scheduled tasks page in place of the type's name.
+        // Disabled while the agent's daily trigger is off (agents.ts),
+        // so its firings are skipped and the scheduled tasks page says why.
         describe: async () => ({
           targetLabel: words.leadTarget,
           description: words.leadTargetDescription,
-          state: 'ready',
+          state: (await agentOn(service, 'leads', 'daily'))
+            ? 'ready'
+            : 'disabled',
         }),
         start: async () => {
           const pass = await scanLeadSignals(
@@ -329,10 +333,14 @@ export default class CrmProvider extends ServiceProvider<Application> {
         type: 'app.crm-deal-signals',
         title: words.dealTarget,
         validate: isObject,
+        // Disabled while the agent's daily trigger is off (agents.ts),
+        // so its firings are skipped and the scheduled tasks page says why.
         describe: async () => ({
           targetLabel: words.dealTarget,
           description: words.dealTargetDescription,
-          state: 'ready',
+          state: (await agentOn(service, 'opportunities', 'daily'))
+            ? 'ready'
+            : 'disabled',
         }),
         start: async () => {
           const pass = await scanDealSignals(
@@ -422,10 +430,14 @@ export default class CrmProvider extends ServiceProvider<Application> {
         type: 'app.crm-task-preparation',
         title: words.taskTarget,
         validate: isObject,
+        // Disabled while the agent's daily trigger is off (agents.ts),
+        // so its firings are skipped and the scheduled tasks page says why.
         describe: async () => ({
           targetLabel: words.taskTarget,
           description: words.taskTargetDescription,
-          state: 'ready',
+          state: (await agentOn(service, 'tasks', 'daily'))
+            ? 'ready'
+            : 'disabled',
         }),
         start: async () => {
           const pass = await scanTaskPreparation(
@@ -452,10 +464,14 @@ export default class CrmProvider extends ServiceProvider<Application> {
         type: 'app.crm-company-signals',
         title: words.signalTarget,
         validate: isObject,
+        // Disabled while the agent's daily trigger is off (agents.ts),
+        // so its firings are skipped and the scheduled tasks page says why.
         describe: async () => ({
           targetLabel: words.signalTarget,
           description: words.signalTargetDescription,
-          state: 'ready',
+          state: (await agentOn(service, 'signals', 'daily'))
+            ? 'ready'
+            : 'disabled',
         }),
         start: async () => {
           const pass = await this.app.container

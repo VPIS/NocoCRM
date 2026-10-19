@@ -1,5 +1,7 @@
 import { useState, type ReactElement } from 'react';
 import { useCan } from '@nocobase/app-plugin-authorization/client';
+import { useApiClient } from '@nocobase/app-client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AgentAvatar } from '@nocobase/app-plugin-agents/client/chat';
 import { Link, Navigate, useLocation } from 'react-router';
 import {
@@ -52,6 +54,10 @@ import { AgentSentence } from '../components/crm/work-agent.js';
 import { useAgentText } from '@nocobase/app-plugin-agents/client/chat';
 import { useWorkAgentNames } from '../components/crm/work-agent-name.js';
 import { DEFAULT_TIME_ZONE } from '../../server/providers/crm/zone-time.js';
+import {
+  useSchedulesKey,
+  type Schedule,
+} from './settings/scheduled-tasks/types.js';
 
 // The CRM's work agents (server/providers/crm/agents.ts, each its own agent
 // of the Agents plugin, crm-agents/work-agents.ts) on one page, Agent work
@@ -68,6 +74,20 @@ import { DEFAULT_TIME_ZONE } from '../../server/providers/crm/zone-time.js';
 // The company signals' check (company-signals.ts) last: its runs are checks
 // of companies, its outcomes signals seen or dismissed.
 type AgentName = 'leads' | 'opportunities' | 'approvals' | 'tasks' | 'signals';
+
+// The scheduler task that starts each agent's daily trigger
+// (server/providers/crm/index.ts). Its switch on the scheduled tasks page
+// and the daily trigger's here are one: shown on only while both are, the
+// trigger off by default, its task reading as disabled meanwhile. Switched
+// on here, a task paused on the scheduled tasks page is enabled too,
+// through the scheduler's API, for whoever may open that page; switched
+// off, the trigger alone goes off.
+const DAILY_SCHEDULES: Partial<Record<AgentName, string>> = {
+  leads: 'crm.lead-signals',
+  opportunities: 'crm.deal-signals',
+  tasks: 'crm.task-preparation',
+  signals: 'crm.company-signals',
+};
 // The method skill each agent works by (ai/skills).
 const SKILLS: Record<AgentName, string> = {
   leads: 'lead-follow-up',
@@ -212,12 +232,61 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
     action: 'access',
   });
   const zone = meta?.settings.timeZone ?? DEFAULT_TIME_ZONE;
+  const { can: canSchedules } = useCan({
+    resource: { type: 'page', id: 'scheduler.schedules' },
+    action: 'access',
+  });
+  const apiClient = useApiClient();
+  const queryClient = useQueryClient();
+  const schedulesKey = useSchedulesKey();
+  const scheduleKey = DAILY_SCHEDULES[agent];
+  // The same query as the scheduled tasks page's, so either page's change
+  // shows on the other.
+  const schedules = useQuery({
+    queryKey: schedulesKey,
+    queryFn: () =>
+      apiClient.request<{
+        data: Schedule[];
+        meta: { total: number };
+      }>({ path: 'scheduler/schedules', query: { pageSize: 100 } }),
+    retry: false,
+    enabled: Boolean(scheduleKey && canSchedules),
+  });
+  const schedule = canSchedules
+    ? schedules.data?.data.find((row) => row.key === scheduleKey)
+    : undefined;
   const save = async (input: Data): Promise<void> => {
     setSaving(true);
     setError(undefined);
     try {
       await api(`aiAgents/${agent}/switches`, 'PUT', input);
       await refresh();
+      // The daily tasks' target state follows the agent's switch.
+      if (scheduleKey && canSchedules)
+        await queryClient.invalidateQueries({ queryKey: schedulesKey });
+    } catch (cause) {
+      setError(cause);
+    } finally {
+      setSaving(false);
+    }
+  };
+  // The daily trigger's switch, and on, its scheduler task enabled too
+  // should it be paused.
+  const switchDaily = async (on: boolean): Promise<void> => {
+    setSaving(true);
+    setError(undefined);
+    try {
+      await api(`aiAgents/${agent}/switches`, 'PUT', {
+        triggers: { daily: on },
+      });
+      if (on && schedule && !schedule.enabled)
+        await apiClient.request({
+          path: `scheduler/schedules/${encodeURIComponent(schedule.id)}/enable`,
+          method: 'POST',
+        });
+      await refresh();
+      if (canSchedules)
+        await queryClient.invalidateQueries({ queryKey: schedulesKey });
     } catch (cause) {
       setError(cause);
     } finally {
@@ -367,13 +436,23 @@ function AgentView({ agent }: { agent: AgentName }): ReactElement {
                                 : 'agents.triggers.dailyTasks.hint',
                           )}`
                         : ''}
+                      {trigger === 'daily' && schedule
+                        ? ` ${text('agents.triggers.dailySchedule', {
+                            title: schedule.title,
+                          })}`
+                        : ''}
                     </p>
                   </div>
                   <Switch
-                    checked={data.switches.triggers[trigger] !== false}
+                    checked={
+                      data.switches.triggers[trigger] !== false &&
+                      (trigger !== 'daily' || !schedule || schedule.enabled)
+                    }
                     disabled={!admin || saving || !enabled}
                     onCheckedChange={(on) =>
-                      void save({ triggers: { [trigger]: on } })
+                      void (trigger === 'daily'
+                        ? switchDaily(on)
+                        : save({ triggers: { [trigger]: on } }))
                     }
                     aria-label={triggerLabel(trigger)}
                   />

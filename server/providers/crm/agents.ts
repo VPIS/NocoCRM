@@ -69,7 +69,13 @@ export type AgentSwitches = Record<SwitchedAgent, AgentSwitch>;
 
 const ROW = 'agents';
 
-// Every agent and trigger on unless an administrator switched it off.
+// The triggers off until an administrator switches them on: the daily
+// passes, which go over every open record each morning (their scheduler
+// tasks read as disabled meanwhile, CrmProvider).
+const OFF_BY_DEFAULT = new Set(['daily']);
+
+// Every agent on, and every trigger but the daily passes, unless an
+// administrator switched it otherwise.
 export async function agentSwitches(
   service: CrmService,
 ): Promise<AgentSwitches> {
@@ -89,10 +95,13 @@ export async function agentSwitches(
       {
         enabled: stored[agent]?.enabled !== false,
         triggers: Object.fromEntries(
-          AGENT_TRIGGERS[agent].map((trigger) => [
-            trigger,
-            stored[agent]?.triggers?.[trigger] !== false,
-          ]),
+          AGENT_TRIGGERS[agent].map((trigger) => {
+            const on = stored[agent]?.triggers?.[trigger];
+            return [
+              trigger,
+              typeof on === 'boolean' ? on : !OFF_BY_DEFAULT.has(trigger),
+            ];
+          }),
         ),
       },
     ]),
