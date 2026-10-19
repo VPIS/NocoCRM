@@ -1753,7 +1753,7 @@ const wording = {
     },
   },
   aiLanguages: {
-    'zh-CN': ['Chinese', '中文'],
+    'zh-CN': ['Simplified Chinese', '简体中文'],
     'en-US': ['English', 'English'],
   },
   // The AI's suggestions in the inbox's To do view.

@@ -112,7 +112,10 @@ function SettingsForm({
       </div>
     );
   };
-  const fields = (keys: readonly (keyof CrmSettings)[]): ReactElement => (
+  const fields = (
+    keys: readonly (keyof CrmSettings)[],
+    extra?: ReactElement,
+  ): ReactElement => (
     <div className='grid gap-4 sm:grid-cols-2'>
       {keys.map((key) => (
         <label key={key} className='grid gap-2 text-sm'>
@@ -175,6 +178,7 @@ function SettingsForm({
           )}
         </label>
       ))}
+      {extra}
     </div>
   );
   return (
@@ -195,23 +199,25 @@ function SettingsForm({
           <CardTitle>{text('business')}</CardTitle>
         </CardHeader>
         <CardContent className='space-y-6'>
-          {fields(BUSINESS_FIELDS)}
-          {/* The assistant's ask box at the bottom of the pages
-              (assistant-dock.tsx), for everyone; the header's ✨ button
-              stays either way. */}
-          <div className='flex items-start justify-between gap-4 rounded-lg border border-border px-3 py-2.5'>
-            <div className='min-w-0 space-y-0.5'>
-              <p className='text-sm'>{text('fields.assistantDock')}</p>
-              <p className='text-xs text-muted-foreground'>
-                {text('fields.assistantDockHint')}
-              </p>
-            </div>
-            <Switch
-              checked={settings.assistantDock !== false}
-              onCheckedChange={(on) => set('assistantDock', on)}
-              aria-label={toText(text('fields.assistantDock'))}
-            />
-          </div>
+          {fields(
+            BUSINESS_FIELDS,
+            // The assistant's ask box at the bottom of the pages
+            // (assistant-dock.tsx), for everyone; the header's ✨ button
+            // stays either way. Beside the AI's language, in the grid.
+            <div className='grid gap-2 text-sm'>
+              <span>{text('fields.assistantDock')}</span>
+              <div className='flex min-h-9 items-center gap-3'>
+                <Switch
+                  checked={settings.assistantDock !== false}
+                  onCheckedChange={(on) => set('assistantDock', on)}
+                  aria-label={toText(text('fields.assistantDock'))}
+                />
+                <span className='text-xs text-muted-foreground'>
+                  {text('fields.assistantDockHint')}
+                </span>
+              </div>
+            </div>,
+          )}
           {saveCard('business', BUSINESS)}
         </CardContent>
       </Card>
