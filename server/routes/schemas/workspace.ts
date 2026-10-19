@@ -309,6 +309,10 @@ export const DemoDataStatus: z.ZodType<DemoStatus> = z
         description:
           'An import under way: how far it has got, 0 to 100, or null when another server process runs it; null when none runs.',
       }),
+    settings: z.array(z.enum(['currency', 'timeZone', 'aiLanguage'])).meta({
+      description:
+        'The business settings the present import set, those still at their default: the currency to CNY, the time zone to the dataset’s, the AI language to the dataset’s.',
+    }),
   })
   .meta({ ref: 'CrmDemoData' });
 

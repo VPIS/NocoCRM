@@ -10,6 +10,7 @@ import { Choice } from '../../components/crm/form.js';
 import { ConfirmDialog } from '../crm-detail.js';
 import {
   localDate,
+  toText,
   useCrmApi,
   useCrmQuery,
   useCrmScopeKey,
@@ -167,6 +168,19 @@ export default function DemoDataPage(): ReactElement {
                   })
                 : text('demoAbsent')}
             </p>
+            {/* The business settings the import set, those still at their
+                default (server/providers/crm/demo.ts `demoSettings`). */}
+            {demo.present && demo.settings?.length ? (
+              <p className='text-sm text-muted-foreground'>
+                {text('demoSettingsSet', {
+                  names: new Intl.ListFormat(language, {
+                    type: 'conjunction',
+                  }).format(
+                    demo.settings.map((key) => toText(text(`fields.${key}`))),
+                  ),
+                })}
+              </p>
+            ) : null}
             {!demo.present && (
               <label className='flex items-center gap-3 text-sm'>
                 <span className='shrink-0'>{text('demoLanguage')}</span>

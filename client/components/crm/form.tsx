@@ -23,14 +23,18 @@ import {
 } from 'react';
 import { Badge } from '../ui/badge.js';
 import {
+  Check,
   ChevronDown,
+  ChevronsUpDown,
   ChevronUp,
   Paperclip,
+  Search,
   Plus,
   Trash2,
   User,
 } from 'lucide-react';
 import { TaskSearchChip } from './task-quick.js';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover.js';
 import { ApprovalChips } from './approval-quick.js';
 import { TaskLinkChips } from './task-links.js';
 import { TaskTimeField } from './task-time-field.js';
@@ -81,6 +85,7 @@ export function MultiChoice({
   label,
   disabled,
   onOpenChange,
+  searchable = false,
 }: {
   value: string[];
   onChange: (v: string[]) => void;
@@ -88,10 +93,25 @@ export function MultiChoice({
   label: string;
   disabled?: boolean;
   onOpenChange?: (open: boolean) => void;
+  // A box above the list narrows it as one types, for a list too long to
+  // scan (the people who may approve).
+  searchable?: boolean;
 }): ReactElement {
   const { text } = useCrmText();
   const labelOf = (id: string): string =>
     choices.find((c) => c.value === id)?.label ?? id;
+  if (searchable)
+    return (
+      <SearchableMultiChoice
+        value={value}
+        onChange={onChange}
+        choices={choices}
+        label={label}
+        disabled={disabled}
+        onOpenChange={onOpenChange}
+        labelOf={labelOf}
+      />
+    );
   return (
     <Select
       multiple
@@ -125,6 +145,105 @@ export function MultiChoice({
         )}
       </SelectContent>
     </Select>
+  );
+}
+
+// MultiChoice with a search box: the list the record pickers show
+// (record-picker.tsx), over choices already loaded, filtered as typed.
+function SearchableMultiChoice({
+  value,
+  onChange,
+  choices,
+  label,
+  disabled,
+  onOpenChange,
+  labelOf,
+}: {
+  value: string[];
+  onChange: (v: string[]) => void;
+  choices: { value: string; label: string }[];
+  label: string;
+  disabled?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  labelOf: (id: string) => string;
+}): ReactElement {
+  const { text } = useCrmText();
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const change = (next: boolean): void => {
+    setOpen(next);
+    if (!next) setSearch('');
+    onOpenChange?.(next);
+  };
+  const needle = search.trim().toLocaleLowerCase();
+  const shown = needle
+    ? choices.filter((c) => c.label.toLocaleLowerCase().includes(needle))
+    : choices;
+  return (
+    <Popover open={open} onOpenChange={change}>
+      <PopoverTrigger
+        disabled={disabled}
+        role='combobox'
+        aria-expanded={open}
+        aria-label={label}
+        className='flex min-h-8 w-full min-w-32 items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-1 text-left text-sm shadow-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50'
+      >
+        <span
+          className={`min-w-0 whitespace-normal ${value.length ? '' : 'text-muted-foreground'}`}
+        >
+          {value.length ? value.map(labelOf).join('、') : text('choose')}
+        </span>
+        <ChevronsUpDown className='size-4 shrink-0 opacity-50' />
+      </PopoverTrigger>
+      <PopoverContent
+        align='start'
+        className='flex max-h-80 w-(--anchor-width) min-w-60 flex-col p-0'
+      >
+        <div className='relative border-b p-2'>
+          <Search className='pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground' />
+          <Input
+            autoFocus
+            value={search}
+            placeholder={toText(text('searchRecords'))}
+            aria-label={toText(text('searchRecords'))}
+            className='pl-8'
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <ul role='listbox' className='min-h-0 flex-1 overflow-y-auto p-1'>
+          {shown.map((choice) => {
+            const picked = value.includes(choice.value);
+            return (
+              <li key={choice.value}>
+                <button
+                  type='button'
+                  role='option'
+                  aria-selected={picked}
+                  className='flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-hover hover:text-accent-foreground'
+                  onClick={() =>
+                    onChange(
+                      picked
+                        ? value.filter((v) => v !== choice.value)
+                        : [...value, choice.value],
+                    )
+                  }
+                >
+                  <Check
+                    className={`size-4 shrink-0 ${picked ? '' : 'invisible'}`}
+                  />
+                  <span className='min-w-0 truncate'>{choice.label}</span>
+                </button>
+              </li>
+            );
+          })}
+          {!shown.length && (
+            <li className='px-2 py-1.5 text-sm text-muted-foreground'>
+              {text('noMatches')}
+            </li>
+          )}
+        </ul>
+      </PopoverContent>
+    </Popover>
   );
 }
 

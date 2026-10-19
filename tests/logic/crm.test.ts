@@ -6824,6 +6824,19 @@ describe('lead signals', () => {
 
 describe('demo dataset', () => {
   let chineseRecords = 0;
+  // The import sets business settings (demoSettings); the tests after these
+  // find them as they were.
+  let settingsBefore: Awaited<ReturnType<CrmService['settings']>>;
+  beforeAll(async () => {
+    settingsBefore = await service.settings();
+  });
+  afterAll(async () => {
+    await service.saveSettings(actor('admin'), {
+      currency: settingsBefore.currency,
+      timeZone: settingsBefore.timeZone,
+      aiLanguage: settingsBefore.aiLanguage,
+    });
+  });
   const count = async (entity: string): Promise<number> =>
     (await service.list(actor('admin'), entity as never, { pageSize: 1 }))
       .total;
@@ -6862,6 +6875,13 @@ describe('demo dataset', () => {
       >;
     expect((await meta('admin')).demoPresent).toBe(false);
     expect(await meta('rep')).not.toHaveProperty('demoPresent');
+    // An administrator's own currency stands; the time zone and the AI's
+    // language, still at their defaults, are set for the Chinese dataset.
+    await service.saveSettings(actor('admin'), {
+      currency: 'EUR',
+      timeZone: defaultSettings.timeZone,
+      aiLanguage: defaultSettings.aiLanguage,
+    });
     // Its approvals, submitted and decided, start no AI run.
     const submitted = vi.fn();
     const decided = vi.fn();
@@ -6884,6 +6904,12 @@ describe('demo dataset', () => {
     expect((await meta('admin')).demoPresent).toBe(true);
     expect(status.language).toBe('zh-CN');
     expect(status.records).toBeGreaterThan(100);
+    expect(status.settings).toEqual(['timeZone', 'aiLanguage']);
+    expect(await service.settings()).toMatchObject({
+      currency: 'EUR',
+      timeZone: 'Asia/Shanghai',
+      aiLanguage: 'zh-CN',
+    });
     // The team's eight companies and the importer's three projects' (SF
     // Express is a lead alone).
     expect(await count('companies')).toBe(before.companies + 11);
@@ -7488,12 +7514,24 @@ describe('demo dataset', () => {
         fieldViolations: [{ field: 'language' }],
       },
     });
+    // The currency back at its default is set; the Shanghai time zone and
+    // the Chinese AI language an earlier import left are no longer defaults
+    // and stay.
+    await service.saveSettings(actor('admin'), {
+      currency: defaultSettings.currency,
+    });
     const populated = await request('/demoData/import', 'admin', 'POST', {
       language: 'en-US',
     });
     expect(populated.status).toBe(200);
     const status = (await populated.json()).data;
     expect(status.language).toBe('en-US');
+    expect(status.settings).toEqual(['currency']);
+    expect(await service.settings()).toMatchObject({
+      currency: 'CNY',
+      timeZone: 'Asia/Shanghai',
+      aiLanguage: 'zh-CN',
+    });
     // The same records as the Chinese dataset, none of them in Chinese.
     expect(status.records).toBe(chineseRecords);
     const marker = await database
