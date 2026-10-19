@@ -12236,7 +12236,14 @@ describe("The assistant's conversations on the Agents plugin", () => {
                 name: 'deepseek',
                 provider: 'deepseek',
                 enabled: true,
-                models: [{ value: 'chat', kind: 'chat' }],
+                models: [{ value: 'deepseek-flash', kind: 'chat' }],
+              },
+              // A provider whose models cannot search the web.
+              {
+                name: 'kimi',
+                provider: 'moonshotai',
+                enabled: true,
+                models: [{ value: 'k2', kind: 'chat' }],
               },
               {
                 name: 'qwen',
@@ -12318,19 +12325,21 @@ describe("The assistant's conversations on the Agents plugin", () => {
       type: 'online',
       access: 'ownerOnly',
       actions: [],
-      // DeepSeek's first for the work that needs no web; the Background AI's
-      // changed instructions.
+      // DeepSeek's fast model first; the Background AI's changed
+      // instructions.
       modelEntries: [
-        { modelService: 'deepseek', model: 'chat' },
+        { modelService: 'deepseek', model: 'deepseek-flash' },
+        { modelService: 'kimi', model: 'k2' },
         { modelService: 'qwen', model: 'flash' },
       ],
       instructions: 'Our own rules.',
     });
-    // The company signals: every chat model, those that can search the
-    // web first.
+    // The company research: every chat model, DeepSeek's fast one first
+    // and those that can search the web before those that cannot.
     expect(created[4]!.modelEntries).toEqual([
+      { modelService: 'deepseek', model: 'deepseek-flash' },
       { modelService: 'qwen', model: 'flash' },
-      { modelService: 'deepseek', model: 'chat' },
+      { modelService: 'kimi', model: 'k2' },
     ]);
     // Each its own skill, where the library has it.
     expect(attached).toEqual({
@@ -12377,7 +12386,8 @@ describe("The assistant's conversations on the Agents plugin", () => {
     await provisionWorkAgents(fakeAgents, database);
     expect(created[1]!.instructions).toContain('following opportunities up');
     expect(created[1]!.modelEntries).toEqual([
-      { modelService: 'deepseek', model: 'chat' },
+      { modelService: 'deepseek', model: 'deepseek-flash' },
+      { modelService: 'kimi', model: 'k2' },
       { modelService: 'qwen', model: 'flash' },
     ]);
   });

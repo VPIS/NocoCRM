@@ -48,19 +48,13 @@ export const WORKS = [
 ] as const;
 export type Work = (typeof WORKS)[number];
 
-// The model each work asks first when its service is configured
-// (server/config/ai.ts): DeepSeek's fast one for the work that needs no
-// web, Qwen's fast one for the company signals, which search with their
-// agent's first model (web-research.ts). A model that reasons at length (Qwen Max) spent
-// minutes and thousands of tokens of thinking on each follow-up, which the
-// work does not need.
-const FIRST_MODELS: Record<
-  'web' | 'plain',
-  { provider: string; model: string }
-> = {
-  plain: { provider: 'deepseek', model: 'deepseek-flash' },
-  web: { provider: 'alibaba', model: 'qwen3.8-flash' },
-};
+// The model every work asks first when its service is configured
+// (server/config/ai.ts): DeepSeek's fast one, the company research's too
+// since 2026-10-19, when it searches through DeepSeek's Search API
+// (web-research.ts; Qwen's fast one led that work before). A model that
+// reasons at length (Qwen Max) spent minutes and thousands of tokens of
+// thinking on each follow-up, which the work does not need.
+const FIRST_MODEL = { provider: 'deepseek', model: 'deepseek-flash' };
 
 // The providers whose models can search the web (web-research.ts); a
 // DeepSeek service through DeepSeek's Search API since 2026-10-19.
@@ -231,16 +225,12 @@ export async function provisionWorkAgents(
   const background = await backgroundOf(agents, database);
   // Every chat model of the enabled services, its provider's first and its
   // fast model leading them.
-  const ordered = async (kind: 'web' | 'plain') => {
-    const { provider, model } = FIRST_MODELS[kind];
-    const entries = await chatModelEntries(agents, provider);
-    const fast = entries.findIndex((entry) => entry.model === model);
-    return fast > 0
+  const entries = await chatModelEntries(agents, FIRST_MODEL.provider);
+  const fast = entries.findIndex((entry) => entry.model === FIRST_MODEL.model);
+  const ordered =
+    fast > 0
       ? [entries[fast], ...entries.slice(0, fast), ...entries.slice(fast + 1)]
       : entries;
-  };
-  const plain = await ordered('plain');
-  const web = await ordered('web');
   const skills = idsOf(
     (
       await query
@@ -267,15 +257,15 @@ export async function provisionWorkAgents(
     const modelEntries =
       work === 'signals'
         ? [
-            ...web.filter((entry) =>
+            ...ordered.filter((entry) =>
               SEARCHING.has(providers.get(entry.modelService) ?? ''),
             ),
-            ...web.filter(
+            ...ordered.filter(
               (entry) =>
                 !SEARCHING.has(providers.get(entry.modelService) ?? ''),
             ),
           ]
-        : plain;
+        : ordered;
     const agent = await agents.agents.create(creator.id, {
       name: WORK_AGENTS[work].name,
       type: 'online',
