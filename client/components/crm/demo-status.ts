@@ -12,4 +12,6 @@ export interface DemoStatus {
   // An import under way: how far it has got, 0 to 100, or null when another
   // server process runs it; null when none runs.
   importing?: { percent: number | null } | null;
+  // The business settings the present import set.
+  settings?: string[];
 }

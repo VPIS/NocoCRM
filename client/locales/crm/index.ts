@@ -2003,12 +2003,16 @@ const wording = {
     'Demo data imported on {{date}}: {{count}} records.',
     '演示数据已于 {{date}} 导入，共 {{count}} 条记录。',
   ],
+  demoSettingsSet: [
+    'The import set the business settings {{names}}, which were at their defaults, to the ones the demo data is written for.',
+    '导入时已把仍为默认值的{{names}}改为演示数据所用的设置。',
+  ],
   demoAccounts: ['Demo accounts', '演示账号'],
   demoImport: ['Import demo data', '导入演示数据'],
   demoImportTitle: ['Import the demo data?', '导入演示数据？'],
   demoImportHint: [
-    'The records are added to the current database and belong to the demo accounts and to you: you become a sales manager as well, keeping your administrator role, and own a share of them. Nothing existing is changed, and the import can be removed again from here. The demo accounts and you each get a demo mailbox holding mail with the demo customers; it sends only to the demo’s people, and nothing is ever delivered.',
-    '演示记录将加入当前数据库，负责人为演示账号和你：你会同时成为销售经理（管理员身份不变），负责其中一部分记录；现有数据不会被修改，之后可以在此清除。演示账号和你会各获得一个演示邮箱，里面是与演示客户的往来邮件；演示邮箱只能发给演示数据里的人，邮件不会真正寄出。',
+    'The records are added to the current database and belong to the demo accounts and to you: you become a sales manager as well, keeping your administrator role, and own a share of them. Business settings still at their defaults are set for the demo: the currency to CNY, the business timezone to the dataset’s (Shanghai for Chinese, New York for English), and the AI working language to the dataset’s; settings you have changed stay. Nothing else existing is changed, and the import can be removed again from here. The demo accounts and you each get a demo mailbox holding mail with the demo customers; it sends only to the demo’s people, and nothing is ever delivered.',
+    '演示记录将加入当前数据库，负责人为演示账号和你：你会同时成为销售经理（管理员身份不变），负责其中一部分记录；业务配置中仍为默认值的项会按演示数据设置：币种改为人民币，业务时区改为演示数据所在地（简体中文为上海，英文为纽约），AI 工作语言改为演示数据的语言；你改过的设置保持不变。除此之外现有数据不会被修改，之后可以在此清除。演示账号和你会各获得一个演示邮箱，里面是与演示客户的往来邮件；演示邮箱只能发给演示数据里的人，邮件不会真正寄出。',
   ],
   demoImported: ['Demo data imported', '演示数据已导入'],
   demoReset: ['Remove demo data', '清除演示数据'],

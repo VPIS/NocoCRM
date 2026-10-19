@@ -3,7 +3,15 @@ import { randomUUID } from 'node:crypto';
 import { eventKey } from './signal-reading.js';
 import type { AppAuthorization } from '@nocobase/app-plugin-authorization/server';
 import { convertLead } from './conversion.js';
-import { CrmError, definitions, object, stages, toText } from './schema.js';
+import {
+  CrmError,
+  type CrmSettings,
+  defaultSettings,
+  definitions,
+  object,
+  stages,
+  toText,
+} from './schema.js';
 import { EVALUATION } from './ai-entries.js';
 import { CrmService } from './service.js';
 import {
@@ -190,7 +198,22 @@ export interface DemoStatus {
   // An import under way: how far it has got, 0 to 100, when this process
   // runs it (null when another does); null when none runs.
   importing: { percent: number | null } | null;
+  // The business settings the present import set (demoSettings).
+  settings: DemoSetting[];
 }
+
+// The business settings a dataset is written for: its amounts are in yuan,
+// its people work in Shanghai or in New York, and the AI writes in its
+// language. The import sets only those still at their shipped default, so
+// an administrator's own choice stands; a removal leaves them as they are.
+type DemoSetting = 'currency' | 'timeZone' | 'aiLanguage';
+const demoSettings = (
+  language: DemoLanguage,
+): Pick<CrmSettings, DemoSetting> => ({
+  currency: 'CNY',
+  timeZone: language === 'zh-CN' ? 'Asia/Shanghai' : 'America/New_York',
+  aiLanguage: language,
+});
 
 // How far the import this process runs has got, 0 to 100, for the banner
 // that shows it while it runs (demoStatus); none while no import runs here.
@@ -198,6 +221,13 @@ let importPercent: number | undefined;
 const reached = (percent: number): void => {
   importPercent = percent;
 };
+
+// What an import wrote so far, for taking it back should it fail: its
+// records, and the settings it changed with the values they had.
+interface Claim {
+  manifest?: Manifest;
+  settings?: Partial<Pick<CrmSettings, DemoSetting>>;
+}
 
 interface Manifest {
   version: number;
@@ -220,6 +250,9 @@ interface Manifest {
   // The demo's WhatsApp numbers and their customers, which removal deletes;
   // absent on an import made before the dataset had them.
   whatsapp?: DemoWhatsAppManifest;
+  // The business settings the import set; absent on one made before it set
+  // any.
+  settings?: DemoSetting[];
 }
 
 // Whether a demo dataset is imported, for the banner that offers one to
@@ -299,6 +332,7 @@ export async function demoStatus(
     accounts: listed(names),
     accountsByLanguage: { 'zh-CN': listed('zh-CN'), 'en-US': listed('en-US') },
     importing: importing ? { percent: importPercent ?? null } : null,
+    settings: manifest?.settings ?? [],
   };
 }
 const listed = (language: DemoLanguage) =>
@@ -381,7 +415,7 @@ export async function populateDemo(
   } catch {
     throw new CrmError('demoExists', 409);
   }
-  const claim: { manifest?: Manifest } = {};
+  const claim: Claim = {};
   reached(0);
   try {
     return await populate(
@@ -397,6 +431,8 @@ export async function populateDemo(
     );
   } catch (error) {
     if (claim.manifest) await deleteRecords(service, claim.manifest);
+    if (claim.settings)
+      await service.saveSettings(actor, claim.settings).catch(() => undefined);
     await query
       .deleteFrom('crmSettings')
       .where('id', 'in', [DEMO_MARKER, DEMO_MAIL_ROW])
@@ -417,7 +453,7 @@ async function populate(
   chats: DemoChats | undefined,
   whatsapp: WhatsAppService | undefined,
   // What the import wrote so far, for taking it back should it fail.
-  claim: { manifest?: Manifest },
+  claim: Claim,
 ): Promise<DemoStatus> {
   const text = demoContent(language);
   const query = service.database.query();
@@ -494,6 +530,23 @@ async function populate(
     actorFor(userIds.secondSeller),
   ];
 
+  // The settings the dataset is written for, before anything is dated by
+  // the business time zone.
+  const before = await service.settings();
+  const adopted = Object.fromEntries(
+    Object.entries(demoSettings(language)).filter(
+      ([key, value]) =>
+        before[key as DemoSetting] === defaultSettings[key as DemoSetting] &&
+        before[key as DemoSetting] !== value,
+    ),
+  ) as Partial<Pick<CrmSettings, DemoSetting>>;
+  const settingsSet = Object.keys(adopted) as DemoSetting[];
+  if (settingsSet.length) {
+    claim.settings = Object.fromEntries(
+      settingsSet.map((key) => [key, before[key]]),
+    );
+    await service.saveSettings(actor, adopted);
+  }
   const settings = await service.settings();
   const timeZone = settings.timeZone || DEFAULT_TIME_ZONE;
   const now = new Date();
@@ -521,6 +574,7 @@ async function populate(
     businessDate: calendarDay,
     ownerId: actor.id,
     ...(importerManager ? { importerManager } : {}),
+    ...(settingsSet.length ? { settings: settingsSet } : {}),
     records: [],
   };
   claim.manifest = manifest;
