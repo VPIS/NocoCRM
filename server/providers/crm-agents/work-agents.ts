@@ -103,7 +103,7 @@ export const WORK_AGENTS: Record<
   signals: {
     name: 'Company research',
     skill: 'company-signals',
-    task: "finding on the web what the team needs to know about the companies it sells to: a new company's particulars, and what happened lately at the companies it watches",
+    task: "finding on the web what the team needs to know about the companies it sells to: a new company's particulars, a lead's company before its follow-up, and what happened lately at the companies it watches",
   },
 };
 

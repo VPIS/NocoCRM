@@ -24,10 +24,14 @@ export function Markdown({
   children,
   compact: isCompact = false,
   className = '',
+  newTab = false,
 }: {
   children: string;
   compact?: boolean;
   className?: string;
+  // Web links open in a new tab, leaving the CRM where it was (the pages
+  // a web look-up cites).
+  newTab?: boolean;
 }): ReactElement {
   return (
     <div className={`${prose} ${isCompact ? compact : document} ${className}`}>
@@ -41,7 +45,13 @@ export function Markdown({
             href === '#mention' ? (
               <span className={MENTION_CLASS}>{label}</span>
             ) : (
-              <a href={href} {...props}>
+              <a
+                href={href}
+                {...props}
+                {...(newTab && /^https?:\/\//iu.test(href ?? '')
+                  ? { target: '_blank', rel: 'noreferrer' }
+                  : {})}
+              >
                 {label}
               </a>
             ),

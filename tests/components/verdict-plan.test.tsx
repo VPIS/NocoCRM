@@ -676,3 +676,70 @@ describe('a follow-up whose next step is an email', () => {
     expect(screen.queryByText('将创建的任务')).toBeNull();
   });
 });
+
+// A lead card's web look-up of the company: folded to a line, opening on
+// what it found with its marks linking the pages; or why none was made.
+describe("a follow-up card's web look-up", () => {
+  it('folds what it found, its marks linking the pages it read', async () => {
+    render(
+      <VerdictPanel
+        entry={{
+          ...entry,
+          ai: {
+            ...entry.ai,
+            research: {
+              at: '2026-10-19T02:00:00.000Z',
+              text: '- 做精密零件 [ref_1]\n- 招聘数字化经理 [ref_2] [ref_9]',
+              pages: [
+                {
+                  index: 1,
+                  title: '调研精工官网',
+                  url: 'https://www.research.example/about',
+                  site: 'research.example',
+                },
+                {
+                  index: 2,
+                  title: '招聘',
+                  url: 'https://jobs.example/1',
+                  site: 'jobs.example',
+                },
+              ],
+            },
+          },
+        }}
+        recordId='lead-1'
+        editable
+        onChanged={() => Promise.resolve()}
+      />,
+    );
+    const line = screen.getByRole('button', {
+      name: /联网查了公司 · 2 个来源/,
+    });
+    expect(screen.queryByText(/做精密零件/)).toBeNull();
+    await userEvent.click(line);
+    expect(screen.getByText(/做精密零件/)).toBeTruthy();
+    // A mark is a link to its page, in a new tab; one naming no page goes.
+    const marks = screen.getAllByRole('link', { name: '[2]' });
+    expect(marks[0]).toHaveAttribute('href', 'https://jobs.example/1');
+    expect(marks[0]).toHaveAttribute('target', '_blank');
+    expect(screen.queryByText(/ref_9/)).toBeNull();
+    expect(screen.getByRole('link', { name: '调研精工官网' })).toHaveAttribute(
+      'href',
+      'https://www.research.example/about',
+    );
+  });
+
+  it('says why the company was not looked up when one was due', () => {
+    render(
+      <VerdictPanel
+        entry={{ ...entry, ai: { ...entry.ai, researchMiss: 'unavailable' } }}
+        recordId='lead-1'
+        editable
+        onChanged={() => Promise.resolve()}
+      />,
+    );
+    expect(
+      screen.getByText('没有能联网搜索的模型，这次没有查公司'),
+    ).toBeTruthy();
+  });
+});

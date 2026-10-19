@@ -23,8 +23,8 @@ Work in this order, not from impressions. When the system has already attached t
    - whether it is already a company (has it bought, which edition, who is the owner);
    - whether the same company already has another lead or an open opportunity (possibly a duplicate, or it should go to the existing owner);
    - whether it came before and why it did not close (the lost reason, the invalid reason).
-4. **The company**: there is no web search; judge the company from what the lead, its tasks, comments and mail say of it, and do not fill gaps from impressions.
-   - What the material states about the company (website, industry, employees, location, address, company introduction) may be suggested for the lead, each item with the material it came from. Do not change values the lead already has; where the material differs, flag it and let the salesperson decide.
+4. **The company**: when a follow-up needs it (the first one, the company changed, a nurture review, a lead gone quiet, or the last look-up is old), the system looks the company up on the web and attaches what it found with the pages it read; otherwise the last look-up is attached with its date. Use it for who the company is (whether it is real, its industry, size and what it does), what changed there lately (hiring for IT or digitalisation roles, new business, funding, reorganisation, trouble) and whether it already uses NocoBase. In a conversation with a web search tool and nothing attached, look the company up yourself. Leave out what may be about another company of the same name; where nothing was found, judge the company from what the lead, its tasks, comments and mail say of it, and do not fill gaps from impressions.
+   - What the look-up or the material states about the company (website, industry, employees, location, address, company introduction) may be suggested for the lead, each item with its source: the page that states it, or the material it came from. Do not change values the lead already has; where the source differs, flag it and let the salesperson decide.
 
 ## 2. Which signals to look at
 

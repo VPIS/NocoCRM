@@ -1,6 +1,7 @@
 import { toText } from './schema.js';
 import { jsonValue } from './values.js';
 import type { Row } from '@nocobase/db';
+import type { LeadResearch, ResearchMiss } from './lead-research.js';
 
 // The AI's own entries in a record's activity feed (crmHistory, action
 // `ai`): what it concluded and where that stands. Read by the feed and by
@@ -175,8 +176,14 @@ export interface EvaluationEntry<V = Verdict> {
     decidedAt?: string;
     taskId?: string;
     // When this run looked the company up on the web; a run that did not
-    // (recently checked, see lead-evaluation.ts) leaves it out.
+    // (recently checked, see lead-evaluation.ts) leaves it out, or carries
+    // the date of the look-up whose findings it still offers.
     researchedAt?: string;
+    // A lead's: what this run's look-up found, with its pages
+    // (lead-research.ts); a revision keeps the card's it redoes.
+    research?: LeadResearch;
+    // A lead's: why a look-up due this time was not made.
+    researchMiss?: ResearchMiss;
     // A card redone as a person asked: the card it replaced, what they
     // asked and who.
     revises?: string;

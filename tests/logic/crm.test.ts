@@ -175,6 +175,7 @@ import {
   pendingDecisions,
   unwrittenFindings,
   stringValues,
+  type FollowUpTrigger,
 } from '../../server/providers/crm/lead-evaluation.js';
 import {
   ApprovalReviewer,
@@ -3895,6 +3896,8 @@ describe('CRM lead evaluation', () => {
         },
         // Already held: left out.
         { field: 'company', value: '杭州老板电器', source: '原始信息' },
+        // A model's word for nothing.
+        { field: 'city', value: '无', source: '无' },
       ],
       { id: 'l1', company: '杭州老板电器', email: null },
     );
@@ -3934,6 +3937,189 @@ describe('CRM lead evaluation', () => {
         current: null,
       },
     ]);
+  });
+
+  // The company looked up on the web before the follow-up when due
+  // (lead-research.ts), with the Company research agent's search: what it
+  // found goes to the follow-up and stays on the card, a value from it is
+  // offered only with a page it read, and a later follow-up reads it
+  // rather than searching again until the company changes.
+  it('takes only an address as a website', () => {
+    expect(
+      cleanEnrich(
+        [
+          { field: 'website', value: '官网未知', source: '原始信息' },
+          { field: 'website', value: 'robam.com', source: '备注' },
+        ],
+        { id: 'l2' },
+      ),
+    ).toEqual([
+      {
+        field: 'website',
+        value: 'robam.com',
+        source: null,
+        basis: '备注',
+        current: null,
+      },
+    ]);
+  });
+
+  it("looks the lead's company up on the web when due", async () => {
+    const enabled = vi
+      .spyOn(service, 'assistantEnabled')
+      .mockResolvedValue(true);
+    try {
+      const container = new ServiceContainer();
+      const { prompts } = fakeModel(container, {
+        ...follow,
+        enrich: [
+          {
+            field: 'website',
+            value: 'https://www.research.example',
+            source: 'ref_1',
+          },
+          // A page the look-up never read: left out.
+          { field: 'employees', value: '201-500', source: 'https://made.up' },
+        ],
+      });
+      const searches: string[] = [];
+      let searching: 'answer' | 'fail' | 'none' = 'answer';
+      container.instance(
+        companySignalsToken,
+        new CompanySignals(
+          service,
+          () =>
+            searching === 'none'
+              ? null
+              : {
+                  kind: 'dashscope' as const,
+                  service: 'qwen',
+                  model: 'qwen3.8-flash',
+                  apiKey: 'key',
+                },
+          {
+            fetch: (async (_url: string, init: { body: string }) => {
+              const body = JSON.parse(init.body) as {
+                input: { messages: { content: { text: string }[] }[] };
+              };
+              searches.push(body.input.messages.at(-1)?.content[0]?.text ?? '');
+              if (searching === 'fail')
+                return new Response('{}', { status: 500 });
+              return new Response(
+                JSON.stringify({
+                  output: {
+                    choices: [
+                      {
+                        message: {
+                          content: [
+                            {
+                              text: '1. 调研精工做精密零件 [ref_1]\n2. 最近招聘数字化经理 [ref_2]\n3. 没有找到使用 NocoBase 的记录',
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                    search_info: {
+                      search_results: [
+                        {
+                          index: 1,
+                          title: '调研精工官网',
+                          url: 'https://www.research.example/about',
+                          site_name: '调研精工',
+                        },
+                        {
+                          index: 2,
+                          title: '数字化经理招聘',
+                          url: 'https://jobs.example/1',
+                          site_name: 'Jobs',
+                        },
+                      ],
+                    },
+                  },
+                  usage: { input_tokens: 10, output_tokens: 5 },
+                }),
+                { status: 200 },
+              );
+            }) as unknown as typeof fetch,
+          },
+        ),
+      );
+      const evaluator = new LeadEvaluator(service, container);
+      const lead = await service.save(actor('rep'), 'leads', {
+        name: '吴调研',
+        company: '调研精工',
+        email: 'wu@research.example',
+        source: 'exhibition',
+        message: '想做设备点检系统',
+      });
+      const run = async (trigger: FollowUpTrigger) => {
+        await evaluator.request(actor('rep'), lead.id, undefined, trigger);
+        await evaluator.idle();
+        return (await latestEvaluation(service, actor('rep'), lead.id))!;
+      };
+
+      // A new lead: looked up, the answer given to the follow-up.
+      const first = await run('created');
+      expect(searches).toHaveLength(1);
+      expect(searches[0]).toContain(
+        'Look up this company on the web: 调研精工',
+      );
+      expect(searches[0]).toContain('research.example');
+      expect(prompts[0]).toContain('# Web research');
+      expect(prompts[0]).toContain('made for this follow-up');
+      expect(prompts[0]).toContain('最近招聘数字化经理 [ref_2]');
+      expect(prompts[0]).toContain(
+        '[ref_1] 调研精工官网 (调研精工): https://www.research.example/about',
+      );
+      expect(first.status).toBe('pending');
+      expect(first.ai.research?.pages.map((p) => p.url)).toEqual([
+        'https://www.research.example/about',
+        'https://jobs.example/1',
+      ]);
+      expect(first.ai.researchedAt).toBe(first.ai.research?.at);
+      expect(first.ai.researchMiss).toBeUndefined();
+      expect(first.ai.result?.enrich).toEqual([
+        {
+          field: 'website',
+          value: 'https://www.research.example',
+          source: 'https://www.research.example/about',
+          current: null,
+        },
+      ]);
+
+      // The customer writing soon after: no search, the earlier look-up
+      // read, and its finding not yet written still offered.
+      const second = await run('customerReplied');
+      expect(searches).toHaveLength(1);
+      expect(prompts.at(-1)).toContain('for an earlier follow-up');
+      expect(prompts.at(-1)).toContain('Put nothing from a web look-up');
+      expect(second.ai.research).toBeUndefined();
+      expect(second.ai.researchMiss).toBeUndefined();
+      expect(second.ai.result?.enrich.map((item) => item.source)).toEqual([
+        'https://www.research.example/about',
+      ]);
+
+      // Its company changed: looked up again.
+      await run('companyChanged');
+      expect(searches).toHaveLength(2);
+
+      // The search failing: the follow-up goes on, the card saying so.
+      searching = 'fail';
+      const failed = await run('companyChanged');
+      expect(searches).toHaveLength(3);
+      expect(failed.status).toBe('pending');
+      expect(failed.ai.research).toBeUndefined();
+      expect(failed.ai.researchMiss).toBe('failed');
+
+      // No model searching: the same, for that reason.
+      searching = 'none';
+      const unavailable = await run('nurtureDue');
+      expect(searches).toHaveLength(3);
+      expect(unavailable.ai.researchMiss).toBe('unavailable');
+      expect(prompts.at(-1)).toContain('for an earlier follow-up');
+    } finally {
+      enabled.mockRestore();
+    }
   });
 
   it('evaluates a new lead as its owner and records the verdict for a decision', async () => {

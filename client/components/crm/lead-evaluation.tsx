@@ -11,6 +11,7 @@ import { AiFailure } from './ai-failure.js';
 import {
   CalendarPlus,
   Check,
+  ChevronRight,
   Copy,
   ExternalLink,
   Globe,
@@ -22,6 +23,12 @@ import {
   Zap,
 } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox.js';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '../ui/collapsible.js';
+import { Markdown } from './markdown.js';
 import { Badge } from '../ui/badge.js';
 import { Button } from '../ui/button.js';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip.js';
@@ -213,6 +220,14 @@ export interface EvaluationEntry {
     updatedFields?: string[];
     // What started a follow-up the system ran on its own.
     trigger?: string;
+    // A lead's web look-up of its company (lead-research.ts): what it found,
+    // its points citing the pages as [ref_n]; or why one due was not made.
+    research?: {
+      at: string;
+      text: string;
+      pages: { index: number; title: string; url: string; site: string }[];
+    };
+    researchMiss?: 'unavailable' | 'failed';
     // When a running follow-up began; absent while it waits its turn.
     startedAt?: string;
     // A deal's follow-up started by its approvals' decisions: those
@@ -966,6 +981,8 @@ export function VerdictPanel({
           onPick={setPicked}
         />
       )}
+      {/* The web look-up behind it, folded: what it found and the pages. */}
+      <WebResearch entry={entry} />
       <ErrorNotice error={error} />
       {/* Everything to do with it, at the card's foot where reading it
           ends: talking it over at the left; at the right dismissing it and
@@ -1726,6 +1743,77 @@ export function EvaluationFeedEntry({
         {text(`evaluation.statuses.${status}`)}
       </Badge>
     </>
+  );
+}
+
+// A lead card's web look-up of the company (lead-research.ts): a line
+// saying when it was made and how many pages it read, opening on what it
+// found, its [ref_n] marks linking those pages; or a line saying why a
+// look-up due this time was not made. Nothing on a card that needed none.
+function WebResearch({
+  entry,
+}: {
+  entry: EvaluationEntry;
+}): ReactElement | null {
+  const { data: meta } = useMetadata();
+  const { text, language } = useCrmText();
+  const { research, researchMiss } = entry.ai;
+  if (!meta) return null;
+  if (!research)
+    return researchMiss ? (
+      <p className='flex items-center gap-1.5 text-xs text-muted-foreground'>
+        <Globe aria-hidden className='size-3.5 shrink-0' />
+        {text(`evaluation.research.${researchMiss}`)}
+      </p>
+    ) : null;
+  const pages = new Map(research.pages.map((page) => [page.index, page]));
+  // Each mark a link to its page, numbered as the list below.
+  const cited = research.text.replace(/\[ref_(\d+)\]/gu, (_mark, n: string) => {
+    const page = pages.get(Number(n));
+    return page ? `[[${n}]](${page.url})` : '';
+  });
+  return (
+    <Collapsible className='grid gap-2'>
+      <CollapsibleTrigger className='group flex w-fit items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground'>
+        <Globe aria-hidden className='size-3.5 shrink-0' />
+        {text('evaluation.research.done', {
+          time: localDate(research.at, language, meta.settings.timeZone),
+          count: research.pages.length,
+        })}
+        <ChevronRight
+          aria-hidden
+          className='size-3.5 transition-transform group-data-[panel-open]:rotate-90'
+        />
+      </CollapsibleTrigger>
+      <CollapsibleContent className='grid gap-2 rounded-lg border border-border bg-background/60 p-3'>
+        <Markdown compact newTab className='break-words'>
+          {cited}
+        </Markdown>
+        {research.pages.length > 0 && (
+          <ol className='grid gap-0.5 border-t border-border pt-2 text-xs'>
+            {research.pages.map((page) => (
+              <li key={page.index} className='flex min-w-0 gap-1.5'>
+                <span className='text-muted-foreground'>{page.index}.</span>
+                <a
+                  href={page.url}
+                  target='_blank'
+                  rel='noreferrer'
+                  className='min-w-0 truncate text-primary hover:underline'
+                  title={page.url}
+                >
+                  {page.title}
+                </a>
+                {page.site && (
+                  <span className='shrink-0 text-muted-foreground'>
+                    {page.site}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ol>
+        )}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 

@@ -401,6 +401,18 @@ export class CompanySignals {
     }
   }
 
+  // A lead follow-up's look-up of its company (lead-research.ts), asked
+  // with this agent's search and recorded as its use; null when no model
+  // searches. The question is written for how the searcher cites. A failed
+  // search throws its WebSearchError.
+  async lookUp(
+    question: (cite: 'refs' | 'urls') => string,
+  ): Promise<WebAnswer | null> {
+    const searcher = await this.searcher();
+    if (!searcher) return null;
+    return this.ask(searcher, question(citesUrls(searcher) ? 'urls' : 'refs'));
+  }
+
   // Someone who may edit the company has it checked now, whether or not
   // the daily check watches it.
   async checkNow(actor: Actor, companyId: string): Promise<CheckResult> {

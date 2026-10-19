@@ -946,6 +946,21 @@ const wording = {
       '写入公司 {{count}} 项',
     ],
     written: ['Written', '已写入'],
+    // A lead card's web look-up of its company (lead-research.ts).
+    research: {
+      done: [
+        'Looked the company up on the web, {{time}} · {{count}} pages',
+        '{{time}} 联网查了公司 · {{count}} 个来源',
+      ],
+      unavailable: [
+        'No model can search the web, so the company was not looked up this time',
+        '没有能联网搜索的模型，这次没有查公司',
+      ],
+      failed: [
+        'The web search failed, so the company was not looked up this time',
+        '联网搜索失败，这次没有查到公司信息',
+      ],
+    },
     nextStep: ['Next step', '下一步'],
     stepTask: ['Task', '任务'],
     stepEmail: ['Email', '邮件'],
@@ -1691,8 +1706,8 @@ const wording = {
       propose: ['Proposed by {{agent}}', '由 {{agent}} 提出'],
     },
     leads: [
-      'Reads a lead with its tasks, comments and mail, and recommends following up, nurturing, converting or closing it as invalid, with a grade and the next step. It also organises pasted text into new leads and proposes how to merge duplicate leads.',
-      '读取线索及其任务、评论和邮件，给出继续跟进、放入培育、转化或无效的建议，附等级和下一步；也负责 AI 整理新线索、提出重复线索的合并方案。',
+      'Reads a lead with its tasks, comments and mail, and what Company research found about its company on the web, and recommends following up, nurturing, converting or closing it as invalid, with a grade and the next step. It also organises pasted text into new leads and proposes how to merge duplicate leads.',
+      '读取线索及其任务、评论和邮件，以及公司情报联网查到的线索公司信息，给出继续跟进、放入培育、转化或无效的建议，附等级和下一步；也负责 AI 整理新线索、提出重复线索的合并方案。',
     ],
     opportunities: [
       'Reads a deal with its company, contacts, tasks, comments, approvals and mail, checks its terms against the approval standards, and recommends advancing, keeping at it, pausing or losing it, with the approvals to submit and the next step. It also organises pasted text into new opportunities.',
@@ -1707,8 +1722,8 @@ const wording = {
       '在任务当天早上为负责人做准备：任务要达成什么、从记录的任务、评论和邮件看进展到哪一步、对方都有谁、要问的问题、要带的材料、风险和要点。只有任务负责人和参与人能看到。也负责完成任务时整理任务结果。',
     ],
     signals: [
-      "Looks companies up on the web. For a new company, it fills the form with the company's public particulars. Each morning, it looks at what happened lately at the companies with an open deal or marked as watched: funding, hiring at scale, new executives, major news and risks. It keeps each with its sources on the company's page and tells the people selling to it; the deals' daily pass then follows up the company's open deals for one worth acting on.",
-      '联网了解客户公司。新建公司时，查找公司的公开资料填好表单；每天早上，查看有进行中商机或被标记关注的公司最近发生了什么：融资、扩张招聘、高管变动、重大动态和风险。每条带出处记在公司页上，并通知公司和商机的负责人；值得跟进的，由随后的商机每日巡检跟进这家公司进行中的商机。',
+      "Looks companies up on the web. For a new company, it fills the form with the company's public particulars. Before a lead's follow-up, when it is due, it looks the lead's company up: who it is, what changed there lately and whether it uses NocoBase. Each morning, it looks at what happened lately at the companies with an open deal or marked as watched: funding, hiring at scale, new executives, major news and risks. It keeps each with its sources on the company's page and tells the people selling to it; the deals' daily pass then follows up the company's open deals for one worth acting on.",
+      '联网了解客户公司。新建公司时，查找公司的公开资料填好表单；跟进线索前，需要时查线索的公司：是谁、最近有什么变化、是否在用 NocoBase；每天早上，查看有进行中商机或被标记关注的公司最近发生了什么：融资、扩张招聘、高管变动、重大动态和风险。每条带出处记在公司页上，并通知公司和商机的负责人；值得跟进的，由随后的商机每日巡检跟进这家公司进行中的商机。',
     ],
   },
   // The agent whose model and instructions the CRM's background work
