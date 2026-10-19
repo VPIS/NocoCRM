@@ -13,6 +13,31 @@ import {
 } from '#components/ui/dropdown-menu';
 import { cn } from 'cn';
 
+// Application change: the two Chinese scripts named as scripts. The
+// framework names a language with Intl.DisplayNames, by its region when
+// two share it ("Chinese (China)", "Chinese (Taiwan)"), and offers no
+// option to name them otherwise; a reader picks a script, not a region, so
+// these are named by their script's tag instead, each in itself.
+const SCRIPT_TAGS: Readonly<Record<string, string>> = {
+  'zh-CN': 'zh-Hans',
+  'zh-TW': 'zh-Hant',
+};
+const labelOf = (definition: {
+  readonly locale: string;
+  readonly label: string;
+}): string => {
+  const tag = SCRIPT_TAGS[definition.locale];
+  if (!tag) return definition.label;
+  try {
+    return (
+      new Intl.DisplayNames([tag], { type: 'language' }).of(tag) ??
+      definition.label
+    );
+  } catch {
+    return definition.label;
+  }
+};
+
 export interface LanguageSwitcherProps {
   readonly className?: string;
 }
@@ -69,8 +94,12 @@ export function LanguageSwitcher({
           {t('actions.language', { defaultValue: 'Language' })}
         </span>
         <span className='text-muted-foreground'>
-          {locales.find((definition) => definition.locale === locale)?.label ??
-            locale}
+          {(() => {
+            const current = locales.find(
+              (definition) => definition.locale === locale,
+            );
+            return current ? labelOf(current) : locale;
+          })()}
         </span>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent>
@@ -85,7 +114,7 @@ export function LanguageSwitcher({
               value={definition.locale}
               disabled={switching}
             >
-              {definition.label}
+              {labelOf(definition)}
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>

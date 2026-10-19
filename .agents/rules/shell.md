@@ -24,7 +24,7 @@ The account menu checks Better Auth sign-out results before refreshing the sessi
 
 The authorization provider clears the permission snapshot before rendering a new session. Route navigation and page guards subscribe to the authorization revision; preserve these checks when customizing the shell so account changes and permission updates take effect without a reload. Pending checks hide protected content, and failed checks deny access.
 
-The account menu language control in `client/layouts/components/language-switcher.tsx` uses a shadcn submenu with radio items. Render it inside `DropdownMenuContent` to preserve menu keyboard navigation and selection semantics.
+The account menu language control in `client/layouts/components/language-switcher.tsx` uses a shadcn submenu with radio items. Render it inside `DropdownMenuContent` to preserve menu keyboard navigation and selection semantics. It names `zh-CN` and `zh-TW` by their scripts (`SCRIPT_TAGS`, `zh-Hans` and `zh-Hant` through `Intl.DisplayNames`: Simplified and Traditional Chinese, each in itself) instead of the framework's labels, which tell two locales sharing a language apart by region; an application change to keep on upgrade.
 
 ## Branded loading
 

@@ -1,0 +1,533 @@
+import type { AppResource } from './en-US.js';
+import { crmZhTW } from './crm/zh-TW.js';
+
+// The pages in zh-TW: the template's copy (./system/), the AI skills'
+// display text and the CRM's own (./crm/zh-TW.ts), with the same keys as
+// ./en-US.ts. The template ships no zh-TW, so its copy is translated
+// here; a template upgrade that adds keys fails the type check until they
+// are translated.
+const zhTW: AppResource = {
+  'auth.passwordResetSuccess': '密碼已重設，請用新密碼登入。',
+  'auth.requestNewResetLink': '重新申請重設連結',
+  'deviceApproval.title': '授權裝置',
+  'deviceApproval.description':
+    '一個命令列或其他裝置要求以你的身分登入。只有在登入是你自己發起的時候才批准。',
+  'deviceApproval.enterCode': '輸入裝置上顯示的代碼。',
+  'deviceApproval.codeLabel': '代碼',
+  'deviceApproval.continue': '繼續',
+  'deviceApproval.checking': '正在檢查代碼…',
+  'deviceApproval.confirm': '確認此代碼與裝置上顯示的一致。',
+  'deviceApproval.client': '由 {{client}} 發起',
+  'deviceApproval.approve': '批准',
+  'deviceApproval.approving': '正在批准…',
+  'deviceApproval.deny': '拒絕',
+  'deviceApproval.denying': '正在拒絕…',
+  'deviceApproval.approved': '裝置已批准。回到終端機繼續操作，可以關閉此頁面。',
+  'deviceApproval.denied': '已拒絕要求，裝置沒有登入。可以關閉此頁面。',
+  'deviceApproval.expired': '此代碼已過期。請在裝置上重新發起登入。',
+  'deviceApproval.invalid': '此代碼無效。請對照裝置上的代碼重試。',
+  'deviceApproval.notYours': '此代碼已由另一個帳號處理。',
+  'deviceApproval.error': '出了點問題，請重試。',
+  'deviceApproval.retry': '重試',
+  'deviceApproval.otherCode': '輸入其他代碼',
+  'inbox.title': '收件匣',
+  'inbox.description': '傳給你的通知和請求。',
+  'inbox.views.all': '通知',
+  'inbox.views.todo': 'AI 建議',
+  'inbox.kinds.label': '類型',
+  'inbox.kinds.all': '全部類型',
+  'inbox.kinds.decision': '決定',
+  'inbox.kinds.info': '通知',
+  'inbox.tabs.decision': '待我決定',
+  'inbox.tabs.info': '通知',
+  'inbox.clearFilter': '清除篩選',
+  'inbox.noMatchDescription': '清除篩選，檢視所有類型。',
+  'inbox.readAll': '全部標為已讀',
+  'inbox.allRead': '已全部標為已讀。',
+  'inbox.loading': '載入中',
+  'inbox.loadFailed': '無法載入收件匣',
+  'inbox.loadFailedDescription': '請檢查網路後重試。',
+  'inbox.retry': '重試',
+  'inbox.loadMore': '載入更多',
+  'inbox.emptyAll': '這裡空空如也',
+  'inbox.empty.todo': '沒有等你處理的事項',
+  'inbox.empty.decision': '沒有等你決定的事項',
+  'inbox.empty.info': '沒有通知',
+  'inbox.emptyDescription': '傳給你的通知和請求會出現在這裡。',
+  'inbox.unread': '未讀',
+  'inbox.unreadCount': '{{count}} 則未讀',
+  'inbox.pendingDecisions': '{{count}} 項待處理',
+  'inbox.resolved': '已處理',
+  'inbox.outcomes.approved': '已批准',
+  'inbox.outcomes.rejected': '已駁回',
+  'inbox.outcomes.withdrawn': '已撤回',
+  'inbox.count': '×{{count}}',
+  'inbox.actionsFor': '{{title}} 的操作',
+  'inbox.actions.read': '標為已讀',
+  'inbox.actions.unread': '標為未讀',
+  'inbox.actions.delete': '刪除',
+  'inbox.deleted': '已刪除。',
+  'inbox.requestFailed': '請求失敗，請重試。',
+  'inbox.forbidden': '你沒有執行此操作的權限。',
+  'inbox.nothingSelected': '選擇一則檢視',
+  'inbox.back': '返回列表',
+  'inbox.open': '開啟',
+  'inbox.keyMove': '移動',
+  'inbox.keyOpen': '開啟',
+  'inbox.cancel': '取消',
+  'inbox.request.approve': '批准',
+  'inbox.request.reject': '駁回',
+  'inbox.request.commentPlaceholder': '寫點什麼…',
+  'inbox.request.commentFor': '{{action}}：{{title}}',
+  'inbox.request.quickSend': '傳送',
+  'inbox.request.newLine': '換行',
+  'inboxButton.title': '收件匣',
+  'inboxButton.pending': '收件匣，{{count}} 項待處理',
+  'inboxButton.unread': '收件匣，{{count}} 則未讀',
+  'inboxButton.pendingHint': '{{count}} 項等你處理，處理後減少。',
+  'inboxButton.unreadHint': '{{count}} 則未讀，閱讀後減少。',
+  'auth.welcome': '歡迎回來',
+  'auth.loginDescription': '使用使用者名稱或電子郵件和密碼登入',
+  'auth.registerTitle': '建立帳戶',
+  'auth.registerDescription': '建立帳戶以開始使用',
+  'auth.forgotTitle': '忘記密碼',
+  'auth.forgotDescription': '輸入電子郵件，如果帳戶存在，我們將傳送重設連結',
+  'auth.passwordResetUnavailable': '未開啟自助找回，請聯絡管理員重設密碼。',
+  'auth.capabilityLoadFailed': '無法檢查自助找回是否已開啟。',
+  'auth.retry': '重試',
+  'auth.loading': '載入中',
+  'auth.resetDescription': '為帳戶設定新密碼',
+  'auth.resetTitle': '重設密碼',
+  'auth.identifier': '使用者名稱或電子郵件',
+  'auth.password': '密碼',
+  'auth.signIn': '登入',
+  'auth.signingIn': '正在登入…',
+  'auth.hidePassword': '隱藏密碼',
+  'auth.showPassword': '顯示密碼',
+  'auth.forgotLink': '忘記密碼？',
+  'auth.noAccount': '還沒有帳戶？',
+  'auth.signUp': '註冊',
+  'auth.createAccount': '建立帳戶',
+  'auth.creatingAccount': '正在建立帳戶…',
+  'auth.name': '姓名',
+  'auth.username': '使用者名稱',
+  'auth.email': '電子郵件',
+  'auth.confirmPassword': '確認密碼',
+  'auth.existingAccount': '已有帳戶？',
+  'auth.passwordMismatch': '兩次輸入的密碼不一致。',
+  'auth.resetting': '正在重設…',
+  'auth.newPassword': '新密碼',
+  'auth.confirmNewPassword': '確認新密碼',
+  'auth.invalidResetLink': '此密碼重設連結無效或已過期。',
+  'auth.backToSignIn': '返回登入',
+  'auth.sendResetLink': '傳送重設連結',
+  'auth.sending': '正在傳送…',
+  'auth.resetSent': '如果帳戶存在，重設連結已傳送。',
+  'auth.rememberPassword': '記得密碼？',
+  'auth.methods': '登入方式',
+  'auth.or': '或使用以下方式繼續',
+  'auth.continueWith': '使用 {provider} 繼續',
+  'auth.about': '關於此應用程式',
+  'auth.platform': 'AI 原生應用程式平台',
+  'auth.marketingTitleFirst': '讓 AI 自由建構',
+  'auth.marketingTitleSecond': 'NocoBase 保障',
+  'auth.marketingTitleThird': '可靠運作',
+  'auth.marketingDescription':
+    '讓 AI 在靈活的前端框架上建構體驗，由 NocoBase 保障底層資料、權限與治理',
+  'auth.frontend': 'AI 原生前端',
+  'auth.frontendDescription': '在靈活的框架上自由建構介面',
+  'auth.foundation': 'NocoBase 基礎能力',
+  'auth.foundationDescription': '可靠的資料、存取控制與治理',
+  'auth.marketingFooter': '自由建構，可靠支撐',
+  'status.loading': '載入中',
+  'status.loadingPage': '正在載入頁面',
+  'status.denied': '無權存取',
+  'status.pageFailed': '無法載入頁面',
+  'status.retry': '重試',
+  'navigation.brandHome': 'NocoCRM 首頁',
+  'navigation.brandApps': 'NocoBase 應用程式',
+  'routeOverlay.close': '關閉',
+  'status.deniedDescription': '你沒有存取 {{label}} 的權限。',
+  'status.routeFailedDescription':
+    '無法載入 {{packageName}} 的路由 {{label}}。',
+  shell: {
+    buildFreely: 'AI 自由建構',
+    reliability: '<brand>NocoBase</brand> 保障可靠',
+  },
+  home: {
+    platform: 'NocoBase · AI 原生應用程式平台',
+    title: '說出需求，由 Agent 來建構',
+    description:
+      '這個應用程式透過和 Coding Agent 對話來開發。用平常的話說明業務需要什麼，它會在這個專案裡撰寫頁面、資料模型、介面和業務流程。',
+    steps: {
+      describe: {
+        title: '描述需求',
+        description: '說明誰來使用、要記錄哪些資料、希望發生什麼。',
+      },
+      build: {
+        title: '交給 Agent 建構',
+        description: '它會閱讀這個專案和內建能力，然後撰寫程式碼。',
+      },
+      review: {
+        title: '檢視並調整',
+        description: '重新整理頁面試用，有需要再用同樣的方式提出修改。',
+      },
+    },
+    example: {
+      title: '可以這樣提需求',
+      text: '幫我做一個採購訂單應用程式。\n\n訂單包含編號、採購事項、申請人、金額和審批狀態。申請人可以建立訂單，只能檢視自己的訂單；審批人可以檢視所有待審批訂單，並通過或駁回。\n審批完成後，用站內信通知申請人，點擊可以開啟對應訂單。',
+      hint: '貼到在這個專案中開啟的 Claude Code、Codex、Cursor 或其他 Coding Agent 中即可。',
+    },
+    capabilitiesTitle: '內建能力',
+    capabilitiesDescription:
+      'Agent 會直接使用這些能力，不必從零開發。開啟任意一項，取得可以修改和複製的提示詞。',
+    viewPrompts: '檢視提示詞（{{count}}）',
+    prompt: {
+      label: '提示詞',
+      hint: '複製前可以依自己的業務修改提示詞。關閉彈出視窗後，修改不會保留。',
+      copy: '複製',
+      copiedShort: '已複製',
+      copied: '提示詞已複製',
+      copyFailed: '無法複製，請選取文字後手動複製。',
+      reset: '還原預設',
+    },
+    capabilities: {
+      auth: {
+        title: '驗證',
+        description: '登入、註冊、找回密碼，以及企業統一身分登入。',
+        prompts: {
+          disableSignUp: {
+            label: '關閉註冊',
+            text: '這個應用程式只供公司員工使用，帳號由管理員統一建立。\n請關閉自助註冊，登入頁不再顯示註冊入口。\n現有員工仍能使用原帳號和密碼登入，保留忘記密碼入口。',
+          },
+          companySso: {
+            label: '企業帳號登入',
+            text: '請讓員工使用公司的統一身分平台登入，採用 OIDC。\n\n保留原有帳號密碼登入，在登入頁增加「企業帳號登入」入口。\n點擊後進入企業身分平台，登入成功後返回應用程式首頁。\n\n首次登入允許建立應用程式帳號，以身分平台的穩定使用者識別碼識別使用者。\n不要根據同名或相同電子郵件自動關聯現有帳號，新帳號沿用應用程式預設權限。\n\n請列出身分平台管理員需要提供的資訊，以及需要登記的回呼網址。',
+          },
+          apiKeys: {
+            label: '整合金鑰',
+            text: '在使用者選單中增加「整合金鑰」入口，接入應用程式現有的 API keys 能力。\n員工只能管理自己建立的 Key，建立時填寫用途名稱和有效天數。\n建立成功後只顯示一次完整 Key，並提示立即複製儲存。\n列表顯示名稱、可辨識的片段、狀態、有效期限和最近使用時間，支援撤銷並二次確認。\n不要在列表、日誌或詳情中顯示完整 Key。',
+          },
+        },
+      },
+      dataSources: {
+        title: '資料來源',
+        description: '選擇應用程式資料庫，接入現有外部資料庫中的業務資料。',
+        prompts: {
+          postgres: {
+            label: '切換資料庫',
+            text: '把應用程式資料庫從 SQLite 切換為 PostgreSQL。\n連線資訊從伺服器端執行設定讀取，不寫進原始碼。\n說明需要安裝的資料庫驅動程式和需要填寫的設定，並提醒我原有資料不會自動遷移。',
+          },
+          externalDatabase: {
+            label: '外部資料庫',
+            text: '將公司現有的財務資料庫作為外部資料來源接入，只讀取資料，不修改外部資料表。\n透過供應商編號比對，在供應商詳情增加「結算資料」，顯示結算週期、信用額度和結算狀態，並標明資料來源。\n供應商聯絡資訊仍從應用程式資料庫讀取，結算資料直接從外部資料庫讀取，不匯入應用程式資料庫。\n連線憑證從伺服器端執行設定讀取。',
+          },
+        },
+      },
+      authorization: {
+        title: '權限',
+        description: '控制誰能進入哪些頁面、執行哪些操作、檢視哪些資料。',
+        prompts: {
+          jobs: {
+            label: '職位權限',
+            text: '請為應用程式設定「採購申請人」和「訂單審批人」兩個職位。\n採購申請人可以進入訂單頁面，檢視本人申請的訂單。\n訂單審批人可以進入訂單頁面，檢視訂單，並批准或駁回待審批訂單。\n只有應用程式管理員可以調整職位權限和人員分配。\n請接入應用程式現有的權限能力，讓管理員以後可以調整權限和分配人員。',
+          },
+          dataScopes: {
+            label: '資料範圍',
+            text: '採購申請人只檢視自己申請的訂單，以訂單的申請人欄位判斷歸屬。\n訂單審批人可以檢視所有訂單，處理待審批訂單。\n管理員可以在權限集中分別調整兩個職位的訂單檢視範圍。',
+          },
+          restrictions: {
+            label: '限制規則',
+            text: 'Bob 臨時協助核對採購訂單，只允許他檢視金額不超過 2,000 元的訂單。\n為他的「檢視訂單」操作增加金額上限，保留現有職位和資料範圍。\n限制同時作用於他本人的訂單和分享給他的訂單。\n管理員可以調整金額或移除規則；移除前說明可見範圍可能擴大。',
+          },
+        },
+      },
+      workflow: {
+        title: '工作流程',
+        description:
+          '讓業務單據依階段推進，處理等待、逾時、失敗重試和處理記錄。',
+        prompts: {
+          stages: {
+            label: '流程階段',
+            text: '為採購訂單增加處理流程：待審批→待採購→已到貨→已完成。\n審批人可以批准或駁回，駁回必須填寫原因，訂單退回申請人修改後重新提交。\n採購員下單後進入待採購，確認到貨並上傳簽收單後進入已到貨，申請人確認後完成。\n訂單詳情只提供目前階段的操作，一般編輯不能直接修改流程階段。\n在伺服器端檢查階段和必填資訊，多人同時處理時不要覆蓋別人已提交的結果。',
+          },
+          backgroundExport: {
+            label: '背景匯出',
+            text: '增加訂單報表頁面，將現有訂單匯出為 CSV。\n提交後進入等待處理，由背景產生，成功後自動完成並提供下載入口。\n顯示目前階段、檔名、匯出訂單數，以及提交和系統處理的記錄。\n產生失敗時依規則重試，最終失敗保留結果供負責人處理；重複執行不要產生重複的報表檔案。\n重新整理頁面後仍可檢視進度與結果，只有獲得授權的人員可以匯出訂單。',
+          },
+          history: {
+            label: '處理記錄',
+            text: '在訂單詳情顯示目前流程階段和處理歷程。\n每筆記錄顯示操作人、時間、操作名稱、前後階段，以及駁回原因或簽收單。\n系統自動執行的動作標明由系統執行。\n重新整理頁面後仍保留進度和記錄，完成後可以回顧整個處理過程。',
+          },
+        },
+      },
+      scheduler: {
+        title: '排程任務',
+        description: '依時間自動執行業務處理，檢視下次執行時間和執行結果。',
+        prompts: {
+          reminder: {
+            label: '每日提醒',
+            text: '為現有訂單應用程式新增「待審批訂單提醒」。\n\n每個工作日北京時間上午 9 點，查找仍待審批的訂單，依審批人彙總，並向對應審批人傳送一則站內通知。\n通知顯示待審批訂單數量，點擊後開啟待審批訂單列表；沒有待審批訂單時不傳送。\n管理員可以檢視任務的執行時間和執行記錄，並暫停或恢復提醒。',
+          },
+          weeklyReport: {
+            label: '每週報表',
+            text: '每週一北京時間上午 8 點產生上週的銷售彙總報表，並通知業務負責人檢視。\n報表包含銷售額、訂單數量和各區域彙總。管理員可以檢視任務及執行記錄。',
+          },
+        },
+      },
+      notification: {
+        title: '通知',
+        description:
+          '在業務事件發生時，透過站內信、電子郵件或群組機器人傳送訊息。',
+        prompts: {
+          inApp: {
+            label: '站內信',
+            text: '我要在目前應用程式中做訂單審批，並用站內信通知申請人審批結果。\n\n訂單包含編號、名稱、申請人、金額和審批狀態。\n申請人可以檢視自己的訂單，審批人可以檢視待審批訂單並通過或駁回。如果已有訂單和審批功能，請直接沿用。\n\n審批完成後，只給該訂單的申請人傳送一則站內信。\n訊息標題說明通過或駁回，內文包含訂單編號、名稱和審批結果。\n點擊訊息可以開啟對應訂單詳情。\n待審批時不傳送，同一次審批結果只通知一次。\n通知傳送失敗不影響已儲存的審批結果。',
+          },
+          email: {
+            label: '電子郵件通知',
+            text: '請在現有訂單審批通知中增加電子郵件，使用應用程式已設定的郵件管道。\n\n訂單審批通過或駁回後，向申請人帳號中的電子郵件地址傳送審批結果。\n主旨包含訂單編號，內文包含訂單名稱和審批結果。\n保留現有站內信；申請人未填寫電子郵件時，只傳送站內信。\n郵件傳送失敗不影響審批結果和站內信。',
+          },
+        },
+      },
+      mail: {
+        title: '郵件',
+        description: '連結個人信箱，閱讀、回覆和傳送業務郵件。',
+        prompts: {
+          providers: {
+            label: '設定信箱服務商',
+            text: '為應用程式設定 mailbox.org 信箱接入，寫入伺服器端設定的 mail.providers：\n- IMAP 收信伺服器：imap.mailbox.org，連接埠 993，使用 SSL/TLS。\n- SMTP 寄信伺服器：smtp.mailbox.org，連接埠 465，使用 SSL/TLS。\n使用者在信箱帳號頁填寫自己的電子郵件地址、使用者名稱和密碼，並選擇首次同步的起始日期；信箱密碼不寫進設定或原始碼。',
+          },
+          mailCenter: {
+            label: '郵件中心',
+            text: '應用程式已內建郵件能力，請直接沿用，不要重新開發或另裝外掛程式。\n在導覽中增加「郵件中心」和「信箱帳號」兩個頁面，分別使用郵件能力提供的郵件工作台和信箱帳號頁面。\n使用者可以連結自己的信箱，同步來信，閱讀內文和附件，並回覆郵件；回覆時保留原郵件主旨和上下文，收件人使用原寄件人。\n每位使用者只處理自己連結的信箱。',
+          },
+          correspondence: {
+            label: '客戶往來郵件',
+            text: '在客戶詳情頁新增往來郵件區，沿用應用程式內建的郵件閱讀和編輯元件。\n顯示寄件人或收件人與目前客戶聯絡人電子郵件相符的郵件。業務人員可以在這裡閱讀內文、檢視附件和回覆，使用自己連結的信箱。',
+          },
+        },
+      },
+      file: {
+        title: '檔案',
+        description: '上傳檔案並關聯業務記錄，支援預覽和下載。',
+        prompts: {
+          attachments: {
+            label: '訂單附件',
+            text: '給現有訂單管理應用程式增加採購附件功能。\n\n在訂單詳情中新增附件區域，每個訂單可以上傳多個檔案，支援 PDF、圖片和 DOCX。\n顯示附件的檔名和大小，支援預覽、下載和移除。\n上傳後點擊儲存，將附件關聯到目前訂單；重新開啟訂單時仍能看到這些附件。\n有權檢視訂單的人員可以檢視和下載附件，申請人和審批人員可以新增或移除附件。\n移除附件只解除它與目前訂單的關聯，保留檔案。',
+          },
+          avatar: {
+            label: '員工頭像',
+            text: '給員工增加頭像，每名員工最多一張。\n支援上傳和更換頭像，在員工列表和詳情中顯示。\n更換後使用新頭像，重新整理頁面後仍能正常顯示。',
+          },
+        },
+      },
+      i18n: {
+        title: '多語言',
+        description: '切換介面語言，新增語言，設定預設語言。',
+        prompts: {
+          addLanguage: {
+            label: '新增語言',
+            text: '為應用程式增加西班牙語，介面和伺服器端提示都使用對應的翻譯，並在語言選單中提供西班牙語選項。',
+          },
+          defaultLanguage: {
+            label: '預設語言',
+            text: '把應用程式的預設語言設為簡體中文，沒有選過語言的使用者第一次開啟時看到中文。語言選單中繼續保留英文。',
+          },
+        },
+      },
+      theme: {
+        title: '主題',
+        description: '調整配色、字型和版面密度，切換淺色和深色模式。',
+        prompts: {
+          changeTheme: {
+            label: '修改主題',
+            text: '修改「緊湊」主題：將主色改為藍色，略微增大圓角。保留目前字型、字級和緊湊間距。',
+          },
+          newTheme: {
+            label: '新增主題',
+            text: '新增一個「森林」主題，以綠色為主色，背景柔和，圓角適中，陰影輕一些。',
+          },
+        },
+      },
+    },
+  },
+  appearance: {
+    title: '外觀',
+    mode: '色彩模式',
+    preset: '主題',
+    light: '淺色',
+    dark: '深色',
+    system: '跟隨系統',
+    themes: {
+      default: '寬鬆',
+      compact: '緊湊',
+    },
+  },
+  app: {
+    title: 'NocoCRM',
+  },
+  actions: {
+    close: '關閉',
+    save: '儲存',
+    cancel: '取消',
+    confirm: '確認',
+    language: '語言',
+  },
+  notices: {
+    serverLocaleFallback: '伺服器端不支援該語言，伺服器端內容已改用英文。',
+    languageChangeFailed: '未能完成語言切換，請重試。',
+  },
+  account: {
+    signOutFailed: '登出失敗，請重試。',
+    openMenu: '開啟帳戶選單',
+    fallback: '帳戶',
+    signOut: '登出',
+    signingOut: '正在登出…',
+  },
+  navigation: {
+    home: '工作台',
+    open: '開啟導覽',
+    close: '關閉導覽',
+    expand: '展開導覽',
+    collapse: '收合導覽',
+    toggle: '展開或收合導覽',
+    label: '應用程式導覽',
+    description: '前往本應用程式的頁面。',
+    breadcrumb: '麵包屑',
+    breadcrumbMore: '顯示中間層級',
+    back: '返回',
+  },
+  dataTable: {
+    noResults: '暫無資料。',
+    sortAscending: '遞增',
+    sortDescending: '遞減',
+    hideColumn: '隱藏',
+    view: '檢視',
+    toggleColumns: '顯示欄位',
+    selectedCount: '已選取 {{selected}} / {{total}} 列。',
+    rowsPerPage: '每頁列數',
+    pageOf: '第 {{page}} 頁，共 {{pageCount}} 頁',
+    firstPage: '第一頁',
+    previousPage: '上一頁',
+    nextPage: '下一頁',
+    lastPage: '最後一頁',
+  },
+  datePicker: {
+    placeholder: '選擇日期',
+    rangePlaceholder: '選擇日期範圍',
+  },
+  'Lead follow-up': '跟進線索',
+  'Review everything a lead has now (the lead itself, its tasks, comments and related records in the CRM) and recommend the next step — keep following up, nurture, convert or invalid — with the reasons; when following up, say clearly how to follow up and what exactly to do. Use when a new lead comes in, when the user asks to follow up a lead or follow it up again, or asks "what should I do next with this lead".':
+    '綜合檢視一條線索現在的全部資訊（線索本身、任務、備註和 CRM 裡的相關記錄），給出下一步建議：繼續跟進、放入培育、轉換還是無效，以及理由；繼續跟進時寫清楚怎麼跟、具體做什麼。新線索進來、使用者要求跟進或重新跟進、或問「這條線索下一步怎麼做」時使用。',
+  'Opportunity follow-up': '跟進商機',
+  'Reviews everything about an opportunity as it now stands (the opportunity itself, the company, contacts and their roles, tasks, comments, approvals, the source lead) and judges whether its stage holds up and what to do next — advance to the next stage, keep at it in the current stage, pause, or mark it lost — with the reasons, risks and gaps to fill; when advancing, spells out exactly what to do. Use when a lead\'s conversion opens a new opportunity, when the outcome of an opportunity\'s task has been recorded, when the user asks for a follow-up, or when asked "what is the next step for this opportunity?".':
+    '綜合檢視一個商機現在的全部資訊（商機本身、公司、聯絡人和角色、任務、備註、審批、來源線索），判斷它的階段站不站得住、下一步做什麼：推進到下一階段、留在本階段繼續推進、暫停還是輸單，以及理由、風險和要補的缺口；推進時寫清楚具體做什麼。線索轉換出新商機、記錄了商機任務的結果、使用者要求跟進，或問「這個商機下一步怎麼做」時使用。',
+  'Approval review': '審批輔助',
+  'Helps an approver judge whether an approval request (discount, payment terms, contract terms, delivery commitment) is worth approving — how far the asked terms are from the standard, the effect on the amount and on collection, the opportunity\'s situation and the evidence supporting this concession, the other approvals submitted with it on the same opportunity, how earlier requests of the same kind were decided, the risks and what the applicant left unclear — then recommends approve, approve on conditions, reject or ask for more information, and drafts the decision comment. Use it after an approval is submitted, or when the approver asks "should this approval be approved?".':
+    '幫審批人看一個審批申請（折扣、帳期、合約條款、交付承諾）值不值得批：申請的條件和標準差多少、對金額和收款的影響、商機的情況和支撐這次讓步的證據、同一商機一起提交的其他審批、以往同類審批是怎麼批的、風險和申請人沒說清的地方，最後給出批准、有條件批准、駁回或需要補充資訊的建議，並寫好審批意見。審批提交後、審批人問「這個審批該不該批」時使用。',
+  'Task preparation': '任務準備',
+  "Prepares a salesperson for a task they are about to do with a customer (a call, a meeting, a visit, a demo) — what the task should achieve, where things stand from the record's tasks, comments and mail, who is on the other side and what part each plays, the questions to ask, what to bring, the risks, and the points to cover in order. Use it on the morning of a task, or when the task's owner asks to be prepared.":
+    '為業務即將和客戶進行的任務（電話、會議、拜訪、展示）做準備：任務要達成什麼、從記錄的任務、評論和郵件看事情進展到哪一步、對方都有誰以及各自的角色、要問的問題、要帶的資料、風險，以及依順序要講的重點。在任務當天早上，或任務負責人要求準備時使用。',
+  flowDiagram: {
+    empty: '沒有可顯示的狀態。',
+    loading: '正在排列流程圖…',
+    failed: '無法排列這個流程圖。',
+    nodeHelp: '按 Enter 或空白鍵選取一個狀態。',
+    edgeHelp: '按 Enter 或空白鍵選取一個轉換。',
+  },
+  loginActivity: {
+    heading: '從一條線索，到一筆成交。',
+    description:
+      'AI 銷售團隊跟進每條線索和商機，備妥每次會面和每個審批，由你拍板。',
+    phases: {
+      lead: '線索',
+      deal: '商機',
+      won: '成交',
+    },
+    participants: {
+      rep: '王小芳',
+      leadAgent: 'AI 線索跟進',
+      prepAgent: 'AI 任務準備',
+      dealAgent: 'AI 商機跟進',
+      approvalAgent: 'AI 審批建議',
+      manager: '李明',
+      customer: '周曉',
+    },
+    capabilities: {
+      capture: 'AI 錄入',
+      followUp: 'AI 跟進',
+      pipeline: '商機管道',
+      prep: '任務準備',
+      mail: '郵件',
+      approval: '審批',
+    },
+    timeline: '動態',
+    lead: {
+      kind: '線索',
+      title: '周曉 / 星海物流',
+      need: '車隊調度，200 輛車 · 來自郵件',
+      grade: 'A 級',
+    },
+    deal: {
+      kind: '商機',
+      title: '車隊調度平台（企業版）',
+      company: '星海物流',
+      amount: '¥320,000',
+      owner: '王小芳',
+      won: '贏單',
+    },
+    leadStatuses: {
+      new: '新線索',
+      working: '跟進中',
+      converted: '已轉換',
+    },
+    stages: {
+      qualification: '需求確認',
+      proposal: '方案報價',
+      negotiation: '商務談判',
+      won: '贏單',
+    },
+    steps: {
+      captured: {
+        who: 'AI',
+        what: '從一封郵件整理出這條線索',
+      },
+      leadFollowUp: {
+        who: 'AI 跟進',
+        what: 'A 級，今天 15:00 致電',
+      },
+      converted: {
+        who: '王小芳',
+        what: '把線索轉換成商機',
+      },
+      prepared: {
+        who: 'AI',
+        what: '備妥明天的展示，用客戶自己的路線',
+      },
+      replied: {
+        who: '周曉',
+        what: '付款能否在開立發票後 60 天？',
+      },
+      dealFollowUp: {
+        who: 'AI 跟進',
+        what: '推進到商務談判，60 天帳期需要審批',
+      },
+      reviewed: {
+        who: 'AI 審批建議',
+        what: '有條件批准',
+      },
+      approved: {
+        who: '李明',
+        what: '批准了 60 天帳期',
+      },
+      won: {
+        who: '王小芳',
+        what: '用印合約已回簽',
+      },
+    },
+  },
+  crm: crmZhTW,
+};
+
+export default zhTW;

@@ -40,7 +40,7 @@ import { TaskLinkChips } from './task-links.js';
 import { TaskTimeField } from './task-time-field.js';
 import { DatePicker } from '../date-picker.js';
 import { format } from 'date-fns';
-import { enUS, zhCN } from 'date-fns/locale';
+import { dateLocale } from './date-locale.js';
 import { Button } from '../ui/button.js';
 import { Input } from '../ui/input.js';
 import { Textarea } from '../ui/textarea.js';
@@ -978,7 +978,7 @@ export function RecordForm({
           {...common}
           className='w-full'
           value={day}
-          locale={language.startsWith('zh') ? zhCN : enUS}
+          locale={dateLocale(language)}
           placeholder={toText(text('taskTime.pickDate'))}
           onChange={(picked) =>
             set(field.key, picked ? format(picked, 'yyyy-MM-dd') : null)

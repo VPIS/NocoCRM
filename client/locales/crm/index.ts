@@ -3425,5 +3425,8 @@ function translate<T>(value: T, index: 0 | 1): Translated<T> {
     ]),
   ) as Translated<T>;
 }
+// The shape every other language's CRM copy takes (./zh-TW.ts): the same
+// keys as `wording`, a string each.
+export type CrmWording = Translated<typeof wording>;
 export const crmEn = translate(wording, 0);
 export const crmZh = translate(wording, 1);

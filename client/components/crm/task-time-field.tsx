@@ -1,4 +1,4 @@
-import { enUS, zhCN } from 'date-fns/locale';
+import { dateLocale } from './date-locale.js';
 import { X } from 'lucide-react';
 import { useState, type ReactElement } from 'react';
 import { DatePicker } from '../date-picker.js';
@@ -109,7 +109,7 @@ export function TaskTimeField({
       size={size}
       className={small ? '' : 'w-56'}
       value={day}
-      locale={language.startsWith('zh') ? zhCN : enUS}
+      locale={dateLocale(language)}
       placeholder={toText(text(small ? 'fields.dueAt' : 'taskTime.pickDate'))}
       display={
         day

@@ -1,5 +1,5 @@
 import { CalendarClock } from 'lucide-react';
-import { enUS, zhCN } from 'react-day-picker/locale';
+import { dayPickerLocale } from './date-locale.js';
 import {
   useEffect,
   useRef,
@@ -216,7 +216,7 @@ export function DateTimeInput({
         >
           <Calendar
             mode='single'
-            locale={language.startsWith('zh') ? zhCN : enUS}
+            locale={dayPickerLocale(language)}
             selected={current ?? undefined}
             defaultMonth={current ?? undefined}
             onSelect={(day) => {
