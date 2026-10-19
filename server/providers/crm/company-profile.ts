@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { jsonIn } from './ai-model.js';
-import { countryCodes, subdivisionCode } from './geography.js';
-import { currencies, employeeRanges, industries } from './schema.js';
+import { countryCodes, streetAddress, subdivisionCode } from './geography.js';
+import { currencies, employeeRanges, industries, toText } from './schema.js';
 import type { WebAnswer, WebPage } from './web-research.js';
 
 // New company with the AI: what the web says of a company named by the
@@ -53,7 +53,8 @@ export function profileQuestion(
       country: 'ISO 3166-1 alpha-2 code of its headquarters, or null',
       state: 'state or province, or null',
       city: 'city, or null',
-      address: 'street address, or null',
+      address:
+        'the street, number and building only, without the country, province or city, or null',
       description:
         'two or three short paragraphs: what it does, its scale and where, what is notable',
       uncertain: ['the fields above you are not sure of'],
@@ -118,8 +119,8 @@ const among = (value: unknown, list: readonly string[]): string | undefined => {
 
 // The answer as the form's values: each field kept only when it is of the
 // field's kind (an option among the field's, a number, an address), the
-// province turned into its code, the pages cited as sources (all it read
-// when it cited none). Undefined when the answer holds no readable JSON.
+// address without the country, province or city, the province turned into
+// its code, the pages cited as sources (all it read when it cited none). Undefined when the answer holds no readable JSON.
 export function readProfile(answer: WebAnswer): CompanyProfile | undefined {
   const parsed = answerShape.safeParse(jsonIn(answer.text));
   if (!parsed.success) return undefined;
@@ -153,7 +154,16 @@ export function readProfile(answer: WebAnswer): CompanyProfile | undefined {
   }
   const city = text(found.city, 100);
   if (city) input.city = city;
-  const address = text(found.address, 500);
+  // The address without the region its own fields hold (or the answer
+  // names), as a capture's.
+  const written = text(found.address, 500);
+  const address =
+    written &&
+    streetAddress(written, {
+      country: toText(input.country ?? ''),
+      state: toText(input.state ?? '') || text(found.state, 100),
+      city: toText(input.city ?? ''),
+    });
   if (address) input.address = address;
   const description = text(found.description, 5000);
   if (description) input.description = description;

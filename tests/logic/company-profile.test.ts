@@ -117,4 +117,41 @@ describe('a company profile searched through the model gateway', () => {
       note: '[ref_1]',
     });
   });
+
+  it('keeps only the street part of the address, the region having its fields', () => {
+    const profile = (found: Record<string, unknown>) =>
+      readProfile({
+        text: JSON.stringify(found),
+        pages: [],
+        usage: { inputTokens: 0, outputTokens: 0 },
+      })?.input;
+    expect(
+      profile({
+        country: 'CN',
+        state: '北京市',
+        city: '北京市',
+        address: '北京市朝阳区望京东路4号恒基伟业大厦B座',
+      }),
+    ).toMatchObject({
+      city: '北京市',
+      address: '朝阳区望京东路4号恒基伟业大厦B座',
+    });
+    expect(
+      profile({
+        country: 'CN',
+        state: '浙江省',
+        city: '杭州',
+        address: '中国浙江省杭州市西湖区文三路90号',
+      }),
+    ).toMatchObject({ address: '西湖区文三路90号' });
+    // Nothing but the region: no address.
+    expect(
+      profile({
+        country: 'CN',
+        state: '浙江省',
+        city: '杭州',
+        address: '浙江省杭州市',
+      }),
+    ).not.toHaveProperty('address');
+  });
 });

@@ -289,11 +289,13 @@ export const definitions: Record<Entity, EntityDefinition> = {
       // Its annual revenue in a currency, as an opportunity's amount.
       field('currency', 'select', false, currencies),
       field('annualRevenue', 'number'),
+      // The address right after the city it is in, as a lead's: the form
+      // lays fields out in this order.
       ...geography,
+      field('address'),
       field('website', 'url'),
       // Its LinkedIn page, as a person's profile.
       field('linkedin', 'url'),
-      field('address'),
       field('description', 'textarea'),
       attachments,
     ],
