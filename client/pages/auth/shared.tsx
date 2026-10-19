@@ -1,7 +1,7 @@
-import { resolveAssetUrl } from '@nocobase/app-client';
 import { useTranslation } from '@nocobase/i18n/client';
 import type { ReactElement, ReactNode } from 'react';
 
+import { NocoCrmLogo } from '#components/brand-logo';
 import { AuthSplitLayout } from '#extensions/nocobase-auth-split-layout/auth-split-layout';
 
 import { ActivityPanel } from './activity-panel.js';
@@ -28,21 +28,15 @@ export function AuthPage({
       aside={<ActivityPanel />}
       asideLabel={t('auth.about')}
       description={description}
-      logo={
-        <>
-          <img
-            alt=''
-            className='dark:hidden'
-            src={resolveAssetUrl('/assets/logo-mark.png')}
-          />
-          <img
-            alt=''
-            className='hidden dark:block'
-            src={resolveAssetUrl('/assets/logo-mark-dark.png')}
-          />
-        </>
+      // The official lockup with the application's name, in place of the
+      // template's boxed mark beside the name in text.
+      name={
+        <NocoCrmLogo
+          role='img'
+          aria-label={t('app.title')}
+          className='h-6 w-auto'
+        />
       }
-      name={t('app.title')}
       title={title}
     >
       {children}
