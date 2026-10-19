@@ -25,6 +25,10 @@ export const PROFILE_FIELDS = [
 ] as const;
 type ProfileField = (typeof PROFILE_FIELDS)[number];
 
+// The fields whose URLs are the company's own pages, not the pages the
+// answer cites: kept as written (web-research.ts's `urlFields`).
+export const PROFILE_URL_FIELDS = ['website', 'linkedin'] as const;
+
 // The question: the company to look up, what the person added, and the
 // answer's JSON; cited by [ref_n] or by URL as the searcher cites.
 export function profileQuestion(

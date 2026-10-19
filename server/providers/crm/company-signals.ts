@@ -9,6 +9,7 @@ import { readSkill, recordUse, sourceOf } from './ai-model.js';
 import { agentOn, agentSwitches, AGENT_TRIGGERS } from './agents.js';
 import { compileFilter, conditions, type Actor } from './authorization.js';
 import {
+  PROFILE_URL_FIELDS,
   profileJsonQuestion,
   profileQuestion,
   readProfile,
@@ -354,6 +355,9 @@ export class CompanySignals {
           /\p{Script=Han}/u.test(name) || settings.aiLanguage.startsWith('zh'),
           citesUrls(searcher) ? 'urls' : 'refs',
         ),
+        true,
+        '',
+        PROFILE_URL_FIELDS,
       );
       let profile = readProfile(answer);
       // An answer in prose: reshaped without searching, its [ref_n] marks
@@ -740,10 +744,12 @@ export class CompanySignals {
     prompt: string,
     search = true,
     system = '',
+    urlFields: readonly string[] = [],
   ): Promise<WebAnswer> {
     const answer = await searchWeb(searcher, prompt, {
       search,
       ...(system ? { system } : {}),
+      ...(urlFields.length ? { urlFields } : {}),
       ...(this.options.fetch ? { fetch: this.options.fetch } : {}),
     });
     // Recorded as the CRM's other model calls are, on the usage page.

@@ -25,8 +25,9 @@ import {
 //   return the pages they read but number nothing, so the question asks
 //   for each event's page URLs (`citesUrls`), and the answer's URLs that
 //   are among the pages become [ref_n] marks here; any other URL is
-//   dropped. A model whose provider has no search tool is still asked, and
-//   its check fails saying so.
+//   dropped, except in the JSON fields the question names as data (a
+//   company's website), kept as written. A model whose provider has no
+//   search tool is still asked, and its check fails saying so.
 
 // DashScope's native API, China region, where the CRM's keys are. Only it
 // returns the pages a search read; its OpenAI-compatible mode does not.
@@ -96,6 +97,9 @@ export async function searchWeb(
     // message: the search is formed from the user's message, and a method
     // in it turned the search to the method's own words.
     system?: string;
+    // The answer's JSON fields whose URLs are data, not citations (a
+    // company's website): kept as written where URLs become [ref_n].
+    urlFields?: readonly string[];
   } = {},
 ): Promise<WebAnswer> {
   if (searcher.kind === 'gateway')
@@ -223,10 +227,13 @@ function pageKey(url: string): string {
 
 // The answer's URLs as [ref_n] marks naming the pages the search read,
 // numbered from 1 in the order it returned them; a URL among none of them
-// is dropped, with the angle brackets or parentheses around it.
+// is dropped, with the angle brackets or parentheses around it. A URL ends
+// at a double quote, so a JSON string holding one stays a string; one that
+// is the value of a JSON field among `urlFields` is left as written.
 export function citePages(
   text: string,
   sources: readonly { url: string; title?: string | undefined }[],
+  urlFields: readonly string[] = [],
 ): { text: string; pages: WebPage[] } {
   const pages: WebPage[] = [];
   const byKey = new Map<string, WebPage>();
@@ -249,9 +256,19 @@ export function citePages(
     pages.push(page);
     byKey.set(key, page);
   }
+  // Where the values of those fields lie in the text.
+  const kept: [number, number][] = [];
+  if (urlFields.length) {
+    const names = urlFields.join('|');
+    for (const match of text.matchAll(
+      new RegExp(`"(?:${names})"\\s*:\\s*"(?:[^"\\\\]|\\\\.)*"`, 'gu'),
+    ))
+      kept.push([match.index, match.index + match[0].length]);
+  }
   const cited = text.replace(
-    /[<([]?(https?:\/\/[^\s<>()\]]+)[>)\]]?/giu,
-    (_whole, url: string) => {
+    /[<([]?(https?:\/\/[^\s<>()\]"]+)[>)\]]?/giu,
+    (whole: string, url: string, at: number) => {
+      if (kept.some(([start, end]) => at >= start && at < end)) return whole;
       const page = byKey.get(pageKey(url.replace(/[.,;:]+$/u, '')));
       return page ? `[ref_${String(page.index)}]` : '';
     },
@@ -262,7 +279,12 @@ export function citePages(
 async function searchThroughGateway(
   searcher: Extract<WebSearcher, { kind: 'gateway' }>,
   prompt: string,
-  options: { signal?: AbortSignal; search?: boolean; system?: string },
+  options: {
+    signal?: AbortSignal;
+    search?: boolean;
+    system?: string;
+    urlFields?: readonly string[];
+  },
 ): Promise<WebAnswer> {
   const search = options.search !== false;
   const tools = search ? searchTool(searcher.provider) : undefined;
@@ -297,7 +319,7 @@ async function searchThroughGateway(
       : [],
   );
   const { text, pages } = search
-    ? citePages(result.text, sources)
+    ? citePages(result.text, sources, options.urlFields)
     : { text: result.text, pages: [] };
   return {
     text,
