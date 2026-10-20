@@ -445,6 +445,27 @@ export function registerWhatsAppRoutes(
       return c.body(null, 204);
     },
   );
+  router.delete(
+    '/whatsapp/conversations/:conversationId',
+    describeRoute({
+      tags,
+      summary: 'Delete a WhatsApp conversation',
+      operationId: 'deleteWhatsAppConversation',
+      description:
+        "For whoever manages the WhatsApp connection, such as for a conversation a test made: its messages and their files go, its customer's timeline lines are written again from their other conversations, and a customer left with none goes too. It cannot be undone.",
+      responses: {
+        '204': emptyResponse(),
+        ...apiErrorResponses,
+        '404': apiErrorResponse(404),
+      },
+    }),
+    apiValidator('param', ConversationParams),
+    async (c) => {
+      await manage(c);
+      await whatsapp().removeConversation(c.req.valid('param').conversationId);
+      return c.body(null, 204);
+    },
+  );
   router.post(
     '/whatsapp/conversations/:conversationId/link',
     describeRoute({

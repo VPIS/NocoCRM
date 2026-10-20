@@ -1705,6 +1705,11 @@ export const crmEsES: CrmWording = {
     spamTitle: '¿Marcar “{{name}}” como spam?',
     spamBody: 'No se te avisará de sus mensajes; los mensajes se conservan.',
     spammed: '“{{name}}” marcado como spam',
+    deleteConversation: 'Eliminar conversación',
+    deleteTitle: '¿Eliminar la conversación con «{{name}}»?',
+    deleteBody:
+      'Se eliminan sus mensajes y archivos, y sus entradas desaparecen de la cronología de los registros. No se puede deshacer.',
+    deleted: 'Conversación con «{{name}}» eliminada',
     setAside: {
       dismissed: 'Apartado como no cliente',
       spam: 'Apartado como spam',

@@ -1681,6 +1681,11 @@ export const crmViVN: CrmWording = {
     spamBody:
       'Bạn sẽ không được thông báo về tin nhắn của họ; các tin nhắn vẫn được giữ lại.',
     spammed: 'Đã đánh dấu “{{name}}” là tin rác',
+    deleteConversation: 'Xóa cuộc trò chuyện',
+    deleteTitle: 'Xóa cuộc trò chuyện với “{{name}}”?',
+    deleteBody:
+      'Tin nhắn và tệp của cuộc trò chuyện sẽ bị xóa, các mục liên quan cũng bị gỡ khỏi dòng thời gian của bản ghi. Không thể hoàn tác.',
+    deleted: 'Đã xóa cuộc trò chuyện với “{{name}}”',
     setAside: {
       dismissed: 'Đã để riêng vì không phải khách hàng',
       spam: 'Đã để riêng vì là tin rác',

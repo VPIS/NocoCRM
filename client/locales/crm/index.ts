@@ -2587,6 +2587,19 @@ const wording = {
       '之后不再通知他们的消息，消息仍会保存。',
     ],
     spammed: ['Marked “{{name}}” as spam', '已将“{{name}}”标为垃圾消息'],
+    deleteConversation: ['Delete conversation', '删除对话'],
+    deleteTitle: [
+      'Delete the conversation with “{{name}}”?',
+      '删除与“{{name}}”的对话？',
+    ],
+    deleteBody: [
+      "Its messages and files are deleted, and its lines leave the records' timelines. This cannot be undone.",
+      '对话里的消息和文件都会删除，记录时间线上的相关条目也会移除，删除后无法恢复。',
+    ],
+    deleted: [
+      'Deleted the conversation with “{{name}}”',
+      '已删除与“{{name}}”的对话',
+    ],
     setAside: {
       dismissed: ['Set aside as not a customer', '已标为不是客户'],
       spam: ['Set aside as spam', '已标为垃圾消息'],

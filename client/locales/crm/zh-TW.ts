@@ -1601,6 +1601,11 @@ export const crmZhTW: CrmWording = {
     spamTitle: '將「{{name}}」標為垃圾訊息？',
     spamBody: '之後不再通知他們的訊息，訊息仍會保存。',
     spammed: '已將「{{name}}」標為垃圾訊息',
+    deleteConversation: '刪除對話',
+    deleteTitle: '刪除與「{{name}}」的對話？',
+    deleteBody:
+      '對話裡的訊息和檔案都會刪除，記錄時間軸上的相關條目也會移除，刪除後無法復原。',
+    deleted: '已刪除與「{{name}}」的對話',
     setAside: {
       dismissed: '已標為不是客戶',
       spam: '已標為垃圾訊息',

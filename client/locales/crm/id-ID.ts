@@ -1688,6 +1688,11 @@ export const crmIdID: CrmWording = {
     spamBody:
       'Anda tidak akan diberi tahu tentang pesan mereka; pesannya tetap disimpan.',
     spammed: '“{{name}}” ditandai sebagai spam',
+    deleteConversation: 'Hapus percakapan',
+    deleteTitle: 'Hapus percakapan dengan “{{name}}”?',
+    deleteBody:
+      'Pesan dan filenya dihapus, dan entrinya hilang dari linimasa catatan. Tindakan ini tidak dapat dibatalkan.',
+    deleted: 'Percakapan dengan “{{name}}” dihapus',
     setAside: {
       dismissed: 'Disisihkan sebagai bukan pelanggan',
       spam: 'Disisihkan sebagai spam',

@@ -1712,6 +1712,11 @@ export const crmDeDE: CrmWording = {
     spamBody:
       'Sie werden über diese Nachrichten nicht mehr benachrichtigt; die Nachrichten bleiben erhalten.',
     spammed: '„{{name}}“ als Spam markiert',
+    deleteConversation: 'Unterhaltung löschen',
+    deleteTitle: 'Unterhaltung mit „{{name}}“ löschen?',
+    deleteBody:
+      'Ihre Nachrichten und Dateien werden gelöscht, ihre Einträge verschwinden aus den Verläufen der Datensätze. Das lässt sich nicht rückgängig machen.',
+    deleted: 'Unterhaltung mit „{{name}}“ gelöscht',
     setAside: {
       dismissed: 'Als „Kein Kunde“ zurückgestellt',
       spam: 'Als Spam zurückgestellt',

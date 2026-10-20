@@ -1703,6 +1703,11 @@ export const crmFrFR: CrmWording = {
     spamBody:
       'Vous ne serez plus prévenu de ses messages ; les messages sont conservés.',
     spammed: '« {{name}} » marqué comme spam',
+    deleteConversation: 'Supprimer la conversation',
+    deleteTitle: 'Supprimer la conversation avec « {{name}} » ?',
+    deleteBody:
+      'Ses messages et fichiers sont supprimés, et ses entrées quittent l’historique des fiches. Cette action est irréversible.',
+    deleted: 'Conversation avec « {{name}} » supprimée',
     setAside: {
       dismissed: 'Mis de côté comme non client',
       spam: 'Mis de côté comme spam',

@@ -1689,6 +1689,11 @@ export const crmPtBR: CrmWording = {
     spamTitle: 'Marcar “{{name}}” como spam?',
     spamBody: 'Você não será avisado das mensagens; as mensagens são mantidas.',
     spammed: '“{{name}}” marcado como spam',
+    deleteConversation: 'Excluir conversa',
+    deleteTitle: 'Excluir a conversa com “{{name}}”?',
+    deleteBody:
+      'As mensagens e os arquivos dela são excluídos, e as entradas saem da linha do tempo dos registros. Não é possível desfazer.',
+    deleted: 'Conversa com “{{name}}” excluída',
     setAside: {
       dismissed: 'Separado como não cliente',
       spam: 'Separado como spam',

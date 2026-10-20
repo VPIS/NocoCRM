@@ -478,6 +478,55 @@ describe('the workspace', () => {
     expect(screen.getByText(crmEn.whatsapp.setAside.dismissed)).toBeTruthy();
   });
 
+  it("deletes a conversation for the connection's managers after asking, and goes back to the list", async () => {
+    const user = userEvent.setup();
+    respond();
+    render(routes('/whatsapp/c1?view=all'));
+    await user.click(
+      await screen.findByRole('button', { name: 'Actions for Ana Souza' }),
+    );
+    await user.click(
+      await screen.findByRole('menuitem', {
+        name: crmEn.whatsapp.deleteConversation,
+      }),
+    );
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText(crmEn.whatsapp.deleteBody)).toBeTruthy();
+    await user.click(
+      within(dialog).getByRole('button', {
+        name: crmEn.whatsapp.deleteConversation,
+      }),
+    );
+    await waitFor(() =>
+      expect(state.api).toHaveBeenCalledWith(
+        'whatsapp/conversations/c1',
+        'DELETE',
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole('heading', { name: 'Ana Souza' })).toBe(null),
+    );
+    expect(screen.getByText(crmEn.whatsapp.choose)).toBeTruthy();
+  });
+
+  it("offers no deleting to a reader who doesn't manage the connection", async () => {
+    const user = userEvent.setup();
+    state.meta = { ...state.meta, settingsAccess: false };
+    respond();
+    render(routes('/whatsapp/c1'));
+    await user.click(
+      await screen.findByRole('button', { name: 'Actions for Ana Souza' }),
+    );
+    expect(
+      await screen.findByRole('menuitem', { name: crmEn.whatsapp.dismiss }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('menuitem', {
+        name: crmEn.whatsapp.deleteConversation,
+      }),
+    ).toBe(null);
+  });
+
   it('says what each empty view holds', async () => {
     respond({
       'whatsapp/conversations?view=all&page=1&pageSize=50': {

@@ -1671,6 +1671,11 @@ export const crmJaJP: CrmWording = {
     spamBody:
       'この相手からのメッセージは通知されなくなります。メッセージは保持されます。',
     spammed: '「{{name}}」をスパムとしてマークしました',
+    deleteConversation: '会話を削除',
+    deleteTitle: '「{{name}}」との会話を削除しますか？',
+    deleteBody:
+      '会話のメッセージとファイルは削除され、レコードのタイムラインからも該当する項目が消えます。元に戻すことはできません。',
+    deleted: '「{{name}}」との会話を削除しました',
     setAside: {
       dismissed: '顧客ではないとして除外済み',
       spam: 'スパムとして除外済み',

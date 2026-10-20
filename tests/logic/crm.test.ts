@@ -13960,4 +13960,74 @@ describe('WhatsApp', () => {
       error: { reason: 'WINDOW_CLOSED' },
     });
   });
+
+  it("deletes a conversation for the connection's managers, with its messages, its customer and their timeline lines", async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Test Sender',
+      company: 'Test Co',
+      phone: '+34 611 222 333',
+      source: 'website',
+    });
+    const now = new Date();
+    await deliver(
+      delivery({ waId: '34611222333', name: 'Tester' }, [
+        text('wamid.delete-1', 'Just a test', now),
+        text('wamid.delete-2', 'Another test', now),
+      ]),
+    );
+    await whatsapp.process(now);
+    const customer = await database
+      .query()
+      .selectFrom('crmWaContacts')
+      .select(['id'])
+      .where('waId', '=', '34611222333')
+      .executeTakeFirstOrThrow();
+    const conversation = await database
+      .query()
+      .selectFrom('crmWaConversations')
+      .select(['id'])
+      .where('waContactId', '=', toText(customer.id))
+      .executeTakeFirstOrThrow();
+    const id = toText(conversation.id);
+    const lines = () =>
+      database
+        .query()
+        .selectFrom('crmHistory')
+        .select('id')
+        .where('action', '=', 'whatsapp')
+        .where('recordId', '=', toText(lead.id))
+        .execute();
+    expect(await lines()).toHaveLength(1);
+    const path = `/whatsapp/conversations/${id}`;
+    // Only whoever manages the connection deletes, not a reader.
+    expect((await request(path, undefined, 'DELETE')).status).toBe(401);
+    expect((await request(path, 'rep', 'DELETE')).status).toBe(403);
+    expect((await request(path, 'admin', 'DELETE')).status).toBe(204);
+    const left = async (table: string, column: string, value: string) =>
+      (
+        await database
+          .query()
+          .selectFrom(table as 'crmWaMessages')
+          .select('id')
+          .where(column as 'id', '=', value)
+          .execute()
+      ).length;
+    expect(await left('crmWaMessages', 'conversationId', id)).toBe(0);
+    expect(await left('crmWaConversations', 'id', id)).toBe(0);
+    expect(await left('crmWaContacts', 'id', toText(customer.id))).toBe(0);
+    expect(
+      await left('crmWaIdentities', 'waContactId', toText(customer.id)),
+    ).toBe(0);
+    expect(await lines()).toHaveLength(0);
+    expect((await request(path, 'admin')).status).toBe(404);
+    expect((await request(path, 'admin', 'DELETE')).status).toBe(404);
+    // A later message starts afresh.
+    await deliver(
+      delivery({ waId: '34611222333', name: 'Tester' }, [
+        text('wamid.delete-3', 'Back again', new Date()),
+      ]),
+    );
+    await whatsapp.process(new Date());
+    expect(await lines()).toHaveLength(1);
+  });
 });

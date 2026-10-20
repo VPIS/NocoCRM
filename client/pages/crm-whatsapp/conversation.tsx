@@ -58,8 +58,10 @@ import { WhatsAppFailure } from '../../components/crm/whatsapp/failure.js';
 // bottom, asked again every few seconds. A customer linked to no record is
 // linked to a lead or a contact (…/link), made a lead (…/new-lead), set
 // aside as not a customer, or marked as spam; after each, focus goes to the
-// customer's name, the control that had it being gone (A6). The reply box
-// is under the messages (composer.tsx).
+// customer's name, the control that had it being gone (A6). Whoever manages
+// the WhatsApp connection may also delete the conversation, such as one a
+// test made, after which the list shows again. The reply box is under the
+// messages (composer.tsx).
 
 export interface ConversationContext {
   conversation: Conversation;
@@ -162,6 +164,7 @@ export default function ConversationPane(): ReactElement {
   };
   const [busy, setBusy] = useState<string>();
   const [confirmSpam, setConfirmSpam] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const setState = async (state: CustomerState): Promise<Conversation> =>
     api<{ data: Conversation }>(
       `whatsapp/conversations/${encodeURIComponent(conversationId)}/link`,
@@ -266,6 +269,7 @@ export default function ConversationPane(): ReactElement {
         onDismiss={() => quick('dismissed')}
         onRestore={() => quick('unlinked')}
         onSpam={() => setConfirmSpam(true)}
+        onDelete={() => setConfirmDelete(true)}
         search={params.toString() ? `?${params.toString()}` : ''}
       />
       {query.error ? (
@@ -311,6 +315,37 @@ export default function ConversationPane(): ReactElement {
         onGone={gone}
         finalFocus={() => nameRef.current}
       />
+      <ConfirmAction
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        destructive
+        title={toText(
+          text('whatsapp.deleteTitle', { name: conversation.contact.name }),
+        )}
+        description={toText(text('whatsapp.deleteBody'))}
+        confirmLabel={toText(text('whatsapp.deleteConversation'))}
+        onConfirm={async () => {
+          await api(
+            `whatsapp/conversations/${encodeURIComponent(conversationId)}`,
+            'DELETE',
+          );
+          queryClient.removeQueries({ queryKey: key });
+          refreshLists();
+          toaster.show({
+            type: 'success',
+            title: toText(
+              text('whatsapp.deleted', { name: conversation.contact.name }),
+            ),
+          });
+          void navigate(`/whatsapp${listSearch}`);
+        }}
+        onGone={gone}
+        finalFocus={() =>
+          document.querySelector<HTMLElement>(
+            '[role="tab"][aria-selected="true"]',
+          )
+        }
+      />
       <Outlet context={context} />
     </>
   );
@@ -323,6 +358,7 @@ function ConversationHeader({
   onDismiss,
   onRestore,
   onSpam,
+  onDelete,
   search,
 }: {
   conversation: Conversation;
@@ -331,6 +367,7 @@ function ConversationHeader({
   onDismiss: () => void;
   onRestore: () => void;
   onSpam: () => void;
+  onDelete: () => void;
   search: string;
 }): ReactElement {
   const { text } = useCrmText();
@@ -340,6 +377,9 @@ function ConversationHeader({
   const state = contact.state;
   const RecordIcon = ENTITY_ICONS[record?.entity ?? 'contacts'];
   const mayCreateLead = Boolean(meta?.permissions.leads?.create);
+  // Deleting is the connection's managers' (server: DELETE …/:id).
+  const mayDelete = Boolean(meta?.settingsAccess);
+  const mayChange = state === 'unlinked' || state === 'linked';
   const overlay = (path: string) => ({
     pathname: `/whatsapp/${encodeURIComponent(conversation.id)}/${path}`,
     search,
@@ -415,7 +455,7 @@ function ConversationHeader({
             {text('whatsapp.restore')}
           </Button>
         )}
-        {state === 'unlinked' || state === 'linked' ? (
+        {mayChange || mayDelete ? (
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -432,13 +472,25 @@ function ConversationHeader({
               {busy === 'dismissed' ? <Spinner /> : <MoreHorizontalIcon />}
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end' className='w-auto min-w-40'>
-              <DropdownMenuItem onClick={onDismiss}>
-                {text('whatsapp.dismiss')}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant='destructive' onClick={onSpam}>
-                {text('whatsapp.spam')}
-              </DropdownMenuItem>
+              {mayChange ? (
+                <>
+                  <DropdownMenuItem onClick={onDismiss}>
+                    {text('whatsapp.dismiss')}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant='destructive' onClick={onSpam}>
+                    {text('whatsapp.spam')}
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+              {mayDelete ? (
+                <>
+                  {mayChange ? <DropdownMenuSeparator /> : null}
+                  <DropdownMenuItem variant='destructive' onClick={onDelete}>
+                    {text('whatsapp.deleteConversation')}
+                  </DropdownMenuItem>
+                </>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         ) : null}

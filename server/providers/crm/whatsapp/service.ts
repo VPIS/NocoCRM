@@ -1869,6 +1869,50 @@ export class WhatsAppService {
     return this.conversation(actor, id, { pageSize: 50 });
   }
 
+  // A conversation deleted, by whoever manages the connection (the route
+  // checks), such as one a test sent: its messages go, and its customer's
+  // timeline lines are written again from what is left on their other
+  // numbers; a customer left with no conversation goes too, with their ids
+  // and lines, so a later message starts afresh. The files its messages
+  // held go with the file sweep, no message naming them; the deliveries
+  // they came in stay in the inbox, already processed.
+  async removeConversation(id: string): Promise<void> {
+    const { contact } = await this.contactOfConversation(id);
+    const contactId = toText(contact.id);
+    await this.service.database.transaction(async ({ query }) => {
+      await query
+        .deleteFrom('crmWaMessages')
+        .where('conversationId', '=', id)
+        .execute();
+      await query
+        .deleteFrom('crmWaConversations')
+        .where('id', '=', id)
+        .execute();
+      const other = await query
+        .selectFrom('crmWaConversations')
+        .select('id')
+        .where('waContactId', '=', contactId)
+        .executeTakeFirst();
+      if (other) {
+        await this.rewriteTimeline(query, contact);
+        return;
+      }
+      await query
+        .deleteFrom('crmHistory')
+        .where('action', '=', 'whatsapp')
+        .where('sourceKey', 'like', `${contactId}:%`)
+        .execute();
+      await query
+        .deleteFrom('crmWaIdentities')
+        .where('waContactId', '=', contactId)
+        .execute();
+      await query
+        .deleteFrom('crmWaContacts')
+        .where('id', '=', contactId)
+        .execute();
+    });
+  }
+
   // The messages of a record's people: a lead's, a contact's, a company's
   // contacts', a deal's contacts'. One person's at a time, the latest to
   // write unless another is asked for, since the team's replies to two
