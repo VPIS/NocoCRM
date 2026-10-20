@@ -1108,7 +1108,7 @@ export const crmZhTW: CrmWording = {
     },
   },
   aiLanguages: {
-    'zh-CN': '簡體中文',
+    'zh-CN': '中文（簡體）',
     'en-US': 'English',
   },
   inbox: {
