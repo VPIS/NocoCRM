@@ -478,6 +478,6 @@ describe('the agent conversations', () => {
       '你好',
     );
     expect(screen.getByRole('button', { name: '发送' })).toBeDisabled();
-    expect(screen.getByText('它的模型现在不可用')).toBeTruthy();
+    expect(screen.getByText('还没有配置 AI 模型')).toBeTruthy();
   });
 });

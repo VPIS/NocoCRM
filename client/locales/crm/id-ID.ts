@@ -750,6 +750,8 @@ export const crmIdID: CrmWording = {
     ask: 'Diskusikan',
     revise: 'Sesuaikan',
     adjusting: 'Menyesuaikan…',
+    needsModel:
+      'Belum ada model AI yang disiapkan. Minta administrator untuk menambahkannya.',
     revisePlaceholder: 'Beri tahu AI apa yang perlu diubah',
     revising: 'AI sedang merevisi saran…',
     instructionBy: '{{name}} meminta: {{text}}',
@@ -1523,7 +1525,7 @@ export const crmIdID: CrmWording = {
       forbidden: 'Anda tidak boleh menggunakan Agent ini',
       noRunner:
         'Saat ini tidak ada runner yang dapat menjalankannya untuk Anda',
-      modelUnavailable: 'Modelnya saat ini tidak tersedia',
+      modelUnavailable: 'Belum ada model AI yang disiapkan',
     },
   },
   plans: {

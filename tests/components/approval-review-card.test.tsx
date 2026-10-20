@@ -118,7 +118,7 @@ describe('the approval review card', () => {
     );
   });
 
-  it('is decided as it is without a model to ask, its redo box gone', () => {
+  it('is decided as it is without a model to ask, its redo button greyed', async () => {
     const card = () =>
       render(
         <ReviewPanel
@@ -136,7 +136,14 @@ describe('the approval review card', () => {
     card();
     expect(screen.getByText('折扣在标准之内，建议批准。')).toBeTruthy();
     expect(screen.getByRole('button', { name: /按建议批准/ })).toBeTruthy();
-    expect(screen.queryByPlaceholderText('告诉 AI 怎么改')).toBeNull();
+    await userEvent.type(
+      screen.getByPlaceholderText('告诉 AI 怎么改'),
+      '再看看',
+    );
+    expect(
+      (screen.getByRole('button', { name: '调整' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
   });
 
   it('offers only Discuss to anyone but the approver', () => {

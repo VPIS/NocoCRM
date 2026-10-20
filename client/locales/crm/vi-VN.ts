@@ -742,6 +742,8 @@ export const crmViVN: CrmWording = {
     ask: 'Thảo luận',
     revise: 'Điều chỉnh',
     adjusting: 'Đang điều chỉnh…',
+    needsModel:
+      'Chưa thiết lập mô hình AI nào. Hãy nhờ quản trị viên thêm một mô hình.',
     revisePlaceholder: 'Cho AI biết cần thay đổi gì',
     revising: 'AI đang sửa đề xuất…',
     instructionBy: '{{name}} yêu cầu: {{text}}',
@@ -1516,7 +1518,7 @@ export const crmViVN: CrmWording = {
       agentArchived: 'Agent này đã được lưu trữ',
       forbidden: 'Bạn không được phép dùng Agent này',
       noRunner: 'Hiện không có Runner nào có thể chạy nó cho bạn',
-      modelUnavailable: 'Mô hình của nó hiện không khả dụng',
+      modelUnavailable: 'Chưa thiết lập mô hình AI nào',
     },
   },
   plans: {

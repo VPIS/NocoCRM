@@ -83,6 +83,7 @@ import { useAgentWords } from './work-agent-name.js';
 import { AgentWords } from './work-agent.js';
 import { cardPin, recordPin } from './agent-chat/ask.js';
 import { DiscussButton } from './agent-chat/discuss-button.js';
+import { ReviseButton, RerunButton, RunButton } from './ai-buttons.js';
 
 // The AI's follow-up recommendation for a lead, as the server keeps it in the lead's
 // activity feed (server/providers/crm/ai-entries.ts).
@@ -326,7 +327,11 @@ export function EvaluationStatus({
   // One chip, not a row of its own: what the AI concluded and where that
   // stands. It opens the evaluation in the timeline, where it is handled;
   // the details say more on hover.
-  const again = request?.available && entry.status !== 'running';
+  // Without a model it stays, greyed (ai-buttons.tsx).
+  const again =
+    request && (request.available || request.needsModel)
+      ? entry.status !== 'running'
+      : false;
   // Where it stands, in words: who decided it and when, once decided.
   const statusLine = toText(
     decided
@@ -405,35 +410,21 @@ export function EvaluationStatus({
         </TooltipContent>
       </Tooltip>
       {/* Following it up again, after where it stands. */}
-      {again ? (
-        <>
-          <span aria-hidden className='h-3.5 w-px shrink-0 bg-primary/20' />
-          {/* Following it up again, in a word, its full name on hover. */}
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <button
-                  type='button'
-                  disabled={request.busy}
-                  onClick={request.ask}
-                  aria-label={words(entity, 'rerun', 'evaluation.askAgain')}
-                  className='flex h-full shrink-0 items-center gap-1 rounded-r-lg px-2 font-medium text-primary transition-colors hover:bg-primary/10 disabled:opacity-50'
-                />
-              }
-            >
-              {request.busy ? <Spinner className='size-3.5' /> : null}
-              {text('evaluation.rerun')}
-            </TooltipTrigger>
-            <TooltipContent side='bottom'>
-              <AgentWords
-                inButton
-                work={entity}
-                wordKey='rerun'
-                fallback='evaluation.askAgain'
-              />
-            </TooltipContent>
-          </Tooltip>
-        </>
+      {again && request ? (
+        <RerunButton
+          asks={request.available}
+          busy={request.busy}
+          onAsk={request.ask}
+          label={words(entity, 'rerun', 'evaluation.askAgain')}
+          hint={
+            <AgentWords
+              inButton
+              work={entity}
+              wordKey='rerun'
+              fallback='evaluation.askAgain'
+            />
+          }
+        />
       ) : null}
     </div>
   );
@@ -448,28 +439,17 @@ export function EvaluateButton({
 }: {
   request: FollowUpRequest;
 }): ReactElement | null {
-  if (!request.available || request.asked) return null;
-  // Shaped as the suggestion's chip it gives way to (EvaluationStatus): as
-  // tall as the small buttons beside it, on the AI's tint, led by its mark.
+  if (!(request.available || request.needsModel) || request.asked) return null;
+  // Shaped as the suggestion's chip it gives way to (EvaluationStatus).
   return (
-    <button
-      type='button'
-      className='inline-flex h-7 items-center gap-1.5 rounded-lg bg-primary/10 px-2.5 font-sans text-sm font-medium tracking-normal text-primary transition-colors hover:bg-primary/15 disabled:opacity-60 dark:bg-primary/20'
-      disabled={request.busy}
-      onClick={request.ask}
-    >
-      {request.busy ? (
-        <Spinner className='size-3.5' />
-      ) : (
-        <Sparkles className='size-3.5' />
-      )}
+    <RunButton asks={request.available} busy={request.busy} onAsk={request.ask}>
       <AgentWords
         inButton
         work={request.entity}
         wordKey='run'
         fallback='evaluation.start'
       />
-    </button>
+    </RunButton>
   );
 }
 
@@ -993,8 +973,9 @@ export function VerdictPanel({
           the fields their writing. */}
       {entry.status === 'pending' && verdict && (
         <div className='grid gap-3 border-t border-border pt-3'>
-          {/* First, redoing it in a sentence, which needs a model. */}
-          {editable && meta?.assistant && (
+          {/* First, redoing it in a sentence: the row stays without a model,
+              its button greyed. */}
+          {editable && (
             <div className='flex'>
               {/* Redo the card in a sentence: another channel, another time,
               something the AI did not know. Questions that change nothing
@@ -1006,7 +987,7 @@ export function VerdictPanel({
                   className='flex min-w-0 flex-1 items-end gap-2'
                   onSubmit={(event) => {
                     event.preventDefault();
-                    if (instruction.trim()) void revise();
+                    if (meta?.assistant && instruction.trim()) void revise();
                   }}
                 >
                   {/* Grows with what is typed; Enter sends, Shift+Enter starts
@@ -1026,7 +1007,8 @@ export function VerdictPanel({
                         !event.nativeEvent.isComposing
                       ) {
                         event.preventDefault();
-                        if (instruction.trim()) void revise();
+                        if (meta?.assistant && instruction.trim())
+                          void revise();
                       }
                     }}
                     // One line as tall as a small button (h-7), whatever the
@@ -1034,21 +1016,12 @@ export function VerdictPanel({
                     // leave of that height. More lines grow it.
                     className='max-h-40 min-h-7 resize-none bg-background py-[calc((var(--spacing)*7-1lh-2px)/2)]'
                   />
-                  <Button
-                    type='submit'
-                    size='sm'
-                    // As tall as the card's other buttons, and the box
-                    // beside it while that is one line.
-                    className='shrink-0 bg-primary text-primary-foreground hover:bg-primary/90'
-                    disabled={Boolean(busy) || !instruction.trim()}
-                  >
-                    {busy === 'revise' ? <Spinner /> : <Sparkles />}
-                    {text(
-                      busy === 'revise'
-                        ? 'evaluation.adjusting'
-                        : 'evaluation.revise',
-                    )}
-                  </Button>
+                  <ReviseButton
+                    asks={Boolean(meta?.assistant)}
+                    busy={Boolean(busy)}
+                    revising={busy === 'revise'}
+                    empty={!instruction.trim()}
+                  />
                 </form>
               )}
             </div>

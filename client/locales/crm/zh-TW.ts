@@ -721,6 +721,7 @@ export const crmZhTW: CrmWording = {
     ask: '討論',
     revise: '調整',
     adjusting: '正在調整…',
+    needsModel: '尚未設定 AI 模型，請聯絡管理員。',
     revisePlaceholder: '告訴 AI 怎麼改',
     revising: 'AI 正在修改建議…',
     instructionBy: '{{name}} 的意見：{{text}}',
@@ -1445,7 +1446,7 @@ export const crmZhTW: CrmWording = {
       agentArchived: '這個 Agent 已封存',
       forbidden: '你不能使用這個 Agent',
       noRunner: '目前沒有能為你執行它的 Runner',
-      modelUnavailable: '它的模型目前無法使用',
+      modelUnavailable: '尚未設定 AI 模型',
     },
   },
   plans: {

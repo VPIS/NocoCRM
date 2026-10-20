@@ -24,6 +24,7 @@ import { AgentWords } from './work-agent.js';
 import { LONG_TEXT_LIMIT } from '../../../server/providers/crm/limits.js';
 import { cardPin, recordPin } from './agent-chat/ask.js';
 import { DiscussButton } from './agent-chat/discuss-button.js';
+import { ReviseButton, RerunButton, RunButton } from './ai-buttons.js';
 import { DEFAULT_TIME_ZONE } from '../../../server/providers/crm/zone-time.js';
 
 // The AI's review of an approval request for its approver
@@ -311,12 +312,12 @@ export function ReviewPanel({
           whose hover says what that is. */}
       {entry.status === 'pending' && review && (
         <div className='grid gap-3 border-t border-border pt-3'>
-          {deciding && meta.assistant && (
+          {deciding && (
             <form
               className='flex min-w-0 items-end gap-2'
               onSubmit={(event) => {
                 event.preventDefault();
-                if (instruction.trim()) revise();
+                if (meta.assistant && instruction.trim()) revise();
               }}
             >
               <Textarea
@@ -334,25 +335,18 @@ export function ReviewPanel({
                     !event.nativeEvent.isComposing
                   ) {
                     event.preventDefault();
-                    if (instruction.trim()) revise();
+                    if (meta.assistant && instruction.trim()) revise();
                   }
                 }}
                 // One line as tall as a small button, growing with more.
                 className='max-h-40 min-h-7 resize-none bg-background py-[calc((var(--spacing)*7-1lh-2px)/2)]'
               />
-              <Button
-                type='submit'
-                size='sm'
-                className='shrink-0 bg-primary text-primary-foreground hover:bg-primary/90'
-                disabled={Boolean(busy) || !instruction.trim()}
-              >
-                {busy === 'revise' ? <Spinner /> : <Sparkles />}
-                {text(
-                  busy === 'revise'
-                    ? 'evaluation.adjusting'
-                    : 'evaluation.revise',
-                )}
-              </Button>
+              <ReviseButton
+                asks={Boolean(meta.assistant)}
+                busy={Boolean(busy)}
+                revising={busy === 'revise'}
+                empty={!instruction.trim()}
+              />
             </form>
           )}
           <div className='flex flex-wrap items-center justify-end gap-2'>
@@ -497,10 +491,11 @@ export function ReviewStatus({
   const record = approval?.record;
   // The review is the approver's alone (the server returns none to anyone
   // else), and so is asking for one.
-  const mayAsk =
-    meta.assistant === true &&
-    record?.status === 'pending' &&
-    record.approverId === meta.userId;
+  const theirs =
+    record?.status === 'pending' && record.approverId === meta.userId;
+  const mayAsk = meta.assistant === true && theirs;
+  // Theirs but no model to ask: the buttons stay, greyed (ai-buttons.tsx).
+  const needsModel = meta.assistant !== true && theirs;
   const review = entry?.ai.result;
   const ask = (): void => {
     setBusy(true);
@@ -513,10 +508,10 @@ export function ReviewStatus({
   // On the AI's tint whatever it stands at, its dot saying where; at work,
   // the AI's state tag's words, as on a list's row (ai-state-tag.tsx).
   const live = entry?.status === 'running';
-  const again = mayAsk && entry?.status !== 'running';
+  const again = (mayAsk || needsModel) && entry?.status !== 'running';
   // Nothing to show (no review, and not the approver's to ask for one):
   // no empty box to push the row's buttons aside.
-  if (!entry && !mayAsk && !error) return null;
+  if (!entry && !mayAsk && !needsModel && !error) return null;
   // Where it stands, in the timeline's words.
   const standing =
     entry?.status === 'running'
@@ -601,60 +596,33 @@ export function ReviewStatus({
             </TooltipContent>
           </Tooltip>
           {again ? (
-            <>
-              <span aria-hidden className='h-3.5 w-px shrink-0 bg-primary/20' />
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <button
-                      type='button'
-                      disabled={busy}
-                      onClick={ask}
-                      aria-label={words(
-                        'approvals',
-                        'rerun',
-                        'approvalReview.again',
-                      )}
-                      className='flex h-full shrink-0 items-center gap-1 rounded-r-lg px-2 font-medium text-primary transition-colors hover:bg-primary/10 disabled:opacity-50'
-                    />
-                  }
-                >
-                  {busy ? <Spinner className='size-3.5' /> : null}
-                  {text('evaluation.rerun')}
-                </TooltipTrigger>
-                <TooltipContent side='bottom'>
-                  <AgentWords
-                    inButton
-                    work='approvals'
-                    wordKey='rerun'
-                    fallback='approvalReview.again'
-                  />
-                </TooltipContent>
-              </Tooltip>
-            </>
+            <RerunButton
+              asks={mayAsk}
+              busy={busy}
+              onAsk={ask}
+              label={words('approvals', 'rerun', 'approvalReview.again')}
+              hint={
+                <AgentWords
+                  inButton
+                  work='approvals'
+                  wordKey='rerun'
+                  fallback='approvalReview.again'
+                />
+              }
+            />
           ) : null}
         </div>
-      ) : mayAsk ? (
+      ) : mayAsk || needsModel ? (
         // Shaped as a lead's first follow-up button (EvaluateButton), and
         // as the chip it gives way to: on the AI's tint, led by its mark.
-        <button
-          type='button'
-          className='inline-flex h-7 items-center gap-1.5 rounded-lg bg-primary/10 px-2.5 font-sans text-sm font-medium tracking-normal text-primary transition-colors hover:bg-primary/15 disabled:opacity-60 dark:bg-primary/20'
-          disabled={busy}
-          onClick={ask}
-        >
-          {busy ? (
-            <Spinner className='size-3.5' />
-          ) : (
-            <Sparkles className='size-3.5' />
-          )}
+        <RunButton asks={mayAsk} busy={busy} onAsk={ask}>
           <AgentWords
             inButton
             work='approvals'
             wordKey='run'
             fallback='approvalReview.ask'
           />
-        </button>
+        </RunButton>
       ) : null}
       <ErrorNotice error={error} />
     </div>

@@ -740,6 +740,8 @@ export const crmJaJP: CrmWording = {
     ask: '相談',
     revise: '調整',
     adjusting: '調整中…',
+    needsModel:
+      'AI モデルがまだ設定されていません。管理者に追加を依頼してください。',
     revisePlaceholder: '変更してほしい内容を AI に伝えてください',
     revising: 'AI が提案を修正しています…',
     instructionBy: '{{name}} の指示：{{text}}',
@@ -1507,7 +1509,7 @@ export const crmJaJP: CrmWording = {
       agentArchived: 'この Agent はアーカイブされています',
       forbidden: 'この Agent を使用する権限がありません',
       noRunner: '現在、実行できる Runner がありません',
-      modelUnavailable: 'モデルが現在利用できません',
+      modelUnavailable: 'AI モデルがまだ設定されていません',
     },
   },
   plans: {

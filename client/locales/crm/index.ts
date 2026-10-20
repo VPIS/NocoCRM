@@ -1160,6 +1160,11 @@ const wording = {
     ask: ['Discuss', '讨论'],
     revise: ['Adjust', '调整'],
     adjusting: ['Adjusting…', '正在调整…'],
+    // Why a button asking the AI is greyed (ai-buttons.tsx).
+    needsModel: [
+      'No AI model is set up yet. Ask an administrator to add one.',
+      '还没有配置 AI 模型，请联系管理员。',
+    ],
     revisePlaceholder: ['Tell AI what to change', '告诉 AI 怎么改'],
     revising: ['The AI is revising the suggestion…', 'AI 正在修改建议…'],
     instructionBy: ['{{name}} asked: {{text}}', '{{name}} 的意见：{{text}}'],
@@ -2364,10 +2369,7 @@ const wording = {
         'No runner can run it for you now',
         '现在没有能为你运行它的 Runner',
       ],
-      modelUnavailable: [
-        'Its model is not available now',
-        '它的模型现在不可用',
-      ],
+      modelUnavailable: ['No AI model is set up yet', '还没有配置 AI 模型'],
     },
   },
   // The plans an agent proposes, decided by the person they were proposed to.

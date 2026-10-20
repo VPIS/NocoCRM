@@ -763,6 +763,8 @@ export const crmDeDE: CrmWording = {
     ask: 'Besprechen',
     revise: 'Anpassen',
     adjusting: 'Wird angepasst…',
+    needsModel:
+      'Es ist noch kein KI-Modell eingerichtet. Bitten Sie einen Administrator, eines hinzuzufügen.',
     revisePlaceholder: 'Sagen Sie der KI, was geändert werden soll',
     revising: 'Die KI überarbeitet den Vorschlag…',
     instructionBy: '{{name}} bat: {{text}}',
@@ -1546,7 +1548,7 @@ export const crmDeDE: CrmWording = {
       agentArchived: 'Dieser Agent ist archiviert',
       forbidden: 'Sie dürfen diesen Agent nicht verwenden',
       noRunner: 'Derzeit kann ihn kein Runner für Sie ausführen',
-      modelUnavailable: 'Sein Modell ist derzeit nicht verfügbar',
+      modelUnavailable: 'Es ist noch kein KI-Modell eingerichtet',
     },
   },
   plans: {

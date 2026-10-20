@@ -754,6 +754,8 @@ export const crmPtBR: CrmWording = {
     ask: 'Discutir',
     revise: 'Ajustar',
     adjusting: 'Ajustando…',
+    needsModel:
+      'Nenhum modelo de IA está configurado ainda. Peça a um administrador para adicionar um.',
     revisePlaceholder: 'Diga à IA o que mudar',
     revising: 'A IA está revisando a sugestão…',
     instructionBy: '{{name}} pediu: {{text}}',
@@ -1525,7 +1527,7 @@ export const crmPtBR: CrmWording = {
       agentArchived: 'Este Agent está arquivado',
       forbidden: 'Você não pode usar este Agent',
       noRunner: 'Nenhum Runner pode executá-lo para você agora',
-      modelUnavailable: 'O modelo dele não está disponível agora',
+      modelUnavailable: 'Nenhum modelo de IA está configurado ainda',
     },
   },
   plans: {

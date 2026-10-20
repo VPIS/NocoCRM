@@ -759,6 +759,8 @@ export const crmEsES: CrmWording = {
     ask: 'Debatir',
     revise: 'Ajustar',
     adjusting: 'Ajustando…',
+    needsModel:
+      'Aún no hay ningún modelo de IA configurado. Pide a un administrador que añada uno.',
     revisePlaceholder: 'Dile a la IA qué cambiar',
     revising: 'La IA está revisando la sugerencia…',
     instructionBy: '{{name}} ha pedido: {{text}}',
@@ -1540,7 +1542,7 @@ export const crmEsES: CrmWording = {
       agentArchived: 'Este Agent está archivado',
       forbidden: 'No puedes usar este Agent',
       noRunner: 'Ahora mismo no hay ningún runner que pueda ejecutarlo por ti',
-      modelUnavailable: 'Su modelo no está disponible ahora',
+      modelUnavailable: 'Aún no hay ningún modelo de IA configurado',
     },
   },
   plans: {

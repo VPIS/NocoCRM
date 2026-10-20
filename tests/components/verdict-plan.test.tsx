@@ -271,7 +271,7 @@ describe('the task a follow-up card creates', () => {
 });
 
 describe('a follow-up card without a model to ask', () => {
-  it('is shown and decided as it is, without asking the AI to redo it', async () => {
+  it('is shown and decided as it is, its redo button greyed', async () => {
     const card = () =>
       render(
         <VerdictPanel
@@ -289,8 +289,27 @@ describe('a follow-up card without a model to ask', () => {
     // What the AI concluded, and taking it or leaving it, stay.
     expect(screen.getByText('将创建的任务')).toBeTruthy();
     expect(screen.getByRole('button', { name: '全部采纳' })).toBeTruthy();
-    // Redoing it would ask a model there is none of.
-    expect(screen.queryByPlaceholderText('告诉 AI 怎么改')).toBeNull();
+    // Redoing it would ask a model there is none of: the row stays, its
+    // button greyed whatever is typed.
+    await userEvent.type(
+      screen.getByPlaceholderText('告诉 AI 怎么改'),
+      '改成电话{Enter}',
+    );
+    expect(
+      (screen.getByRole('button', { name: '调整' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    // Its hover says why.
+    await userEvent.hover(
+      screen.getByRole('button', { name: '调整' }).parentElement!,
+    );
+    expect(
+      await screen.findByText('还没有配置 AI 模型，请联系管理员。'),
+    ).toBeTruthy();
+    expect(state.api).not.toHaveBeenCalledWith(
+      expect.stringContaining('revise'),
+      expect.anything(),
+    );
     await userEvent.click(screen.getByRole('button', { name: '全部采纳' }));
     expect(state.api).toHaveBeenCalledWith(
       'leads/lead-1/evaluations/entry-1/decide',
