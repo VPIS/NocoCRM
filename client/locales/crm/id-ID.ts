@@ -1728,7 +1728,6 @@ export const crmIdID: CrmWording = {
     edited: 'Diedit',
     revoked: 'Pesan ini telah dihapus',
     photoFrom: 'Foto dari {{name}}',
-    download: 'Unduh {{file}}',
     media: {
       pending: 'Mengambil file…',
       unavailable: 'File tidak tersedia',

@@ -189,6 +189,35 @@ describe('the messages', () => {
     expect(screen.queryByText('Taken back')).toBeNull();
   });
 
+  it('open a stored file in the preview dialog rather than downloading it', async () => {
+    render(
+      <WhatsAppMessages
+        messages={[
+          message('m1', '2026-10-15T08:00:00.000Z', {
+            type: 'document',
+            text: null,
+            caption: 'Our needs',
+            media: {
+              status: 'stored',
+              fileId: 'f2',
+              url: '/api/attachments/f2/content',
+              mimeType: 'application/pdf',
+              filename: 'spec.pdf',
+            },
+          }),
+        ]}
+        more={false}
+        senderOf={() => 'Ana Souza'}
+      />,
+    );
+    // A button, not a download link.
+    expect(screen.queryByRole('link', { name: /spec\.pdf/ })).toBeNull();
+    await userEvent.click(
+      screen.getByRole('button', { name: `${crmEn.preview} spec.pdf` }),
+    );
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+  });
+
   it("read their times and days in the CRM's time zone, not the browser's", () => {
     state.meta = { ...state.meta, settings: { timeZone: 'America/New_York' } };
     render(

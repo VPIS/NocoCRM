@@ -1728,7 +1728,6 @@ export const crmPtBR: CrmWording = {
     edited: 'Editada',
     revoked: 'Esta mensagem foi apagada',
     photoFrom: 'Foto de {{name}}',
-    download: 'Baixar {{file}}',
     media: {
       pending: 'Obtendo arquivo…',
       unavailable: 'Arquivo indisponível',

@@ -1744,7 +1744,6 @@ export const crmEsES: CrmWording = {
     edited: 'Editado',
     revoked: 'Este mensaje se ha eliminado',
     photoFrom: 'Foto de {{name}}',
-    download: 'Descargar {{file}}',
     media: {
       pending: 'Obteniendo archivo…',
       unavailable: 'Archivo no disponible',

@@ -1721,7 +1721,6 @@ export const crmViVN: CrmWording = {
     edited: 'Đã chỉnh sửa',
     revoked: 'Tin nhắn này đã bị xóa',
     photoFrom: 'Ảnh từ {{name}}',
-    download: 'Tải xuống {{file}}',
     media: {
       pending: 'Đang tải tệp…',
       unavailable: 'Tệp không khả dụng',

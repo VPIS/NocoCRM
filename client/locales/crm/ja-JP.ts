@@ -1710,7 +1710,6 @@ export const crmJaJP: CrmWording = {
     edited: '編集済み',
     revoked: 'このメッセージは削除されました',
     photoFrom: '{{name}} からの写真',
-    download: '{{file}} をダウンロード',
     media: {
       pending: 'ファイルを取得中…',
       unavailable: 'ファイルを利用できません',

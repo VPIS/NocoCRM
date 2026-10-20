@@ -18,10 +18,12 @@ import {
   useState,
   type ReactElement,
 } from 'react';
+import { FilePreviewDialog } from '#extensions/nocobase-file-component-ui';
 import { Button } from '#components/ui/button';
 import { Skeleton } from '#components/ui/skeleton';
 import { Spinner } from '#components/ui/spinner';
 import { useCrmText } from '../api.js';
+import { fileRecord } from '../file-record.js';
 import { dayIn, useBusinessZone, type WhatsAppMessage } from './api.js';
 
 // A conversation's messages, as the WhatsApp page's right pane and a
@@ -367,15 +369,47 @@ function Body({
     );
   return (
     <>
-      <a
-        href={media.url}
-        className='inline-flex min-w-0 items-center gap-2 rounded-md bg-background px-2 py-1.5 underline-offset-4 hover:underline'
-        aria-label={toWords(text('whatsapp.download', { file: name }))}
+      <FileCard
+        file={{
+          id: media.fileId ?? message.id,
+          filename: name,
+          createdAt: message.occurredAt,
+          mimeType: media.mimeType,
+          size: null,
+          url: media.url,
+        }}
+      />
+      {caption ? plain(caption) : null}
+    </>
+  );
+}
+
+// A file the customer sent, opening the preview dialog the comments' files
+// open (PDF, Office, text and the rest), its download there.
+function FileCard({
+  file,
+}: {
+  file: Parameters<typeof fileRecord>[0];
+}): ReactElement {
+  const { text } = useCrmText();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <FilePreviewDialog
+        files={[fileRecord(file)]}
+        initialIndex={0}
+        open={open}
+        onOpenChange={setOpen}
+      />
+      <button
+        type='button'
+        onClick={() => setOpen(true)}
+        className='inline-flex min-w-0 items-center gap-2 rounded-md bg-background px-2 py-1.5 text-left underline-offset-4 hover:underline'
+        aria-label={`${toWords(text('preview'))} ${file.filename}`}
       >
         <FileText aria-hidden className='size-4 shrink-0' />
-        <span className='min-w-0 truncate'>{name}</span>
-      </a>
-      {caption ? plain(caption) : null}
+        <span className='min-w-0 truncate'>{file.filename}</span>
+      </button>
     </>
   );
 }

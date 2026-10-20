@@ -2644,7 +2644,6 @@ const wording = {
     edited: ['Edited', '已编辑'],
     revoked: ['This message was deleted', '此消息已删除'],
     photoFrom: ['Photo from {{name}}', '来自 {{name}} 的图片'],
-    download: ['Download {{file}}', '下载 {{file}}'],
     media: {
       pending: ['Fetching file…', '正在获取文件…'],
       unavailable: ['File unavailable', '文件不可用'],

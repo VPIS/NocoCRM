@@ -1753,7 +1753,6 @@ export const crmDeDE: CrmWording = {
     edited: 'Bearbeitet',
     revoked: 'Diese Nachricht wurde gelöscht',
     photoFrom: 'Foto von {{name}}',
-    download: '{{file}} herunterladen',
     media: {
       pending: 'Datei wird abgerufen…',
       unavailable: 'Datei nicht verfügbar',

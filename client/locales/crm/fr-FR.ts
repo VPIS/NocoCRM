@@ -1743,7 +1743,6 @@ export const crmFrFR: CrmWording = {
     edited: 'Modifié',
     revoked: 'Ce message a été supprimé',
     photoFrom: 'Photo de {{name}}',
-    download: 'Télécharger {{file}}',
     media: {
       pending: 'Récupération du fichier…',
       unavailable: 'Fichier indisponible',

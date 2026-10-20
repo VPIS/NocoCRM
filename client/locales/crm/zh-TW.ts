@@ -1639,7 +1639,6 @@ export const crmZhTW: CrmWording = {
     edited: '已編輯',
     revoked: '此訊息已刪除',
     photoFrom: '來自 {{name}} 的圖片',
-    download: '下載 {{file}}',
     media: {
       pending: '正在取得檔案…',
       unavailable: '檔案無法使用',
