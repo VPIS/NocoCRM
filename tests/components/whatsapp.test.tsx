@@ -189,6 +189,32 @@ describe('the messages', () => {
     expect(screen.queryByText('Taken back')).toBeNull();
   });
 
+  it('open a stored photo in the preview dialog rather than a new tab', async () => {
+    render(
+      <WhatsAppMessages
+        messages={[
+          message('m1', '2026-10-15T08:00:00.000Z', {
+            type: 'image',
+            text: null,
+            caption: 'Our line',
+            media: {
+              status: 'stored',
+              fileId: 'f1',
+              url: '/api/attachments/f1/content',
+              mimeType: 'image/jpeg',
+              filename: null,
+            },
+          }),
+        ]}
+        more={false}
+        senderOf={() => 'Ana Souza'}
+      />,
+    );
+    expect(screen.queryByRole('link')).toBeNull();
+    await userEvent.click(screen.getByRole('img', { name: 'Our line' }));
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+  });
+
   it('open a stored file in the preview dialog rather than downloading it', async () => {
     render(
       <WhatsAppMessages

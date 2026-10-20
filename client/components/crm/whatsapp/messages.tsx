@@ -17,6 +17,7 @@ import {
   useRef,
   useState,
   type ReactElement,
+  type ReactNode,
 } from 'react';
 import { FilePreviewDialog } from '#extensions/nocobase-file-component-ui';
 import { Button } from '#components/ui/button';
@@ -347,13 +348,20 @@ function Body({
       </>
     );
   const name = media.filename ?? toWords(text(`whatsapp.kind.${message.type}`));
+  const file = {
+    id: media.fileId ?? message.id,
+    filename: name,
+    createdAt: message.occurredAt,
+    mimeType: media.mimeType,
+    size: null,
+    url: media.url,
+  };
   if (message.type === 'image' || message.type === 'sticker')
     return (
       <>
-        <a
-          href={`${media.url}?inline=1`}
-          target='_blank'
-          rel='noopener noreferrer'
+        <Previewed
+          file={file}
+          className='block rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
         >
           <img
             src={`${media.url}?inline=1`}
@@ -363,33 +371,35 @@ function Body({
             className='max-h-60 max-w-full rounded-md object-contain'
             onLoad={onLoad}
           />
-        </a>
+        </Previewed>
         {caption ? plain(caption) : null}
       </>
     );
   return (
     <>
-      <FileCard
-        file={{
-          id: media.fileId ?? message.id,
-          filename: name,
-          createdAt: message.occurredAt,
-          mimeType: media.mimeType,
-          size: null,
-          url: media.url,
-        }}
-      />
+      <Previewed
+        file={file}
+        className='inline-flex min-w-0 items-center gap-2 rounded-md bg-background px-2 py-1.5 text-left underline-offset-4 hover:underline'
+      >
+        <FileText aria-hidden className='size-4 shrink-0' />
+        <span className='min-w-0 truncate'>{name}</span>
+      </Previewed>
       {caption ? plain(caption) : null}
     </>
   );
 }
 
-// A file the customer sent, opening the preview dialog the comments' files
-// open (PDF, Office, text and the rest), its download there.
-function FileCard({
+// A picture or a file the customer sent, opening the preview dialog the
+// comments' files open (images, PDF, Office, text and the rest), its
+// download there.
+function Previewed({
   file,
+  className,
+  children,
 }: {
   file: Parameters<typeof fileRecord>[0];
+  className: string;
+  children: ReactNode;
 }): ReactElement {
   const { text } = useCrmText();
   const [open, setOpen] = useState(false);
@@ -404,11 +414,10 @@ function FileCard({
       <button
         type='button'
         onClick={() => setOpen(true)}
-        className='inline-flex min-w-0 items-center gap-2 rounded-md bg-background px-2 py-1.5 text-left underline-offset-4 hover:underline'
+        className={className}
         aria-label={`${toWords(text('preview'))} ${file.filename}`}
       >
-        <FileText aria-hidden className='size-4 shrink-0' />
-        <span className='min-w-0 truncate'>{file.filename}</span>
+        {children}
       </button>
     </>
   );
