@@ -1,5 +1,7 @@
 import type { Application } from '@nocobase/app-server/application';
 import {
+  ApiError,
+  apiErrorHandler,
   apiErrorResponse,
   apiErrorResponses,
   apiValidator,
@@ -17,6 +19,7 @@ import { capability } from '../providers/crm/authorization.js';
 import { CrmError, toText } from '../providers/crm/schema.js';
 import { whatsappToken } from '../providers/crm/whatsapp/service.js';
 import type { CrmEnv } from './context.js';
+import { CRM_ERROR_DOMAIN } from './errors.js';
 import {
   ConversationParams,
   ConversationsQuery,
@@ -35,6 +38,9 @@ import {
   WhatsAppHealth,
   WhatsAppNumberLabel,
 } from './schemas/whatsapp.js';
+
+// The largest file a reply carries, as the CRM's other uploads.
+const MAX_SEND = 20 * 1024 * 1024;
 
 // Meta's webhook for the company's WhatsApp number, at the application's
 // root (/webhooks/whatsapp, outside /api, answering in Meta's protocol).
@@ -156,7 +162,6 @@ export function registerWhatsAppRoutes(
       responses: {
         '200': dataResponse(WhatsAppConnection),
         ...apiErrorResponses,
-        '409': apiErrorResponse(409, 'The number is already there.'),
         '503': apiErrorResponse(503, 'No secrets key is configured.'),
       },
     }),
@@ -340,6 +345,78 @@ export function registerWhatsAppRoutes(
           c.get('actor'),
           c.req.valid('param').conversationId,
           c.req.valid('query'),
+        ),
+      });
+    },
+  );
+  // A reply from the CRM, within the 24-hour window: words, a file, or
+  // both (the words its caption), as multipart form data.
+  router.post(
+    '/whatsapp/conversations/:conversationId/messages',
+    bodyLimit({
+      maxSize: MAX_SEND + 1024 * 1024,
+      onError: (c) =>
+        apiErrorHandler(
+          new ApiError({
+            status: 'INVALID_ARGUMENT',
+            reason: 'FILE_TOO_LARGE',
+            domain: CRM_ERROR_DOMAIN,
+            message: 'The request body exceeds 21 MiB.',
+            httpStatus: 413,
+          }),
+          c,
+        ),
+    }),
+    describeRoute({
+      tags,
+      summary: 'Reply in a WhatsApp conversation',
+      operationId: 'sendWhatsAppMessage',
+      description:
+        "Sends from the conversation's number to the customer, for a reader of the conversation holding the `sendWhatsApp` capability, within 24 hours of the customer's last message (after, a 400 `FAILED_PRECONDITION` with reason `WINDOW_CLOSED`; `NO_RECIPIENT` for a customer known only by a username). `text` is the words, `file` (at most 20 MiB) a picture (JPEG or PNG, shown as a photo) or any other file (sent as a document), the words then its caption. Meta refusing the message keeps it, failed, with Meta's reason; a demo number keeps it and sends nothing. Answers with the conversation as it now stands.",
+      requestBody: {
+        required: true,
+        content: {
+          'multipart/form-data': {
+            schema: {
+              type: 'object',
+              properties: {
+                text: { type: 'string', maxLength: 4096 },
+                file: { type: 'string', format: 'binary' },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        '200': dataResponse(WhatsAppConversation),
+        ...apiErrorResponses,
+        '403': apiErrorResponse(
+          403,
+          'The reader may not send WhatsApp messages.',
+        ),
+        '404': apiErrorResponse(404),
+        '409': apiErrorResponse(
+          409,
+          'The 24-hour window has closed, or the customer has no number WhatsApp can send to.',
+        ),
+        '413': apiErrorResponse(413, 'The file is too large.'),
+      },
+    }),
+    apiValidator('param', ConversationParams),
+    async (c) => {
+      await page(c);
+      const body = await c.req.parseBody();
+      const text = typeof body.text === 'string' ? body.text : undefined;
+      const file = body.file instanceof File ? body.file : undefined;
+      if (text !== undefined && text.length > 4096)
+        throw new CrmError('invalidInput', 400, 'text');
+      if (file && (file.size === 0 || file.size > MAX_SEND))
+        throw new CrmError('invalidInput', 400, 'file');
+      return c.json({
+        data: await whatsapp().send(
+          c.get('actor'),
+          c.req.valid('param').conversationId,
+          { text, file },
         ),
       });
     },

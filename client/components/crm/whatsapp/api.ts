@@ -27,7 +27,10 @@ export interface WhatsAppMessage {
   caption: string | null;
   media: WhatsAppMedia | null;
   replyTo: string | null;
+  // Where a message the team sent stands: sent, delivered, read or
+  // failed (null while Meta has said nothing yet), and Meta's reason.
   status: string | null;
+  errorCode: string | null;
   sentById: string | null;
   // Edited or deleted by the team on the WhatsApp Business app.
   editedAt?: string | null;

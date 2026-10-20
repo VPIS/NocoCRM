@@ -139,6 +139,10 @@ export const WhatsAppMessage = z
       .nullable(),
     replyTo: z.string().nullable(),
     status: z.string().nullable(),
+    errorCode: z.string().nullable().meta({
+      description:
+        "Meta's reason a message the team sent failed (`meta_131047`: the 24-hour window had closed).",
+    }),
     sentById: z.string().nullable(),
     editedAt: z
       .string()

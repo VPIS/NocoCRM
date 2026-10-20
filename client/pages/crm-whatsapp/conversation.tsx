@@ -1,5 +1,6 @@
 import { ApiClientError, useToaster } from '@nocobase/app-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { WhatsAppComposer } from '../../components/crm/whatsapp/composer.js';
 import { MoreHorizontalIcon } from 'lucide-react';
 import {
   useCallback,
@@ -57,8 +58,8 @@ import { WhatsAppFailure } from '../../components/crm/whatsapp/failure.js';
 // bottom, asked again every few seconds. A customer linked to no record is
 // linked to a lead or a contact (…/link), made a lead (…/new-lead), set
 // aside as not a customer, or marked as spam; after each, focus goes to the
-// customer's name, the control that had it being gone (A6). Read only in
-// this phase: replies are made on WhatsApp.
+// customer's name, the control that had it being gone (A6). The reply box
+// is under the messages (composer.tsx).
 
 export interface ConversationContext {
   conversation: Conversation;
@@ -287,9 +288,7 @@ export default function ConversationPane(): ReactElement {
         senderOf={() => conversation.contact.name}
         onSeeLatest={markRead}
       />
-      <p className='border-t border-border px-4 py-2 text-xs text-muted-foreground'>
-        {text('whatsapp.readOnlyNote')}
-      </p>
+      <WhatsAppComposer conversation={conversation} onSent={settle} />
       <ConfirmAction
         open={confirmSpam}
         onOpenChange={setConfirmSpam}

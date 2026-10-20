@@ -16,6 +16,7 @@ import {
 } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { crmEn } from '../../client/locales/crm/index.js';
+import { WhatsAppComposer } from '../../client/components/crm/whatsapp/composer.js';
 
 // The WhatsApp pages (client/pages/crm-whatsapp/, components/crm/whatsapp/,
 // pages/crm-whatsapp/connection.tsx): the messages as bubbles with their media,
@@ -101,6 +102,7 @@ const message = (
   media: null,
   replyTo: null,
   status: null,
+  errorCode: null,
   sentById: null,
   occurredAt: at,
   ...extra,
@@ -406,7 +408,8 @@ describe('the workspace', () => {
         .closest('a')
         ?.getAttribute('href'),
     ).toBe('/whatsapp/connection');
-    expect(screen.getByText(crmEn.whatsapp.readOnlyNote)).toBeTruthy();
+    // No reply box for a reader who may not send.
+    expect(screen.getByText(crmEn.whatsapp.composer.noPermission)).toBeTruthy();
   });
 
   it('filters by number once there are two, naming each row’s number', async () => {
@@ -854,5 +857,95 @@ describe('the connection settings', () => {
         accessToken: 'EAAG-token',
       }),
     );
+  });
+});
+
+describe('the reply box', () => {
+  const hoursAgo = (hours: number): string =>
+    new Date(Date.now() - hours * 3_600_000).toISOString();
+  const box = (
+    extra: Record<string, unknown> = {},
+    onSent = vi.fn(),
+  ): ReturnType<typeof render> =>
+    render(
+      wrap(
+        <WhatsAppComposer
+          conversation={{
+            ...conversation,
+            lastInboundAt: hoursAgo(3.5),
+            number: {
+              id: 'n1',
+              phone: '+1 555 0100',
+              name: 'Sales',
+              mode: 'api',
+            },
+            ...extra,
+          }}
+          onSent={onSent}
+        />,
+      ),
+    );
+  beforeEach(() => {
+    state.meta = { ...state.meta, sendWhatsApp: true };
+  });
+
+  it('sends the words with Enter within the window, saying the time left', async () => {
+    const onSent = vi.fn();
+    const next = { ...conversation, messages: [] };
+    state.api.mockResolvedValue({ data: next });
+    box({}, onSent);
+    expect(screen.getByText('Reply window: 20 h left')).toBeTruthy();
+    const input = screen.getByRole('textbox', {
+      name: crmEn.whatsapp.composer.placeholder,
+    });
+    await userEvent.type(input, 'Here it is.{Enter}');
+    await waitFor(() => expect(onSent).toHaveBeenCalledWith(next));
+    const [path, method, body] = state.api.mock.calls[0] as [
+      string,
+      string,
+      FormData,
+    ];
+    expect([path, method]).toEqual([
+      'whatsapp/conversations/c1/messages',
+      'POST',
+    ]);
+    expect(body.get('text')).toBe('Here it is.');
+    expect((input as HTMLTextAreaElement).value).toBe('');
+  });
+
+  it('says why it is absent: no permission, the window closed, no number', () => {
+    state.meta = { ...state.meta, sendWhatsApp: false };
+    const { unmount } = box();
+    expect(screen.getByText(crmEn.whatsapp.composer.noPermission)).toBeTruthy();
+    unmount();
+    state.meta = { ...state.meta, sendWhatsApp: true };
+    box({ lastInboundAt: hoursAgo(30) }).unmount();
+    box({
+      lastInboundAt: hoursAgo(30),
+      number: { id: 'n1', phone: '+1', name: 'Sales', mode: 'coexistence' },
+    });
+    expect(
+      screen.getByText(crmEn.whatsapp.composer.windowClosedApp),
+    ).toBeTruthy();
+    expect(screen.queryByRole('textbox')).toBeNull();
+  });
+
+  it('on a demo number, keeps the box open whenever they last wrote, and says nothing leaves', () => {
+    box({
+      lastInboundAt: hoursAgo(72),
+      number: {
+        id: 'n9',
+        phone: '+1 555 010 0199',
+        name: 'Demo',
+        mode: 'demo',
+      },
+    });
+    expect(screen.getByText(crmEn.whatsapp.composer.demo)).toBeTruthy();
+    expect(screen.getByRole('textbox')).toBeTruthy();
+  });
+
+  it('cannot send to a customer known only by a username', () => {
+    box({ contact: { ...customer, phone: null, username: 'kevin' } });
+    expect(screen.getByText(crmEn.whatsapp.composer.noRecipient)).toBeTruthy();
   });
 });

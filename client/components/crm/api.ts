@@ -44,6 +44,8 @@ export interface Metadata {
   export: boolean;
   assign: boolean;
   approve: boolean;
+  // May reply on WhatsApp from the CRM (the sendWhatsApp capability).
+  sendWhatsApp: boolean;
   settingsAccess: boolean;
   // Only for whoever may manage the settings: whether a demo dataset is
   // imported (the banner offering one shows until it is).

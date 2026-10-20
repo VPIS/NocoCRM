@@ -146,7 +146,12 @@ function capability(action: string): CompositeResourceContribution {
   };
 }
 
-export const capabilityActions = ['assign', 'approve', 'export'] as const;
+export const capabilityActions = [
+  'assign',
+  'approve',
+  'export',
+  'sendWhatsApp',
+] as const;
 export type CapabilityAction = (typeof capabilityActions)[number];
 
 export const crmSalesResource = defineCompositeResource(
@@ -162,6 +167,13 @@ export const crmSalesResource = defineCompositeResource(
       )
       .action('export', (a) =>
         a.title(crm('authz.actions.export')).grant(capability('export')),
+      )
+      // Replying to customers on WhatsApp from the CRM (whatsapp/service.ts
+      // send()); both sales roles hold it.
+      .action('sendWhatsApp', (a) =>
+        a
+          .title(crm('authz.actions.sendWhatsApp'))
+          .grant(capability('sendWhatsApp')),
       ),
 );
 
@@ -253,6 +265,10 @@ export function crmPermissionSet(role: string) {
           : {}),
       }),
     );
-  if (manager) set = set.grant(salesGrant('assign', 'approve', 'export'));
+  set = set.grant(
+    manager
+      ? salesGrant('assign', 'approve', 'export', 'sendWhatsApp')
+      : salesGrant('sendWhatsApp'),
+  );
   return set.build();
 }

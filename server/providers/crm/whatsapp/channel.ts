@@ -85,11 +85,31 @@ export interface NumberStanding {
   readonly messagingLimit?: string;
 }
 
+// A message the team sends from the CRM: words, or a picture or a file
+// with its caption, to the customer's WhatsApp number (`to`, digits).
+export interface OutboundMessage {
+  readonly to: string;
+  readonly text?: string;
+  readonly media?: {
+    readonly kind: 'image' | 'document';
+    readonly data: Uint8Array;
+    readonly mimeType: string;
+    readonly filename: string;
+    readonly caption?: string;
+  };
+}
+
 export interface WhatsAppChannel {
   // Whether the body is Meta's, by its X-Hub-Signature-256 header.
   verify(body: Uint8Array, signature: string | undefined): boolean;
   media(media: NonNullable<InboundMessage['media']>): Promise<DownloadedMedia>;
   standing(phoneNumberId: string): Promise<NumberStanding>;
+  // Sends from the number; Meta's id for the message, whose statuses
+  // arrive by webhook.
+  send(
+    phoneNumberId: string,
+    message: OutboundMessage,
+  ): Promise<{ waMessageId: string }>;
 }
 
 export class ChannelError extends Error {
@@ -134,9 +154,92 @@ export function cloudApiChannel(options: {
       );
     return response;
   };
+  // A request Meta answers with JSON; refused, the reason is Meta's error
+  // code (`meta_131047`, the 24-hour window closed) when it gives one.
+  const posted = async (
+    url: string,
+    body: string | FormData,
+  ): Promise<unknown> => {
+    let response: Response;
+    try {
+      response = await fetcher(url, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${options.accessToken}`,
+          ...(typeof body === 'string'
+            ? { 'content-type': 'application/json' }
+            : {}),
+        },
+        body,
+        signal: AbortSignal.timeout(60_000),
+      });
+    } catch {
+      throw new ChannelError('network', true);
+    }
+    const read = (await response.json().catch(() => ({}))) as {
+      error?: { code?: number };
+    };
+    if (!response.ok)
+      throw new ChannelError(
+        read.error?.code
+          ? `meta_${String(read.error.code)}`
+          : `http_${response.status}`,
+        response.status === 429 || response.status >= 500,
+      );
+    return read;
+  };
   return {
     verify: (body, signature) =>
       verifySignature(options.appSecret, body, signature),
+    async send(phoneNumberId, message) {
+      const number = `${base}/${encodeURIComponent(phoneNumberId)}`;
+      let content: Record<string, unknown>;
+      if (message.media) {
+        // The file goes to Meta first; the message names it by id.
+        const form = new FormData();
+        form.append('messaging_product', 'whatsapp');
+        form.append('type', message.media.mimeType);
+        form.append(
+          'file',
+          new Blob([new Uint8Array(message.media.data)], {
+            type: message.media.mimeType,
+          }),
+          message.media.filename,
+        );
+        const uploaded = (await posted(`${number}/media`, form)) as {
+          id?: string;
+        };
+        if (!uploaded.id) throw new ChannelError('no_media_id', false);
+        content = {
+          type: message.media.kind,
+          [message.media.kind]: {
+            id: uploaded.id,
+            ...(message.media.caption
+              ? { caption: message.media.caption }
+              : {}),
+            ...(message.media.kind === 'document'
+              ? { filename: message.media.filename }
+              : {}),
+          },
+        };
+      } else
+        content = {
+          type: 'text',
+          text: { body: message.text ?? '', preview_url: false },
+        };
+      const sent = (await posted(
+        `${number}/messages`,
+        JSON.stringify({
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: message.to,
+          ...content,
+        }),
+      )) as { messages?: { id?: string }[] };
+      const waMessageId = sent.messages?.[0]?.id;
+      if (!waMessageId) throw new ChannelError('no_message_id', false);
+      return { waMessageId };
+    },
     async media(media) {
       let url = media.url;
       let mimeType = media.mimeType;

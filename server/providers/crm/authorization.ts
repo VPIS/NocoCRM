@@ -358,6 +358,30 @@ export async function provisionCrm(
     }
     await mark('crm-whatsapp-v1');
   }
+  // Replying on WhatsApp from the CRM arrived after the sets were
+  // provisioned: both sales roles get the capability once, added to their
+  // `crm.sales` grant (a salesperson's set had none).
+  if (!(await marker('crm-whatsapp-send-v1'))) {
+    for (const role of salesRoles) {
+      const set = await authz.permissionSets.get(roleKey(role));
+      if (!set) continue;
+      const sales = set.grants.find(
+        (g) =>
+          g.resource.type === 'composite' &&
+          g.resource.id === CRM_SALES_RESOURCE,
+      );
+      if (sales?.actions.some((a) => a.action === 'sendWhatsApp')) continue;
+      const grants = sales
+        ? set.grants.map((g) =>
+            g === sales
+              ? { ...g, actions: [...g.actions, { action: 'sendWhatsApp' }] }
+              : g,
+          )
+        : [...set.grants, salesGrant('sendWhatsApp')];
+      await authz.permissionSets.update(set.key, { ...set, grants });
+    }
+    await mark('crm-whatsapp-send-v1');
+  }
   // Mail arrived after the sets were provisioned, and the CRM's own
   // notification centre went with the move to the template's inbox: both
   // sales roles get the Mail plugin's workspace once, and lose the grant of

@@ -1,5 +1,9 @@
 import {
+  Check,
+  CheckCheck,
+  CircleAlert,
   CircleHelp,
+  Clock3,
   FileText,
   Image,
   Info,
@@ -23,7 +27,7 @@ import { FilePreviewDialog } from '#extensions/nocobase-file-component-ui';
 import { Button } from '#components/ui/button';
 import { Skeleton } from '#components/ui/skeleton';
 import { Spinner } from '#components/ui/spinner';
-import { useCrmText } from '../api.js';
+import { useCrmText, useMetadata } from '../api.js';
 import { fileRecord } from '../file-record.js';
 import { dayIn, useBusinessZone, type WhatsAppMessage } from './api.js';
 
@@ -182,6 +186,9 @@ export function WhatsAppMessages({
     dateStyle: 'medium',
   });
   const team = toWords(text('whatsapp.team'));
+  const { data: meta } = useMetadata();
+  const userName = (id: string): string | undefined =>
+    meta?.users.find((user) => user.id === id)?.name;
   // Each message with what goes above it: the day's separator when the day
   // changes, the sender's name when another customer's run starts.
   const rows = messages.map((message, index) => {
@@ -245,11 +252,15 @@ export function WhatsAppMessages({
                 {/* The time, after where it came from when not the
                     conversation as it happens (sent from the app, the
                     history imported), and an edit. */}
-                <span className='self-end text-xs text-muted-foreground'>
+                <span className='flex items-center gap-1 self-end text-xs text-muted-foreground'>
                   {[
                     message.origin === 'businessApp' ||
                     message.origin === 'imported'
                       ? toWords(text(`whatsapp.origin.${message.origin}`))
+                      : '',
+                    // Sent from the CRM: by whom.
+                    message.origin === 'crm' && message.sentById
+                      ? (userName(message.sentById) ?? '')
                       : '',
                     message.editedAt && !message.revokedAt
                       ? toWords(text('whatsapp.edited'))
@@ -258,6 +269,12 @@ export function WhatsAppMessages({
                   ]
                     .filter(Boolean)
                     .join(' · ')}
+                  {message.origin === 'crm' ? (
+                    <SendStatus
+                      status={message.status}
+                      errorCode={message.errorCode}
+                    />
+                  ) : null}
                 </span>
               </div>
             </div>
@@ -420,6 +437,57 @@ function Previewed({
         {children}
       </button>
     </>
+  );
+}
+
+// Where a message sent from the CRM stands, as Meta's statuses tell it
+// (server: status()): sending until Meta says sent, then delivered, read,
+// or failed with Meta's reason.
+function SendStatus({
+  status,
+  errorCode,
+}: {
+  status: string | null;
+  errorCode: string | null;
+}): ReactElement {
+  const { text } = useCrmText();
+  const state =
+    status === 'sent' ||
+    status === 'delivered' ||
+    status === 'read' ||
+    status === 'failed'
+      ? status
+      : 'sending';
+  const label = toWords(text(`whatsapp.sendStatus.${state}`));
+  const Icon =
+    state === 'sending'
+      ? Clock3
+      : state === 'sent'
+        ? Check
+        : state === 'failed'
+          ? CircleAlert
+          : CheckCheck;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 ${
+        state === 'read'
+          ? 'text-primary'
+          : state === 'failed'
+            ? 'text-destructive'
+            : ''
+      }`}
+      title={label}
+    >
+      <Icon aria-hidden className='size-3.5' />
+      {state === 'failed' ? (
+        <span>
+          {label}
+          {errorCode ? ` (${errorCode})` : ''}
+        </span>
+      ) : (
+        <span className='sr-only'>{label}</span>
+      )}
+    </span>
   );
 }
 

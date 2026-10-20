@@ -1141,6 +1141,7 @@ export const crmIdID: CrmWording = {
       assign: 'Tetapkan data ke orang lain',
       approve: 'Putuskan persetujuan',
       export: 'Ekspor data',
+      sendWhatsApp: 'Kirim pesan WhatsApp',
       manage: 'Kelola',
     },
     pages: {
@@ -1704,8 +1705,35 @@ export const crmIdID: CrmWording = {
     signIn: 'Masuk lagi',
     retry: 'Coba lagi',
     backToList: 'Kembali ke daftar',
-    readOnlyNote:
-      'Untuk saat ini, balas di WhatsApp; membalas dari CRM akan segera hadir.',
+    // The record tab's note: replies are written in the conversation.
+    replyInConversation: 'Buka percakapan untuk membalas.',
+    // The reply box under a conversation (composer.tsx).
+    composer: {
+      placeholder: 'Tulis balasan…',
+      send: 'Kirim',
+      attach: 'Lampirkan file',
+      removeFile: 'Hapus {{file}}',
+      tooLarge: 'File lebih besar dari 20 MB.',
+      windowHours: 'Sisa jendela balasan: {{count}} jam',
+      windowMinutes: 'Sisa jendela balasan: {{count}} menit',
+      windowClosed:
+        'Pelanggan tidak mengirim pesan selama 24 jam, jadi WhatsApp tidak mengizinkan balasan sekarang: tunggu mereka mengirim pesan lagi.',
+      windowClosedApp:
+        'Sudah lebih dari 24 jam sejak pesan terakhir pelanggan: dari CRM hanya templat yang disetujui yang bisa dikirim (tersedia nanti). Balas dari aplikasi WhatsApp Business di ponsel.',
+      noRecipient:
+        'Pelanggan ini hanya dikenal lewat nama pengguna, jadi CRM belum bisa mengirim pesan kepadanya.',
+      noPermission:
+        'Anda tidak memiliki izin mengirim pesan WhatsApp; minta kepada administrator.',
+      demo: 'Nomor demo: pesan hanya tersimpan di CRM dan tidak pernah dikirim.',
+    },
+    // Where a message sent from the CRM stands, beside its time.
+    sendStatus: {
+      sending: 'Mengirim',
+      sent: 'Terkirim',
+      delivered: 'Diterima',
+      read: 'Dibaca',
+      failed: 'Gagal terkirim',
+    },
     team: 'Tim',
     kind: {
       image: 'Foto',
@@ -1771,8 +1799,8 @@ export const crmIdID: CrmWording = {
     },
     modeHints: {
       coexistence:
-        'Nomor tetap digunakan di aplikasi WhatsApp Business: balasan tim dari ponsel juga masuk, dan obrolan sebelumnya diimpor satu kali.',
-      api: 'Nomor hanya menggunakan Cloud API: hanya pesan pelanggan yang masuk, dan membuka percakapan menghentikan status menunggu balasan.',
+        'Nomor tetap dipakai di aplikasi WhatsApp Business di ponsel. Balas dari ponsel atau CRM; balasan dari ponsel juga masuk, dan obrolan sebelumnya diimpor sekali.',
+      api: 'Nomor hanya memakai Cloud API dan tidak bisa lagi dipakai di aplikasi ponsel: pesan dikirim dan dibaca di CRM. Jika pelanggan tidak mengirim pesan selama 24 jam, Anda tidak bisa membalas sampai mereka mengirim pesan lagi.',
     },
     recommended: 'Disarankan',
     demo: 'Demo',
@@ -2647,6 +2675,10 @@ export const crmIdID: CrmWording = {
     numberExists: 'Nomor WhatsApp tersebut sudah terhubung.',
     numberInUse:
       'Nomor ini memiliki percakapan, sehingga tidak dapat dihapus: riwayat pelanggannya tetap ada di CRM.',
+    windowClosed:
+      'Jendela balasan 24 jam sudah tertutup: WhatsApp kini hanya menerima templat yang disetujui.',
+    noRecipient:
+      'Pelanggan ini tidak memiliki nomor yang dapat dikirimi WhatsApp.',
     demoAccounts: 'Akun demo tidak dapat dibuat.',
   },
 };

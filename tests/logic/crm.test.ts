@@ -251,6 +251,10 @@ let whatsapp: WhatsAppService;
 let webhooks: Hono;
 // What the WhatsApp channel's fake fetched: a media file per id.
 const waMedia = new Map<string, string>();
+// What the CRM sent to Meta (the fake Graph API below), and a refusal to
+// answer the next send with: Meta's error code.
+const waSent: { url: string; body: unknown }[] = [];
+let waRefuse: number | undefined;
 // What the faked web search answers, and how it was asked.
 const web = {
   on: true,
@@ -699,7 +703,27 @@ beforeAll(async () => {
     return cloudApiChannel({
       appSecret: 'app-secret',
       accessToken: 'token',
-      fetch: (async (url: string) => {
+      fetch: (async (url: string, init?: RequestInit) => {
+        if (init?.method === 'POST') {
+          if (url.endsWith('/media')) {
+            waSent.push({ url, body: 'file' });
+            return new Response(JSON.stringify({ id: 'meta-media-1' }));
+          }
+          const body = JSON.parse(String(init.body)) as unknown;
+          waSent.push({ url, body });
+          if (waRefuse !== undefined) {
+            const code = waRefuse;
+            waRefuse = undefined;
+            return new Response(JSON.stringify({ error: { code } }), {
+              status: 400,
+            });
+          }
+          return new Response(
+            JSON.stringify({
+              messages: [{ id: `wamid.sent-${String(waSent.length)}` }],
+            }),
+          );
+        }
         const id = url.split('/').pop() ?? '';
         if (url.startsWith('https://media.test/'))
           return new Response(waMedia.get(id) ?? '', {
@@ -2431,7 +2455,7 @@ describe('CRM API security and domain rules', () => {
     }
     expect(
       defined.find((d) => d.name === 'crm.sales')?.actions.map((a) => a.name),
-    ).toEqual(['assign', 'approve', 'export']);
+    ).toEqual(['assign', 'approve', 'export', 'sendWhatsApp']);
     // The provisioned sets grant the operations and the pages, nothing raw.
     const rep = await authorization.permissionSets.get(
       roleKey('sales-representative'),
@@ -2444,6 +2468,12 @@ describe('CRM API security and domain rules', () => {
         .map((g) => g.resource.id)
         .sort(),
     ).toEqual([...crmPages.map((p) => p.name), MAIL_WORKSPACE_PAGE].sort());
+    // A salesperson's only capability: replying on WhatsApp.
+    expect(
+      rep!.grants
+        .find((g) => g.resource.id === 'crm.sales')
+        ?.actions.map((a) => a.action),
+    ).toEqual(['sendWhatsApp']);
     const leads = rep!.grants.find((g) => g.resource.id === 'crm.leads');
     expect(leads?.actions.map((a) => a.action)).toEqual([
       'view',
@@ -2464,7 +2494,7 @@ describe('CRM API security and domain rules', () => {
       manager!.grants
         .find((g) => g.resource.id === 'crm.sales')
         ?.actions.map((a) => a.action),
-    ).toEqual(['assign', 'approve', 'export']);
+    ).toEqual(['assign', 'approve', 'export', 'sendWhatsApp']);
     // The administrator is the plugin's root set: unrestricted by
     // declaration, so it carries no CRM grants and is offered as the role.
     expect((await authorization.permissionSets.get('root'))?.grants).toEqual(
@@ -2531,7 +2561,35 @@ describe('CRM API security and domain rules', () => {
       (await authorization.permissionSets.get(roleKey('sales-manager')))!.grants
         .find((g) => g.resource.id === 'crm.sales')
         ?.actions.map((a) => a.action),
-    ).toEqual(['assign', 'approve', 'export']);
+    ).toEqual(['assign', 'approve', 'export', 'sendWhatsApp']);
+    // Sets provisioned before replying on WhatsApp get the capability once:
+    // added to a manager's operations grant, and a salesperson's own.
+    for (const role of ['sales-manager', 'sales-representative']) {
+      const set = (await authorization.permissionSets.get(roleKey(role)))!;
+      await authorization.permissionSets.update(set.key, {
+        ...set,
+        grants: set.grants.flatMap((g) => {
+          if (g.resource.id !== 'crm.sales') return [g];
+          const kept = g.actions.filter((a) => a.action !== 'sendWhatsApp');
+          return kept.length ? [{ ...g, actions: kept }] : [];
+        }),
+      });
+    }
+    await database
+      .query()
+      .deleteFrom('crmSettings')
+      .where('id', '=', 'crm-whatsapp-send-v1')
+      .execute();
+    await provisionCrm(authorization, database);
+    for (const [role, actions] of [
+      ['sales-manager', ['assign', 'approve', 'export', 'sendWhatsApp']],
+      ['sales-representative', ['sendWhatsApp']],
+    ] as const)
+      expect(
+        (await authorization.permissionSets.get(roleKey(role)))!.grants
+          .find((g) => g.resource.id === 'crm.sales')
+          ?.actions.map((a) => a.action),
+      ).toEqual(actions);
     // A set provisioned before the operations existed is translated into
     // them once, keeping its scopes; grants the CRM does not own stay.
     const legacy = translateLegacyGrants([
@@ -7218,6 +7276,36 @@ describe('demo dataset', () => {
         .executeTakeFirstOrThrow();
       expect(Number(stored.size)).toBeGreaterThan(1000);
     }
+    // A reply on a demo number is kept and sends nothing, whenever the
+    // customer last wrote.
+    // The job seeker's, set aside and answered already, so the counts
+    // below stand.
+    const demoConversation = await database
+      .query()
+      .selectFrom('crmWaConversations as c')
+      .innerJoin('crmWaContacts as w', 'w.id', 'c.waContactId')
+      .select('c.id as id')
+      .where(
+        'c.numberId',
+        'in',
+        waNumbers.map((n) => toText(n.id)),
+      )
+      .where('w.state', '=', 'dismissed')
+      .executeTakeFirstOrThrow();
+    const sentBefore = waSent.length;
+    const demoReply = new FormData();
+    demoReply.append('text', 'Thanks, noted.');
+    const replied = await router.request(
+      `/whatsapp/conversations/${toText(demoConversation.id)}/messages`,
+      { method: 'POST', headers: { 'x-test-user': 'admin' }, body: demoReply },
+    );
+    expect(replied.status).toBe(200);
+    expect(
+      (
+        (await replied.json()) as { data: { messages: Row[] } }
+      ).data.messages.at(-1),
+    ).toMatchObject({ origin: 'crm', text: 'Thanks, noted.', status: 'sent' });
+    expect(waSent.length).toBe(sentBefore);
     const waConversations = await database
       .query()
       .selectFrom('crmWaConversations as c')
@@ -13706,5 +13794,170 @@ describe('WhatsApp', () => {
         .where('waMessageId', '=', 'wamid.out-1')
         .executeTakeFirst(),
     ).toMatchObject({ status: 'read', pricingCategory: 'service' });
+  });
+
+  it('replies from the CRM within the window, as the team, and keeps a refusal as a failed message', async () => {
+    const lead = await service.save(actor('rep'), 'leads', {
+      name: 'Maya Lopez',
+      company: 'Lopez Freight',
+      phone: '+34 600 123 456',
+      source: 'website',
+    });
+    const now = new Date();
+    await deliver(
+      delivery({ waId: '34600123456', name: 'Maya' }, [
+        text('wamid.reply-1', 'Can you send the price list?', now),
+      ]),
+    );
+    await whatsapp.process(now);
+    const conversation = await database
+      .query()
+      .selectFrom('crmWaConversations as c')
+      .innerJoin('crmWaContacts as w', 'w.id', 'c.waContactId')
+      .select(['c.id as id'])
+      .where('w.waId', '=', '34600123456')
+      .executeTakeFirstOrThrow();
+    const id = toText(conversation.id);
+    const send = (
+      user: string,
+      fields: Record<string, string | File>,
+    ): Promise<Response> => {
+      const body = new FormData();
+      for (const [name, value] of Object.entries(fields))
+        body.append(name, value);
+      return router.request(`/whatsapp/conversations/${id}/messages`, {
+        method: 'POST',
+        headers: { 'x-test-user': user },
+        body,
+      });
+    };
+    type Sent = { data: { messages: Row[]; unreadCount: number } };
+    // Whoever has no WhatsApp page sends nothing; nor do empty words.
+    expect((await send('outsider', { text: 'Hi' })).status).not.toBe(200);
+    expect((await send('rep', { text: '   ' })).status).toBe(400);
+    // Words, from the conversation's number, to the customer's.
+    const before = waSent.length;
+    const sent = await send('rep', { text: 'Here it is.' });
+    expect(sent.status).toBe(200);
+    const view = ((await sent.json()) as Sent).data;
+    expect(view.unreadCount).toBe(0);
+    expect(view.messages.at(-1)).toMatchObject({
+      direction: 'out',
+      origin: 'crm',
+      type: 'text',
+      text: 'Here it is.',
+      sentById: 'rep',
+      status: null,
+      errorCode: null,
+    });
+    expect(waSent.slice(before)).toEqual([
+      {
+        url: expect.stringMatching(new RegExp(`/${NUMBER}/messages$`)),
+        body: expect.objectContaining({
+          messaging_product: 'whatsapp',
+          to: '34600123456',
+          type: 'text',
+          text: { body: 'Here it is.', preview_url: false },
+        }),
+      },
+    ]);
+    // Meta's statuses move it on.
+    const waId = toText(
+      (
+        await database
+          .query()
+          .selectFrom('crmWaMessages')
+          .select('waMessageId')
+          .where('conversationId', '=', id)
+          .where('origin', '=', 'crm')
+          .executeTakeFirstOrThrow()
+      ).waMessageId,
+    );
+    await deliver(
+      delivery(
+        { waId: '34600123456' },
+        [],
+        [
+          {
+            id: waId,
+            status: 'delivered',
+            timestamp: seconds(new Date()),
+            recipient_id: '34600123456',
+          },
+        ],
+      ),
+    );
+    await whatsapp.process();
+    expect(
+      await database
+        .query()
+        .selectFrom('crmWaMessages')
+        .select('status')
+        .where('waMessageId', '=', waId)
+        .executeTakeFirst(),
+    ).toMatchObject({ status: 'delivered' });
+    // A picture goes to Meta first, then as a photo with its caption.
+    const picture = new File(
+      [new Uint8Array([0x89, 0x50, 0x4e, 0x47])],
+      'line.png',
+      {
+        type: 'image/png',
+      },
+    );
+    const withFile = await send('rep', { text: 'Our line', file: picture });
+    expect(withFile.status).toBe(200);
+    expect(waSent.at(-2)?.url).toMatch(new RegExp(`/${NUMBER}/media$`));
+    expect(waSent.at(-1)?.body).toMatchObject({
+      type: 'image',
+      image: { id: 'meta-media-1', caption: 'Our line' },
+    });
+    expect(
+      ((await withFile.json()) as Sent).data.messages.at(-1),
+    ).toMatchObject({
+      type: 'image',
+      caption: 'Our line',
+      media: { status: 'stored', mimeType: 'image/png' },
+    });
+    // Refused by Meta: kept, failed, with Meta's reason.
+    waRefuse = 131047;
+    const refused = await send('rep', { text: 'Still there?' });
+    expect(refused.status).toBe(200);
+    expect(((await refused.json()) as Sent).data.messages.at(-1)).toMatchObject(
+      {
+        text: 'Still there?',
+        status: 'failed',
+        errorCode: 'meta_131047',
+      },
+    );
+    // The team's reply is on the timeline's stretch.
+    const lines = await database
+      .query()
+      .selectFrom('crmHistory')
+      .select('changes')
+      .where('action', '=', 'whatsapp')
+      .where('entity', '=', 'leads')
+      .where('recordId', '=', lead.id)
+      .execute();
+    expect(
+      lines.some(
+        (line) =>
+          (JSON.parse(toText(line.changes)) as { outbound?: number })
+            .outbound === 2,
+      ),
+    ).toBe(true);
+    // A day after the customer's last message only templates may go.
+    await database
+      .query()
+      .updateTable('crmWaConversations')
+      .set({
+        lastInboundAt: new Date(Date.now() - 25 * 3600 * 1000).toISOString(),
+      })
+      .where('id', '=', id)
+      .execute();
+    const late = await send('rep', { text: 'Hello again' });
+    expect(late.status).toBe(400);
+    expect(await late.json()).toMatchObject({
+      error: { reason: 'WINDOW_CLOSED' },
+    });
   });
 });

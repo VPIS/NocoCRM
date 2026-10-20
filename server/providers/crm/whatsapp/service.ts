@@ -9,7 +9,7 @@ import {
   type ServiceResolver,
   type ServiceToken,
 } from '@nocobase/service-provider';
-import { crmActor, type Actor } from '../authorization.js';
+import { capability, crmActor, type Actor } from '../authorization.js';
 import { normalizePhone } from '../phone.js';
 import { samePhone } from '../lead-merge.js';
 import { CrmError, toText, type Entity } from '../schema.js';
@@ -49,6 +49,11 @@ const MAX_ATTEMPTS = 5;
 // people send several short messages in a row, and a conversation often
 // goes back and forth for a while (ten minutes until 2026-10-16).
 export const QUIET_MS = 30 * 60_000;
+// How long after the customer's last message free words may be sent
+// (Meta's customer service window); after, only approved templates.
+const REPLY_WINDOW_MS = 24 * 60 * 60 * 1000;
+// The pictures WhatsApp shows as photos; any other file goes as a document.
+const SENDABLE_IMAGES = new Set(['image/jpeg', 'image/png']);
 // Only a message this recent starts a follow-up (a late redelivery does not).
 const NEWS_MS = 24 * 3600_000;
 // Meta's media ids expire after seven days.
@@ -1653,6 +1658,127 @@ export class WhatsAppService {
       .execute();
   }
 
+  // A reply from the CRM (phase 2, within the window): words, or a picture
+  // or a file with its caption, sent from the conversation's number by
+  // whoever may read the conversation and holds the sendWhatsApp
+  // capability. It is the team's reply as one made on the app is: it ends
+  // the conversation's awaiting a reply, writes the timeline's stretch and
+  // counts as contact on the lead. Meta answers with the message's id,
+  // whose statuses (sent, delivered, read, failed) arrive by webhook
+  // (status()); a refusal is kept as a failed message with Meta's reason,
+  // so it shows where it was written. A demo number keeps the message and
+  // sends nothing (demo-whatsapp.ts), its window not applying.
+  async send(
+    actor: Actor,
+    id: string,
+    input: { readonly text?: string; readonly file?: File },
+    now = new Date(),
+  ): Promise<Row> {
+    const { conversation, contact } = await this.contactOfConversation(id);
+    if (!(await this.mayRead(actor, contact)))
+      throw new CrmError('notFound', 404);
+    if (!(await capability(actor, 'sendWhatsApp')))
+      throw new CrmError('forbidden', 403);
+    const words = input.text?.trim() ?? '';
+    if (!words && !input.file) throw new CrmError('required', 400, 'text');
+    const number = await this.query
+      .selectFrom('crmWaNumbers')
+      .selectAll()
+      .where('id', '=', toText(conversation.numberId))
+      .executeTakeFirst();
+    if (!number) throw new CrmError('notFound', 404);
+    const demo = toText(number.mode) === 'demo';
+    // Free words only within 24 hours of the customer's last message;
+    // after, Meta takes only approved templates (phase 2's next part).
+    const lastInbound = conversation.lastInboundAt
+      ? Date.parse(toText(conversation.lastInboundAt))
+      : NaN;
+    if (!demo && !(now.getTime() - lastInbound < REPLY_WINDOW_MS))
+      throw new CrmError('windowClosed', 409);
+    const to = toText(contact.waId);
+    if (!demo && !to) throw new CrmError('noRecipient', 409);
+    const file = input.file;
+    const kind: 'text' | 'image' | 'document' = !file
+      ? 'text'
+      : SENDABLE_IMAGES.has(file.type)
+        ? 'image'
+        : 'document';
+    const fileId = file ? await this.storeFile(file) : null;
+    let waMessageId = `crm-${randomUUID()}`;
+    let status: string | null = demo ? 'sent' : null;
+    let errorCode: string | null = null;
+    if (!demo)
+      try {
+        const channel = await this.channel(number);
+        ({ waMessageId } = await channel.send(toText(number.phoneNumberId), {
+          to,
+          ...(file
+            ? {
+                media: {
+                  kind: kind === 'image' ? 'image' : 'document',
+                  data: new Uint8Array(await file.arrayBuffer()),
+                  mimeType: file.type || 'application/octet-stream',
+                  filename: file.name,
+                  ...(words ? { caption: words } : {}),
+                },
+              }
+            : { text: words }),
+        }));
+      } catch (error) {
+        status = 'failed';
+        errorCode =
+          error instanceof ChannelError ? error.reason.slice(0, 32) : 'error';
+      }
+    const at = now.toISOString();
+    await this.service.database.transaction(async ({ query }) => {
+      await query
+        .insertInto('crmWaMessages')
+        .values({
+          id: randomUUID(),
+          waMessageId,
+          conversationId: id,
+          numberId: toText(number.id),
+          direction: 'out',
+          origin: 'crm',
+          type: kind,
+          ...(file
+            ? {
+                caption: words || null,
+                mediaId: `crm-${randomUUID()}`,
+                mediaMime: file.type || 'application/octet-stream',
+                mediaFilename: kind === 'document' ? file.name : null,
+                mediaStatus: 'stored',
+                mediaFileId: fileId,
+              }
+            : { text: words }),
+          mediaAttempts: 0,
+          status,
+          errorCode,
+          sentById: actor.id,
+          occurredAt: at,
+          createdAt: at,
+        })
+        .execute();
+      // A message that never left is no reply: the conversation still
+      // awaits one.
+      if (status === 'failed') return;
+      await query
+        .updateTable('crmWaConversations')
+        .set({
+          lastMessageAt: at,
+          lastDirection: 'out',
+          unreadCount: 0,
+          updatedAt: at,
+        })
+        .where('id', '=', id)
+        .execute();
+      await this.writeTimeline(query, contact, at);
+      if (contact.leadId && contact.state === 'linked' && !contact.contactId)
+        await this.service.leadWorked(query, actor, toText(contact.leadId), at);
+    });
+    return this.conversation(actor, id, { pageSize: 50 });
+  }
+
   // Links the customer to a lead or a contact the reader may edit, or sets
   // them aside; their lines move to the records they reach now.
   async link(
@@ -2124,6 +2250,8 @@ function publicMessage(row: Row, basePath: string): Row {
       : null,
     replyTo: row.replyTo ?? null,
     status: row.status ?? null,
+    // Meta's reason when it refused the message.
+    errorCode: row.errorCode ?? null,
     sentById: row.sentById ?? null,
     // The team edited or deleted it on the WhatsApp Business app.
     editedAt: row.editedAt ? toText(row.editedAt) : null,

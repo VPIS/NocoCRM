@@ -1,5 +1,6 @@
 import { useToaster } from '@nocobase/app-client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { WhatsAppComposer } from './composer.js';
 import { Maximize2, X } from 'lucide-react';
 import { useState, type ReactElement } from 'react';
 import { Link } from 'react-router';
@@ -82,6 +83,7 @@ function ConversationBody({ id }: { id: string }): ReactElement {
   const api = useCrmApi();
   const toaster = useToaster();
   const key = useConversationKey(id);
+  const queryClient = useQueryClient();
   const path = `whatsapp/conversations/${encodeURIComponent(id)}`;
   const query = useQuery({
     queryKey: key,
@@ -156,9 +158,10 @@ function ConversationBody({ id }: { id: string }): ReactElement {
         onLoadEarlier={loadEarlier}
         senderOf={() => contact.name}
       />
-      <p className='border-t px-4 py-3 text-xs text-muted-foreground'>
-        {text('whatsapp.readOnlyNote')}
-      </p>
+      <WhatsAppComposer
+        conversation={conversation}
+        onSent={(next) => queryClient.setQueryData(key, next)}
+      />
     </div>
   );
 }

@@ -227,6 +227,8 @@ export function registerWorkspaceRoutes(
           export: await capability(actor, 'export'),
           assign: await capability(actor, 'assign'),
           approve: await capability(actor, 'approve'),
+          // Whether the WhatsApp pages offer the reply box.
+          sendWhatsApp: await capability(actor, 'sendWhatsApp'),
           settingsAccess,
           // For whoever may import it: whether a demo dataset is imported,
           // so the pages can offer one until it is (DemoBanner).

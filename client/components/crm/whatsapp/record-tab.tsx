@@ -196,7 +196,7 @@ export function RecordWhatsAppPanel({
         {/* Under a rule, as the WhatsApp page's conversation ends, so the
           messages scrolling above do not run into it. */}
         <p className='border-t border-border px-4 py-3 text-xs text-muted-foreground'>
-          {text('whatsapp.readOnlyNote')}
+          {text('whatsapp.replyInConversation')}
         </p>
       </div>
       <WhatsAppConversationDrawer

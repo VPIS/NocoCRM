@@ -1157,6 +1157,7 @@ export const crmDeDE: CrmWording = {
       assign: 'Datensätze anderen zuweisen',
       approve: 'Über Genehmigungen entscheiden',
       export: 'Datensätze exportieren',
+      sendWhatsApp: 'WhatsApp-Nachrichten senden',
       manage: 'Verwalten',
     },
     pages: {
@@ -1729,8 +1730,35 @@ export const crmDeDE: CrmWording = {
     signIn: 'Erneut anmelden',
     retry: 'Erneut versuchen',
     backToList: 'Zurück zur Liste',
-    readOnlyNote:
-      'Antworten Sie vorerst in WhatsApp; Antworten aus dem CRM folgen als Nächstes.',
+    // The record tab's note: replies are written in the conversation.
+    replyInConversation: 'Öffnen Sie die Unterhaltung, um zu antworten.',
+    // The reply box under a conversation (composer.tsx).
+    composer: {
+      placeholder: 'Antwort schreiben…',
+      send: 'Senden',
+      attach: 'Datei anhängen',
+      removeFile: '{{file}} entfernen',
+      tooLarge: 'Die Datei ist größer als 20 MB.',
+      windowHours: 'Antwortfenster: noch {{count}} Std.',
+      windowMinutes: 'Antwortfenster: noch {{count}} Min.',
+      windowClosed:
+        'Der Kunde hat 24 Stunden nicht geschrieben, daher erlaubt WhatsApp jetzt keine Antwort: Warten Sie, bis er wieder schreibt.',
+      windowClosedApp:
+        'Seit der letzten Nachricht des Kunden sind mehr als 24 Stunden vergangen: Aus dem CRM können jetzt nur genehmigte Vorlagen gesendet werden (folgen später). Antworten Sie in der WhatsApp-Business-App auf dem Telefon.',
+      noRecipient:
+        'Dieser Kunde ist nur über einen Benutzernamen bekannt, daher kann das CRM ihm noch nicht schreiben.',
+      noPermission:
+        'Sie dürfen keine WhatsApp-Nachrichten senden; wenden Sie sich an einen Administrator.',
+      demo: 'Demonummer: Nachrichten bleiben im CRM und werden nie gesendet.',
+    },
+    // Where a message sent from the CRM stands, beside its time.
+    sendStatus: {
+      sending: 'Wird gesendet',
+      sent: 'Gesendet',
+      delivered: 'Zugestellt',
+      read: 'Gelesen',
+      failed: 'Nicht gesendet',
+    },
     team: 'Team',
     kind: {
       image: 'Foto',
@@ -1796,8 +1824,8 @@ export const crmDeDE: CrmWording = {
     },
     modeHints: {
       coexistence:
-        'Die Nummer bleibt in der WhatsApp Business App: Antworten des Teams auf dem Telefon kommen ebenfalls herein, und frühere Chats werden einmalig importiert.',
-      api: 'Die Nummer läuft nur über die Cloud API: Nur Nachrichten von Kunden kommen herein, und das Öffnen einer Unterhaltung beendet den Status „Wartet auf Antwort“.',
+        'Die Nummer bleibt in der WhatsApp-Business-App auf dem Telefon in Gebrauch. Antworten Sie vom Telefon oder aus dem CRM; Antworten vom Telefon kommen ebenfalls an, frühere Chats werden einmal importiert.',
+      api: 'Die Nummer läuft nur über die Cloud API und kann in der App auf dem Telefon nicht mehr genutzt werden: Nachrichten werden im CRM gesendet und gelesen. Hat der Kunde 24 Stunden nicht geschrieben, können Sie erst antworten, wenn er wieder schreibt.',
     },
     recommended: 'Empfohlen',
     demo: 'Demo',
@@ -2683,6 +2711,9 @@ export const crmDeDE: CrmWording = {
     numberExists: 'Diese WhatsApp-Nummer ist bereits verbunden.',
     numberInUse:
       'Diese Nummer enthält Unterhaltungen und kann daher nicht entfernt werden: Der Verlauf ihrer Kunden bleibt im CRM.',
+    windowClosed:
+      'Das 24-Stunden-Antwortfenster ist geschlossen: WhatsApp akzeptiert jetzt nur genehmigte Vorlagen.',
+    noRecipient: 'Dieser Kunde hat keine Nummer, an die WhatsApp senden kann.',
     demoAccounts: 'Die Demokonten konnten nicht erstellt werden.',
   },
 };

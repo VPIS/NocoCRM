@@ -1131,6 +1131,7 @@ export const crmViVN: CrmWording = {
       assign: 'Giao bản ghi cho người khác',
       approve: 'Quyết định phê duyệt',
       export: 'Xuất bản ghi',
+      sendWhatsApp: 'Gửi tin nhắn WhatsApp',
       manage: 'Quản lý',
     },
     pages: {
@@ -1697,8 +1698,35 @@ export const crmViVN: CrmWording = {
     signIn: 'Đăng nhập lại',
     retry: 'Thử lại',
     backToList: 'Quay lại danh sách',
-    readOnlyNote:
-      'Hiện tại hãy trả lời trên WhatsApp; tính năng trả lời từ CRM sẽ có trong thời gian tới.',
+    // The record tab's note: replies are written in the conversation.
+    replyInConversation: 'Mở cuộc trò chuyện để trả lời.',
+    // The reply box under a conversation (composer.tsx).
+    composer: {
+      placeholder: 'Nhập câu trả lời…',
+      send: 'Gửi',
+      attach: 'Đính kèm tệp',
+      removeFile: 'Gỡ {{file}}',
+      tooLarge: 'Tệp lớn hơn 20 MB.',
+      windowHours: 'Còn {{count}} giờ trong khung trả lời',
+      windowMinutes: 'Còn {{count}} phút trong khung trả lời',
+      windowClosed:
+        'Khách hàng đã 24 giờ không nhắn nên WhatsApp không cho trả lời lúc này: hãy chờ họ nhắn lại.',
+      windowClosedApp:
+        'Đã quá 24 giờ kể từ tin nhắn cuối của khách hàng: từ CRM chỉ gửi được mẫu tin đã duyệt (sẽ có sau). Hãy trả lời từ ứng dụng WhatsApp Business trên điện thoại.',
+      noRecipient:
+        'Khách hàng này chỉ có tên người dùng nên CRM chưa thể gửi tin.',
+      noPermission:
+        'Bạn không có quyền gửi tin nhắn WhatsApp; hãy liên hệ quản trị viên.',
+      demo: 'Số mẫu: tin nhắn chỉ lưu trong CRM và không bao giờ được gửi đi.',
+    },
+    // Where a message sent from the CRM stands, beside its time.
+    sendStatus: {
+      sending: 'Đang gửi',
+      sent: 'Đã gửi',
+      delivered: 'Đã nhận',
+      read: 'Đã xem',
+      failed: 'Gửi thất bại',
+    },
     team: 'Nhóm',
     kind: {
       image: 'Ảnh',
@@ -1763,8 +1791,8 @@ export const crmViVN: CrmWording = {
     },
     modeHints: {
       coexistence:
-        'Số vẫn được dùng trong ứng dụng WhatsApp Business: các câu trả lời của nhóm trên điện thoại cũng được đồng bộ vào, và các cuộc trò chuyện trước đây được nhập một lần.',
-      api: 'Số chỉ dùng Cloud API: chỉ tin nhắn của khách hàng được đưa vào, và mở một hội thoại sẽ khiến nó không còn ở trạng thái chờ trả lời.',
+        'Số vẫn được dùng trong ứng dụng WhatsApp Business trên điện thoại. Có thể trả lời từ điện thoại hoặc CRM; tin trả lời trên điện thoại cũng được đồng bộ, và các cuộc trò chuyện trước được nhập một lần.',
+      api: 'Số chỉ dùng qua Cloud API và không thể dùng trong ứng dụng điện thoại nữa: tin nhắn được gửi và đọc trong CRM. Nếu khách hàng 24 giờ không nhắn, bạn không thể trả lời cho đến khi họ nhắn lại.',
     },
     recommended: 'Khuyến nghị',
     demo: 'Mẫu',
@@ -2630,6 +2658,9 @@ export const crmViVN: CrmWording = {
     numberExists: 'Số WhatsApp đó đã được kết nối.',
     numberInUse:
       'Số này có các cuộc hội thoại nên không thể xóa: lịch sử của khách hàng vẫn được giữ trong CRM.',
+    windowClosed:
+      'Khung trả lời 24 giờ đã đóng: WhatsApp giờ chỉ chấp nhận mẫu tin đã duyệt.',
+    noRecipient: 'Khách hàng này không có số để WhatsApp gửi tới.',
     demoAccounts: 'Không thể tạo các tài khoản mẫu.',
   },
 };

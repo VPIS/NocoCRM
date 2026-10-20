@@ -107,6 +107,7 @@ export const Workspace = z
     export: z.boolean(),
     assign: z.boolean(),
     approve: z.boolean(),
+    sendWhatsApp: z.boolean(),
     settingsAccess: z.boolean(),
     demoPresent: z.boolean().optional().meta({
       description: 'For whoever may import one: whether a demo dataset is.',

@@ -1764,6 +1764,7 @@ const wording = {
       assign: ['Assign records to others', '分配记录给他人'],
       approve: ['Decide approvals', '审批'],
       export: ['Export records', '导出记录'],
+      sendWhatsApp: ['Send WhatsApp messages', '发送 WhatsApp 消息'],
       manage: ['Manage', '管理'],
     },
     pages: {
@@ -2614,10 +2615,55 @@ const wording = {
     signIn: ['Sign in again', '重新登录'],
     retry: ['Retry', '重试'],
     backToList: ['Back to the list', '返回列表'],
-    readOnlyNote: [
-      'Reply on WhatsApp for now; replying from the CRM comes next.',
-      '目前请在 WhatsApp 上回复；在 CRM 里回复将在下一阶段提供。',
+    // The record tab's note: replies are written in the conversation.
+    replyInConversation: [
+      'Open the conversation to reply.',
+      '打开对话即可回复。',
     ],
+    // The reply box under a conversation (composer.tsx).
+    composer: {
+      placeholder: ['Write a reply…', '输入回复…'],
+      send: ['Send', '发送'],
+      attach: ['Attach a file', '添加附件'],
+      removeFile: ['Remove {{file}}', '移除 {{file}}'],
+      tooLarge: ['The file is larger than 20 MB.', '文件超过 20 MB。'],
+      windowHours: [
+        'Reply window: {{count}} h left',
+        '回复窗口还剩 {{count}} 小时',
+      ],
+      windowMinutes: [
+        'Reply window: {{count}} min left',
+        '回复窗口还剩 {{count}} 分钟',
+      ],
+      windowClosed: [
+        "The customer hasn't written for 24 hours, so WhatsApp doesn't allow a reply now: wait for them to write again.",
+        '客户超过 24 小时没发消息，WhatsApp 现在不允许回复，要等客户先发消息。',
+      ],
+      windowClosedApp: [
+        "More than 24 hours since the customer's last message: from the CRM only approved templates can go now (they come later). Reply from the WhatsApp Business app on your phone.",
+        '客户最后一条消息已超过 24 小时，在 CRM 里只能发审核通过的模板（稍后提供），可以先在手机的 WhatsApp Business App 上回复。',
+      ],
+      noRecipient: [
+        'This customer is known only by a username, so the CRM cannot send to them yet.',
+        '这位客户只有用户名，没有号码，暂时无法从 CRM 发送。',
+      ],
+      noPermission: [
+        'You may not send WhatsApp messages; ask an administrator for the permission.',
+        '你没有发送 WhatsApp 消息的权限，请联系管理员。',
+      ],
+      demo: [
+        'Demo number: messages stay in the CRM and are never sent.',
+        '演示号码：消息只保存在 CRM，不会真的发出。',
+      ],
+    },
+    // Where a message sent from the CRM stands, beside its time.
+    sendStatus: {
+      sending: ['Sending', '发送中'],
+      sent: ['Sent', '已发送'],
+      delivered: ['Delivered', '已送达'],
+      read: ['Read', '已读'],
+      failed: ['Not sent', '发送失败'],
+    },
     team: ['Team', '团队'],
     kind: {
       image: ['Photo', '图片'],
@@ -2700,12 +2746,12 @@ const wording = {
     },
     modeHints: {
       coexistence: [
-        "The number stays in the WhatsApp Business app: the team's replies on the phone come in too, and its earlier chats are imported once.",
-        '号码继续在 WhatsApp Business App 里使用：团队在手机上的回复也会同步进来，之前的聊天导入一次。',
+        "The number stays in the WhatsApp Business app on the phone. Reply from the phone or the CRM; the phone's replies come in too, and earlier chats are imported once.",
+        '号码继续在手机的 WhatsApp Business App 里使用。手机和 CRM 都能回复，手机上的回复也会同步进来，之前的聊天导入一次。',
       ],
       api: [
-        "The number is on the Cloud API alone: only customers' messages come in, and opening a conversation stops it awaiting a reply.",
-        '号码只走 Cloud API：只同步客户发来的消息，打开对话即不再算待回复。',
+        "The number is on the Cloud API alone and can no longer be used in the phone app: messages are sent and read in the CRM. When a customer hasn't written for 24 hours, you can't reply until they write again.",
+        '号码只接入 Cloud API，手机 App 上不能再用，消息只在 CRM 里收发。客户超过 24 小时没发消息时无法回复，要等客户先发消息。',
       ],
     },
     recommended: ['Recommended', '推荐'],
@@ -3407,6 +3453,14 @@ const wording = {
     numberInUse: [
       "This number holds conversations, so it can't be removed: its customers' history stays in the CRM.",
       '这个号码已有会话，不能删除：客户的往来记录要保留在 CRM 里。',
+    ],
+    windowClosed: [
+      'The 24-hour reply window has closed: WhatsApp accepts only approved templates now.',
+      '24 小时回复窗口已关闭，WhatsApp 现在只接受审核通过的模板消息。',
+    ],
+    noRecipient: [
+      'This customer has no number WhatsApp can send to.',
+      '这位客户没有可以发送的 WhatsApp 号码。',
     ],
     demoAccounts: [
       'The demo accounts could not be created.',

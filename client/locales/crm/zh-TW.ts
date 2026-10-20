@@ -1094,6 +1094,7 @@ export const crmZhTW: CrmWording = {
       assign: '分配記錄給他人',
       approve: '審批',
       export: '匯出記錄',
+      sendWhatsApp: '傳送 WhatsApp 訊息',
       manage: '管理',
     },
     pages: {
@@ -1616,7 +1617,33 @@ export const crmZhTW: CrmWording = {
     signIn: '重新登入',
     retry: '重試',
     backToList: '返回列表',
-    readOnlyNote: '目前請在 WhatsApp 上回覆；在 CRM 裡回覆將在下一階段提供。',
+    // The record tab's note: replies are written in the conversation.
+    replyInConversation: '開啟對話即可回覆。',
+    // The reply box under a conversation (composer.tsx).
+    composer: {
+      placeholder: '輸入回覆…',
+      send: '傳送',
+      attach: '新增附件',
+      removeFile: '移除 {{file}}',
+      tooLarge: '檔案超過 20 MB。',
+      windowHours: '回覆視窗還剩 {{count}} 小時',
+      windowMinutes: '回覆視窗還剩 {{count}} 分鐘',
+      windowClosed:
+        '客戶超過 24 小時沒傳訊息，WhatsApp 現在不允許回覆，要等客戶先傳訊息。',
+      windowClosedApp:
+        '客戶最後一則訊息已超過 24 小時，在 CRM 裡只能傳送審核通過的範本（稍後提供），可以先在手機的 WhatsApp Business App 上回覆。',
+      noRecipient: '這位客戶只有使用者名稱，沒有號碼，暫時無法從 CRM 傳送。',
+      noPermission: '你沒有傳送 WhatsApp 訊息的權限，請聯絡管理員。',
+      demo: '示範號碼：訊息只保存在 CRM，不會真的送出。',
+    },
+    // Where a message sent from the CRM stands, beside its time.
+    sendStatus: {
+      sending: '傳送中',
+      sent: '已傳送',
+      delivered: '已送達',
+      read: '已讀',
+      failed: '傳送失敗',
+    },
     team: '團隊',
     kind: {
       image: '圖片',
@@ -1677,8 +1704,8 @@ export const crmZhTW: CrmWording = {
     },
     modeHints: {
       coexistence:
-        '號碼繼續在 WhatsApp Business App 裡使用：團隊在手機上的回覆也會同步進來，之前的聊天匯入一次。',
-      api: '號碼只走 Cloud API：只同步客戶傳來的訊息，開啟對話即不再算待回覆。',
+        '號碼繼續在手機的 WhatsApp Business App 裡使用。手機和 CRM 都能回覆，手機上的回覆也會同步進來，之前的聊天匯入一次。',
+      api: '號碼只接入 Cloud API，手機 App 上不能再用，訊息只在 CRM 裡收發。客戶超過 24 小時沒傳訊息時無法回覆，要等客戶先傳訊息。',
     },
     recommended: '推薦',
     demo: '示範',
@@ -2493,6 +2520,9 @@ export const crmZhTW: CrmWording = {
     secretsMissing: '無法儲存憑證：請先在伺服器上設定 SECRETS_KEYS。',
     numberExists: '這個 WhatsApp 號碼已經串接了。',
     numberInUse: '這個號碼已有對話，不能刪除：客戶的往來記錄要保留在 CRM 裡。',
+    windowClosed:
+      '24 小時回覆視窗已關閉，WhatsApp 現在只接受審核通過的範本訊息。',
+    noRecipient: '這位客戶沒有可以傳送的 WhatsApp 號碼。',
     demoAccounts: '無法建立示範帳號。',
   },
 };

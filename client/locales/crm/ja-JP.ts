@@ -1126,6 +1126,7 @@ export const crmJaJP: CrmWording = {
       assign: 'レコードを他のユーザーに割り当て',
       approve: '承認の判断',
       export: 'レコードのエクスポート',
+      sendWhatsApp: 'WhatsApp メッセージの送信',
       manage: '管理',
     },
     pages: {
@@ -1686,8 +1687,35 @@ export const crmJaJP: CrmWording = {
     signIn: '再度ログイン',
     retry: '再試行',
     backToList: '一覧に戻る',
-    readOnlyNote:
-      '現在は WhatsApp で返信してください。CRM からの返信は今後対応予定です。',
+    // The record tab's note: replies are written in the conversation.
+    replyInConversation: '返信するには会話を開いてください。',
+    // The reply box under a conversation (composer.tsx).
+    composer: {
+      placeholder: '返信を入力…',
+      send: '送信',
+      attach: 'ファイルを添付',
+      removeFile: '{{file}} を外す',
+      tooLarge: 'ファイルが 20 MB を超えています。',
+      windowHours: '返信可能な残り時間：{{count}} 時間',
+      windowMinutes: '返信可能な残り時間：{{count}} 分',
+      windowClosed:
+        'お客様から 24 時間メッセージがないため、WhatsApp では今は返信できません。次のメッセージを待ってください。',
+      windowClosedApp:
+        'お客様の最後のメッセージから 24 時間を過ぎたため、CRM からは承認済みテンプレートしか送れません（今後対応）。スマートフォンの WhatsApp Business アプリから返信してください。',
+      noRecipient:
+        'このお客様はユーザー名しか分からないため、まだ CRM から送信できません。',
+      noPermission:
+        'WhatsApp メッセージを送信する権限がありません。管理者に依頼してください。',
+      demo: 'デモ番号：メッセージは CRM に保存されるだけで、実際には送信されません。',
+    },
+    // Where a message sent from the CRM stands, beside its time.
+    sendStatus: {
+      sending: '送信中',
+      sent: '送信済み',
+      delivered: '配信済み',
+      read: '既読',
+      failed: '送信失敗',
+    },
     team: 'チーム',
     kind: {
       image: '写真',
@@ -1752,8 +1780,8 @@ export const crmJaJP: CrmWording = {
     },
     modeHints: {
       coexistence:
-        '番号は WhatsApp Business アプリで引き続き使用できます。チームがスマートフォンで送った返信も取り込まれ、以前のチャットは一度だけインポートされます。',
-      api: '番号は Cloud API のみで使用されます。取り込まれるのは顧客からのメッセージだけで、会話を開くと返信待ちではなくなります。',
+        '番号はスマートフォンの WhatsApp Business アプリでそのまま使えます。スマートフォンと CRM のどちらからも返信でき、スマートフォンでの返信も取り込まれ、過去のチャットは一度だけインポートされます。',
+      api: '番号は Cloud API のみで使い、スマートフォンのアプリでは使えなくなります。送受信は CRM で行います。お客様から 24 時間メッセージがないと、次にメッセージが届くまで返信できません。',
     },
     recommended: '推奨',
     demo: 'デモ',
@@ -2622,6 +2650,9 @@ export const crmJaJP: CrmWording = {
     numberExists: 'この WhatsApp 番号はすでに接続されています。',
     numberInUse:
       'この番号には会話があるため削除できません。顧客とのやり取りの履歴は CRM に残ります。',
+    windowClosed:
+      '24 時間の返信可能期間が終了しました。WhatsApp では承認済みのテンプレートしか送れません。',
+    noRecipient: 'このお客様には送信先の WhatsApp 番号がありません。',
     demoAccounts: 'デモアカウントを作成できませんでした。',
   },
 };
