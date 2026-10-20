@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { QueryAdapter, Row } from '@nocobase/db';
 
 import type { DemoContent } from './demo-content/index.js';
+import type { DemoWhatsAppFileKey } from './demo-content/types.js';
 import { normalizePhone } from './phone.js';
 import { toText } from './schema.js';
 import type { WhatsAppService } from './whatsapp/service.js';
@@ -41,15 +42,22 @@ type Message = ['in' | 'out', number, number, number];
 
 // Each conversation: who it is with, the number it came in on
 // (demoNumbers), and its messages. One awaits a reply when the customer wrote last:
-// as many as they wrote since the team's last reply.
+// as many as they wrote since the team's last reply. `media` names the
+// messages that carry a picture or a file, by index, and which of the
+// content's files (demo-content/whatsapp-files-*.ts): the message's text is
+// then its caption.
 export const demoWhatsAppSchedule: {
   customer: Customer;
   number: number;
   messages: Message[];
+  media?: Readonly<Record<number, DemoWhatsAppFileKey>>;
 }[] = [
   {
     customer: { contact: [0, 0] },
     number: 0,
+    // A photo of the paper inspection sheet, and the production reports'
+    // sample before the trial import.
+    media: { 3: 'inspection', 24: 'sample' },
     messages: [
       ['in', -42, 16, 10],
       ['out', -42, 16, 25],
@@ -130,6 +138,8 @@ export const demoWhatsAppSchedule: {
   },
   {
     customer: { hworld: 0 },
+    // The load test's report, as a screenshot.
+    media: { 12: 'loadTest' },
     number: 0,
     messages: [
       ['in', -30, 20, 10],
@@ -208,6 +218,8 @@ export const demoWhatsAppSchedule: {
   {
     customer: { phone: '+86 139 0555 0188', state: 'dismissed' },
     number: 0,
+    // The job seeker's CV.
+    media: { 0: 'resume' },
     messages: [
       ['in', -6, 13, 0],
       ['out', -6, 13, 20],
@@ -276,7 +288,7 @@ export async function populateDemoWhatsApp(
       .execute();
   for (const [
     index,
-    { number, customer, messages },
+    { number, customer, messages, media },
   ] of demoWhatsAppSchedule.entries()) {
     const numberId = manifest.numberIds[number];
     const content = input.text.conversations[index];
@@ -339,7 +351,25 @@ export async function populateDemoWhatsApp(
         updatedAt: now,
       })
       .execute();
-    for (const [i, [direction]] of messages.entries())
+    for (const [i, [direction]] of messages.entries()) {
+      // A picture or a file, stored with the CRM's files as a downloaded
+      // one is, its text the caption.
+      const file = media?.[i] ? input.text.files[media[i]] : undefined;
+      const type = file
+        ? file.mimeType.startsWith('image/')
+          ? 'image'
+          : 'document'
+        : 'text';
+      const fileId = file
+        ? await whatsapp.storeFile(
+            new File(
+              [Buffer.from(file.base64, 'base64')],
+              file.filename ??
+                `whatsapp-image.${file.mimeType === 'image/png' ? 'png' : 'jpg'}`,
+              { type: file.mimeType },
+            ),
+          )
+        : null;
       await query
         .insertInto('crmWaMessages')
         .values({
@@ -351,13 +381,23 @@ export async function populateDemoWhatsApp(
           // The team's replies as made in the WhatsApp Business app on the
           // number's phone: the CRM receives and does not send yet.
           origin: direction === 'in' ? 'customer' : 'businessApp',
-          type: 'text',
-          text: content.messages[i],
+          type,
+          ...(file
+            ? {
+                caption: content.messages[i],
+                mediaId: `demo-${randomUUID()}`,
+                mediaMime: file.mimeType,
+                mediaFilename: file.filename,
+                mediaStatus: 'stored',
+                mediaFileId: fileId,
+              }
+            : { text: content.messages[i] }),
           mediaAttempts: 0,
           occurredAt: times[i],
           createdAt: times[i],
         })
         .execute();
+    }
     // A line a day on the records the customer reaches, as the webhook
     // writes them.
     if (linked)

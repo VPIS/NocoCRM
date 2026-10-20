@@ -1,9 +1,11 @@
 import type { DemoContent } from './types.js';
+import { enWhatsAppFiles } from './whatsapp-files-en-US.js';
 
 // The demo's WhatsApp conversations in English (demo-whatsapp.ts), in the
 // order of its schedule.
 export const enWhatsApp: DemoContent['whatsapp'] = {
   displayNames: ['NocoBase Sales', 'NocoBase International'],
+  files: enWhatsAppFiles,
   conversations: [
     // Shanghai Electric's decision maker, about the deal at proposal.
     {
@@ -32,7 +34,7 @@ export const enWhatsApp: DemoContent['whatsapp'] = {
         'The technical note is in your inbox, with the deployment diagram and the audit log details.',
         'Another question: we have nearly three years of production reports in Excel. Can they be imported?',
         "Yes, they can be bulk-imported once arranged to a template. Send me a sample file and we'll try an import first.",
-        "I've emailed you a sample: plant one's data from last year.",
+        "Here's a sample: plant one's data from last year.",
         "The trial import is done: 120,000 rows in under two minutes. About 300 rows have irregular shift values; I've sent you the list.",
         "That fast. We'll fix the irregular ones ourselves.",
         'Group holds an IT review next week. Could you prepare a formal proposal?',
@@ -163,7 +165,7 @@ export const enWhatsApp: DemoContent['whatsapp'] = {
     {
       profileName: 'Leo',
       messages: [
-        'Hi, are you still hiring implementation engineers? Who should I send my CV to?',
+        'Hi, are you still hiring implementation engineers? My CV is attached; could you pass it to whoever handles hiring?',
         'Hi Leo, our openings are on the Careers page of our website, where you can apply directly. This number is for customer enquiries only. Thanks!',
       ],
     },

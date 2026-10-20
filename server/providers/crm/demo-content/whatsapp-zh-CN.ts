@@ -1,9 +1,11 @@
 import type { DemoContent } from './types.js';
+import { zhWhatsAppFiles } from './whatsapp-files-zh-CN.js';
 
 // The demo's WhatsApp conversations in Chinese (demo-whatsapp.ts), in the
 // order of its schedule.
 export const zhWhatsApp: DemoContent['whatsapp'] = {
   displayNames: ['NocoBase 销售', 'NocoBase 海外'],
+  files: zhWhatsAppFiles,
   conversations: [
     // Shanghai Electric's decision maker, about the deal at proposal.
     {
@@ -32,7 +34,7 @@ export const zhWhatsApp: DemoContent['whatsapp'] = {
         '技术说明已经发到您邮箱，包括部署架构图和审计日志的说明。',
         '还有个问题，我们近三年的报工数据都在 Excel 里，能导进去吗？',
         '可以，按模板整理后批量导入。您发一个样例文件给我，我们先试导一下。',
-        '样例发您邮箱了，是一号工厂去年的数据。',
+        '样例发您了，是一号工厂去年的数据。',
         '试导完成了，12 万行，不到两分钟。有 300 多行班次填得不规范，清单发您了。',
         '这么快。那些不规范的我们自己改。',
         '下周集团要开信息化评审会，你们能出一版正式方案吗？',
@@ -163,7 +165,7 @@ export const zhWhatsApp: DemoContent['whatsapp'] = {
     {
       profileName: '小刘',
       messages: [
-        '您好，请问你们还招实施工程师吗？简历发给谁比较合适？',
+        '您好，请问你们还招实施工程师吗？简历附上，麻烦转给负责招聘的同事。',
         '您好，招聘信息在官网的“加入我们”页面，可以直接在那里投递。这个号码只处理客户咨询，谢谢。',
       ],
     },

@@ -234,7 +234,23 @@ export interface DemoWhatsApp {
     readonly username?: string;
     readonly messages: readonly string[];
   }[];
+  // The pictures and files some messages carry (demo-whatsapp.ts `media`),
+  // the message's text their caption.
+  readonly files: DemoWhatsAppFiles;
 }
+
+// A picture or file a demo customer sends: its name when WhatsApp gives one
+// (a document's; a photo has none), its type, and its bytes.
+export interface DemoWhatsAppFile {
+  readonly filename: string | null;
+  readonly mimeType: string;
+  readonly base64: string;
+}
+export type DemoWhatsAppFileKey =
+  'inspection' | 'sample' | 'loadTest' | 'resume';
+export type DemoWhatsAppFiles = Readonly<
+  Record<DemoWhatsAppFileKey, DemoWhatsAppFile>
+>;
 
 // A person at one of the importer's project companies.
 export interface DemoProjectPerson extends DemoPerson {

@@ -1346,8 +1346,9 @@ export class WhatsAppService {
       .execute();
   }
   // Stored with the CRM's files (kept by the file sweep while a message
-  // names it, file-sweep.ts).
-  private async storeFile(file: File): Promise<string> {
+  // names it, file-sweep.ts); the demo's pictures and files too
+  // (demo-whatsapp.ts).
+  async storeFile(file: File): Promise<string> {
     const repository = this.container
       .resolve(serverFileRepositoryManagerToken)
       .repository('crmFiles', {

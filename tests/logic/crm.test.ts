@@ -7188,6 +7188,36 @@ describe('demo dataset', () => {
       whatsapp.updateNumber(view.demoNumbers[0].id, {}),
     ).rejects.toMatchObject({ code: 'notFound' });
     expect((await meta('admin')).whatsapp).toEqual({ configured: true });
+    // Two photos and two files among them, stored with the CRM's files,
+    // each message's text their caption (demo-whatsapp.ts `media`).
+    const waMedia = await database
+      .query()
+      .selectFrom('crmWaMessages')
+      .select(['type', 'text', 'caption', 'mediaStatus', 'mediaFileId'])
+      .where(
+        'numberId',
+        'in',
+        waNumbers.map((n) => toText(n.id)),
+      )
+      .where('type', '!=', 'text')
+      .execute();
+    expect(waMedia.map((m) => toText(m.type)).sort()).toEqual([
+      'document',
+      'document',
+      'image',
+      'image',
+    ]);
+    for (const m of waMedia) {
+      expect(m).toMatchObject({ text: null, mediaStatus: 'stored' });
+      expect(toText(m.caption).length).toBeGreaterThan(0);
+      const stored = await database
+        .query()
+        .selectFrom('crmFiles')
+        .select(['size', 'mimeType'])
+        .where('id', '=', toText(m.mediaFileId))
+        .executeTakeFirstOrThrow();
+      expect(Number(stored.size)).toBeGreaterThan(1000);
+    }
     const waConversations = await database
       .query()
       .selectFrom('crmWaConversations as c')
