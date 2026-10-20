@@ -5,7 +5,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nocobase/nococrm.git"
+    "url": "https://github.com/nocobase/NocoCRM.git"
   },
   "type": "module",
   "prettier": "@nocobase/dev-config/prettier",
