@@ -14,6 +14,13 @@ export function installDemoChat(app: Application): void {
   if (!configuration.enabled) return;
   const agents = app.container.resolve(agentsToken);
   const conversations = agents.conversations;
+  agents.conversations.rules.provide(async () => ({
+    rules: [
+      'This is a demo using fictional CRM records. Answer naturally in the user’s language and use authorized local queries when enabled.',
+      'Demo chat cannot modify records, create or approve plans, send messages, call external services, or consult another agent. Do not offer or claim these actions. You may explain a suggested action or draft its text for the user.',
+      'If a tool is disabled, explain that limitation; do not invent query results or try another route to bypass the restriction.',
+    ],
+  }));
   const unavailable = () =>
     new ApiError({
       status: 'FAILED_PRECONDITION',
