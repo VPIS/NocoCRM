@@ -24,7 +24,6 @@ import { roleKey, type Actor } from './authorization.js';
 import { DEFAULT_TIME_ZONE } from './zone-time.js';
 import {
   populateDemoWhatsApp,
-  removeDemoWhatsApp,
   type DemoWhatsAppManifest,
 } from './demo-whatsapp.js';
 import type { WhatsAppService } from './whatsapp/service.js';
@@ -2334,143 +2333,65 @@ export interface DemoClearServices {
   inbox?: DemoInbox;
 }
 
-// Takes back what an import recorded, whole or in part (the demo mode
-// plugin calls it on clear, after a failed step and for an import cut off):
-// its mailboxes, conversations, records with their history, signals and
-// WhatsApp data, the notifications left naming them, its mail and the
-// business settings it set. The plugin then removes the accounts, the
-// importer's sales manager assignment and the simulated model.
+// Dedicated demo environments clear all CRM business rows, including visitor-created data.
+// Keep administrator identities, permission configuration and environment models intact.
 export async function clearDemo(
   service: CrmService,
-  actorId: string,
-  data: Readonly<Record<string, unknown>>,
+  _actorId: string,
+  _data: Readonly<Record<string, unknown>>,
   { mailboxes, chats, inbox }: DemoClearServices,
 ): Promise<void> {
-  const manifest = demoManifestOf(data);
   const query = service.database.query();
-  if (manifest) {
-    // The demo mailboxes go first, while the manifest still records them;
-    // the Mail plugin deletes their mail. One the user removed already is
-    // passed over.
-    if (mailboxes)
-      for (const { userId, accountId } of manifest.mailAccounts ?? [])
-        await mailboxes.remove(userId, accountId).catch(() => undefined);
-    if (chats && manifest.chats?.length)
-      await chats.remove(manifest.chats).catch(() => undefined);
-    await deleteRecords(service, manifest);
+  if (mailboxes) {
+    const accounts = await query
+      .selectFrom('mailAccounts')
+      .select(['id', 'userId'])
+      .where('providerType', '=', 'crm-demo')
+      .execute();
+    for (const account of accounts)
+      await mailboxes.remove(toText(account.userId), toText(account.id));
   }
-  // The notifications already in people's inboxes about its records, and
-  // any other about a record gone, which would only open nothing.
-  if (inbox) await inbox.removeOrphans().catch(() => undefined);
-  await query
-    .deleteFrom('crmSettings')
-    .where('id', '=', DEMO_MAIL_ROW)
-    .execute();
-  setDemoMailLanguage(undefined);
-  // The business settings the import set go back to what they were, unless
-  // someone has changed one since.
-  const previous = manifest?.settings ?? {};
-  const keys = Object.keys(previous) as DemoSetting[];
-  if (keys.length && manifest) {
-    const current = await service.settings();
-    const wanted = demoSettings(manifest.language);
-    const restore = Object.fromEntries(
-      keys
-        .filter((key) => current[key] === wanted[key])
-        .map((key) => [key, previous[key]]),
-    ) as Partial<Pick<CrmSettings, DemoSetting>>;
-    if (Object.keys(restore).length)
-      await service.saveSettings(
-        {
-          id: actorId,
-          locale: manifest.language,
-          scope: service.authz.for({
-            principal: { type: 'user', id: actorId },
-            subjects: [{ type: 'authenticated', id: '*' }],
-          }),
-        },
-        restore,
-      );
+  if (chats) {
+    const conversations = await query
+      .selectFrom('agConversations')
+      .select('id')
+      .where('source', 'in', ['crm', 'crm-search'])
+      .execute();
+    await chats.remove(conversations.map((row) => toText(row.id)));
   }
-}
-
-// Deletes the rows a manifest records, with their history and queued
-// messages, in dependency order.
-async function deleteRecords(
-  service: CrmService,
-  manifest: DemoManifest,
-): Promise<void> {
-  const byEntity = new Map<string, string[]>();
-  for (const record of manifest.records) {
-    const list = byEntity.get(record.entity) ?? [];
-    list.push(record.id);
-    byEntity.set(record.entity, list);
-  }
-  const all = manifest.records.map((r) => r.id);
   await service.database.transaction(async ({ query: q }) => {
-    if (all.length) {
-      await q.deleteFrom('crmHistory').where('recordId', 'in', all).execute();
-      await q.deleteFrom('crmOutbox').where('recordId', 'in', all).execute();
-    }
-    // The companies' signals (company-signals.ts) go with them.
-    const companies = byEntity.get('companies') ?? [];
-    if (companies.length)
-      await q
-        .deleteFrom('crmSignals')
-        .where('companyId', 'in', companies)
-        .execute();
-    if (companies.length)
-      await q
-        .deleteFrom('crmSignalChecks')
-        .where('companyId', 'in', companies)
-        .execute();
-    // The approvals' lifecycle log (server/lifecycles/approvals.ts) goes
-    // with them.
-    const approvals = byEntity.get('approvals') ?? [];
-    if (approvals.length) {
-      await q
-        .deleteFrom('lifecycleEffectRuns')
-        .where('lifecycle', '=', 'approvals')
-        .where('recordId', 'in', approvals)
-        .execute();
-      await q
-        .deleteFrom('lifecycleTransitions')
-        .where('lifecycle', '=', 'approvals')
-        .where('recordId', 'in', approvals)
-        .execute();
-    }
-    for (const [entity, table] of [
-      ['tasks', 'crmTasks'],
-      ['approvals', 'crmApprovals'],
-      ['opportunities', 'crmOpportunities'],
-      ['contacts', 'crmContacts'],
-      ['leads', 'crmLeads'],
-      ['companies', 'crmCompanies'],
-    ] as const) {
-      const ids = byEntity.get(entity) ?? [];
-      if (ids.length)
-        await q.deleteFrom(table).where('id', 'in', ids).execute();
-    }
-    if (manifest.whatsapp) await removeDemoWhatsApp(q, manifest.whatsapp);
-    // A WhatsApp customer someone linked to a demo lead or contact is
-    // unlinked again, its record gone.
-    for (const [entity, column] of [
-      ['leads', 'leadId'],
-      ['contacts', 'contactId'],
-    ] as const) {
-      const ids = byEntity.get(entity) ?? [];
-      if (ids.length)
-        await q
-          .updateTable('crmWaContacts')
-          .set({
-            state: 'unlinked',
-            leadId: null,
-            contactId: null,
-            matchedBy: null,
-            updatedAt: new Date().toISOString(),
-          })
-          .where(column, 'in', ids)
-          .execute();
-    }
+    for (const table of [
+      'crmPlanRows',
+      'crmPlans',
+      'crmAiWatches',
+      'crmOutbox',
+      'crmHistory',
+      'crmSignals',
+      'crmSignalChecks',
+      'crmWaInbox',
+      'crmWaMessages',
+      'crmWaConversations',
+      'crmWaIdentities',
+      'crmWaContacts',
+      'crmTasks',
+      'crmApprovals',
+      'crmOpportunities',
+      'crmContacts',
+      'crmLeads',
+      'crmCompanies',
+      'lifecycleParameterUsages',
+      'lifecycleParameterSnapshots',
+    ])
+      await q.deleteFrom(table).allowAllRows().execute();
+    for (const table of ['lifecycleEffectRuns', 'lifecycleTransitions'])
+      await q.deleteFrom(table).where('lifecycle', '=', 'approvals').execute();
+    // Real channel connection configuration survives; only fictional demo numbers go.
+    await q.deleteFrom('crmWaNumbers').where('mode', '=', 'demo').execute();
+    await q
+      .deleteFrom('crmSettings')
+      .where('id', 'in', [DEMO_MAIL_ROW, 'demo-dataset-v1', 'file-sweep'])
+      .execute();
   });
+  if (inbox) await inbox.removeOrphans();
+  setDemoMailLanguage(undefined);
 }

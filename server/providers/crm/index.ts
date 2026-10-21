@@ -212,10 +212,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
           // provider's search; none while there is no model at all.
           async (): Promise<WebSearcher | null> => {
             // Never the web for the demo: its companies' signals are its own.
-            if (
-              await crmDemoScope(this.app.container.resolve(crmToken).database)
-            )
-              return null;
+            if (await crmDemoScope(this.app.container)) return null;
             const model = await crmModel(this.app.container, 'signals').catch(
               () => null,
             );
@@ -305,13 +302,19 @@ export default class CrmProvider extends ServiceProvider<Application> {
         ),
       );
       setDemoMailLanguage(
-        (await crmDemoScope(service.database))?.language ?? undefined,
+        (await crmDemoScope(this.app.container))?.language ?? undefined,
       );
     }
     // The demo dataset, imported, cleared and reset through the demo mode
     // plugin (demo-data.ts), and what visitors of a read-only demo may still
     // do once an administrator allows it (demo-writes.ts).
     if (this.app.container.has(demoDataToken)) {
+      if (this.app.container.has(agentsToken))
+        this.app.container
+          .resolve(demoDataToken)
+          .registerModelServices(
+            this.app.container.resolve(agentsToken).online.services,
+          );
       this.app.container
         .resolve(demoDataToken)
         .register(
@@ -357,7 +360,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
         }),
         start: async () => {
           // The demo's AI work is curated: a daily pass would rewrite it.
-          if (await crmDemoScope(service.database))
+          if (await crmDemoScope(this.app.container))
             return { state: 'skipped', reason: 'demo-data' };
           const pass = await scanLeadSignals(
             service,
@@ -394,7 +397,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
         }),
         start: async () => {
           // The demo's AI work is curated: a daily pass would rewrite it.
-          if (await crmDemoScope(service.database))
+          if (await crmDemoScope(this.app.container))
             return { state: 'skipped', reason: 'demo-data' };
           const pass = await scanDealSignals(
             service,
@@ -494,7 +497,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
         }),
         start: async () => {
           // The demo's AI work is curated: a daily pass would rewrite it.
-          if (await crmDemoScope(service.database))
+          if (await crmDemoScope(this.app.container))
             return { state: 'skipped', reason: 'demo-data' };
           const pass = await scanTaskPreparation(
             service,
@@ -531,7 +534,7 @@ export default class CrmProvider extends ServiceProvider<Application> {
         }),
         start: async () => {
           // The demo's signals are curated, and a pass would search the web.
-          if (await crmDemoScope(service.database))
+          if (await crmDemoScope(this.app.container))
             return { state: 'skipped', reason: 'demo-data' };
           const pass = await this.app.container
             .resolve(companySignalsToken)

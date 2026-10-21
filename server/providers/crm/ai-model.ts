@@ -213,7 +213,7 @@ async function generateQuietly(
   if (
     container.has(demoDataToken) &&
     container.has(databaseManagerToken) &&
-    (await crmDemoScope(container.resolve(databaseManagerToken)))
+    (await crmDemoScope(container))
   ) {
     const demo = container.resolve(demoDataToken);
     await demo.load();

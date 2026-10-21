@@ -1307,6 +1307,9 @@ export const crmFrFR: CrmWording = {
   noMatches: 'Aucune fiche correspondante',
   clearChoice: 'Effacer',
   clearDate: 'Effacer',
+  demoRebuild: 'Réinitialiser les données demo',
+  demoClearAllHint:
+    'Supprime toutes les données métier du CRM, y compris les ajouts des visiteurs, fichiers et messages demo. Les administrateurs, paramètres et le modèle Demo sont conservés. La réinitialisation importe ensuite de nouvelles données dans la langue choisie.',
   demoData: 'Données de démonstration',
   demoDescription:
     "Un jeu de données où NocoBase vend ses propres licences et services à des clients fictifs, en chinois ou en anglais : prospects, entreprises, contacts, opportunités, tâches et approbations, e-mails dans des boîtes mail de démonstration et conversations sur deux numéros WhatsApp de démonstration, datés par rapport au jour de l'importation. L'importation crée les comptes de démonstration ci-dessous s'ils n'existent pas ; le mot de passe est le nom d'utilisateur suivi de 123.",

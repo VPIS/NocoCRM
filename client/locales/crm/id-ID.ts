@@ -1296,6 +1296,9 @@ export const crmIdID: CrmWording = {
   noMatches: 'Tidak ada data yang cocok',
   clearChoice: 'Hapus pilihan',
   clearDate: 'Hapus',
+  demoRebuild: 'Reset data demo',
+  demoClearAllHint:
+    'Menghapus semua data bisnis CRM, termasuk data pengunjung, berkas, dan pesan demo. Administrator, pengaturan, dan model Demo tetap disimpan. Reset kemudian mengimpor data baru dalam bahasa yang dipilih.',
   demoData: 'Data demo',
   demoDescription:
     'Kumpulan data tentang NocoBase yang menjual lisensi dan layanannya sendiri kepada pelanggan fiktif, dalam bahasa Tionghoa atau Inggris: prospek, perusahaan, kontak, peluang, tugas, dan persetujuan, email di kotak surat demo, serta percakapan di dua nomor WhatsApp demo, dengan tanggal relatif terhadap hari impor. Impor akan membuat akun demo di bawah ini jika belum ada; kata sandinya adalah nama pengguna diikuti 123.',

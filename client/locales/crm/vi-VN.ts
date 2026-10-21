@@ -1290,6 +1290,9 @@ export const crmViVN: CrmWording = {
   noMatches: 'Không có bản ghi phù hợp',
   clearChoice: 'Bỏ chọn',
   clearDate: 'Xóa',
+  demoRebuild: 'Đặt lại dữ liệu demo',
+  demoClearAllHint:
+    'Xóa toàn bộ dữ liệu nghiệp vụ CRM, bao gồm dữ liệu khách truy cập, tệp và tin nhắn demo. Giữ nguyên quản trị viên, cấu hình và mô hình Demo. Sau đó nhập dữ liệu mới bằng ngôn ngữ đã chọn.',
   demoData: 'Dữ liệu mẫu',
   demoDescription:
     'Bộ dữ liệu về việc NocoBase bán giấy phép và dịch vụ của chính mình cho các khách hàng hư cấu, bằng tiếng Trung hoặc tiếng Anh: khách hàng tiềm năng, công ty, liên hệ, cơ hội, công việc và phê duyệt, email trong các hộp thư mẫu và hội thoại trên hai số WhatsApp mẫu, với ngày tháng tính theo ngày nhập. Khi nhập sẽ tạo các tài khoản mẫu dưới đây nếu chúng chưa tồn tại; mật khẩu là tên người dùng kèm theo 123.',

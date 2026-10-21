@@ -71,17 +71,18 @@ export default function DemoDataPage(): ReactElement {
     DEFAULT_TIME_ZONE;
   const demo = useDemoData();
   const [error, setError] = useState<unknown>();
-  const [action, setAction] = useState<'import' | 'clear'>();
+  const [action, setAction] = useState<'import' | 'clear' | 'reset'>();
   // The dataset comes in Chinese and in English (the same story, told with
   // people of the language); the reader's interface language first.
   const [demoLanguage, setDemoLanguage] = useState(
     language.startsWith('zh') ? 'zh-CN' : 'en-US',
   );
   const status = demo.status;
-  const run = async (which: 'import' | 'clear'): Promise<void> => {
+  const run = async (which: 'import' | 'clear' | 'reset'): Promise<void> => {
     setError(undefined);
     try {
       if (which === 'import') await demo.importData(demoLanguage);
+      else if (which === 'reset') await demo.reset(demoLanguage);
       else await demo.clear();
       // Clearing is done when it answers; an import goes on in the
       // background, its progress on this page and in the banner.
@@ -182,7 +183,7 @@ export default function DemoDataPage(): ReactElement {
               {text('demoFailed', { message: status.failure.message })}
             </p>
           ) : null}
-          {!status.present && !status.importing && (
+          {!status.importing && (
             <label className='flex items-center gap-3 text-sm'>
               <span className='shrink-0'>{text('demoLanguage')}</span>
               <span className='w-40'>
@@ -199,6 +200,13 @@ export default function DemoDataPage(): ReactElement {
             </label>
           )}
           <div className='flex flex-wrap gap-2'>
+            <Button
+              variant='outline'
+              disabled={busy}
+              onClick={() => setAction('reset')}
+            >
+              {text('demoRebuild')}
+            </Button>
             <Button
               disabled={busy || status.present}
               onClick={() => setAction('import')}
@@ -217,12 +225,16 @@ export default function DemoDataPage(): ReactElement {
           {action && (
             <ConfirmDialog
               title={text(
-                action === 'import' ? 'demoImportTitle' : 'demoResetTitle',
+                action === 'import'
+                  ? 'demoImportTitle'
+                  : action === 'reset'
+                    ? 'demoRebuild'
+                    : 'demoResetTitle',
               )}
               description={
                 action === 'import'
                   ? text('demoImportHint')
-                  : `${toText(text('demoResetHint'))} ${toText(text('demoResetMore'))}`
+                  : text('demoClearAllHint')
               }
               busy={demo.pending}
               onCancel={() => setAction(undefined)}

@@ -1,3 +1,5 @@
+import { configureCrmDemoAgents } from '../crm/demo-data.js';
+import { crmDemoScope } from '../crm/demo-scope.js';
 import { SEARCH_SOURCE } from './search-answers.js';
 import type { Application } from '@nocobase/app-server/application';
 import {
@@ -136,7 +138,8 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
       this.settings = settings;
       saved?.(settings);
     };
-    await provisionModelServices(this.app, agents);
+    if (!(await crmDemoScope(this.app.container)))
+      await provisionModelServices(this.app, agents);
     await provisionAssistant(
       agents,
       this.app.container.resolve(databaseManagerToken),
@@ -181,5 +184,9 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
       agents,
       this.app.container.resolve(databaseManagerToken),
     );
+  }
+
+  public override async ready(): Promise<void> {
+    await configureCrmDemoAgents(this.app);
   }
 }

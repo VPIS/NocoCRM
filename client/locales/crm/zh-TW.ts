@@ -1232,6 +1232,9 @@ export const crmZhTW: CrmWording = {
   noMatches: '沒有符合的記錄',
   clearChoice: '清除選擇',
   clearDate: '清除',
+  demoRebuild: '重設示範資料',
+  demoClearAllHint:
+    '將清空全部 CRM 業務資料，包括訪客新增的記錄、檔案和示範訊息。保留管理員、系統設定和 Demo 模型。重設後依所選語言匯入新資料。',
   demoData: '示範資料',
   demoDescription:
     '一套以 NocoBase 自己的銷售（商業授權與服務，客戶均為虛構）為背景的示範資料，有中文和英文兩種，包含線索、公司、聯絡人、商機、任務和審批，以及示範信箱裡的往來郵件和兩個示範 WhatsApp 號碼上的對話，日期以匯入當天為基準。匯入時會自動建立下列示範帳號（已存在的直接使用），密碼為使用者名稱加 123。',

@@ -16,7 +16,6 @@ import {
 import { createStandaloneServer } from '../../server/standalone.js';
 import { crmToken } from '../../server/providers/crm/index.js';
 import { crmActor } from '../../server/providers/crm/authorization.js';
-import { defaultSettings } from '../../server/providers/crm/schema.js';
 import { demoAccountsIn } from '../../server/providers/crm/demo.js';
 
 // The CRM's demo dataset on the demo mode plugin, in a running application:
@@ -118,7 +117,7 @@ describe('the demo dataset on the demo mode plugin', () => {
     });
   });
 
-  it('imports in Chinese, signs its accounts in, answers the CRM’s AI from the demo model and clears only what it made', async () => {
+  it('imports in Chinese, signs its accounts in, answers the CRM’s AI from the demo model and clears all business data', async () => {
     // A company of the CRM's own, which the demo must leave alone, owned
     // by the administrator as a sales manager.
     await app.application.container
@@ -201,8 +200,8 @@ describe('the demo dataset on the demo mode plugin', () => {
     expect(await demo.status()).toMatchObject({ present: false, state: null });
     // And get their models back.
     for (const entries of await agentModels())
-      expect(entries).not.toContain(service);
-    expect(await companies()).toEqual(['Kept Company']);
+      expect(entries).toContain(service);
+    expect(await companies()).toEqual([]);
     for (const table of ['crmLeads', 'crmOpportunities', 'crmApprovals'])
       expect(
         await app.connection.query.selectFrom(table).select('id').execute(),
@@ -222,9 +221,9 @@ describe('the demo dataset on the demo mode plugin', () => {
       }),
     ).rejects.toThrow();
     expect(await crm().settings()).toMatchObject({
-      currency: defaultSettings.currency,
-      timeZone: defaultSettings.timeZone,
-      aiLanguage: defaultSettings.aiLanguage,
+      currency: 'CNY',
+      timeZone: 'Asia/Shanghai',
+      aiLanguage: 'zh-CN',
     });
   });
 
@@ -250,9 +249,9 @@ describe('the demo dataset on the demo mode plugin', () => {
       state: 'failed',
       failure: { message: 'boom' },
     });
-    expect(await companies()).toEqual(['Kept Company']);
+    expect(await companies()).toEqual([]);
     expect(await crm().settings()).toMatchObject({
-      currency: defaultSettings.currency,
+      currency: 'CNY',
     });
 
     expect(
@@ -267,8 +266,7 @@ describe('the demo dataset on the demo mode plugin', () => {
         expect.objectContaining({ username }),
       ),
     });
-    expect(await companies()).toContain('Kept Company');
-    expect((await companies()).length).toBe(12);
+    expect(await companies()).not.toContain('Kept Company');
     const [manager] = demoAccountsIn('en-US');
     const seller = await signIn(app, {
       username: manager!.username,
@@ -295,7 +293,7 @@ describe('the demo dataset on the demo mode plugin', () => {
     expect((await admin.fetch('/demoMode/data/clear', post())).status).toBe(
       200,
     );
-    expect(await companies()).toEqual(['Kept Company']);
+    expect(await companies()).toEqual([]);
   });
 });
 

@@ -1299,6 +1299,9 @@ export const crmPtBR: CrmWording = {
   noMatches: 'Nenhum registro correspondente',
   clearChoice: 'Limpar',
   clearDate: 'Limpar',
+  demoRebuild: 'Redefinir dados demo',
+  demoClearAllHint:
+    'Exclui todos os dados de negócio do CRM, incluindo registros de visitantes, arquivos e mensagens demo. Preserva administradores, configurações e o modelo Demo. Depois importa novos dados no idioma selecionado.',
   demoData: 'Dados de demonstração',
   demoDescription:
     'Um conjunto de dados da NocoBase vendendo suas próprias licenças e serviços a clientes fictícios, em chinês ou em inglês: leads, empresas, contatos, oportunidades, tarefas e aprovações, e-mails em caixas de e-mail de demonstração e conversas em dois números de WhatsApp de demonstração, com datas relativas ao dia da importação. A importação cria as contas de demonstração abaixo quando elas não existem; a senha é o nome de usuário seguido de 123.',

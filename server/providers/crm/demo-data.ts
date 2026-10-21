@@ -1,11 +1,10 @@
-import type { Agents } from '@nocobase/app-plugin-agents/server/tokens';
+import { driveManagerToken } from '@nocobase/app-server/drive';
 import { agentsToken } from '@nocobase/app-plugin-agents/server/tokens';
 import { authorizationToken } from '@nocobase/app-plugin-authorization/server';
 import {
   demoDataToken,
-  type DemoDataService,
+  demoConfigurationToken,
   type DemoDataset,
-  type DemoImportContext,
 } from '@nocobase/app-plugin-demo-mode/server/tokens';
 import type { Application } from '@nocobase/app-server/application';
 import type { DatabaseManager } from '@nocobase/db';
@@ -61,75 +60,32 @@ async function crmAgentIds(database: DatabaseManager): Promise<string[]> {
 }
 
 type ModelEntry = { modelService: string; model: string };
-interface AgentModels {
-  id: string;
-  previous: unknown[];
-  set: ModelEntry[];
-}
-
-// The CRM's agents answer from the demo model while the demo is there: each
-// lists the model service the plugin added, alone, so neither a conversation
-// nor a work can pick a real model. What each listed before is recorded, to
-// be put back on clear.
-async function useDemoModel(
-  agents: Agents,
-  database: DatabaseManager,
-  demoData: DemoDataService,
-  context: DemoImportContext,
-): Promise<void> {
-  const service = demoData.models.serviceName;
-  if (!service) return;
+// Bind CRM agents to the environment model at startup and after import.
+export async function configureCrmDemoAgents(app: Application): Promise<void> {
+  const container = app.container;
+  if (
+    !container.has(demoConfigurationToken) ||
+    !container.resolve(demoConfigurationToken).enabled
+  )
+    return;
+  const demo = container.resolve(demoDataToken);
+  await demo.load();
+  const service = demo.models.serviceName;
+  if (!service)
+    throw new Error('The CRM demo requires an initialized demo model.');
+  const agents = container.resolve(agentsToken);
   const model = (await agents.online.services.list()).find(
     (item) => item.name === service,
   )?.models[0]?.value;
-  if (!model) return;
+  if (!model) throw new Error('The CRM demo model is unavailable.');
   const set: ModelEntry[] = [{ modelService: service, model }];
-  const changed: AgentModels[] = [];
-  for (const id of await crmAgentIds(database)) {
-    const agent = await agents.agents.get(id).catch(() => null);
-    if (!agent || agent.archivedAt) continue;
+  for (const id of await crmAgentIds(container.resolve(databaseManagerToken))) {
+    const agent = await agents.agents.get(id);
+    if (agent.archivedAt) continue;
     await agents.agents.update(id, null, {
       modelEntries: set,
       expectedRevision: agent.revision,
     });
-    changed.push({ id, previous: [...agent.modelEntries], set });
-    await context.setData({ agentModels: changed });
-  }
-}
-
-// Puts back the models the import replaced, on an agent still listing only
-// the demo's: one an administrator changed since keeps their choice.
-async function restoreModels(
-  agents: Agents,
-  data: Readonly<Record<string, unknown>>,
-): Promise<void> {
-  const changed = (data.agentModels ?? []) as AgentModels[];
-  for (const { id, previous, set } of changed) {
-    const agent = await agents.agents.get(id).catch(() => null);
-    if (!agent) continue;
-    // Compared by service and model: the plugin adds fields of its own.
-    const listed = agent.modelEntries.map((entry) =>
-      'modelService' in entry ? `${entry.modelService}/${entry.model}` : '',
-    );
-    if (
-      listed.join('\n') !==
-      set.map((entry) => `${entry.modelService}/${entry.model}`).join('\n')
-    )
-      continue;
-    await agents.agents
-      .update(id, null, {
-        // Never a demo model service, which goes with the demo.
-        modelEntries: previous.filter(
-          (entry) =>
-            !set.some(
-              (demo) =>
-                (entry as Partial<ModelEntry>).modelService ===
-                demo.modelService,
-            ),
-        ) as typeof agent.modelEntries,
-        expectedRevision: agent.revision,
-      })
-      .catch(() => undefined);
   }
 }
 
@@ -139,16 +95,10 @@ export function createCrmDemo(
   crm: () => CrmService,
 ): DemoDataset {
   const container = app.container;
-  const database = () => container.resolve(databaseManagerToken);
-  const agents = () =>
-    container.has(agentsToken) ? container.resolve(agentsToken) : undefined;
   const { demoMailboxes, demoChats, demoInbox } = demoServices(app);
   return {
     id: CRM_DEMO,
     languages: ['zh-CN', 'en-US'],
-    // The users plugin keeps a deleted account's username and email, so the
-    // demo's accounts are disabled on clear and enabled again on import.
-    keepAccounts: true,
     timeZone: (language) =>
       language === 'en-US' ? 'America/New_York' : 'Asia/Shanghai',
     accounts: (language) =>
@@ -176,21 +126,26 @@ export function createCrmDemo(
       },
       {
         key: 'models',
-        run: async (context) => {
-          const plugin = agents();
-          if (plugin)
-            await useDemoModel(
-              plugin,
-              database(),
-              container.resolve(demoDataToken),
-              context,
-            );
-        },
+        run: () => configureCrmDemoAgents(app),
       },
     ],
     clear: async (context) => {
-      const plugin = agents();
-      if (plugin) await restoreModels(plugin, context.data);
+      const query = container.resolve(databaseManagerToken).query();
+      const files = await query
+        .selectFrom('crmFiles')
+        .select(['id', 'disk', 'key'])
+        .execute();
+      for (const file of files) {
+        await container
+          .resolve(driveManagerToken)
+          .use(String(file.disk))
+          .delete(String(file.key));
+        await query
+          .deleteFrom('crmFileUploads')
+          .where('id', '=', file.id)
+          .execute();
+        await query.deleteFrom('crmFiles').where('id', '=', file.id).execute();
+      }
       await clearDemo(crm(), context.actorId, context.data, {
         ...(demoMailboxes ? { mailboxes: demoMailboxes } : {}),
         ...(demoChats ? { chats: demoChats } : {}),

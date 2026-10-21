@@ -1319,6 +1319,9 @@ export const crmDeDE: CrmWording = {
   noMatches: 'Keine passenden Datensätze',
   clearChoice: 'Leeren',
   clearDate: 'Leeren',
+  demoRebuild: 'Demodaten zurücksetzen',
+  demoClearAllHint:
+    'Löscht alle CRM-Geschäftsdaten einschließlich Besucher-Einträgen, Dateien und Demo-Nachrichten. Administratoren, Einstellungen und das Demo-Modell bleiben erhalten. Zurücksetzen importiert anschließend neue Daten in der gewählten Sprache.',
   demoData: 'Demodaten',
   demoDescription:
     'Ein Demodatenbestand, in dem NocoBase seine eigenen Lizenzen und Services an fiktive Kunden verkauft, auf Chinesisch oder Englisch: Leads, Unternehmen, Kontakte, Verkaufschancen, Aufgaben und Genehmigungen, E-Mails in Demo-Postfächern und Unterhaltungen über zwei Demo-WhatsApp-Nummern, datiert relativ zum Importtag. Beim Import werden die unten aufgeführten Demokonten erstellt, sofern sie noch nicht existieren; das Passwort ist der Benutzername gefolgt von 123.',
