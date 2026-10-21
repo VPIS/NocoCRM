@@ -73,14 +73,16 @@ pnpm dev
 
 ### Demo data
 
-A banner offers the **demo data**, imported and removed on **Settings → Demo data**, in English or Chinese. It brings sales accounts whose password is the username followed by `123`:
+Demo data is offered only in a deployment running in demo mode: start it with `NOCOBASE_DEMO_MODE=read-only` (a read-only demo: visitors sign in and browse, and changes are refused) or `NOCOBASE_DEMO_MODE=observe` (changes are allowed, and what read-only mode would refuse is logged). A banner then offers the **demo data**, imported and cleared on **Settings → Demo data**, in English or Chinese, or from the command line with `pnpm nocobase demo-mode data import --actor <administrator id> --language en-US --force` (and `status`, `clear`, `reset`). It brings sales accounts whose password is the username followed by `123`:
 
 | Language | Sales managers                                   | Salespeople                                        |
 | -------- | ------------------------------------------------ | -------------------------------------------------- |
 | English  | `daniel` (Daniel Brooks), `emily` (Emily Carter) | `sophie` (Sophie Bennett), `oliver` (Oliver Hayes) |
 | Chinese  | `liming` (李明), `zhaomin` (赵敏)                | `wangxiaofang` (王小芳), `chenxiaohao` (陈小浩)    |
 
-The administrator who imports it becomes a sales manager too, with records, approvals, AI suggestions and conversations of their own. Each account gets a demo mailbox (`<username>@demo.example`) holding the dataset's customer conversations, and a demo WhatsApp number holds a few customer chats, so mail and WhatsApp can be tried without connecting anything. Demo mail is never delivered outside the dataset's `.example` addresses. Removing the demo data removes all of it and disables the demo accounts.
+The administrator who imports it becomes a sales manager too, with records, approvals, AI suggestions and conversations of their own. Each account gets a demo mailbox (`<username>@demo.example`) holding the dataset's customer conversations, and a demo WhatsApp number holds a few customer chats, so mail and WhatsApp can be tried without connecting anything. Demo mail is never delivered outside the dataset's `.example` addresses. Clearing the demo data removes all of it and the conversations the import wrote, disables the demo accounts, and puts back the business settings the import changed (currency, business time zone, AI working language); records created by hand stay.
+
+While the demo data is there, the CRM's AI (follow-ups, approval reviews, task preparation, AI capture) and the Sales Expert assistant are answered by a built-in demo model, whose answers say so: no real model is called and no company news is searched on the web. The daily AI checks pause so they do not rewrite the demo's content; asking the AI on a record still works. In a read-only demo, an administrator can tick "Ask the AI to follow up, review or prepare a demo record" under "Allowed in read-only mode" on **Settings → Demo data**, so visitors can try the AI on the demo's records; it is off by default and applies to the demo's records only. Visitors of a read-only demo cannot talk to the assistant; use `observe` mode, or open the Agents plugin's conversation tables with `NOCOBASE_DEMO_ALLOW_TABLES`, if they should.
 
 ### Roles
 

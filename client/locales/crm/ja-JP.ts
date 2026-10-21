@@ -1293,8 +1293,6 @@ export const crmJaJP: CrmWording = {
   demoAbsent: 'デモデータはインポートされていません。',
   demoPresent:
     '{{date}} にデモデータをインポートしました：{{count}} 件のレコード。',
-  demoSettingsSet:
-    'インポートにより、既定値のままだった業務設定 {{names}} をデモデータ用の値に変更しました。',
   demoAccounts: 'デモアカウント',
   demoImport: 'デモデータをインポート',
   demoImportTitle: 'デモデータをインポートしますか？',
@@ -1311,6 +1309,20 @@ export const crmJaJP: CrmWording = {
   demoBannerAction: 'デモデータをインポート',
   demoBannerDismiss: '閉じる',
   demoImporting: 'デモデータをインポートしています…',
+  demoResetMore:
+    'インポートで作成されたアシスタントとの会話も削除され、インポートで変更された業務設定は元の値に戻ります（その後に変更されたものを除く）。',
+  demoUnavailable:
+    'デモデータは、デモモードで動作するデプロイメントでのみ利用できます（NOCOBASE_DEMO_MODE を read-only または observe に設定）。',
+  demoFailed: '前回のデモデータの操作は完了しませんでした：{{message}}',
+  demoModeReadOnly:
+    'このデプロイメントは読み取り専用のデモです。訪問者はログインして閲覧できますが、下で許可した操作以外の変更はすべて拒否されます。',
+  demoModeObserve:
+    'このデプロイメントはデモモードを観察モードで実行しています。変更は許可され、読み取り専用のデモで拒否される書き込みはログに記録されます。',
+  demoWrites: '読み取り専用モードで許可する操作',
+  demoWriteAiWork:
+    'デモレコードのフォローアップ・レビュー・準備を AI に依頼する（デモモデルが回答）',
+  demoWritesConflict:
+    '別の管理者がこの設定を変更しました。再読み込みしたので、確認してからもう一度保存してください。',
   enabled: '有効',
   disabled: '無効',
   role: '営業ロール',
@@ -2647,9 +2659,6 @@ export const crmJaJP: CrmWording = {
     confirmationRequired: '実行する前に、この操作を確認してください。',
     fileTooLarge: 'アップロードが 20 MB を超えています。',
     importLimit: '一度にインポートできるのは 1～500 件のレコードです。',
-    demoExists:
-      'デモデータはすでにインポートされています。再度インポートする前に削除してください。',
-    demoMissing: '削除するデモデータはありません。',
     secretsMissing:
       '認証情報を保存できません。先にサーバーで SECRETS_KEYS を設定してください。',
     numberExists: 'この WhatsApp 番号はすでに接続されています。',
@@ -2658,6 +2667,5 @@ export const crmJaJP: CrmWording = {
     windowClosed:
       '24 時間の返信可能期間が終了しました。WhatsApp では承認済みのテンプレートしか送れません。',
     noRecipient: 'このお客様には送信先の WhatsApp 番号がありません。',
-    demoAccounts: 'デモアカウントを作成できませんでした。',
   },
 };

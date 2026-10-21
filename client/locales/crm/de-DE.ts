@@ -1325,8 +1325,6 @@ export const crmDeDE: CrmWording = {
   demoLanguage: 'Sprache der Demodaten',
   demoAbsent: 'Es wurden keine Demodaten importiert.',
   demoPresent: 'Demodaten am {{date}} importiert: {{count}} Datensätze.',
-  demoSettingsSet:
-    'Der Import hat die Geschäftseinstellungen {{names}}, die noch auf Standardwerten standen, auf die Werte gesetzt, für die die Demodaten geschrieben sind.',
   demoAccounts: 'Demokonten',
   demoImport: 'Demodaten importieren',
   demoImportTitle: 'Demodaten importieren?',
@@ -1343,6 +1341,21 @@ export const crmDeDE: CrmWording = {
   demoBannerAction: 'Demodaten importieren',
   demoBannerDismiss: 'Ausblenden',
   demoImporting: 'Demodaten werden importiert…',
+  demoResetMore:
+    'Auch die vom Import geschriebenen Unterhaltungen mit dem Assistenten werden gelöscht, und die vom Import gesetzten Geschäftseinstellungen erhalten ihre früheren Werte zurück, sofern sie seitdem nicht geändert wurden.',
+  demoUnavailable:
+    'Demodaten sind nur in einer Bereitstellung im Demomodus verfügbar (NOCOBASE_DEMO_MODE auf read-only oder observe gesetzt).',
+  demoFailed:
+    'Der letzte Vorgang mit den Demodaten wurde nicht abgeschlossen: {{message}}',
+  demoModeReadOnly:
+    'Diese Bereitstellung ist eine schreibgeschützte Demo: Besucher können sich anmelden und alles ansehen; jede Änderung wird abgelehnt, sofern sie unten nicht erlaubt ist.',
+  demoModeObserve:
+    'Diese Bereitstellung läuft im Beobachtungsmodus: Änderungen sind erlaubt, und Schreibvorgänge, die eine schreibgeschützte Demo ablehnen würde, werden protokolliert.',
+  demoWrites: 'Im schreibgeschützten Modus erlaubt',
+  demoWriteAiWork:
+    'Die KI einen Demodatensatz nachfassen, prüfen oder vorbereiten lassen (vom Demomodell beantwortet)',
+  demoWritesConflict:
+    'Ein anderer Administrator hat diese Einstellungen geändert. Sie wurden neu geladen; prüfen Sie sie und speichern Sie erneut.',
   enabled: 'Aktiviert',
   disabled: 'Deaktiviert',
   role: 'Vertriebsrolle',
@@ -2708,9 +2721,6 @@ export const crmDeDE: CrmWording = {
       'Bestätigen Sie diese Aktion, bevor sie ausgeführt wird.',
     fileTooLarge: 'Der Upload überschreitet 20 MB.',
     importLimit: 'Importieren Sie zwischen 1 und 500 Datensätze auf einmal.',
-    demoExists:
-      'Die Demodaten sind bereits importiert. Entfernen Sie sie, bevor Sie erneut importieren.',
-    demoMissing: 'Es gibt keine Demodaten zum Entfernen.',
     secretsMissing:
       'Zugangsdaten können nicht gespeichert werden: Legen Sie zuerst SECRETS_KEYS auf dem Server fest.',
     numberExists: 'Diese WhatsApp-Nummer ist bereits verbunden.',
@@ -2719,6 +2729,5 @@ export const crmDeDE: CrmWording = {
     windowClosed:
       'Das 24-Stunden-Antwortfenster ist geschlossen: WhatsApp akzeptiert jetzt nur genehmigte Vorlagen.',
     noRecipient: 'Dieser Kunde hat keine Nummer, an die WhatsApp senden kann.',
-    demoAccounts: 'Die Demokonten konnten nicht erstellt werden.',
   },
 };

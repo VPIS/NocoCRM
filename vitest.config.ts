@@ -27,6 +27,9 @@ export default createReactVitestConfig({
     // Playwright runs tests/playwright/ against a built application; its files are named *.test.ts too.
     exclude: ['tests/playwright/**'],
     setupFiles: ['./tests/setup/client-config.ts'],
+    // Tests that start the whole application (tests/logic/demo-data-app.test.ts) run its migrations and seeds, which
+    // Node imports itself, outside Vite: tsx resolves their `.js` imports of the TypeScript sources, as `pnpm dev` does.
+    execArgv: ['--import', 'tsx'],
     // Keep the command usable if an application intentionally removes all scaffold tests before adding its own.
     passWithNoTests: true,
     coverage: {

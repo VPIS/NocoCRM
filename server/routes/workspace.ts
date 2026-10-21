@@ -30,12 +30,6 @@ import {
   outputFields,
 } from '../providers/crm/authorization.js';
 import { agenda, dashboard } from '../providers/crm/dashboard.js';
-import {
-  demoPresent,
-  demoStatus,
-  populateDemo,
-  resetDemo,
-} from '../providers/crm/demo.js';
 import { searchPlaces, subdivisions } from '../providers/crm/geography.js';
 import { companySignalsToken } from '../providers/crm/company-signals.js';
 import { crmToken } from '../providers/crm/index.js';
@@ -74,7 +68,6 @@ import {
 import { agentsToken } from '@nocobase/app-plugin-agents/server/tokens';
 import { showSuggestion } from '../providers/crm-agents/ai-work-news.js';
 import { checkDuplicates } from '../providers/crm/duplicate-check.js';
-import { demoServices } from './demo-services.js';
 import { CRM_ERROR_DOMAIN } from './errors.js';
 import { JsonObject, ListMeta } from './schemas/common.js';
 import {
@@ -97,8 +90,6 @@ import {
   DecisionsQuery,
   Notice,
   NoticesQuery,
-  DemoDataStatus,
-  ImportDemoDataInput,
   Place,
   PlaceQuery,
   ScopeQuery,
@@ -122,7 +113,6 @@ import { APPROVAL_LIFECYCLE } from '../lifecycles/approvals.js';
 export const WORKSPACE_PATHS = [
   'workspace',
   'systemSettings',
-  'demoData',
   'approvalLifecycle',
   'approverRule',
   'geography',
@@ -164,8 +154,6 @@ export function registerWorkspaceRoutes(
   router: Hono<CrmEnv>,
 ): void {
   const service = app.container.resolve(crmToken);
-  const { demoAccounts, demoMailboxes, demoChats, demoInbox } =
-    demoServices(app);
   const contentUrl = (id: string) =>
     `${toText(app.publicBasePath)}/api/attachments/${encodeURIComponent(id)}/content`;
 
@@ -183,7 +171,9 @@ export function registerWorkspaceRoutes(
     }),
     async (c) => {
       const actor = c.get('actor');
-      await service.rememberLocale(actor);
+      // Best effort: the language is kept for work done while the person
+      // is away, and a read-only demo refuses the write.
+      await service.rememberLocale(actor).catch(() => undefined);
       const permissions: Record<string, unknown> = {};
       // What the person may read, kept for the page-context resolvers of
       // the Agents plugin (CrmService.rememberReads).
@@ -230,11 +220,6 @@ export function registerWorkspaceRoutes(
           // Whether the WhatsApp pages offer the reply box.
           sendWhatsApp: await capability(actor, 'sendWhatsApp'),
           settingsAccess,
-          // For whoever may import it: whether a demo dataset is imported,
-          // so the pages can offer one until it is (DemoBanner).
-          ...(settingsAccess
-            ? { demoPresent: await demoPresent(service) }
-            : {}),
           // Whether the pages offer the assistant at all.
           assistant: await service.assistantEnabled(),
           // Whether the company's WhatsApp number is connected, or the demo
@@ -387,80 +372,6 @@ export function registerWorkspaceRoutes(
         ),
       }),
   );
-  // The demo dataset (demo.ts): whether one is imported, importing it and
-  // removing it, for whoever may manage the settings.
-  const demoResponses = {
-    '200': dataResponse(DemoDataStatus),
-    ...apiErrorResponses,
-  };
-  router.get(
-    '/demoData',
-    describeRoute({
-      tags: ['DemoData'],
-      summary: 'Get the demo data',
-      operationId: 'getDemoData',
-      description: `Whether a demo dataset is imported, and the accounts an import makes. ${settingsOnly}`,
-      responses: demoResponses,
-    }),
-    async (c) => {
-      if (!(await capability(c.get('actor'), 'manage', 'settings')))
-        throw new CrmError('forbidden', 403);
-      return c.json({ data: await demoStatus(service, c.get('actor')) });
-    },
-  );
-  router.post(
-    '/demoData/import',
-    describeRoute({
-      tags: ['DemoData'],
-      summary: 'Import the demo data',
-      operationId: 'importDemoData',
-      description: `Creates the demo accounts, records and mailboxes. ${settingsOnly}`,
-      responses: {
-        ...demoResponses,
-        '400': apiErrorResponse(
-          400,
-          'A demo dataset is imported already (`DEMO_EXISTS`), or the users plugin refused an account (`DEMO_ACCOUNTS`, its explanation in `metadata.detail`).',
-        ),
-      },
-    }),
-    apiValidator('json', ImportDemoDataInput),
-    async (c) =>
-      c.json({
-        data: await populateDemo(
-          service,
-          service.authz,
-          c.get('actor'),
-          demoAccounts,
-          // The language the dataset is written in, Chinese unless asked.
-          c.req.valid('json').language ?? 'zh-CN',
-          demoMailboxes,
-          demoChats,
-          app.container.resolve(whatsappToken),
-        ),
-      }),
-  );
-  router.post(
-    '/demoData/remove',
-    describeRoute({
-      tags: ['DemoData'],
-      summary: 'Remove the demo data',
-      operationId: 'removeDemoData',
-      description: `Deletes what the import created and disables its accounts. ${settingsOnly}`,
-      responses: demoResponses,
-    }),
-    async (c) =>
-      c.json({
-        data: await resetDemo(
-          service,
-          c.get('actor'),
-          demoAccounts,
-          demoMailboxes,
-          demoChats,
-          demoInbox,
-        ),
-      }),
-  );
-
   // A record's region, searched by a province's or a country's name, and
   // a country's provinces.
   router.get(

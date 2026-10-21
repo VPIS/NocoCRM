@@ -1238,7 +1238,6 @@ export const crmZhTW: CrmWording = {
   demoLanguage: '示範資料語言',
   demoAbsent: '尚未匯入示範資料。',
   demoPresent: '示範資料已於 {{date}} 匯入，共 {{count}} 筆記錄。',
-  demoSettingsSet: '匯入時已把仍為預設值的{{names}}改為示範資料所用的設定。',
   demoAccounts: '示範帳號',
   demoImport: '匯入示範資料',
   demoImportTitle: '匯入示範資料？',
@@ -1255,6 +1254,18 @@ export const crmZhTW: CrmWording = {
   demoBannerAction: '匯入示範資料',
   demoBannerDismiss: '不再顯示',
   demoImporting: '正在匯入示範資料…',
+  demoResetMore:
+    '匯入寫入的與助手的對話也會刪除；匯入時改過的業務設定會恢復原值（之後又被修改過的除外）。',
+  demoUnavailable:
+    '示範資料只在以示範模式執行的部署中可用（NOCOBASE_DEMO_MODE 設為 read-only 或 observe）。',
+  demoFailed: '上一次示範資料操作沒有完成：{{message}}',
+  demoModeReadOnly:
+    '目前部署是唯讀示範：訪客可以登入和瀏覽，除下方允許的操作外，所有修改都會被拒絕。',
+  demoModeObserve:
+    '目前部署以觀察模式執行示範模式：允許修改，唯讀示範會拒絕的寫入會記錄在日誌中。',
+  demoWrites: '唯讀模式下允許的操作',
+  demoWriteAiWork: '讓 AI 跟進、審核或準備示範記錄（由示範模型回答）',
+  demoWritesConflict: '其他管理員已修改這些設定，已重新載入，請檢查後再儲存。',
   enabled: '啟用',
   disabled: '停用',
   role: '銷售角色',
@@ -2520,14 +2531,11 @@ export const crmZhTW: CrmWording = {
     confirmationRequired: '執行前請確認此操作。',
     fileTooLarge: '上傳檔案超過 20 MB。',
     importLimit: '每次可匯入 1 至 500 筆記錄。',
-    demoExists: '示範資料已匯入，請先清除後再匯入。',
-    demoMissing: '沒有可清除的示範資料。',
     secretsMissing: '無法儲存憑證：請先在伺服器上設定 SECRETS_KEYS。',
     numberExists: '這個 WhatsApp 號碼已經串接了。',
     numberInUse: '這個號碼已有對話，不能刪除：客戶的往來記錄要保留在 CRM 裡。',
     windowClosed:
       '24 小時回覆視窗已關閉，WhatsApp 現在只接受審核通過的範本訊息。',
     noRecipient: '這位客戶沒有可以傳送的 WhatsApp 號碼。',
-    demoAccounts: '無法建立示範帳號。',
   },
 };

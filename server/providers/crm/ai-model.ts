@@ -5,7 +5,9 @@ import { agentsToken } from '@nocobase/app-plugin-agents/server/tokens';
 import { idGeneratorToken } from '@nocobase/app-server/id-generator';
 import { databaseManagerToken } from '@nocobase/db';
 import type { ServiceResolver } from '@nocobase/service-provider';
+import { demoDataToken } from '@nocobase/app-plugin-demo-mode/server/tokens';
 import { BACKGROUND_MARKER } from '../crm-agents/background.js';
+import { crmDemoScope } from './demo-scope.js';
 import {
   WORK_AGENTS,
   WORK_AGENTS_MARKER,
@@ -199,10 +201,28 @@ async function generateQuietly(
     system: string;
     prompt: string;
     source: string;
+    // The work asking, which the demo model answers by.
+    tag?: string;
     signal?: AbortSignal;
   },
 ): Promise<string> {
   const { model, system, prompt, source, signal } = request;
+  // While the CRM holds the demo dataset, its AI answers from the demo
+  // model in process, whatever model the work's agent names: nothing about
+  // the demo reaches a real provider (demo-data.ts).
+  if (
+    container.has(demoDataToken) &&
+    container.has(databaseManagerToken) &&
+    (await crmDemoScope(container.resolve(databaseManagerToken)))
+  ) {
+    const demo = container.resolve(demoDataToken);
+    await demo.load();
+    return demo.models.complete({
+      system,
+      prompt,
+      ...(request.tag ? { tag: request.tag } : {}),
+    });
+  }
   const languageModel = await container
     .resolve(agentsToken)
     .online.gateway.languageModel(model);
@@ -349,6 +369,7 @@ export async function openSession(
       system,
       prompt,
       source: sourceOf(work),
+      tag: work,
       ...(signal ? { signal } : {}),
     });
     turns.push({ role: 'assistant', text });

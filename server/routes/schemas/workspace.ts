@@ -2,7 +2,6 @@ import type { LifecycleDescription } from '@nocobase/lifecycle';
 import { z } from 'zod';
 import type { AgentSwitches } from '../../providers/crm/agents.js';
 import { AGENDA_PAGE } from '../../providers/crm/dashboard.js';
-import type { DemoStatus } from '../../providers/crm/demo.js';
 import type { PlaceMatch } from '../../providers/crm/geography.js';
 import { LONG_TEXT_LIMIT } from '../../providers/crm/limits.js';
 import type { CrmSettings } from '../../providers/crm/schema.js';
@@ -11,7 +10,7 @@ import { JsonObject, PageQuery, TitlesShape } from './common.js';
 import { AiEntry } from './operations.js';
 
 // The workspace's own routes: what the pages start from, the settings, the
-// demo data, the overview and reports, the inbox's AI suggestions, the AI
+// overview and reports, the inbox's AI suggestions, the AI
 // agents, attachments, the mail timeline and search.
 
 const SettingsShape = {
@@ -109,9 +108,6 @@ export const Workspace = z
     approve: z.boolean(),
     sendWhatsApp: z.boolean(),
     settingsAccess: z.boolean(),
-    demoPresent: z.boolean().optional().meta({
-      description: 'For whoever may import one: whether a demo dataset is.',
-    }),
     assistant: z.boolean().meta({
       description: "Whether the CRM's AI employee is switched on.",
     }),
@@ -286,42 +282,6 @@ export const UpdateApproverRuleInput = z
       ),
   })
   .meta({ ref: 'CrmApproverRuleInput' });
-
-const DemoAccount = z.object({
-  username: z.string(),
-  name: z.string(),
-  role: z.string(),
-});
-export const DemoDataStatus: z.ZodType<DemoStatus> = z
-  .object({
-    present: z.boolean(),
-    language: z.enum(['zh-CN', 'en-US']).nullable(),
-    createdAt: z.string().nullable(),
-    records: z.number().int(),
-    accounts: z.array(DemoAccount),
-    accountsByLanguage: z.object({
-      'zh-CN': z.array(DemoAccount),
-      'en-US': z.array(DemoAccount),
-    }),
-    importing: z
-      .object({ percent: z.number().int().min(0).max(100).nullable() })
-      .nullable()
-      .meta({
-        description:
-          'An import under way: how far it has got, 0 to 100, or null when another server process runs it; null when none runs.',
-      }),
-    settings: z.array(z.enum(['currency', 'timeZone', 'aiLanguage'])).meta({
-      description:
-        'The business settings the present import set, those still at their default: the currency to CNY, the time zone to the dataset’s, the AI language to the dataset’s.',
-    }),
-  })
-  .meta({ ref: 'CrmDemoData' });
-
-export const ImportDemoDataInput = z.strictObject({
-  language: z.enum(['zh-CN', 'en-US']).optional().meta({
-    description: 'The language the dataset is written in; Chinese by default.',
-  }),
-});
 
 export const PlaceQuery = z.object({
   q: z

@@ -1306,8 +1306,6 @@ export const crmPtBR: CrmWording = {
   demoAbsent: 'Nenhum dado de demonstração foi importado.',
   demoPresent:
     'Dados de demonstração importados em {{date}}: {{count}} registros.',
-  demoSettingsSet:
-    'A importação definiu as configurações de negócio {{names}}, que estavam no padrão, com os valores para os quais os dados de demonstração foram escritos.',
   demoAccounts: 'Contas de demonstração',
   demoImport: 'Importar dados de demonstração',
   demoImportTitle: 'Importar os dados de demonstração?',
@@ -1324,6 +1322,21 @@ export const crmPtBR: CrmWording = {
   demoBannerAction: 'Importar dados de demonstração',
   demoBannerDismiss: 'Dispensar',
   demoImporting: 'Importando os dados de demonstração…',
+  demoResetMore:
+    'As conversas com o assistente escritas pela importação também são removidas, e as configurações de negócio que ela alterou voltam ao valor anterior, a menos que tenham sido alteradas desde então.',
+  demoUnavailable:
+    'Os dados de demonstração só estão disponíveis em uma implantação no modo de demonstração (NOCOBASE_DEMO_MODE como read-only ou observe).',
+  demoFailed:
+    'A última operação com os dados de demonstração não terminou: {{message}}',
+  demoModeReadOnly:
+    'Esta implantação é uma demonstração somente leitura: os visitantes podem entrar e navegar, e toda alteração é recusada, a menos que seja permitida abaixo.',
+  demoModeObserve:
+    'Esta implantação executa o modo de demonstração em observação: alterações são permitidas e as gravações que uma demonstração somente leitura recusaria são registradas.',
+  demoWrites: 'Permitido no modo somente leitura',
+  demoWriteAiWork:
+    'Pedir à IA que acompanhe, revise ou prepare um registro de demonstração (respondido pelo modelo de demonstração)',
+  demoWritesConflict:
+    'Outro administrador alterou estas configurações. Elas foram recarregadas; confira e salve novamente.',
   enabled: 'Ativado',
   disabled: 'Desativado',
   role: 'Função de vendas',
@@ -2667,9 +2680,6 @@ export const crmPtBR: CrmWording = {
     confirmationRequired: 'Confirme esta ação antes de executá-la.',
     fileTooLarge: 'O arquivo enviado excede 20 MB.',
     importLimit: 'Importe entre 1 e 500 registros por vez.',
-    demoExists:
-      'Os dados de demonstração já foram importados. Remova-os antes de importar novamente.',
-    demoMissing: 'Não há dados de demonstração para remover.',
     secretsMissing:
       'Não é possível salvar as credenciais: defina SECRETS_KEYS no servidor primeiro.',
     numberExists: 'Esse número de WhatsApp já está conectado.',
@@ -2679,6 +2689,5 @@ export const crmPtBR: CrmWording = {
       'A janela de resposta de 24 horas foi encerrada: o WhatsApp agora só aceita modelos aprovados.',
     noRecipient:
       'Este cliente não tem um número para o qual o WhatsApp possa enviar.',
-    demoAccounts: 'Não foi possível criar as contas de demonstração.',
   },
 };

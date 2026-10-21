@@ -42,7 +42,13 @@ import {
   setDemoMailLanguage,
   type DemoMailStore,
 } from './demo-mail.js';
-import { demoLanguageOf } from './demo.js';
+import { crmDemoScope } from './demo-scope.js';
+import { createCrmDemo } from './demo-data.js';
+import { registerCrmDemoWrites } from './demo-writes.js';
+import {
+  demoConfigurationToken,
+  demoDataToken,
+} from '@nocobase/app-plugin-demo-mode/server/tokens';
 import {
   followUpAfterTask,
   followUpLead,
@@ -205,6 +211,11 @@ export default class CrmProvider extends ServiceProvider<Application> {
           // DeepSeek's Search API, any other through the gateway with its
           // provider's search; none while there is no model at all.
           async (): Promise<WebSearcher | null> => {
+            // Never the web for the demo: its companies' signals are its own.
+            if (
+              await crmDemoScope(this.app.container.resolve(crmToken).database)
+            )
+              return null;
             const model = await crmModel(this.app.container, 'signals').catch(
               () => null,
             );
@@ -293,7 +304,23 @@ export default class CrmProvider extends ServiceProvider<Application> {
             ).startsWith('zh'),
         ),
       );
-      setDemoMailLanguage(await demoLanguageOf(service));
+      setDemoMailLanguage(
+        (await crmDemoScope(service.database))?.language ?? undefined,
+      );
+    }
+    // The demo dataset, imported, cleared and reset through the demo mode
+    // plugin (demo-data.ts), and what visitors of a read-only demo may still
+    // do once an administrator allows it (demo-writes.ts).
+    if (this.app.container.has(demoDataToken)) {
+      this.app.container
+        .resolve(demoDataToken)
+        .register(
+          createCrmDemo(this.app, () => this.app.container.resolve(crmToken)),
+        );
+      registerCrmDemoWrites(
+        this.app,
+        this.app.container.resolve(demoConfigurationToken),
+      );
     }
     // The CRM's AI runs while there is a model to ask on the Agents plugin.
     this.app.container.resolve(crmToken).aiCheck = () =>
@@ -329,6 +356,9 @@ export default class CrmProvider extends ServiceProvider<Application> {
             : 'disabled',
         }),
         start: async () => {
+          // The demo's AI work is curated: a daily pass would rewrite it.
+          if (await crmDemoScope(service.database))
+            return { state: 'skipped', reason: 'demo-data' };
           const pass = await scanLeadSignals(
             service,
             this.app.container.resolve(leadEvaluatorToken),
@@ -363,6 +393,9 @@ export default class CrmProvider extends ServiceProvider<Application> {
             : 'disabled',
         }),
         start: async () => {
+          // The demo's AI work is curated: a daily pass would rewrite it.
+          if (await crmDemoScope(service.database))
+            return { state: 'skipped', reason: 'demo-data' };
           const pass = await scanDealSignals(
             service,
             this.app.container.resolve(opportunityEvaluatorToken),
@@ -460,6 +493,9 @@ export default class CrmProvider extends ServiceProvider<Application> {
             : 'disabled',
         }),
         start: async () => {
+          // The demo's AI work is curated: a daily pass would rewrite it.
+          if (await crmDemoScope(service.database))
+            return { state: 'skipped', reason: 'demo-data' };
           const pass = await scanTaskPreparation(
             service,
             this.app.container.resolve(taskPreparerToken),
@@ -494,6 +530,9 @@ export default class CrmProvider extends ServiceProvider<Application> {
             : 'disabled',
         }),
         start: async () => {
+          // The demo's signals are curated, and a pass would search the web.
+          if (await crmDemoScope(service.database))
+            return { state: 'skipped', reason: 'demo-data' };
           const pass = await this.app.container
             .resolve(companySignalsToken)
             .scan();

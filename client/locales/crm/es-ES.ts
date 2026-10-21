@@ -1319,8 +1319,6 @@ export const crmEsES: CrmWording = {
   demoAbsent: 'No se han importado datos de demostración.',
   demoPresent:
     'Datos de demostración importados el {{date}}: {{count}} registros.',
-  demoSettingsSet:
-    'La importación ha cambiado la configuración del negocio {{names}}, que tenía los valores predeterminados, a la que usan los datos de demostración.',
   demoAccounts: 'Cuentas de demostración',
   demoImport: 'Importar datos de demostración',
   demoImportTitle: '¿Importar los datos de demostración?',
@@ -1337,6 +1335,21 @@ export const crmEsES: CrmWording = {
   demoBannerAction: 'Importar datos de demostración',
   demoBannerDismiss: 'Descartar',
   demoImporting: 'Importando los datos de demostración…',
+  demoResetMore:
+    'También se eliminan las conversaciones con el asistente que escribió la importación, y los ajustes de negocio que cambió vuelven a su valor anterior, salvo que se hayan modificado desde entonces.',
+  demoUnavailable:
+    'Los datos de demostración solo están disponibles en un despliegue en modo demostración (NOCOBASE_DEMO_MODE con read-only u observe).',
+  demoFailed:
+    'La última operación con los datos de demostración no terminó: {{message}}',
+  demoModeReadOnly:
+    'Este despliegue es una demostración de solo lectura: los visitantes pueden iniciar sesión y navegar, y se rechaza cualquier cambio que no se permita abajo.',
+  demoModeObserve:
+    'Este despliegue ejecuta el modo demostración en modo observación: se permiten cambios y se registran las escrituras que una demostración de solo lectura rechazaría.',
+  demoWrites: 'Permitido en modo de solo lectura',
+  demoWriteAiWork:
+    'Pedir a la IA que haga seguimiento, revise o prepare un registro de demostración (responde el modelo de demostración)',
+  demoWritesConflict:
+    'Otro administrador cambió estos ajustes. Se han vuelto a cargar; revísalos y guarda de nuevo.',
   enabled: 'Activado',
   disabled: 'Desactivado',
   role: 'Rol de ventas',
@@ -2685,9 +2698,6 @@ export const crmEsES: CrmWording = {
     confirmationRequired: 'Confirma esta acción antes de ejecutarla.',
     fileTooLarge: 'El archivo supera los 20 MB.',
     importLimit: 'Importa entre 1 y 500 registros a la vez.',
-    demoExists:
-      'Los datos de demostración ya están importados. Elimínalos antes de volver a importarlos.',
-    demoMissing: 'No hay datos de demostración que eliminar.',
     secretsMissing:
       'No se pueden guardar las credenciales: configura primero SECRETS_KEYS en el servidor.',
     numberExists: 'Ese número de WhatsApp ya está conectado.',
@@ -2697,6 +2707,5 @@ export const crmEsES: CrmWording = {
       'La ventana de respuesta de 24 horas se ha cerrado: WhatsApp solo admite ahora plantillas aprobadas.',
     noRecipient:
       'Este cliente no tiene un número al que WhatsApp pueda enviar.',
-    demoAccounts: 'No se han podido crear las cuentas de demostración.',
   },
 };

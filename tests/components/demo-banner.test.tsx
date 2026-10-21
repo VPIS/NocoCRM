@@ -5,15 +5,29 @@ import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { crmZh } from '../../client/locales/crm/index.js';
 
-// The demo banner: offered to whoever may import the dataset while none is
-// imported, linking to the settings page's demo tab, and dismissed for good
-// in this browser; while an import runs, how far it has got.
+// The demo banner: in a deployment running in demo mode, offered to whoever
+// may import the dataset while none is imported, linking to the settings
+// page's demo tab, and dismissed for good in this browser; while an import
+// runs, how far it has got.
 
 const state = vi.hoisted(() => ({
-  metadata: {} as { settingsAccess?: boolean; demoPresent?: boolean },
+  metadata: {} as { settingsAccess?: boolean },
+  mode: 'read-only' as string,
   status: undefined as
-    | { present: boolean; importing: { percent: number | null } | null }
+    | {
+        available: boolean;
+        present: boolean;
+        importing: { percent: number } | null;
+      }
     | undefined,
+  enabled: [] as boolean[],
+}));
+
+vi.mock('@nocobase/app-plugin-demo-mode/client/demo-data', () => ({
+  useDemoData: (options: { enabled?: boolean }) => {
+    state.enabled.push(options.enabled !== false);
+    return { status: options.enabled === false ? null : state.status };
+  },
 }));
 
 vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
@@ -22,7 +36,7 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
   return {
     ...actual,
     useMetadata: () => ({ data: state.metadata }),
-    useCrmQuery: () => ({ data: state.status }),
+    useCrmQuery: () => ({ data: { mode: state.mode } }),
     useCrmScopeKey: () => ['test'],
     useCrmText: () => ({
       text: (key: string): string => {
@@ -49,11 +63,13 @@ const renderBanner = () =>
 describe('the demo banner', () => {
   beforeEach(() => {
     localStorage.clear();
-    state.status = undefined;
+    state.mode = 'read-only';
+    state.enabled = [];
+    state.status = { available: true, present: false, importing: null };
   });
 
   it('offers the import to an administrator while no demo data is imported', () => {
-    state.metadata = { settingsAccess: true, demoPresent: false };
+    state.metadata = { settingsAccess: true };
     renderBanner();
     expect(screen.getByText(crmZh.demoBanner)).toBeTruthy();
     expect(
@@ -64,17 +80,28 @@ describe('the demo banner', () => {
   });
 
   it('hides once the demo data is imported, and from those who cannot import', () => {
-    state.metadata = { settingsAccess: true, demoPresent: true };
+    state.metadata = { settingsAccess: true };
+    state.status = { available: true, present: true, importing: null };
     const { unmount } = renderBanner();
     expect(screen.queryByText(crmZh.demoBanner)).toBeNull();
     unmount();
+    state.status = { available: true, present: false, importing: null };
     state.metadata = { settingsAccess: false };
     renderBanner();
     expect(screen.queryByText(crmZh.demoBanner)).toBeNull();
+    expect(state.enabled.at(-1)).toBe(false);
+  });
+
+  it('stays away, asking nothing, outside a demo deployment', () => {
+    state.metadata = { settingsAccess: true };
+    state.mode = 'off';
+    renderBanner();
+    expect(screen.queryByText(crmZh.demoBanner)).toBeNull();
+    expect(state.enabled.every((enabled) => !enabled)).toBe(true);
   });
 
   it('stays dismissed in this browser', async () => {
-    state.metadata = { settingsAccess: true, demoPresent: false };
+    state.metadata = { settingsAccess: true };
     const { unmount } = renderBanner();
     await userEvent.click(
       screen.getByRole('button', { name: crmZh.demoBannerDismiss }),
@@ -86,13 +113,17 @@ describe('the demo banner', () => {
   });
 
   it('shows how far an import has got while it runs, even dismissed', async () => {
-    state.metadata = { settingsAccess: true, demoPresent: false };
+    state.metadata = { settingsAccess: true };
     const { unmount } = renderBanner();
     await userEvent.click(
       screen.getByRole('button', { name: crmZh.demoBannerDismiss }),
     );
     unmount();
-    state.status = { present: false, importing: { percent: 42 } };
+    state.status = {
+      available: true,
+      present: false,
+      importing: { percent: 42 },
+    };
     renderBanner();
     expect(screen.getByText(crmZh.demoImporting)).toBeTruthy();
     expect(screen.getByText('42%')).toBeTruthy();

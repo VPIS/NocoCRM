@@ -2028,10 +2028,6 @@ const wording = {
     'Demo data imported on {{date}}: {{count}} records.',
     '演示数据已于 {{date}} 导入，共 {{count}} 条记录。',
   ],
-  demoSettingsSet: [
-    'The import set the business settings {{names}}, which were at their defaults, to the ones the demo data is written for.',
-    '导入时已把仍为默认值的{{names}}改为演示数据所用的设置。',
-  ],
   demoAccounts: ['Demo accounts', '演示账号'],
   demoImport: ['Import demo data', '导入演示数据'],
   demoImportTitle: ['Import the demo data?', '导入演示数据？'],
@@ -2054,6 +2050,35 @@ const wording = {
   demoBannerAction: ['Import demo data', '导入演示数据'],
   demoBannerDismiss: ['Dismiss', '不再显示'],
   demoImporting: ['Importing the demo data…', '正在导入演示数据…'],
+  demoResetMore: [
+    'The conversations with the assistant the import wrote go too, and the business settings it set return to what they were, unless changed since.',
+    '导入写入的与助手的对话也会删除；导入时改过的业务设置会恢复原值（之后又被修改过的除外）。',
+  ],
+  demoUnavailable: [
+    'Demo data is available only in a deployment running in demo mode (NOCOBASE_DEMO_MODE set to read-only or observe).',
+    '演示数据只在以演示模式运行的部署中可用（NOCOBASE_DEMO_MODE 设为 read-only 或 observe）。',
+  ],
+  demoFailed: [
+    'The last demo data operation did not finish: {{message}}',
+    '上一次演示数据操作没有完成：{{message}}',
+  ],
+  demoModeReadOnly: [
+    'This deployment is a read-only demo: visitors can sign in and browse, and every change is refused unless allowed below.',
+    '当前部署是只读演示：访客可以登录和浏览，除下方允许的操作外，所有修改都会被拒绝。',
+  ],
+  demoModeObserve: [
+    'This deployment runs demo mode in observe mode: changes are allowed and the writes a read-only demo would refuse are logged.',
+    '当前部署以观察模式运行演示模式：允许修改，只读演示会拒绝的写入会记录在日志中。',
+  ],
+  demoWrites: ['Allowed in read-only mode', '只读模式下允许的操作'],
+  demoWriteAiWork: [
+    'Ask the AI to follow up, review or prepare a demo record (answered by the demo model)',
+    '让 AI 跟进、审核或准备演示记录（由演示模型回答）',
+  ],
+  demoWritesConflict: [
+    'Another administrator changed these settings. They have been reloaded; check them and save again.',
+    '其他管理员已修改这些设置，已重新加载，请检查后再保存。',
+  ],
   enabled: ['Enabled', '启用'],
   disabled: ['Disabled', '停用'],
   role: ['Sales role', '销售角色'],
@@ -3450,11 +3475,6 @@ const wording = {
       'Import between 1 and 500 records at a time.',
       '每次可导入 1 至 500 条记录。',
     ],
-    demoExists: [
-      'The demo data is already imported. Remove it before importing again.',
-      '演示数据已导入，请先清除后再导入。',
-    ],
-    demoMissing: ['There is no demo data to remove.', '没有可清除的演示数据。'],
     secretsMissing: [
       "Credentials can't be saved: set SECRETS_KEYS on the server first.",
       '无法保存凭据：请先在服务器上配置 SECRETS_KEYS。',
@@ -3474,10 +3494,6 @@ const wording = {
     noRecipient: [
       'This customer has no number WhatsApp can send to.',
       '这位客户没有可以发送的 WhatsApp 号码。',
-    ],
-    demoAccounts: [
-      'The demo accounts could not be created.',
-      '无法创建演示账号。',
     ],
   },
 } as const;

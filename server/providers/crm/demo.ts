@@ -3,14 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { eventKey } from './signal-reading.js';
 import type { AppAuthorization } from '@nocobase/app-plugin-authorization/server';
 import { convertLead } from './conversion.js';
-import {
-  CrmError,
-  type CrmSettings,
-  definitions,
-  object,
-  stages,
-  toText,
-} from './schema.js';
+import { type CrmSettings, definitions, stages, toText } from './schema.js';
 import { EVALUATION } from './ai-entries.js';
 import { CrmService } from './service.js';
 import {
@@ -27,12 +20,7 @@ import {
   type DemoConversation,
   type DemoMailbox,
 } from './demo-mail.js';
-import {
-  listUsers,
-  requireCapability,
-  roleKey,
-  type Actor,
-} from './authorization.js';
+import { roleKey, type Actor } from './authorization.js';
 import { DEFAULT_TIME_ZONE } from './zone-time.js';
 import {
   populateDemoWhatsApp,
@@ -40,14 +28,16 @@ import {
   type DemoWhatsAppManifest,
 } from './demo-whatsapp.js';
 import type { WhatsAppService } from './whatsapp/service.js';
+import type { DemoImportContext } from '@nocobase/app-plugin-demo-mode/server/tokens';
 
 // The demo dataset: NocoBase selling its own licences and services (the
 // editions and prices of nocobase.com/cn/commercial) to fictional customers,
 // with companies, contacts, leads, opportunities, tasks and approvals
 // dated relative to the day it is imported. It follows the business guidance
-// in server/providers/crm/guidance.ts. Imported and removed from the settings
-// page by an administrator; a manifest row in crm_settings records exactly
-// which rows the import created, so removal touches nothing else.
+// in server/providers/crm/guidance.ts. Imported, cleared and reset through
+// the demo mode plugin's lifecycle (demo-data.ts registers it); the manifest
+// the import keeps in the plugin's dataset data records exactly which rows
+// it created, so clearing touches nothing else.
 
 // Each demo lead's gender, by place (the content files' leads, in both
 // languages, are the same people in the same order).
@@ -81,7 +71,7 @@ export const demoProfile = (mailbox: string): string =>
 // introduced by a partner.
 const PROSPECTED = new Set(['exhibition', 'outbound', 'partner']);
 
-export const DEMO_MARKER = 'demo-dataset-v1';
+export const DEMO_DOMAIN = '@demo.example';
 
 export const demoPassword = (username: string): string => `${username}123`;
 
@@ -118,28 +108,6 @@ export const demoAccountsIn = (
   }));
 
 export const demoAccounts: readonly DemoAccount[] = demoAccountsIn('zh-CN');
-
-// How the import gets an account it needs: the users plugin in the running
-// application, a stub in tests.
-export interface DemoAccountCreator {
-  create(input: {
-    name: string;
-    username: string;
-    email: string;
-    password: string;
-    role: string;
-  }): Promise<{ id: string }>;
-  // An account that already exists is reused, and its password set back to
-  // the demo one, so the password the settings page states always holds.
-  resetPassword(id: string, password: string): Promise<void>;
-  // And its name set back to the demo one, should it have been changed.
-  rename(id: string, name: string): Promise<void>;
-  // Removing the demo data disables its accounts (the users plugin keeps a
-  // deleted account's address, so a deleted one could not be made again on
-  // the next import); importing again enables them.
-  disable(id: string): Promise<void>;
-  enable(id: string): Promise<void>;
-}
 
 // How the import gets its demo mailboxes (demo-mail.ts): through the Mail
 // plugin in the running application, a stub in tests, absent without the
@@ -181,30 +149,10 @@ export interface DemoChats {
   remove(ids: readonly string[]): Promise<void>;
 }
 
-export interface DemoStatus {
-  present: boolean;
-  // The language the present import was made in.
-  language: DemoLanguage | null;
-  createdAt: string | null;
-  records: number;
-  accounts: readonly { username: string; name: string; role: string }[];
-  // Each language's accounts, so the settings page lists the ones the
-  // import it is about to make will create.
-  accountsByLanguage: Record<
-    DemoLanguage,
-    readonly { username: string; name: string; role: string }[]
-  >;
-  // An import under way: how far it has got, 0 to 100, when this process
-  // runs it (null when another does); null when none runs.
-  importing: { percent: number | null } | null;
-  // The business settings the present import set (demoSettings).
-  settings: DemoSetting[];
-}
-
 // The business settings a dataset is written for: its amounts are in yuan,
 // its people work in Shanghai or in New York, and the AI writes in its
 // language. The import sets only those still at their shipped default, so
-// an administrator's own choice stands; a removal leaves them as they are.
+// an administrator's own choice stands; clearing puts them back.
 type DemoSetting = 'currency' | 'timeZone' | 'aiLanguage';
 const demoSettings = (
   language: DemoLanguage,
@@ -214,138 +162,37 @@ const demoSettings = (
   aiLanguage: language,
 });
 
-// How far the import this process runs has got, 0 to 100, for the banner
-// that shows it while it runs (demoStatus); none while no import runs here.
-let importPercent: number | undefined;
-const reached = (percent: number): void => {
-  importPercent = percent;
-};
-
-// What an import wrote so far, for taking it back should it fail: its
-// records, and the settings it changed with the values they had.
-interface Claim {
-  manifest?: Manifest;
-  settings?: Partial<Pick<CrmSettings, DemoSetting>>;
-}
-
-interface Manifest {
+// What an import recorded about itself in the demo mode plugin's dataset
+// data (`manifest`), kept at each checkpoint so a clear after a failed or
+// interrupted import knows what to take back.
+export interface DemoManifest {
   version: number;
-  // Absent on an import made before the dataset had a language: Chinese.
-  language?: DemoLanguage;
+  language: DemoLanguage;
   label: string;
   createdAt: string;
   businessDate: string;
   ownerId: string;
-  // The importer was made a sales manager by the import, which removal
-  // undoes; absent when they already were one.
-  importerManager?: boolean;
   records: { entity: string; id: string; name: string }[];
-  // The demo mailboxes the import connected, which removal disconnects;
-  // absent on an import made before the dataset had mail.
+  // The demo mailboxes the import connected, which clearing disconnects.
   mailAccounts?: { userId: string; accountId: string }[];
-  // The importer's conversations with the assistant, which removal deletes;
-  // absent on an import made before the dataset had them.
+  // The importer's conversations with the assistant, which clearing deletes.
   chats?: string[];
-  // The demo's WhatsApp numbers and their customers, which removal deletes;
-  // absent on an import made before the dataset had them.
+  // The demo's WhatsApp numbers and their customers, which clearing deletes.
   whatsapp?: DemoWhatsAppManifest;
-  // The business settings the import set; absent on one made before it set
-  // any.
-  settings?: DemoSetting[];
+  // The business settings the import set, with the values they had before,
+  // which clearing puts back while they still hold the demo's value.
+  settings?: Partial<Pick<CrmSettings, DemoSetting>>;
 }
 
-// Whether a demo dataset is imported, for the banner that offers one to
-// whoever may import it (the metadata route asks only for them).
-// An import under way is not one yet: the banner stays, showing its
-// progress.
-export async function demoPresent(service: CrmService): Promise<boolean> {
-  const row = await service.database
-    .query()
-    .selectFrom('crmSettings')
-    .select('value')
-    .where('id', '=', DEMO_MARKER)
-    .executeTakeFirst();
-  return Boolean(row) && !isImporting(row?.value);
-}
-
-// The marker an import claims before it writes anything, until its manifest
-// replaces it.
-function isImporting(value: unknown): boolean {
-  const parsed: unknown = typeof value === 'string' ? JSON.parse(value) : value;
-  return object(parsed).importing === true;
-}
-
-// A claim no import holds any more: last moved on ten minutes ago or more
-// and not run by this process, as when the server was stopped mid-import
-// (one that fails takes its claim back). It counts as none: nothing shows
-// it under way, and a new import takes back what it recorded (each step
-// keeps it in the claim) and claims the marker again.
-const STALE_IMPORT_MS = 10 * 60 * 1000;
-function abandoned(row: Row): boolean {
-  if (!isImporting(row.value) || importPercent !== undefined) return false;
-  const at = Date.parse(toText(row.updatedAt));
-  return !Number.isNaN(at) && Date.now() - at >= STALE_IMPORT_MS;
-}
-
-// The language of the demo imported, if any (the demo mailboxes' label
-// follows it).
-export async function demoLanguageOf(
-  service: CrmService,
-): Promise<string | undefined> {
-  const row = await service.database
-    .query()
-    .selectFrom('crmSettings')
-    .select('value')
-    .where('id', '=', DEMO_MARKER)
-    .executeTakeFirst();
-  const manifest = row ? parseManifest(row.value) : undefined;
-  return manifest ? (manifest.language ?? 'zh-CN') : undefined;
-}
-
-export async function demoStatus(
-  service: CrmService,
-  actor: Actor,
-): Promise<DemoStatus> {
-  await requireCapability(actor, 'manage', 'settings');
-  const found = await service.database
-    .query()
-    .selectFrom('crmSettings')
-    .select(['value', 'updatedAt'])
-    .where('id', '=', DEMO_MARKER)
-    .executeTakeFirst();
-  const row = found && !abandoned(found) ? found : undefined;
-  const importing = row ? isImporting(row.value) : false;
-  const manifest =
-    row && !importing ? (parseManifest(row.value) ?? null) : null;
-  // The accounts of the language of the import present, else of the
-  // reader's.
-  const language: DemoLanguage | null = manifest
-    ? (manifest.language ?? 'zh-CN')
-    : null;
-  const names = language ?? (actor.locale.startsWith('zh') ? 'zh-CN' : 'en-US');
-  return {
-    present: Boolean(manifest),
-    language,
-    createdAt: manifest?.createdAt ?? null,
-    records: manifest?.records.length ?? 0,
-    accounts: listed(names),
-    accountsByLanguage: { 'zh-CN': listed('zh-CN'), 'en-US': listed('en-US') },
-    importing: importing ? { percent: importPercent ?? null } : null,
-    settings: manifest?.settings ?? [],
-  };
-}
-const listed = (language: DemoLanguage) =>
-  demoAccountsIn(language).map(({ username, name, role }) => ({
-    username,
-    name,
-    role,
-  }));
-
-function parseManifest(value: unknown): Manifest | undefined {
-  const parsed: unknown = typeof value === 'string' ? JSON.parse(value) : value;
-  const record = object(parsed);
-  return Array.isArray(record.records)
-    ? (record as unknown as Manifest)
+// The manifest an import recorded, if it got that far.
+export function demoManifestOf(
+  data: Readonly<Record<string, unknown>>,
+): DemoManifest | undefined {
+  const manifest = (
+    data.manifest && typeof data.manifest === 'object' ? data.manifest : {}
+  ) as Record<string, unknown>;
+  return Array.isArray(manifest.records)
+    ? (manifest as unknown as DemoManifest)
     : undefined;
 }
 
@@ -364,156 +211,71 @@ function zoneOffsetMinutes(timeZone: string, date: Date): number {
   return match[1] === '-' ? -minutes : minutes;
 }
 
-export async function populateDemo(
+// What the import needs besides the CRM: the plugins its mailboxes and the
+// importer's conversations are made through (demo-services.ts), absent
+// without them, and the WhatsApp service.
+export interface DemoImportServices {
+  mailboxes?: DemoMailboxes;
+  chats?: DemoChats;
+  whatsapp?: WhatsAppService;
+}
+
+// Imports the dataset in a language for the demo mode plugin's lifecycle
+// (demo-data.ts): the plugin claims the import, tracks what it records and
+// takes everything back should a step fail.
+export async function importDemo(
   service: CrmService,
   authz: AppAuthorization,
-  actor: Actor,
-  accounts: DemoAccountCreator,
-  language: DemoLanguage = 'zh-CN',
-  mailboxes?: DemoMailboxes,
-  chats?: DemoChats,
-  whatsapp?: WhatsAppService,
-): Promise<DemoStatus> {
-  await requireCapability(actor, 'manage', 'settings');
-  // The marker is claimed before anything is written, so a second import
-  // started beside this one (a double click, another administrator) is
-  // refused at once instead of writing a second dataset that no manifest
-  // records. An import that fails takes back what it wrote.
-  const query = service.database.query();
-  const claimed = await query
-    .selectFrom('crmSettings')
-    .select(['value', 'updatedAt'])
-    .where('id', '=', DEMO_MARKER)
-    .executeTakeFirst();
-  if (claimed && abandoned(claimed)) {
-    // An import cut off: what its claim recorded goes first, as a removal
-    // would take it, so the new one does not write a second dataset.
-    const recorded = parseManifest(claimed.value);
-    if (recorded) {
-      if (mailboxes)
-        for (const { userId, accountId } of recorded.mailAccounts ?? [])
-          await mailboxes.remove(userId, accountId).catch(() => undefined);
-      if (chats && recorded.chats?.length)
-        await chats.remove(recorded.chats).catch(() => undefined);
-      await deleteRecords(service, recorded);
-    }
-    await query
-      .deleteFrom('crmSettings')
-      .where('id', 'in', [DEMO_MARKER, DEMO_MAIL_ROW])
-      .execute();
-  }
-  try {
-    await query
-      .insertInto('crmSettings')
-      .values({
-        id: DEMO_MARKER,
-        value: JSON.stringify({ version: 8, importing: true, records: [] }),
-        updatedAt: new Date(),
-      })
-      .execute();
-  } catch {
-    throw new CrmError('demoExists', 409);
-  }
-  const claim: Claim = {};
-  reached(0);
-  try {
-    return await populate(
-      service,
-      authz,
-      actor,
-      accounts,
-      language,
-      mailboxes,
-      chats,
-      whatsapp,
-      claim,
-    );
-  } catch (error) {
-    if (claim.manifest) await deleteRecords(service, claim.manifest);
-    if (claim.settings)
-      await service.saveSettings(actor, claim.settings).catch(() => undefined);
-    await query
-      .deleteFrom('crmSettings')
-      .where('id', 'in', [DEMO_MARKER, DEMO_MAIL_ROW])
-      .execute();
-    throw error;
-  } finally {
-    importPercent = undefined;
-  }
+  context: DemoImportContext,
+  services: DemoImportServices,
+): Promise<void> {
+  const language: DemoLanguage =
+    context.language === 'en-US' ? 'en-US' : 'zh-CN';
+  const actor: Actor = {
+    id: context.actorId,
+    locale: language,
+    scope: authz.for({
+      principal: { type: 'user', id: context.actorId },
+      subjects: [{ type: 'authenticated', id: '*' }],
+    }),
+  };
+  await populate(service, authz, actor, context, language, services);
 }
 
 async function populate(
   service: CrmService,
   authz: AppAuthorization,
   actor: Actor,
-  accounts: DemoAccountCreator,
+  context: DemoImportContext,
   language: DemoLanguage,
-  mailboxes: DemoMailboxes | undefined,
-  chats: DemoChats | undefined,
-  whatsapp: WhatsAppService | undefined,
-  // What the import wrote so far, for taking it back should it fail.
-  claim: Claim,
-): Promise<DemoStatus> {
+  { mailboxes, chats, whatsapp }: DemoImportServices,
+): Promise<void> {
   const text = demoContent(language);
   const query = service.database.query();
 
-  // Accounts: reuse one that exists by username, create the rest, and make
-  // sure each holds its demo role and nothing else among the CRM roles.
-  const existing = await listUsers(service.database);
-  const disabled = new Set(
-    (
-      await query
-        .selectFrom('user')
-        .select('id')
-        .where('disabledAt', 'is not', null)
-        .where('deletedAt', 'is', null)
-        .execute()
-    ).map((row) => toText(row.id)),
-  );
+  // Accounts, through the demo mode plugin, which owns them and disables
+  // them when the demo is cleared: each with its CRM role, given through the
+  // CRM's role scope (user-roles.ts), which every account must hold. The
+  // CRM's sales sets carry no last-holder protection, so clearing can take
+  // them back; the administrator (root) is never a demo account's.
   const userIds = {} as Record<DemoSeat, string>;
-  for (const account of demoAccountsIn(language)) {
-    const found = existing.find((u) => u.username === account.username);
-    if (found) {
-      // One a removal disabled is the demo's again.
-      if (disabled.has(found.id)) await accounts.enable(found.id);
-      await accounts.resetPassword(found.id, demoPassword(account.username));
-      if (found.name !== account.name)
-        await accounts.rename(found.id, account.name);
-    }
-    const id = found
-      ? found.id
-      : (
-          await accounts.create({
-            name: account.name,
-            username: account.username,
-            email: `${account.username}@demo.example`,
-            password: demoPassword(account.username),
-            role: roleKey(account.role),
-          })
-        ).id;
-    await authz.permissionSets.replaceSubjectAssignments({
-      subject: { type: 'user', id },
-      managedPermissionSets: [
-        'sales-representative',
-        'sales-manager',
-        'system-administrator',
-      ].map(roleKey),
-      permissionSets: [roleKey(account.role)],
+  for (const account of demoAccountsIn(language))
+    userIds[account.seat] = await context.createAccount({
+      username: account.username,
+      name: account.name,
+      email: `${account.username}${DEMO_DOMAIN}`,
+      password: demoPassword(account.username),
+      roleScopes: { app: [roleKey(account.role)] },
     });
-    userIds[account.seat] = id;
-  }
-  // The importer becomes a sales manager too, keeping every set they hold.
+  // The importer becomes a sales manager too, for the demo's lifetime,
+  // keeping every set they hold.
   const managerSet = roleKey('sales-manager');
-  const importerManager = !(
-    await authz.permissionSets.listAssignments(managerSet)
-  ).some((a) => a.subject.type === 'user' && a.subject.id === actor.id);
-  if (importerManager)
-    await authz.permissionSets.replaceSubjectAssignments({
-      subject: { type: 'user', id: actor.id },
-      managedPermissionSets: [managerSet],
-      permissionSets: [managerSet],
-    });
-  reached(5);
+  if (
+    !(await authz.permissionSets.listAssignments(managerSet)).some(
+      (a) => a.subject.type === 'user' && a.subject.id === actor.id,
+    )
+  )
+    await context.assignPermissionSet(actor.id, managerSet);
   const actorFor = (id: string): Actor => ({
     id,
     locale: language,
@@ -530,7 +292,8 @@ async function populate(
   ];
 
   // The settings the dataset is written for, before anything is dated by
-  // the business time zone.
+  // the business time zone; the values they had are recorded first, so a
+  // failed import or a clear puts them back.
   const before = await service.settings();
   const adopted = Object.fromEntries(
     Object.entries(demoSettings(language)).filter(
@@ -540,22 +303,15 @@ async function populate(
     ),
   ) as Partial<Pick<CrmSettings, DemoSetting>>;
   const settingsSet = Object.keys(adopted) as DemoSetting[];
-  if (settingsSet.length) {
-    claim.settings = Object.fromEntries(
-      settingsSet.map((key) => [key, before[key]]),
-    );
-    await service.saveSettings(actor, adopted);
-  }
-  const settings = await service.settings();
-  const timeZone = settings.timeZone || DEFAULT_TIME_ZONE;
-  const now = new Date();
-  const calendarDay = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(now);
-  // Local midnight of today in the business timezone.
+  const previous = Object.fromEntries(
+    settingsSet.map((key) => [key, before[key]]),
+  ) as Partial<Pick<CrmSettings, DemoSetting>>;
+  // Dates are laid out from the import's clock, in the dataset's time
+  // zone: local midnight of today there.
+  const { clock } = context;
+  const timeZone = clock.timeZone || DEFAULT_TIME_ZONE;
+  const now = clock.now;
+  const calendarDay = clock.dateAgo(0);
   const base =
     Date.parse(`${calendarDay}T00:00:00Z`) -
     zoneOffsetMinutes(timeZone, now) * 60000;
@@ -564,32 +320,35 @@ async function populate(
       base + day * 86400000 + hour * 3600000 + minute * 60000,
     ).toISOString();
   const started = now.toISOString();
-  const manifest: Manifest = {
-    // 7: the demo mailboxes (mailAccounts); 8: the WhatsApp number.
-    version: 8,
+  const manifest: DemoManifest = {
+    // 7: the demo mailboxes (mailAccounts); 8: the WhatsApp number; 9: the
+    // demo mode plugin's lifecycle.
+    version: 9,
     language,
     label: text.label,
     createdAt: started,
     businessDate: calendarDay,
     ownerId: actor.id,
-    ...(importerManager ? { importerManager } : {}),
-    ...(settingsSet.length ? { settings: settingsSet } : {}),
+    ...(settingsSet.length ? { settings: previous } : {}),
     records: [],
   };
-  claim.manifest = manifest;
+  await context.setData({ manifest });
+  if (settingsSet.length) await service.saveSettings(actor, adopted);
   // Each step's progress, with what the import has written so far kept in
-  // its claim, so an import cut off (the server stopped mid-way) can be
-  // taken back by the next (populateDemo).
+  // its data and the new records tracked, so an import cut off or failing
+  // is taken back by clearDemo. Never inside a transaction: on SQLite the
+  // plugin's writes would wait for the connection the transaction holds.
+  let tracked = 0;
   const progress = async (percent: number): Promise<void> => {
-    reached(percent);
-    await query
-      .updateTable('crmSettings')
-      .set({
-        value: JSON.stringify({ ...manifest, importing: true }),
-        updatedAt: new Date(),
-      })
-      .where('id', '=', DEMO_MARKER)
-      .execute();
+    const fresh = manifest.records.slice(tracked);
+    tracked = manifest.records.length;
+    for (const entity of new Set(fresh.map((r) => r.entity)))
+      await context.track(
+        definitions[entity as keyof typeof definitions].table,
+        fresh.filter((r) => r.entity === entity).map((r) => r.id),
+      );
+    await context.setData({ manifest });
+    await context.progress(percent / 100);
   };
   const track = (entity: string, record: Row): Row => {
     if (!manifest.records.some((r) => r.id === record.id))
@@ -2564,102 +2323,82 @@ async function populate(
     }
   }
 
-  // The manifest makes the import repeat-safe and records exactly which rows
-  // it created, so removal can find them again.
-  await query
-    .updateTable('crmSettings')
-    .set({ value: JSON.stringify(manifest), updatedAt: new Date() })
-    .where('id', '=', DEMO_MARKER)
-    .execute();
-  reached(100);
-  return demoStatus(service, actor);
+  await progress(100);
 }
 
-// Removes exactly the rows the import created, in dependency order. The demo
-// accounts stay: they are ordinary accounts now, and deleting people is the
-// Users page's job.
-export async function resetDemo(
+// What clearing needs besides the CRM, as the import's services: the
+// plugins the mailboxes and conversations go through, and the in-app inbox.
+export interface DemoClearServices {
+  mailboxes?: DemoMailboxes;
+  chats?: DemoChats;
+  inbox?: DemoInbox;
+}
+
+// Takes back what an import recorded, whole or in part (the demo mode
+// plugin calls it on clear, after a failed step and for an import cut off):
+// its mailboxes, conversations, records with their history, signals and
+// WhatsApp data, the notifications left naming them, its mail and the
+// business settings it set. The plugin then removes the accounts, the
+// importer's sales manager assignment and the simulated model.
+export async function clearDemo(
   service: CrmService,
-  actor: Actor,
-  accounts?: DemoAccountCreator,
-  mailboxes?: DemoMailboxes,
-  chats?: DemoChats,
-  inbox?: DemoInbox,
-): Promise<DemoStatus> {
-  await requireCapability(actor, 'manage', 'settings');
+  actorId: string,
+  data: Readonly<Record<string, unknown>>,
+  { mailboxes, chats, inbox }: DemoClearServices,
+): Promise<void> {
+  const manifest = demoManifestOf(data);
   const query = service.database.query();
-  const row = await query
-    .selectFrom('crmSettings')
-    .select('value')
-    .where('id', '=', DEMO_MARKER)
-    .executeTakeFirst();
-  const manifest = row ? parseManifest(row.value) : undefined;
-  if (!manifest) throw new CrmError('demoMissing', 404);
-  // The demo mailboxes go first, while the manifest still records them;
-  // the plugin deletes their mail. One the user removed already is passed
-  // over. An import made before the dataset had mail has none.
-  if (mailboxes)
-    for (const { userId, accountId } of manifest.mailAccounts ?? [])
-      await mailboxes.remove(userId, accountId).catch(() => undefined);
-  if (chats && manifest.chats?.length)
-    await chats.remove(manifest.chats).catch(() => undefined);
-  await deleteRecords(service, manifest);
+  if (manifest) {
+    // The demo mailboxes go first, while the manifest still records them;
+    // the Mail plugin deletes their mail. One the user removed already is
+    // passed over.
+    if (mailboxes)
+      for (const { userId, accountId } of manifest.mailAccounts ?? [])
+        await mailboxes.remove(userId, accountId).catch(() => undefined);
+    if (chats && manifest.chats?.length)
+      await chats.remove(manifest.chats).catch(() => undefined);
+    await deleteRecords(service, manifest);
+  }
   // The notifications already in people's inboxes about its records, and
   // any other about a record gone, which would only open nothing.
   if (inbox) await inbox.removeOrphans().catch(() => undefined);
   await query
     .deleteFrom('crmSettings')
-    .where('id', 'in', [DEMO_MARKER, DEMO_MAIL_ROW])
+    .where('id', '=', DEMO_MAIL_ROW)
     .execute();
   setDemoMailLanguage(undefined);
-  if (accounts) await disableDemoAccounts(service, actor, accounts);
-  // The sales manager role the import gave its importer goes with it.
-  if (manifest.importerManager)
-    await service.authz.permissionSets.replaceSubjectAssignments({
-      subject: { type: 'user', id: manifest.ownerId },
-      managedPermissionSets: [roleKey('sales-manager')],
-      permissionSets: [],
-    });
-  return demoStatus(service, actor);
-}
-
-// The demo's accounts go with its data: those an import created (a demo
-// username at the demo's own mail domain; an existing account an import
-// reused keeps its own address and stays as it was), of either language, are
-// disabled: they no longer sign in, nor are they offered as owners or
-// participants. Never the reader's own account.
-const DEMO_DOMAIN = '@demo.example';
-async function disableDemoAccounts(
-  service: CrmService,
-  actor: Actor,
-  accounts: DemoAccountCreator,
-): Promise<void> {
-  const usernames = new Set(
-    (['zh-CN', 'en-US'] as const).flatMap((language) =>
-      demoAccountsIn(language).map((account) => account.username),
-    ),
-  );
-  const rows = await service.database
-    .query()
-    .selectFrom('user')
-    .select(['id', 'username', 'email'])
-    .where('deletedAt', 'is', null)
-    .where('disabledAt', 'is', null)
-    .execute();
-  for (const user of rows)
-    if (
-      toText(user.id) !== actor.id &&
-      usernames.has(toText(user.username)) &&
-      toText(user.email).toLowerCase().endsWith(DEMO_DOMAIN)
-    )
-      await accounts.disable(toText(user.id));
+  // The business settings the import set go back to what they were, unless
+  // someone has changed one since.
+  const previous = manifest?.settings ?? {};
+  const keys = Object.keys(previous) as DemoSetting[];
+  if (keys.length && manifest) {
+    const current = await service.settings();
+    const wanted = demoSettings(manifest.language);
+    const restore = Object.fromEntries(
+      keys
+        .filter((key) => current[key] === wanted[key])
+        .map((key) => [key, previous[key]]),
+    ) as Partial<Pick<CrmSettings, DemoSetting>>;
+    if (Object.keys(restore).length)
+      await service.saveSettings(
+        {
+          id: actorId,
+          locale: manifest.language,
+          scope: service.authz.for({
+            principal: { type: 'user', id: actorId },
+            subjects: [{ type: 'authenticated', id: '*' }],
+          }),
+        },
+        restore,
+      );
+  }
 }
 
 // Deletes the rows a manifest records, with their history and queued
 // messages, in dependency order.
 async function deleteRecords(
   service: CrmService,
-  manifest: Manifest,
+  manifest: DemoManifest,
 ): Promise<void> {
   const byEntity = new Map<string, string[]>();
   for (const record of manifest.records) {

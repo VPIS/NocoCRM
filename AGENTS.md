@@ -142,6 +142,6 @@ When the built-in mechanism genuinely cannot express what is being asked, changi
 | [.agents/rules/crm-mail.md](.agents/rules/crm-mail.md)                             | Mailbox pages, a record's Mail tab, sending mail, mail in follow-ups                                                  |
 | [.agents/rules/crm-permissions.md](.agents/rules/crm-permissions.md)               | Roles, permission sets, resources, page grants, capabilities                                                          |
 | [.agents/rules/crm-server.md](.agents/rules/crm-server.md)                         | HTTP routes and errors, migrations, model services, notifications, attachments, titles, approval lifecycle, approvers |
-| [.agents/rules/crm-demo.md](.agents/rules/crm-demo.md)                             | The demo dataset, its mail, import and removal, the demo banner                                                       |
+| [.agents/rules/crm-demo.md](.agents/rules/crm-demo.md)                             | The demo dataset on the demo mode plugin, its mail, simulated AI, read-only exceptions, the demo banner               |
 | [.agents/rules/crm-signals.md](.agents/rules/crm-signals.md)                       | Company signals: the web search, the daily check, the Signals tab, signal notices and timeline lines                  |
 | [.agents/rules/crm-whatsapp.md](.agents/rules/crm-whatsapp.md)                     | WhatsApp: the webhook, conversations, a record's WhatsApp tab and timeline lines, what follow-ups read, its settings  |

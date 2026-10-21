@@ -1,5 +1,4 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
-import { ApiClientError } from '@nocobase/app-client';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -14,6 +13,62 @@ import { defaultSettings } from '../../server/providers/crm/schema.js';
 
 const state = vi.hoisted(() => ({
   api: vi.fn(),
+}));
+
+// The demo configuration a read-only demo starts with: no rule yet.
+const configuration = vi.hoisted(() => ({
+  revision: 0,
+  rules: [] as unknown[],
+  busy: false,
+  capabilities: [
+    {
+      id: 'crm.aiWork',
+      title: 'Ask the AI about a demo record',
+      table: 'crm_history',
+      operations: ['insert', 'update'],
+      scopes: [{ id: 'demo-records', title: 'Demo records' }],
+    },
+  ],
+}));
+
+// The demo mode plugin's hook, as the demo page reads it.
+const demo = vi.hoisted(() => ({
+  status: {
+    available: true,
+    present: false,
+    state: null,
+    mode: 'read-only',
+    languages: ['zh-CN', 'en-US'],
+    accounts: [],
+    accountsByLanguage: {
+      'en-US': [
+        {
+          username: 'daniel',
+          name: 'Daniel Brooks',
+          role: 'sales-manager',
+          password: 'daniel123',
+        },
+      ],
+    },
+    importing: null,
+    failure: null,
+    createdAt: null,
+    records: 0,
+  } as Record<string, unknown> | null,
+  importData: vi.fn(async () => undefined),
+  clear: vi.fn(async () => undefined),
+}));
+vi.mock('@nocobase/app-plugin-demo-mode/client/demo-data', () => ({
+  useDemoData: () => ({
+    status: demo.status,
+    loading: false,
+    error: null,
+    pending: false,
+    refresh: async () => undefined,
+    importData: demo.importData,
+    clear: demo.clear,
+    reset: async () => undefined,
+  }),
 }));
 
 const lookup = (key: string): unknown =>
@@ -37,7 +92,10 @@ vi.mock('../../client/components/crm/api.js', async (importOriginal) => {
       data:
         path === 'systemSettings'
           ? defaultSettings
-          : { present: false, createdAt: null, records: 0, accounts: [] },
+          : path === 'demoMode/configuration'
+            ? configuration
+            : { present: false, createdAt: null, records: 0, accounts: [] },
+      refetch: async () => undefined,
     }),
     useCrmApi: () => state.api,
     useCrmScopeKey: () => ['crm'],
@@ -165,54 +223,55 @@ describe('the settings page', () => {
     );
   });
 
-  it('takes an import a gateway cut off for done once the dataset is there, and hides the banner', async () => {
-    // On the settings' Demo data tab, the General tab's last card once.
+  it('imports the demo data through the demo mode plugin in the language chosen, and lets a read-only demo allow asking the AI', async () => {
     const user = userEvent.setup();
     state.api.mockReset();
-    // The import's request is cut off by a gateway; the server finishes it,
-    // and the dataset reads as present on the next ask.
-    state.api.mockImplementation((path: string) =>
-      path === 'demoData/import'
-        ? Promise.reject(
-            new ApiClientError('Gateway Timeout', {
-              status: 504,
-              method: 'POST',
-              url: '/api/demoData/import',
-              payload: null,
-            }),
-          )
-        : Promise.resolve({
-            data: {
-              present: true,
-              createdAt: null,
-              records: 201,
-              accounts: [],
-            },
-          }),
+    state.api.mockImplementation(
+      (_path: string, _method: string, input: { value: unknown[] }) =>
+        Promise.resolve({
+          data: { ...configuration, revision: 1, rules: input.value },
+        }),
     );
-    const client = new QueryClient();
-    client.setQueryData(['crm', 'workspace'], { demoPresent: false });
     render(
-      <QueryClientProvider client={client}>
+      <QueryClientProvider client={new QueryClient()}>
         <MemoryRouter initialEntries={['/settings/demo-data']}>
           <DemoDataPage />
         </MemoryRouter>
       </QueryClientProvider>,
     );
+    expect(screen.getByText('daniel')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: crmEn.demoImport }));
     await user.click(screen.getByRole('button', { name: crmEn.confirm }));
-    await waitFor(
-      () =>
-        expect(client.getQueryData(['crm', 'workspace'])).toEqual({
-          demoPresent: true,
-        }),
-      { timeout: 5000 },
+    expect(demo.importData).toHaveBeenCalledWith('en-US');
+    await user.click(await screen.findByRole('checkbox'));
+    await waitFor(() =>
+      expect(state.api).toHaveBeenCalledWith(
+        'demoMode/configuration/writeRules',
+        'PUT',
+        {
+          expectedRevision: 0,
+          value: ['insert', 'update'].map((operation) => ({
+            capability: 'crm.aiWork',
+            operation,
+            scope: 'demo-records',
+          })),
+        },
+      ),
     );
-    expect(client.getQueryData(['crm', 'demoData'])).toMatchObject({
-      present: true,
-    });
-    expect(state.api).toHaveBeenCalledWith('demoData');
-  }, 10000);
+  });
+
+  it('says demo data needs a demo deployment', () => {
+    demo.status = { ...demo.status!, mode: 'off' };
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/settings/demo-data']}>
+          <DemoDataPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByText(crmEn.demoUnavailable)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: crmEn.demoImport })).toBeNull();
+  });
 });
 
 describe('the General settings tab', () => {

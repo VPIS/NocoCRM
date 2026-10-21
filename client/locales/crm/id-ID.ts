@@ -1302,8 +1302,6 @@ export const crmIdID: CrmWording = {
   demoLanguage: 'Bahasa data demo',
   demoAbsent: 'Belum ada data demo yang diimpor.',
   demoPresent: 'Data demo diimpor pada {{date}}: {{count}} data.',
-  demoSettingsSet:
-    'Impor ini mengubah pengaturan bisnis {{names}}, yang masih bernilai default, menjadi pengaturan yang digunakan data demo.',
   demoAccounts: 'Akun demo',
   demoImport: 'Impor data demo',
   demoImportTitle: 'Impor data demo?',
@@ -1320,6 +1318,20 @@ export const crmIdID: CrmWording = {
   demoBannerAction: 'Impor data demo',
   demoBannerDismiss: 'Tutup',
   demoImporting: 'Mengimpor data demo…',
+  demoResetMore:
+    'Percakapan dengan asisten yang ditulis impor juga dihapus, dan pengaturan bisnis yang diubah impor kembali ke nilai sebelumnya, kecuali sudah diubah lagi sejak itu.',
+  demoUnavailable:
+    'Data demo hanya tersedia pada deployment yang berjalan dalam mode demo (NOCOBASE_DEMO_MODE bernilai read-only atau observe).',
+  demoFailed: 'Operasi data demo terakhir tidak selesai: {{message}}',
+  demoModeReadOnly:
+    'Deployment ini adalah demo hanya-baca: pengunjung dapat masuk dan menjelajah, dan setiap perubahan ditolak kecuali diizinkan di bawah.',
+  demoModeObserve:
+    'Deployment ini menjalankan mode demo dalam mode observasi: perubahan diizinkan, dan penulisan yang akan ditolak demo hanya-baca dicatat.',
+  demoWrites: 'Diizinkan dalam mode hanya-baca',
+  demoWriteAiWork:
+    'Meminta AI menindaklanjuti, meninjau, atau menyiapkan data demo (dijawab oleh model demo)',
+  demoWritesConflict:
+    'Administrator lain mengubah pengaturan ini. Pengaturan telah dimuat ulang; periksa lalu simpan lagi.',
   enabled: 'Aktif',
   disabled: 'Nonaktif',
   role: 'Peran penjualan',
@@ -2672,9 +2684,6 @@ export const crmIdID: CrmWording = {
     confirmationRequired: 'Konfirmasikan tindakan ini sebelum menjalankannya.',
     fileTooLarge: 'Unggahan melebihi 20 MB.',
     importLimit: 'Impor antara 1 dan 500 data sekaligus.',
-    demoExists:
-      'Data demo sudah diimpor. Hapus terlebih dahulu sebelum mengimpor lagi.',
-    demoMissing: 'Tidak ada data demo untuk dihapus.',
     secretsMissing:
       'Kredensial tidak dapat disimpan: atur SECRETS_KEYS di server terlebih dahulu.',
     numberExists: 'Nomor WhatsApp tersebut sudah terhubung.',
@@ -2684,6 +2693,5 @@ export const crmIdID: CrmWording = {
       'Jendela balasan 24 jam sudah tertutup: WhatsApp kini hanya menerima templat yang disetujui.',
     noRecipient:
       'Pelanggan ini tidak memiliki nomor yang dapat dikirimi WhatsApp.',
-    demoAccounts: 'Akun demo tidak dapat dibuat.',
   },
 };

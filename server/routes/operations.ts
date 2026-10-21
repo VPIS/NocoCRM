@@ -15,6 +15,7 @@ import { latestReview } from '../providers/crm/approval-review.js';
 import { conversionPreview, convertLead } from '../providers/crm/conversion.js';
 import { organiseFeedback, recordOutcome } from '../providers/crm/feedback.js';
 import { crmToken } from '../providers/crm/index.js';
+import { DEMO_AI_WORK, demoWrite } from '../providers/crm/demo-writes.js';
 import { captureLeads } from '../providers/crm/lead-capture.js';
 import { latestEvaluation } from '../providers/crm/lead-evaluation.js';
 import {
@@ -353,15 +354,22 @@ export function registerOperationRoutes(
       const leadId = toText(c.req.valid('param').leadId);
       const body = c.req.valid('json');
       await service.get(actor, 'leads', leadId, undefined, 'update');
-      const entry = await ai
-        .leads()
-        ?.request(
-          actor,
-          leadId,
-          body.revise
-            ? { entryId: body.revise, instruction: body.instruction }
-            : undefined,
-        );
+      // A read-only demo may allow it on its own records (demo-writes.ts).
+      const entry = await demoWrite(
+        app,
+        DEMO_AI_WORK,
+        { entity: 'leads', recordId: leadId },
+        async () =>
+          ai
+            .leads()
+            ?.request(
+              actor,
+              leadId,
+              body.revise
+                ? { entryId: body.revise, instruction: body.instruction }
+                : undefined,
+            ),
+      );
       if (!entry) throw new CrmError('assistantUnavailable', 409);
       await watchRunWork(app, c, 'leads', leadId, entry.id);
       return c.json({ data: entry }, 201);
@@ -556,15 +564,22 @@ export function registerOperationRoutes(
         undefined,
         'update',
       );
-      const entry = await ai
-        .opportunities()
-        ?.request(
-          actor,
-          opportunityId,
-          body.revise
-            ? { entryId: body.revise, instruction: body.instruction }
-            : undefined,
-        );
+      // A read-only demo may allow it on its own records (demo-writes.ts).
+      const entry = await demoWrite(
+        app,
+        DEMO_AI_WORK,
+        { entity: 'opportunities', recordId: opportunityId },
+        async () =>
+          ai
+            .opportunities()
+            ?.request(
+              actor,
+              opportunityId,
+              body.revise
+                ? { entryId: body.revise, instruction: body.instruction }
+                : undefined,
+            ),
+      );
       if (!entry) throw new CrmError('assistantUnavailable', 409);
       await watchRunWork(app, c, 'opportunities', opportunityId, entry.id);
       return c.json({ data: entry }, 201);
@@ -699,16 +714,23 @@ export function registerOperationRoutes(
     async (c) => {
       const body = c.req.valid('json');
       const taskId = toText(c.req.valid('param').taskId);
-      const entry = await ai
-        .tasks()
-        ?.request(
-          c.get('actor'),
-          taskId,
-          undefined,
-          body.revise
-            ? { entryId: body.revise, instruction: body.instruction }
-            : undefined,
-        );
+      // A read-only demo may allow it on its own records (demo-writes.ts).
+      const entry = await demoWrite(
+        app,
+        DEMO_AI_WORK,
+        { entity: 'tasks', recordId: taskId },
+        async () =>
+          ai
+            .tasks()
+            ?.request(
+              c.get('actor'),
+              taskId,
+              undefined,
+              body.revise
+                ? { entryId: body.revise, instruction: body.instruction }
+                : undefined,
+            ),
+      );
       if (!entry) throw new CrmError('assistantUnavailable', 409);
       await watchRunWork(app, c, 'tasks', taskId, entry.id);
       return c.json({ data: entry }, 201);
@@ -949,15 +971,22 @@ export function registerOperationRoutes(
       // starts is requested by the service, not through this route).
       if (approval.approverId !== actor.id)
         throw new CrmError('forbidden', 403);
-      const entry = await ai
-        .approvals()
-        ?.request(
-          actor,
-          approvalId,
-          body.revise
-            ? { entryId: body.revise, instruction: body.instruction }
-            : undefined,
-        );
+      // A read-only demo may allow it on its own records (demo-writes.ts).
+      const entry = await demoWrite(
+        app,
+        DEMO_AI_WORK,
+        { entity: 'approvals', recordId: approvalId },
+        async () =>
+          ai
+            .approvals()
+            ?.request(
+              actor,
+              approvalId,
+              body.revise
+                ? { entryId: body.revise, instruction: body.instruction }
+                : undefined,
+            ),
+      );
       if (!entry) throw new CrmError('assistantUnavailable', 409);
       await watchRunWork(app, c, 'approvals', approvalId, entry.id);
       return c.json({ data: entry }, 201);

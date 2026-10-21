@@ -47,9 +47,6 @@ export interface Metadata {
   // May reply on WhatsApp from the CRM (the sendWhatsApp capability).
   sendWhatsApp: boolean;
   settingsAccess: boolean;
-  // Only for whoever may manage the settings: whether a demo dataset is
-  // imported (the banner offering one shows until it is).
-  demoPresent?: boolean;
   // Whether the company's WhatsApp number is connected: records show their
   // WhatsApp tab (components/crm/whatsapp/).
   whatsapp?: { configured: boolean };

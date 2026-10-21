@@ -1314,8 +1314,6 @@ export const crmFrFR: CrmWording = {
   demoAbsent: "Aucune donnée de démonstration n'a été importée.",
   demoPresent:
     'Données de démonstration importées le {{date}} : {{count}} fiches.',
-  demoSettingsSet:
-    "L'importation a défini les paramètres commerciaux {{names}}, qui étaient à leurs valeurs par défaut, sur ceux pour lesquels les données de démonstration sont conçues.",
   demoAccounts: 'Comptes de démonstration',
   demoImport: 'Importer les données de démonstration',
   demoImportTitle: 'Importer les données de démonstration ?',
@@ -1332,6 +1330,21 @@ export const crmFrFR: CrmWording = {
   demoBannerAction: 'Importer les données de démonstration',
   demoBannerDismiss: 'Ignorer',
   demoImporting: 'Importation des données de démonstration…',
+  demoResetMore:
+    "Les conversations avec l'assistant écrites par l'importation sont aussi supprimées, et les paramètres métier qu'elle a modifiés reprennent leur valeur précédente, sauf s'ils ont été changés depuis.",
+  demoUnavailable:
+    'Les données de démonstration ne sont disponibles que dans un déploiement en mode démonstration (NOCOBASE_DEMO_MODE à read-only ou observe).',
+  demoFailed:
+    "La dernière opération sur les données de démonstration n'a pas abouti : {{message}}",
+  demoModeReadOnly:
+    'Ce déploiement est une démonstration en lecture seule : les visiteurs peuvent se connecter et parcourir, et toute modification est refusée sauf si elle est autorisée ci-dessous.',
+  demoModeObserve:
+    "Ce déploiement exécute le mode démonstration en observation : les modifications sont permises et les écritures qu'une démonstration en lecture seule refuserait sont journalisées.",
+  demoWrites: 'Autorisé en lecture seule',
+  demoWriteAiWork:
+    "Demander à l'IA de relancer, d'examiner ou de préparer une fiche de démonstration (répond le modèle de démonstration)",
+  demoWritesConflict:
+    'Un autre administrateur a modifié ces paramètres. Ils ont été rechargés ; vérifiez-les et enregistrez à nouveau.',
   enabled: 'Activé',
   disabled: 'Désactivé',
   role: 'Rôle commercial',
@@ -2691,9 +2704,6 @@ export const crmFrFR: CrmWording = {
     confirmationRequired: "Confirmez cette action avant de l'exécuter.",
     fileTooLarge: 'Le fichier dépasse 20 Mo.',
     importLimit: 'Importez entre 1 et 500 fiches à la fois.',
-    demoExists:
-      'Les données de démonstration sont déjà importées. Supprimez-les avant de les importer à nouveau.',
-    demoMissing: "Il n'y a aucune donnée de démonstration à supprimer.",
     secretsMissing:
       "Impossible d'enregistrer les identifiants : définissez d'abord SECRETS_KEYS sur le serveur.",
     numberExists: 'Ce numéro WhatsApp est déjà connecté.',
@@ -2702,6 +2712,5 @@ export const crmFrFR: CrmWording = {
     windowClosed:
       "La fenêtre de réponse de 24 heures est fermée : WhatsApp n'accepte plus que des modèles approuvés.",
     noRecipient: "Ce client n'a pas de numéro auquel WhatsApp puisse écrire.",
-    demoAccounts: "Les comptes de démonstration n'ont pas pu être créés.",
   },
 };

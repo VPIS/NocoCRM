@@ -1296,8 +1296,6 @@ export const crmViVN: CrmWording = {
   demoLanguage: 'Ngôn ngữ dữ liệu mẫu',
   demoAbsent: 'Chưa nhập dữ liệu mẫu.',
   demoPresent: 'Đã nhập dữ liệu mẫu vào {{date}}: {{count}} bản ghi.',
-  demoSettingsSet:
-    'Khi nhập, các cài đặt nghiệp vụ {{names}} (đang ở giá trị mặc định) đã được đặt theo cài đặt mà dữ liệu mẫu được soạn cho.',
   demoAccounts: 'Tài khoản mẫu',
   demoImport: 'Nhập dữ liệu mẫu',
   demoImportTitle: 'Nhập dữ liệu mẫu?',
@@ -1314,6 +1312,20 @@ export const crmViVN: CrmWording = {
   demoBannerAction: 'Nhập dữ liệu mẫu',
   demoBannerDismiss: 'Bỏ qua',
   demoImporting: 'Đang nhập dữ liệu mẫu…',
+  demoResetMore:
+    'Các cuộc trò chuyện với trợ lý do lần nhập tạo ra cũng bị xóa, và các thiết lập kinh doanh mà lần nhập đã đổi sẽ trở về giá trị cũ, trừ khi đã được đổi lại sau đó.',
+  demoUnavailable:
+    'Dữ liệu mẫu chỉ có trong bản triển khai chạy ở chế độ demo (NOCOBASE_DEMO_MODE là read-only hoặc observe).',
+  demoFailed: 'Thao tác dữ liệu mẫu gần nhất chưa hoàn tất: {{message}}',
+  demoModeReadOnly:
+    'Bản triển khai này là bản demo chỉ đọc: khách có thể đăng nhập và xem, mọi thay đổi đều bị từ chối trừ khi được cho phép bên dưới.',
+  demoModeObserve:
+    'Bản triển khai này chạy chế độ demo ở chế độ quan sát: cho phép thay đổi, và các thao tác ghi mà bản demo chỉ đọc sẽ từ chối được ghi vào nhật ký.',
+  demoWrites: 'Được phép ở chế độ chỉ đọc',
+  demoWriteAiWork:
+    'Yêu cầu AI theo dõi, xem xét hoặc chuẩn bị bản ghi mẫu (do mô hình demo trả lời)',
+  demoWritesConflict:
+    'Một quản trị viên khác đã thay đổi các thiết lập này. Đã tải lại; hãy kiểm tra và lưu lại.',
   enabled: 'Đã bật',
   disabled: 'Đã tắt',
   role: 'Vai trò bán hàng',
@@ -2656,8 +2668,6 @@ export const crmViVN: CrmWording = {
     confirmationRequired: 'Hãy xác nhận thao tác này trước khi thực hiện.',
     fileTooLarge: 'Tệp tải lên vượt quá 20 MB.',
     importLimit: 'Mỗi lần nhập từ 1 đến 500 bản ghi.',
-    demoExists: 'Dữ liệu mẫu đã được nhập. Hãy xóa trước khi nhập lại.',
-    demoMissing: 'Không có dữ liệu mẫu nào để xóa.',
     secretsMissing:
       'Không thể lưu thông tin xác thực: hãy thiết lập SECRETS_KEYS trên máy chủ trước.',
     numberExists: 'Số WhatsApp đó đã được kết nối.',
@@ -2666,6 +2676,5 @@ export const crmViVN: CrmWording = {
     windowClosed:
       'Khung trả lời 24 giờ đã đóng: WhatsApp giờ chỉ chấp nhận mẫu tin đã duyệt.',
     noRecipient: 'Khách hàng này không có số để WhatsApp gửi tới.',
-    demoAccounts: 'Không thể tạo các tài khoản mẫu.',
   },
 };

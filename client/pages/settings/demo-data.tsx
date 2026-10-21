@@ -1,10 +1,18 @@
-import { useRef, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ApiClientError, useToaster } from '@nocobase/app-client';
+import { useDemoData } from '@nocobase/app-plugin-demo-mode/client/demo-data';
+import type {
+  DemoConfigurationView,
+  DemoWriteRule,
+} from '@nocobase/app-plugin-demo-mode/client/demo-configuration';
 import { PageContainer } from '../../components/page-container.js';
 import { PageHeader } from '../../components/page-header.js';
 import { Button } from '../../components/ui/button.js';
 import { Card, CardContent } from '../../components/ui/card.js';
+import { Checkbox } from '../../components/ui/checkbox.js';
+import { Progress } from '../../components/ui/progress.js';
+import { Alert, AlertDescription } from '../../components/ui/alert.js';
 import { ErrorNotice, Loading } from '../../components/crm/common.js';
 import { Choice } from '../../components/crm/form.js';
 import { ConfirmDialog } from '../crm-detail.js';
@@ -13,225 +21,308 @@ import {
   toText,
   useCrmApi,
   useCrmQuery,
-  useCrmScopeKey,
   useCrmText,
   useRefresh,
-  type Data,
   type Metadata,
 } from '../../components/crm/api.js';
-import type { DemoStatus } from '../../components/crm/demo-status.js';
 import { DEFAULT_TIME_ZONE } from '../../../server/providers/crm/zone-time.js';
 
-// Settings → Demo data, a tab of its own (it was the General tab's last
-// card): the demo dataset's accounts, whether it is there, and importing it
-// in either language or removing it, never saved with the settings.
+// Settings → Demo data: the CRM's demo dataset, imported and removed
+// through the demo mode plugin's lifecycle (`useDemoData`, the server's
+// /api/demoMode/data), and what visitors of a read-only demo may still do
+// (/api/demoMode/configuration). Only in a deployment running in demo mode:
+// elsewhere the plugin's routes answer nothing and the page says why.
+
+// The demo mode plugin's own errors carry their explanation, translated by
+// the server; the CRM's are told as everywhere else.
+function DemoError({ error }: { error: unknown }): ReactElement | null {
+  const standard =
+    error instanceof ApiClientError
+      ? (
+          error.payload as
+            | {
+                error?: {
+                  domain?: string;
+                  localizedMessage?: { message?: string };
+                  message?: string;
+                };
+              }
+            | undefined
+        )?.error
+      : undefined;
+  if (standard?.domain !== 'demoMode') return <ErrorNotice error={error} />;
+  return (
+    <Alert variant='destructive' role='alert'>
+      <AlertDescription>
+        {standard.localizedMessage?.message ?? standard.message}
+      </AlertDescription>
+    </Alert>
+  );
+}
+
 export default function DemoDataPage(): ReactElement {
   const { text, language } = useCrmText();
-  const api = useCrmApi();
   const refresh = useRefresh();
-  // The workspace's settings, as useMetadata reads them, for the date the
-  // dataset was imported.
+  const queryClient = useQueryClient();
+  const toaster = useToaster();
+  // The workspace's settings, for the date the dataset was imported.
   const timeZone =
     useCrmQuery<Metadata>('workspace').data?.settings?.timeZone ??
     DEFAULT_TIME_ZONE;
+  const demo = useDemoData();
   const [error, setError] = useState<unknown>();
-  const [busy, setBusy] = useState(false);
-  // Read from its query rather than kept here: importing or
-  // removing it changes the reader's roles, and the route guards hide and
-  // show the page again while the new permissions load, so this page mounts
-  // anew; its own state would start from what the cache held before. The
-  // answer is written into the cache, and the outcome told in a toast, which
-  // outlives that remount.
-  const demoQuery = useCrmQuery<DemoStatus>('demoData');
-  const queryClient = useQueryClient();
-  const scopeKey = useCrmScopeKey();
-  const toaster = useToaster();
-  const [demoAction, setDemoAction] = useState<'populate' | 'reset'>();
-  // The dataset comes in Chinese and in English (the same story, translated);
-  // the reader's interface language is the first choice.
+  const [action, setAction] = useState<'import' | 'clear'>();
+  // The dataset comes in Chinese and in English (the same story, told with
+  // people of the language); the reader's interface language first.
   const [demoLanguage, setDemoLanguage] = useState(
     language.startsWith('zh') ? 'zh-CN' : 'en-US',
   );
-  // A second click on the confirmation, before it closes, starts nothing:
-  // an import takes a while, and a second one beside it would be refused.
-  const demoRunningRef = useRef(false);
-  // How the dataset stands, asked every few seconds until it is as wanted.
-  const waitForDemo = async (
-    present: boolean,
-  ): Promise<DemoStatus | undefined> => {
-    for (let tries = 0; tries < 60; tries += 1) {
-      await new Promise((done) => setTimeout(done, 3000));
-      const status = await api<{ data: DemoStatus }>('demoData')
-        .then((answer) => answer.data)
-        .catch(() => undefined);
-      if (status?.present === present) return status;
-    }
-    return undefined;
-  };
-  const runDemo = async (action: 'populate' | 'reset'): Promise<void> => {
-    if (demoRunningRef.current) return;
-    demoRunningRef.current = true;
-    setBusy(true);
+  const status = demo.status;
+  const run = async (which: 'import' | 'clear'): Promise<void> => {
     setError(undefined);
-    const wanted = action === 'populate';
-    // The outcome, written into what every page reads at once: the card's
-    // query and the workspace's `demoPresent`, which the banner reads, so
-    // neither waits for the refresh after it.
-    const settle = async (answer: DemoStatus): Promise<void> => {
-      queryClient.setQueryData([...scopeKey, 'demoData'], answer);
-      queryClient.setQueryData<Data>([...scopeKey, 'workspace'], (current) =>
-        current ? { ...current, demoPresent: answer.present } : current,
-      );
-      toaster.show({
-        type: 'success',
-        title: text(wanted ? 'demoImported' : 'demoRemoved'),
-      });
-      await refresh();
-    };
-    // Under way at once in what the banner reads, which then follows the
-    // import's progress (demo-banner.tsx).
-    if (wanted)
-      queryClient.setQueryData<DemoStatus>(
-        [...scopeKey, 'demoData'],
-        (current) =>
-          current ? { ...current, importing: { percent: 0 } } : current,
-      );
     try {
-      await settle(
-        (
-          await api<{ data: DemoStatus }>(
-            wanted ? 'demoData/import' : 'demoData/remove',
-            'POST',
-            wanted ? { language: demoLanguage } : {},
-          )
-        ).data,
-      );
-    } catch (e) {
-      // An import takes long enough for a gateway in front of the server
-      // (a hosted deployment's) to give up on the request while the server
-      // carries on: a timeout or a lost connection is not its failure. The
-      // page then asks how the dataset stands until it is there, for up to
-      // three minutes.
-      const cutOff =
-        !(e instanceof ApiClientError) || [502, 503, 504].includes(e.status);
-      const answer = cutOff ? await waitForDemo(wanted) : undefined;
-      if (answer) await settle(answer);
-      else setError(e);
+      if (which === 'import') await demo.importData(demoLanguage);
+      else await demo.clear();
+      // Clearing is done when it answers; an import goes on in the
+      // background, its progress on this page and in the banner.
+      if (which === 'clear') {
+        toaster.show({ type: 'success', title: text('demoRemoved') });
+        // The records, the reader's roles and the settings changed.
+        await queryClient.invalidateQueries();
+        await refresh();
+      }
+    } catch (cause) {
+      setError(cause);
     } finally {
-      demoRunningRef.current = false;
-      setBusy(false);
-      setDemoAction(undefined);
+      setAction(undefined);
     }
   };
-  const demo = demoQuery.data;
-  if (demoQuery.isLoading) return <Loading />;
-  if (!demo)
+  // An import this page watched has finished: everything the pages read
+  // changed, the reader's roles included.
+  const importing = Boolean(status?.importing);
+  const wasImportingRef = useRef(false);
+  const present = Boolean(status?.present);
+  useEffect(() => {
+    if (wasImportingRef.current && !importing && present) {
+      toaster.show({ type: 'success', title: text('demoImported') });
+      void queryClient.invalidateQueries();
+    }
+    wasImportingRef.current = importing;
+  }, [importing, present, toaster, text, queryClient]);
+
+  if (demo.loading && !status) return <Loading />;
+  if (!status || status.mode === 'off' || !status.available)
     return (
       <PageContainer>
         <PageHeader title={text('demoData')} />
-        <ErrorNotice error={demoQuery.error} />
+        <p className='text-sm text-muted-foreground'>
+          {text('demoUnavailable')}
+        </p>
       </PageContainer>
     );
+  const accounts =
+    (!status.present && status.accountsByLanguage[demoLanguage]) ||
+    status.accounts;
+  const busy = demo.pending || importing || status.state === 'clearing';
   return (
     <PageContainer>
       <PageHeader
         title={text('demoData')}
         description={text('demoDescription')}
       />
-      <ErrorNotice error={error} />
+      <DemoError error={error ?? demo.error} />
       <Card className='max-w-4xl border border-border shadow-xs ring-0'>
         <CardContent className='space-y-6'>
-          <>
-            <ul className='grid gap-1 text-sm sm:grid-cols-2'>
-              {/* The accounts the import will create in the language
-                  picked, or those of the import present. */}
-              {(
-                (!demo.present && demo.accountsByLanguage?.[demoLanguage]) ||
-                demo.accounts
-              ).map((account) => (
-                <li key={account.username} className='flex gap-2'>
-                  <code className='rounded bg-muted px-1.5 py-0.5 text-xs'>
-                    {account.username}
-                  </code>
-                  <span>{account.name}</span>
-                  <span className='text-muted-foreground'>
-                    {text(`options.${account.role}`)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+          <p className='text-sm text-muted-foreground'>
+            {text(
+              status.mode === 'read-only'
+                ? 'demoModeReadOnly'
+                : 'demoModeObserve',
+            )}
+          </p>
+          <ul className='grid gap-1 text-sm sm:grid-cols-2'>
+            {/* The accounts the import will create in the language
+                picked, or those of the import present. */}
+            {accounts.map((account) => (
+              <li key={account.username} className='flex gap-2'>
+                <code className='rounded bg-muted px-1.5 py-0.5 text-xs'>
+                  {account.username}
+                </code>
+                <span>{account.name}</span>
+                <span className='text-muted-foreground'>
+                  {text(`options.${account.role}`)}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {status.importing ? (
+            <div className='flex items-center gap-3 text-sm'>
+              <span className='shrink-0'>{text('demoImporting')}</span>
+              <Progress
+                value={status.importing.percent}
+                aria-label={text('demoImporting')}
+                className='w-56'
+              />
+              <span className='text-xs text-muted-foreground tabular-nums'>
+                {status.importing.percent}%
+              </span>
+            </div>
+          ) : (
             <p className='text-sm'>
-              {demo.present
+              {status.present
                 ? text('demoPresent', {
-                    date: localDate(demo.createdAt, language, timeZone),
-                    count: demo.records,
+                    date: localDate(status.createdAt, language, timeZone),
+                    count: status.records,
                   })
                 : text('demoAbsent')}
             </p>
-            {/* The business settings the import set, those still at their
-                default (server/providers/crm/demo.ts `demoSettings`). */}
-            {demo.present && demo.settings?.length ? (
-              <p className='text-sm text-muted-foreground'>
-                {text('demoSettingsSet', {
-                  names: new Intl.ListFormat(language, {
-                    type: 'conjunction',
-                  }).format(
-                    demo.settings.map((key) => toText(text(`fields.${key}`))),
-                  ),
-                })}
-              </p>
-            ) : null}
-            {!demo.present && (
-              <label className='flex items-center gap-3 text-sm'>
-                <span className='shrink-0'>{text('demoLanguage')}</span>
-                <span className='w-40'>
-                  <Choice
-                    label={text('demoLanguage')}
-                    value={demoLanguage}
-                    choices={['zh-CN', 'en-US'].map((v) => ({
-                      value: v,
-                      label: text(`aiLanguages.${v}`),
-                    }))}
-                    onChange={(v) => v && setDemoLanguage(v)}
-                  />
-                </span>
-              </label>
-            )}
-            <div className='flex flex-wrap gap-2'>
-              <Button
-                disabled={busy || demo.present}
-                onClick={() => setDemoAction('populate')}
-              >
-                {text('demoImport')}
-              </Button>
-              <Button
-                variant='outline'
-                disabled={busy || !demo.present}
-                onClick={() => setDemoAction('reset')}
-              >
-                {text('demoReset')}
-              </Button>
-            </div>
-            {demoAction && (
-              <ConfirmDialog
-                title={text(
-                  demoAction === 'populate'
-                    ? 'demoImportTitle'
-                    : 'demoResetTitle',
-                )}
-                description={text(
-                  demoAction === 'populate'
-                    ? 'demoImportHint'
-                    : 'demoResetHint',
-                )}
-                busy={busy}
-                onCancel={() => setDemoAction(undefined)}
-                onConfirm={() => void runDemo(demoAction)}
-              />
-            )}
-          </>
+          )}
+          {status.failure && !status.importing ? (
+            <p className='text-sm text-destructive'>
+              {text('demoFailed', { message: status.failure.message })}
+            </p>
+          ) : null}
+          {!status.present && !status.importing && (
+            <label className='flex items-center gap-3 text-sm'>
+              <span className='shrink-0'>{text('demoLanguage')}</span>
+              <span className='w-40'>
+                <Choice
+                  label={text('demoLanguage')}
+                  value={demoLanguage}
+                  choices={status.languages.map((v) => ({
+                    value: v,
+                    label: text(`aiLanguages.${v}`),
+                  }))}
+                  onChange={(v) => v && setDemoLanguage(v)}
+                />
+              </span>
+            </label>
+          )}
+          <div className='flex flex-wrap gap-2'>
+            <Button
+              disabled={busy || status.present}
+              onClick={() => setAction('import')}
+            >
+              {text('demoImport')}
+            </Button>
+            <Button
+              variant='outline'
+              // A failed import or clear leaves part of it to take back.
+              disabled={busy || (!status.present && status.state !== 'failed')}
+              onClick={() => setAction('clear')}
+            >
+              {text('demoReset')}
+            </Button>
+          </div>
+          {action && (
+            <ConfirmDialog
+              title={text(
+                action === 'import' ? 'demoImportTitle' : 'demoResetTitle',
+              )}
+              description={
+                action === 'import'
+                  ? text('demoImportHint')
+                  : `${toText(text('demoResetHint'))} ${toText(text('demoResetMore'))}`
+              }
+              busy={demo.pending}
+              onCancel={() => setAction(undefined)}
+              onConfirm={() => void run(action)}
+            />
+          )}
         </CardContent>
       </Card>
+      <DemoWrites />
     </PageContainer>
+  );
+}
+
+// The write exceptions a read-only demo offers (server/providers/crm/
+// demo-writes.ts), as checkboxes: each capability's operations together, in
+// its scope. Saved with the revision read, so another administrator's save
+// is never overwritten.
+const LABELS: Record<string, string> = { 'crm.aiWork': 'demoWriteAiWork' };
+
+function DemoWrites(): ReactElement | null {
+  const { text } = useCrmText();
+  const api = useCrmApi();
+  const query = useCrmQuery<DemoConfigurationView>('demoMode/configuration');
+  // What the last save answered, until the query reads it again.
+  const [saved, setSaved] = useState<DemoConfigurationView>();
+  const view =
+    saved && (!query.data || saved.revision >= query.data.revision)
+      ? saved
+      : query.data;
+  const [error, setError] = useState<unknown>();
+  const [saving, setSaving] = useState(false);
+  if (!view) return query.error ? <DemoError error={query.error} /> : null;
+  const capabilities = view.capabilities.filter((c) => c.id in LABELS);
+  if (!capabilities.length) return null;
+  const allowed = (id: string) => view.rules.some((r) => r.capability === id);
+  const toggle = async (id: string, on: boolean): Promise<void> => {
+    const capability = capabilities.find((c) => c.id === id);
+    if (!capability) return;
+    const scope = capability.scopes[0]?.id ?? 'all';
+    const rules: DemoWriteRule[] = [
+      ...view.rules.filter((r) => r.capability !== id),
+      ...(on
+        ? capability.operations.map((operation) => ({
+            capability: id,
+            operation,
+            scope,
+          }))
+        : []),
+    ];
+    setSaving(true);
+    setError(undefined);
+    try {
+      setSaved(
+        (
+          await api<{ data: DemoConfigurationView }>(
+            'demoMode/configuration/writeRules',
+            'PUT',
+            { expectedRevision: view.revision, value: rules },
+          )
+        ).data,
+      );
+    } catch (cause) {
+      const conflict =
+        cause instanceof ApiClientError &&
+        (cause.payload as { error?: { reason?: string } } | undefined)?.error
+          ?.reason === 'DEMO_CONFIGURATION_CONFLICT';
+      if (conflict) {
+        setSaved(undefined);
+        await query.refetch();
+        setError(new Error(toText(text('demoWritesConflict'))));
+      } else setError(cause);
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <Card className='max-w-4xl border border-border shadow-xs ring-0'>
+      <CardContent className='space-y-3'>
+        <h2 className='text-sm font-medium'>{text('demoWrites')}</h2>
+        {error instanceof Error && !(error instanceof ApiClientError) ? (
+          <p className='text-sm text-destructive'>{error.message}</p>
+        ) : (
+          <DemoError error={error} />
+        )}
+        {capabilities.map((capability) => (
+          <label
+            key={capability.id}
+            className='flex items-center gap-3 text-sm'
+          >
+            <Checkbox
+              checked={allowed(capability.id)}
+              disabled={saving || view.busy}
+              onCheckedChange={(checked) =>
+                void toggle(capability.id, checked === true)
+              }
+            />
+            <span>{text(LABELS[capability.id] ?? capability.title)}</span>
+          </label>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
