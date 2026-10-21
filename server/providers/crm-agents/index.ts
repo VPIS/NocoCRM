@@ -1,5 +1,5 @@
+import { installDemoChat } from './demo-chat.js';
 import { configureCrmDemoAgents } from '../crm/demo-data.js';
-import { crmDemoScope } from '../crm/demo-scope.js';
 import { SEARCH_SOURCE } from './search-answers.js';
 import type { Application } from '@nocobase/app-server/application';
 import {
@@ -138,8 +138,9 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
       this.settings = settings;
       saved?.(settings);
     };
-    if (!(await crmDemoScope(this.app.container)))
-      await provisionModelServices(this.app, agents);
+    // Provision explicit deployment model services without enabling their use in demo chat.
+    // The Demo chat policy still chooses the model and background AI stays simulated.
+    await provisionModelServices(this.app, agents);
     await provisionAssistant(
       agents,
       this.app.container.resolve(databaseManagerToken),
@@ -187,6 +188,7 @@ export default class CrmAgentsProvider extends ServiceProvider<Application> {
   }
 
   public override async ready(): Promise<void> {
+    installDemoChat(this.app);
     await configureCrmDemoAgents(this.app);
   }
 }

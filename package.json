@@ -93,7 +93,6 @@
   },
   "files": [
     ".prettierignore",
-    "app-plugins/demo-mode",
     "cli",
     "client",
     "server",
@@ -144,7 +143,7 @@
     "@nocobase/app-plugin-authz-restriction-rules": "^1.0.0-beta.12",
     "@nocobase/app-plugin-authz-sharing-rules": "^1.0.0-beta.13",
     "@nocobase/app-plugin-database-explorer": "^1.0.0-beta.15",
-    "@nocobase/app-plugin-demo-mode": "link:app-plugins/demo-mode",
+    "@nocobase/app-plugin-demo-mode": "0.0.1",
     "@nocobase/app-plugin-file": "^1.0.0-beta.23",
     "@nocobase/app-plugin-i18n": "^1.0.0-beta.16",
     "@nocobase/app-plugin-mail": "^1.0.0-beta.14",

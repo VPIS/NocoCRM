@@ -11,6 +11,7 @@ import {
 import { authorizationToken } from '@nocobase/app-plugin-authorization/server';
 import {
   demoDataToken,
+  demoConfigurationToken,
   type DemoDataService,
 } from '@nocobase/app-plugin-demo-mode/server/tokens';
 import { createStandaloneServer } from '../../server/standalone.js';
@@ -274,6 +275,14 @@ describe('the demo dataset on the demo mode plugin', () => {
     });
     expect((await seller.fetch('/workspace')).status).toBe(200);
     // The CRM's own agents answer from the demo model while it is there.
+    const configuration = app.application.container.resolve(
+      demoConfigurationToken,
+    );
+    await configuration.save('chat', (await configuration.read()).revision, {
+      enabled: true,
+      model: null,
+      tools: { 'crm.read': 'read' },
+    });
     const assistant = (
       (await (
         await seller.fetch(
@@ -307,6 +316,48 @@ describe('a read-only demo', () => {
     admin = await signIn(app, ADMIN);
   });
   afterAll(() => app?.close());
+
+  it('allows online chat without opening unrelated writes and observes revocation', async () => {
+    await app.application.container
+      .resolve(authorizationToken)
+      .permissionSets.assign({
+        permissionSet: 'crm-sales-manager',
+        subject: { type: 'user', id: admin.user.id },
+      });
+    const configuration = app.application.container.resolve(
+      demoConfigurationToken,
+    );
+    const request = () =>
+      admin.fetch(
+        '/agents/conversations/start',
+        post({ source: 'crm', text: 'Hello' }),
+      );
+    expect((await request()).status).toBe(400);
+    await configuration.save('chat', (await configuration.read()).revision, {
+      enabled: true,
+      model: null,
+      tools: {},
+    });
+    const started = await request();
+    const payload = await started.json();
+    expect(started.status).toBe(200);
+    expect(payload.data.conversation.mode).toBe('online');
+    // Direct business mutations are still guarded, even after a successful chat request.
+    const denied = await admin.fetch(
+      '/leads',
+      post({ name: 'Must not exist', source: 'website' }),
+    );
+    expect(denied.status).toBe(400);
+    expect(await denied.json()).toMatchObject({
+      error: { reason: 'DEMO_READ_ONLY' },
+    });
+    await configuration.save('chat', (await configuration.read()).revision, {
+      enabled: false,
+      model: null,
+      tools: {},
+    });
+    expect((await request()).status).toBe(400);
+  });
 
   it('refuses visitors’ writes, except asking the AI about a demo record once an administrator allows it', async () => {
     const crm = app.application.container.resolve(crmToken);

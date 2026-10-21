@@ -88,6 +88,15 @@ export function demoServices(app: Application): {
   // model. @temporary(nocobase-official): until the plugin can import a
   // finished conversation. None without the plugin or before the assistant
   // exists.
+  // Capture the public creation operation before the visitor chat adapter is installed at ready().
+  // Dataset import is already an authorized lifecycle operation, independent of the chat switch.
+  const createConversation = app.container.has(agentsToken)
+    ? app.container
+        .resolve(agentsToken)
+        .conversations.create.bind(
+          app.container.resolve(agentsToken).conversations,
+        )
+    : undefined;
   const demoChats: DemoChats | undefined = app.container.has(agentsToken)
     ? {
         async create(userId, chat) {
@@ -103,13 +112,11 @@ export function demoServices(app: Application): {
               ?.agentId ?? '',
           );
           if (!agentId) return undefined;
-          const conversation = await app.container
-            .resolve(agentsToken)
-            .conversations.create(userId, {
-              agentId,
-              title: chat.title,
-              source: 'crm',
-            });
+          const conversation = await createConversation!(userId, {
+            agentId,
+            title: chat.title,
+            source: 'crm',
+          });
           const first = chat.messages[0]?.at ?? new Date().toISOString();
           const last = chat.messages.at(-1)?.at ?? first;
           for (const [index, message] of chat.messages.entries())

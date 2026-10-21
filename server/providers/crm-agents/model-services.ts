@@ -24,6 +24,7 @@ type ConfiguredService = CrmModelService;
 const PROVIDERS: Record<string, string> = {
   dashscope: 'alibaba',
   openai: 'openai',
+  'openai-compatible': 'openai-compatible',
   deepseek: 'deepseek',
 };
 // The Agents plugin's Alibaba provider calls the international endpoint;

@@ -21,12 +21,6 @@ const crmBuild = defineCliPlugin({
         command: ['node', 'scripts/utils/copy-skills.mjs'],
         label: "Copy the CRM's skills",
       },
-      {
-        // The demo mode plugin is vendored until it is published
-        // (app-plugins/demo-mode, linked from package.json).
-        command: ['node', 'scripts/utils/copy-demo-mode-plugin.mjs'],
-        label: 'Include the demo mode plugin',
-      },
     ],
   },
 });

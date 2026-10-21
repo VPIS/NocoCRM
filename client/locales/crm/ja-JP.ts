@@ -4,6 +4,16 @@ import type { CrmWording } from './index.js';
 // a string each. A key added there is added here too, or the type check
 // fails.
 export const crmJaJP: CrmWording = {
+  demoChatTitle: 'デモチャット',
+  demoChatHint:
+    'オンラインモデルはトークンを消費します。明示的に有効にしたローカル検索のみ、現在のユーザーの権限で実行します。業務データの変更、外部呼び出し、Agent への委任は無効です。',
+  demoChatEnabled: 'チャットを有効にする',
+  demoChatLive: 'オンラインモデルを使う（オフの場合は模擬応答）',
+  demoChatService: 'モデルサービス名',
+  demoChatModel: 'モデル ID',
+  demoChatRead: 'ローカル CRM 検索を許可する',
+  demoChatReload: '設定を再読み込み',
+
   conversionRate: 'コンバート率',
   uncontacted: '初回連絡待ちのリード',
   uncontactedCard: '新規リード',

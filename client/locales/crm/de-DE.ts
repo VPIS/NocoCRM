@@ -4,6 +4,16 @@ import type { CrmWording } from './index.js';
 // a string each. A key added there is added here too, or the type check
 // fails.
 export const crmDeDE: CrmWording = {
+  demoChatTitle: 'Demo-Chat',
+  demoChatHint:
+    'Online-Modelle verbrauchen Tokens. Nur aktivierte lokale Abfragen sind mit den Berechtigungen des aktuellen Benutzers erlaubt. Änderungen, externe Aufrufe und Anfragen an andere Agent bleiben deaktiviert.',
+  demoChatEnabled: 'Chat aktivieren',
+  demoChatLive: 'Online-Modell verwenden (sonst simulierte Antworten)',
+  demoChatService: 'Name des Modelldienstes',
+  demoChatModel: 'Modell-ID',
+  demoChatRead: 'Lokale CRM-Abfragen erlauben',
+  demoChatReload: 'Konfiguration neu laden',
+
   conversionRate: 'Konvertierungsrate',
   uncontacted: 'Leads ohne Erstkontakt',
   uncontactedCard: 'Neue Leads',

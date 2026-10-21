@@ -1,3 +1,4 @@
+import { DemoChat } from './demo-chat.js';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ApiClientError, useToaster } from '@nocobase/app-client';
@@ -244,6 +245,7 @@ export default function DemoDataPage(): ReactElement {
         </CardContent>
       </Card>
       <DemoWrites />
+      <DemoChat />
     </PageContainer>
   );
 }

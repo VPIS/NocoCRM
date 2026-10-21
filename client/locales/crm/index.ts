@@ -1,6 +1,21 @@
 import { adminWording } from './admin.js';
 
 const wording = {
+  demoChatTitle: ['Demo chat', '演示聊天'],
+  demoChatHint: [
+    'Live models consume tokens. Only explicitly enabled local queries may run, with the current user’s permissions. Business changes, external calls and agent consultations remain unavailable.',
+    '在线模型会消耗 Token。仅允许明确开启的本地查询，并遵守当前用户权限。业务修改、外部调用和 Agent 委派保持禁用。',
+  ],
+  demoChatEnabled: ['Enable chat', '启用聊天'],
+  demoChatLive: [
+    'Use a live model (otherwise use simulated replies)',
+    '使用在线模型（否则使用模拟回复）',
+  ],
+  demoChatService: ['Model service name', '模型服务名称'],
+  demoChatModel: ['Model ID', '模型 ID'],
+  demoChatRead: ['Allow local CRM queries', '允许本地 CRM 数据查询'],
+  demoChatReload: ['Reload configuration', '重新加载配置'],
+
   conversionRate: ['Conversion rate', '转化率'],
   uncontacted: ['Leads awaiting first contact', '待首次跟进线索'],
   uncontactedCard: ['New leads', '新线索'],

@@ -4,6 +4,16 @@ import type { CrmWording } from './index.js';
 // a string each. A key added there is added here too, or the type check
 // fails.
 export const crmIdID: CrmWording = {
+  demoChatTitle: 'Chat demo',
+  demoChatHint:
+    'Model online menggunakan token. Hanya kueri lokal yang diaktifkan yang diizinkan, sesuai izin pengguna saat ini. Perubahan data, panggilan eksternal, dan delegasi Agent tetap dinonaktifkan.',
+  demoChatEnabled: 'Aktifkan chat',
+  demoChatLive: 'Gunakan model online (jika tidak, balasan simulasi)',
+  demoChatService: 'Nama layanan model',
+  demoChatModel: 'ID model',
+  demoChatRead: 'Izinkan kueri CRM lokal',
+  demoChatReload: 'Muat ulang konfigurasi',
+
   conversionRate: 'Tingkat konversi',
   uncontacted: 'Prospek menunggu kontak pertama',
   uncontactedCard: 'Prospek baru',

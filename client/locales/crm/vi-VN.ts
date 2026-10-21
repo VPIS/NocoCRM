@@ -4,6 +4,16 @@ import type { CrmWording } from './index.js';
 // a string each. A key added there is added here too, or the type check
 // fails.
 export const crmViVN: CrmWording = {
+  demoChatTitle: 'Trò chuyện demo',
+  demoChatHint:
+    'Mô hình trực tuyến tiêu thụ token. Chỉ cho phép truy vấn cục bộ đã bật, theo quyền của người dùng hiện tại. Thay đổi dữ liệu, gọi bên ngoài và ủy quyền Agent vẫn bị tắt.',
+  demoChatEnabled: 'Bật trò chuyện',
+  demoChatLive: 'Dùng mô hình trực tuyến (nếu không, dùng phản hồi mô phỏng)',
+  demoChatService: 'Tên dịch vụ mô hình',
+  demoChatModel: 'ID mô hình',
+  demoChatRead: 'Cho phép truy vấn CRM cục bộ',
+  demoChatReload: 'Tải lại cấu hình',
+
   conversionRate: 'Tỷ lệ chuyển đổi',
   uncontacted: 'Khách hàng tiềm năng chờ liên hệ lần đầu',
   uncontactedCard: 'Khách hàng tiềm năng mới',

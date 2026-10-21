@@ -1,3 +1,4 @@
+import { demoConfigurationToken } from '@nocobase/app-plugin-demo-mode/server/tokens';
 import {
   authenticationToken,
   type AuthEnv,
@@ -27,10 +28,13 @@ import { leadEvaluatorToken } from '../providers/crm/lead-evaluation.js';
 import { opportunityEvaluatorToken } from '../providers/crm/opportunity-evaluation.js';
 import { approvalReviewerToken } from '../providers/crm/approval-review.js';
 import { taskPreparerToken } from '../providers/crm/task-preparation.js';
-import { CrmError } from '../providers/crm/schema.js';
+import { CrmError, entities } from '../providers/crm/schema.js';
 import { CRM_ERROR_DOMAIN, toApiError } from './errors.js';
 import {
   AI_WORK_ACTION,
+  SEARCH_ACTION,
+  COLLEAGUES_ACTION,
+  recordAction,
   PLAN_ACTION,
 } from '../providers/crm-agents/actions.js';
 import { watchAiWork } from '../providers/crm/ai-watches.js';
@@ -118,6 +122,20 @@ export function crmGuard(app: Application) {
           'An agent does not change records: propose the change as a plan for the person to confirm.',
         metadata: { reason: 'alwaysConfirm', action },
       });
+    if (app.container.has(demoConfigurationToken)) {
+      const demo = app.container.resolve(demoConfigurationToken);
+      if (demo.enabled)
+        return demo.runChatTool('crm.read', {
+          readOnly:
+            c.req.method === 'GET' &&
+            [
+              SEARCH_ACTION,
+              COLLEAGUES_ACTION,
+              ...entities.map((entity) => recordAction(entity, 'view')),
+            ].includes(action),
+          run: next,
+        });
+    }
     return next();
   };
   return [

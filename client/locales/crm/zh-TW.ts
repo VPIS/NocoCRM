@@ -4,6 +4,16 @@ import type { CrmWording } from './index.js';
 // a string each. A key added there is added here too, or the type check
 // fails.
 export const crmZhTW: CrmWording = {
+  demoChatTitle: '示範聊天',
+  demoChatHint:
+    '線上模型會消耗 Token。僅允許明確啟用的本機查詢，並遵守目前使用者權限。業務修改、外部呼叫及 Agent 委派保持停用。',
+  demoChatEnabled: '啟用聊天',
+  demoChatLive: '使用線上模型（否則使用模擬回覆）',
+  demoChatService: '模型服務名稱',
+  demoChatModel: '模型 ID',
+  demoChatRead: '允許本機 CRM 資料查詢',
+  demoChatReload: '重新載入設定',
+
   conversionRate: '轉換率',
   uncontacted: '待首次跟進線索',
   uncontactedCard: '新線索',
