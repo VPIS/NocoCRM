@@ -74,8 +74,10 @@ tabs; it preserves their configuration APIs and saved policies. Its default
 integrated chat and registered simulation adapters are now enabled, and tools
 use a supplied mock or an explicitly declared local read. CRM does not register
 those integrations: keep the early request guard even when the default chat
-policy is enabled. Preserve this deployment's saved `chat.enabled: false`, empty
-collection exceptions and disabled reset across upgrades. Beta.2 requires Agents `1.0.0-beta.23` and App Client `4.0.0-beta.3`; the
+policy is enabled. Read and preserve the deployment's actual saved policies on
+each upgrade; do not assert historical defaults in the deployment smoke check.
+On 2026-10-24, the deployment had `chat.enabled: false`, empty collection
+exceptions and daily reset enabled. Beta.2 requires Agents `1.0.0-beta.23` and App Client `4.0.0-beta.3`; the
 latter supplies the HTTP-compatible UUID and clipboard helpers imported by both
 plugins. Keep these compatible versions together. No additional migration is
 introduced by these three patch upgrades.
