@@ -1,4 +1,5 @@
 import { ApiClientError } from '@nocobase/app-client';
+import { isDemoReadOnlyError } from '#lib/demo-mode';
 import { Link } from 'react-router';
 import { useTranslation } from '@nocobase/i18n/client';
 import type { ReactElement, ReactNode } from 'react';
@@ -23,7 +24,7 @@ export function SettingsError({
   readonly retry?: () => void;
 }): ReactElement | null {
   const { t } = useTranslation();
-  if (!error) return null;
+  if (!error || isDemoReadOnlyError(error)) return null;
   const status: unknown =
     typeof error === 'object' && error !== null
       ? Reflect.get(error, 'status')

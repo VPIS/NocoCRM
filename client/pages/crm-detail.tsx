@@ -1,4 +1,5 @@
 import { copyText } from '@nocobase/app-client';
+import { isDemoReadOnlyError } from '#lib/demo-mode';
 import {
   stepsToPageBefore,
   useNoteHistoryEntry,
@@ -1419,7 +1420,11 @@ function LeadStatusField({
       await onSave(values);
       setError('');
     } catch (cause) {
-      setError(text(`errors.${errorCode(cause).code}`, { defaultValue: '' }));
+      setError(
+        isDemoReadOnlyError(cause)
+          ? ''
+          : text(`errors.${errorCode(cause).code}`, { defaultValue: '' }),
+      );
     }
   };
   const trigger = (

@@ -1,4 +1,5 @@
 import { toText } from './api.js';
+import { isDemoReadOnlyError } from '#lib/demo-mode';
 import { reasonFor } from './reason-rules.js';
 import { useState, type ReactElement } from 'react';
 import { Button } from '../ui/button.js';
@@ -193,6 +194,10 @@ export function StageField({
       setError('');
       setAsking(undefined);
     } catch (cause) {
+      if (isDemoReadOnlyError(cause)) {
+        setError('');
+        return;
+      }
       setError(text(`errors.${errorCode(cause).code}`, { defaultValue: '' }));
     } finally {
       setBusy(false);

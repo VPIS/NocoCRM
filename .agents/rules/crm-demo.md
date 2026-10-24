@@ -42,6 +42,16 @@ policy must not be mistaken for isolation of arbitrary external integrations.
 The old import banner is hidden while the plugin reports demo mode, including
 when a preview deployment's dataset was created outside the CRM importer.
 
+Demo write refusals (`DEMO_READ_ONLY`) are reported once by the plugin's global
+toast. `client/lib/demo-mode.ts` identifies that specific API error; the CRM and
+settings error notices and settings confirmations omit their duplicate message.
+`InlineField` restores the persisted value and ends editing on that refusal;
+its `reverted` result also discards the long-text popover's separate draft.
+Amount/currency and location popovers likewise discard their drafts and close;
+status pickers retain the persisted status without a local demo error.
+Submitted forms remain open with their input, and no success callback runs.
+Keep ordinary validation, permission and network errors visible as before.
+
 The dedicated `nococrm.nfvd.net` deployment on host `252` predates the published
 plugin. Its seven additional executed preview migrations are preserved byte for
 byte in `/opt/nococrm/legacy-demo-migrations`, mounted read-only at

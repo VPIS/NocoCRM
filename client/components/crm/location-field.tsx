@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactElement } from 'react';
+import { isDemoReadOnlyError } from '#lib/demo-mode';
 import { Search } from 'lucide-react';
 import { Input } from '../ui/input.js';
 import { Textarea } from '../ui/textarea.js';
@@ -119,6 +120,13 @@ export function LocationField({
       setError('');
       return true;
     } catch (cause) {
+      if (isDemoReadOnlyError(cause)) {
+        setDraft({ country, state, city, address });
+        setQuery('');
+        setError('');
+        setOpen(false);
+        return false;
+      }
       setError(text(`errors.${errorCode(cause).code}`, { defaultValue: '' }));
       return false;
     } finally {

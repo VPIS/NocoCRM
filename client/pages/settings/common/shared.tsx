@@ -6,6 +6,7 @@
 // plugins' own pages; these pages are the application's, built on the
 // plugins' APIs. Functions and hooks are in ./hooks.ts.
 import { useToaster, copyText } from '@nocobase/app-client';
+import { isDemoReadOnlyError } from '#lib/demo-mode';
 import { useAuthentication } from '@nocobase/app-plugin-authentication/client';
 import { AlertCircleIcon, CheckIcon, CopyIcon } from 'lucide-react';
 import {
@@ -195,6 +196,7 @@ export function ConfirmAction({
       onOpenChange(false);
       return;
     } catch (caught: unknown) {
+      if (isDemoReadOnlyError(caught)) return;
       if (errorStatus(caught) === 404) {
         setGone(true);
         setError(text('common.notFound'));
