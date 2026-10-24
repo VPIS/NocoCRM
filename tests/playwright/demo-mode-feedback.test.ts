@@ -156,6 +156,16 @@ test('demo refusals restore autosaved fields and leave submitted drafts with one
     .fill('Demo feedback verification');
   await dialog.getByRole('combobox', { name: 'Source', exact: true }).click();
   await page.getByRole('option', { name: 'Website', exact: true }).click();
+  // The public demo admin may not sell; choose the required owner explicitly.
+  await dialog.getByRole('combobox', { name: 'Owner', exact: true }).click();
+  await page
+    .getByRole('option')
+    .filter({ hasNotText: /^Select…$/ })
+    .first()
+    .click();
+  await expect(
+    dialog.getByRole('combobox', { name: 'Owner', exact: true }),
+  ).not.toHaveText('Select…');
   await refused(page, () =>
     dialog.getByRole('button', { name: 'Save', exact: true }).click(),
   );
