@@ -390,7 +390,6 @@ minimumReleaseAgeExclude:
   - '@nocobase/dev-config@0.1.0-beta.25'
   - '@nocobase/document-extractor@0.1.0-beta.0'
   - '@nocobase/jobs@0.1.0-beta.4'
-  - '@nocobase/app-plugin-demo-mode@0.1.0-beta.2'
   - '@nocobase/agent-protocol@0.1.0-beta.15'
   - '@nocobase/app-cli-client@0.1.0-beta.16'
   - '@nocobase/app-plugin-agents@1.0.0-beta.24'

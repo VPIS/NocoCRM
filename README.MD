@@ -63,43 +63,6 @@ A banner offers the **demo data**, imported and removed on **Settings → Demo d
 
 The administrator who imports it becomes a sales manager too, with records, approvals, AI suggestions and conversations of their own. Each account gets a demo mailbox (`<username>@demo.example`) holding the dataset's customer conversations, and a demo WhatsApp number holds a few customer chats, so mail and WhatsApp can be tried without connecting anything. Demo mail is never delivered outside the dataset's `.example` addresses. Removing the demo data removes all of it and disables the demo accounts. The demo amounts are in yuan, so the import sets the currency to CNY; after removing the demo data, change it on **Settings → General** if you use another currency.
 
-### Read-only Demo Mode
-
-`@nocobase/app-plugin-demo-mode` controls read-only showcase deployments. It is
-disabled by default. Use a dedicated database and storage directory and enable
-`NOCOBASE_DEMO_MODE=true` (or `demoMode.enabled: true` in `config.yml`). Generate
-the existing CRM story through **Settings → Demo environment**. For SQLite,
-the default database lives under `APP_STORAGE_DIR`; an explicit `DB_FILENAME`
-must also point to the demo database.
-
-In Demo Mode, **Settings → Demo environment** shows data, the daily reset schedule
-and system accounts together. When `demoMode.quickSignIn` is true (the default),
-all enabled person accounts are available from the account menu, including
-existing administrators. Anonymous home-page visitors automatically enter an
-existing Super Admin; existing sessions remain unchanged. This works before
-generating data and changes neither passwords nor permissions. Switching accounts
-reloads the page and retains the current path.
-
-Pages remain readable. Business writes, uploads, mail actions and Agent actions
-return `DEMO_READ_ONLY`, including for administrators. Authorized plugin
-generation, clear, reset and policy management remain available. Cleanup preserves
-the executing administrator's access, and enabled accounts remain enterable.
-The CRM's background follow-ups, reminders and timeline synchronization are paused.
-Use only the fictional mail provider and no real integration credentials: Mail's
-background synchronization is independent of request write protection.
-
-Daily reset is always enabled and configured by deployment, not by the page.
-Set `NOCOBASE_DEMO_RESET_HOUR` (default `3`), `NOCOBASE_DEMO_RESET_MINUTE` (`0`),
-`NOCOBASE_DEMO_RESET_TIMEZONE` (`UTC`), and `NOCOBASE_DEMO_RESET_LANGUAGE` (`en-US`),
-then restart. When upgrading beta.2, transfer its saved time, zone and language to
-these values; beta.3 ignores saved schedules. Other saved policies remain effective.
-Upgrading does not regenerate data. Do not add writable collection exceptions to
-a read-only showcase.
-
-The plugin management component is registered only in Demo Mode through
-`demoModeRoutes()`. Ordinary installations retain their separate CRM sample-data
-importer at **Settings → Demo data**, without automatic sign-in or daily reset.
-
 ### Roles
 
 Accounts are created on **Settings → Users**, each with one or more roles; there is no self-registration.
