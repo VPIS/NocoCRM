@@ -5,6 +5,11 @@ import systemZhCN from './system/zh-CN.js';
 const zhCN: AppResource = {
   // The template's own copy; see `./en-US.ts`.
   ...systemZhCN,
+  settings: {
+    ...systemZhCN.settings,
+    usersDescription:
+      '管理账户、角色及登录会话。新账户默认选中成员角色，可替换或移除；没有角色的账户仅保留账户基础功能。',
+  },
   crm: crmZh,
   // Display text of the CRM's AI skills (ai/skills/<name>): the title and
   // description of each SKILL.md, keyed by that English text as the AI
@@ -90,14 +95,6 @@ const zhCN: AppResource = {
       approved: { who: '李明', what: '批准了 60 天账期' },
       won: { who: '王小芳', what: '盖章合同已回签' },
     },
-  },
-  // The header's Demo Mode badge (client/layouts/components/demo-mode-badge.tsx).
-  demoMode: {
-    badge: '演示模式',
-    title: '这是演示环境',
-    hint: '数据每天自动重置，修改不会保存。可以直接切换到下面的账户，看看不同角色看到的内容。',
-    accounts: '切换账户',
-    switchFailed: '切换账户失败，请重试。',
   },
   navigation: { ...systemZhCN.navigation, home: '工作台' },
 };

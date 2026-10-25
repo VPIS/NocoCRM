@@ -9,11 +9,10 @@ import {
 import { roleKey, roles } from './authorization.js';
 
 // The CRM's roles in the Users page (Settings → Users), replacing the
-// template's generic provider: a user holds one or more CRM roles (their
-// grants add up, as the authorization plugin composes permission sets),
-// the last administrator can neither lose the role nor be disabled, and
-// only the three CRM roles are offered. The permission sets stay the
-// source of truth.
+// template's generic provider: Member is a visible, removable creation
+// default alongside the three CRM roles. Empty roles grant no business
+// access. The last administrator can neither lose the role nor be disabled.
+// The permission sets stay the source of truth.
 const ADMINISTRATOR = 'system-administrator';
 
 // Whether a user still owns, created or decides a CRM record: deleting them
@@ -50,7 +49,7 @@ export async function holdsCrmRecords(
 export function createCrmUserRoleScope(
   authorization: Pick<AppAuthorization, 'permissionSets'>,
 ): UserRoleScope {
-  const managed = roles.map(roleKey);
+  const managed = ['member', ...roles.map(roleKey)];
   const sets = (connection?: DatabaseConnection) =>
     connection
       ? authorization.permissionSets.withTransaction(connection)
@@ -92,24 +91,35 @@ export function createCrmUserRoleScope(
     labelI18nKey: 'crm.admin.users.fields.roles',
     labelI18nNs: 'crm',
     selection: 'multiple',
-    requiredOnCreate: true,
-    hasAuthenticatedDefaultAccess: true,
+    defaultValue: ['member'],
+    hasAuthenticatedDefaultAccess: async () =>
+      (await authorization.permissionSets.listAssignments()).some(
+        ({ subject }) => subject.type === 'authenticated' && subject.id === '*',
+      ),
     async options() {
       const all = await authorization.permissionSets.list();
-      return roles.map((role) => {
-        const set = all.find((s) => s.key === roleKey(role));
-        return {
-          value: roleKey(role),
-          // The permission set's title is bilingual because the
-          // Authorization pages do not translate; the Users page does, so
-          // it shows the CRM's own wording in the current language.
-          label:
-            (typeof set?.title === 'string' ? set.title.trim() : '') ||
-            roleKey(role),
-          labelI18nKey: `crm.options.${role}`,
-          labelI18nNs: 'crm',
-        };
-      });
+      return [
+        {
+          value: 'member',
+          label: 'Member',
+          labelI18nKey: 'permissionSets.builtIn.member',
+          labelI18nNs: '@nocobase/app-plugin-authorization',
+        },
+        ...roles.map((role) => {
+          const set = all.find((s) => s.key === roleKey(role));
+          return {
+            value: roleKey(role),
+            // The permission set's title is bilingual because the
+            // Authorization pages do not translate; the Users page does, so
+            // it shows the CRM's own wording in the current language.
+            label:
+              (typeof set?.title === 'string' ? set.title.trim() : '') ||
+              roleKey(role),
+            labelI18nKey: `crm.options.${role}`,
+            labelI18nNs: 'crm',
+          };
+        }),
+      ];
     },
     async get(userId, connection) {
       return assignedRoles(await sets(connection).listAssignments(), userId);
@@ -132,13 +142,6 @@ export function createCrmUserRoleScope(
     },
     async replace(userId, value: UserRoleValue, connection) {
       const chosen = [...new Set(typeof value === 'string' ? [value] : value)];
-      // A user of the CRM holds at least one of its roles; taking every
-      // role away is what disabling the account is for.
-      if (!chosen.length)
-        throw new UserManagementError(
-          'INVALID_ROLE_SCOPE_VALUE',
-          'A user holds at least one CRM role',
-        );
       for (const role of chosen)
         if (!managed.includes(role))
           throw new UserManagementError(

@@ -3,6 +3,10 @@
 import { register } from 'tsx/esm/api';
 import { expect, it } from 'vitest';
 import { createAppTest } from '@nocobase/app-testing/server';
+import {
+  DEFAULT_ADMIN_CREDENTIALS,
+  signIn,
+} from '@nocobase/app-plugin-authentication/testing';
 import { createStandaloneServer } from '../../server/standalone.js';
 
 // Application change: the harness installs the application through Node,
@@ -20,14 +24,7 @@ type Assignment = {
 function unexpectedGlobalAssignments(
   assignments: readonly Assignment[],
 ): Assignment[] {
-  return assignments.filter(
-    (assignment) =>
-      assignment.subjectId === '*' &&
-      !(
-        assignment.subjectType === 'authenticated' &&
-        assignment.permissionSetKey === 'member'
-      ),
-  );
+  return assignments.filter((assignment) => assignment.subjectId === '*');
 }
 
 const test = createAppTest({
@@ -35,7 +32,11 @@ const test = createAppTest({
   connections: ['main'],
   config: {
     app: { publicOrigin: 'http://localhost' },
-    auth: { secret: 'test-auth-secret-at-least-32-characters' },
+    auth: {
+      secret: 'test-auth-secret-at-least-32-characters',
+      trustedOrigins: ['http://localhost'],
+    },
+    users: { initialAdmin: DEFAULT_ADMIN_CREDENTIALS },
     // Application change: a developer's SMTP_PASSWORD (.env.local) makes the
     // system mailer's channel, which then needs its provider; a local one
     // that is never used here.
@@ -81,6 +82,59 @@ test('initialization does not silently grant business roles to every signed-in u
   ).toEqual([]);
 });
 
+test('shows editable Member defaults and keeps an explicitly roleless person without CRM access', async ({
+  testApp,
+}) => {
+  const admin = await signIn(testApp, DEFAULT_ADMIN_CREDENTIALS);
+  const send = (path: string, method: string, body: unknown) =>
+    admin.fetch(path, {
+      method,
+      headers: {
+        'content-type': 'application/json',
+        Origin: 'http://localhost',
+      },
+      body: JSON.stringify(body),
+    });
+  const options = await admin.fetch('/users/options').then((r) => r.json());
+  expect(
+    options.data.roleScopes.find(
+      (scope: { key: string }) => scope.key === 'app',
+    ),
+  ).toMatchObject({ defaultValue: ['member'] });
+  const credentials = {
+    email: 'member-test@example.test',
+    password: 'member-test-password',
+  };
+  const created = await send('/users', 'POST', {
+    name: 'Member test',
+    ...credentials,
+  });
+  expect(created.status).toBe(201);
+  const user = (await created.json()).data;
+  expect(user.roleScopes.app).toEqual(['member']);
+  const empty = await send('/users', 'POST', {
+    name: 'Empty roles',
+    email: 'empty-roles@example.test',
+    password: credentials.password,
+    roleScopes: { app: [] },
+  });
+  expect(empty.status).toBe(201);
+  expect((await empty.json()).data.roleScopes.app).toEqual([]);
+  expect(
+    (await send(`/users/${user.id}`, 'PATCH', { roleScopes: { app: [] } }))
+      .status,
+  ).toBe(200);
+  const edited = await send(`/users/${user.id}`, 'PATCH', {
+    name: 'Still roleless',
+  });
+  expect(edited.status).toBe(200);
+  expect((await edited.json()).data.roleScopes.app).toEqual([]);
+  const person = await signIn(testApp, credentials);
+  expect((await person.fetch('/auth/get-session')).status).toBe(200);
+  expect((await person.fetch('/leads')).status).toBe(403);
+  expect((await person.fetch('/users')).status).toBe(403);
+});
+
 it('detects wildcard recipients regardless of the role name, while preserving explicit user assignments', () => {
   const global = {
     subjectType: 'authenticated',
@@ -102,5 +156,13 @@ it('detects wildcard recipients regardless of the role name, while preserving ex
       global,
       { ...global, subjectType: 'everyone' },
     ]),
-  ).toEqual([global, { ...global, subjectType: 'everyone' }]);
+  ).toEqual([
+    {
+      subjectType: 'authenticated',
+      subjectId: '*',
+      permissionSetKey: 'member',
+    },
+    global,
+    { ...global, subjectType: 'everyone' },
+  ]);
 });

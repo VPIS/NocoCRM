@@ -50,6 +50,7 @@ import {
   type AppAuthorization,
 } from '@nocobase/app-plugin-authorization/server';
 import { authenticationToken } from '@nocobase/app-plugin-authentication';
+import { OnlineAgentConfigurator } from '@nocobase/app-plugin-agents/server/online-agent';
 import { createAppPaths } from '@nocobase/app-server/config';
 import {
   ServiceContainer,
@@ -128,6 +129,7 @@ import { defaultSettings } from '../../server/providers/crm/schema.js';
 import { crmConversationRules } from '../../server/providers/crm-agents/rules.js';
 import {
   ASSISTANT_SCOPE,
+  assistantActor,
   configureAssistant,
 } from '../../server/providers/crm-agents/assistant.js';
 import { adoptLegacyConversations } from '../../server/providers/crm-agents/legacy-conversations.js';
@@ -3507,9 +3509,15 @@ describe('CRM API security and domain rules', () => {
     ).rejects.toMatchObject({ code: 'forbidden' });
   });
   it('exposes the CRM roles per user to the Users page and keeps the last administrator', async () => {
+    await authorization.permissionSets.create({
+      key: 'member',
+      title: 'Member',
+      grants: [],
+    });
     const scope = createCrmUserRoleScope(authorization);
     const connection = database.connection();
     expect((await scope.options()).map((o) => o.value)).toEqual([
+      'member',
       'crm-sales-representative',
       'crm-sales-manager',
       'root',
@@ -3545,13 +3553,20 @@ describe('CRM API security and domain rules', () => {
     await expect(
       scope.replace('other', 'editor', connection),
     ).rejects.toMatchObject({ code: 'INVALID_ROLE_SCOPE_VALUE' });
-    await expect(scope.replace('other', [], connection)).rejects.toMatchObject({
-      code: 'INVALID_ROLE_SCOPE_VALUE',
-    });
+    expect(scope.defaultValue).toEqual(['member']);
+    await scope.replace('other', ['member'], connection);
+    expect(await scope.get('other', connection)).toEqual(['member']);
+    expect(await capability(actor('other'), 'assign')).toBe(false);
+    await scope.replace('other', [], connection);
+    expect(await scope.get('other', connection)).toEqual([]);
+    expect(await capability(actor('other'), 'assign')).toBe(false);
     // The only administrator stays one, and stays enabled.
     await expect(
       scope.replace('admin', 'crm-sales-manager', connection),
     ).rejects.toMatchObject({ code: 'LAST_ADMINISTRATOR' });
+    await expect(scope.replace('admin', [], connection)).rejects.toMatchObject({
+      code: 'LAST_ADMINISTRATOR',
+    });
     await expect(
       scope.assertCanDisable?.('admin', connection),
     ).rejects.toMatchObject({ code: 'LAST_ADMINISTRATOR' });
@@ -12276,8 +12291,7 @@ describe("The assistant's conversations on the Agents plugin", () => {
   });
 
   it("gives the assistant's conversations the CRM's prompt, its tools and every chat model, DeepSeek's first", async () => {
-    const scopes = new Map<string, (context: unknown) => unknown>();
-    const tools = new Map<string, unknown>();
+    const configurator = new OnlineAgentConfigurator();
     const resolvers: unknown[] = [];
     const container = new ServiceContainer();
     container.instance(authenticationToken, {
@@ -12288,14 +12302,7 @@ describe("The assistant's conversations on the Agents plugin", () => {
     } as never);
     const fakeOnline = {
       onlineAgent: {
-        configurator: {
-          registerTool: (name: string, options: unknown) =>
-            tools.set(name, options),
-          registerOnlineAgentScope: (
-            name: string,
-            provider: (context: unknown) => unknown,
-          ) => scopes.set(name, provider),
-        },
+        configurator,
       },
       models: {
         gateway: {
@@ -12328,22 +12335,19 @@ describe("The assistant's conversations on the Agents plugin", () => {
       service,
       () => ({ ...defaultSettings, timeZone: 'Asia/Shanghai' }),
     );
-    expect([...tools.keys()]).toEqual(['crm', 'crm_skill']);
+    expect(configurator.toolDefinition('crm')).toBeDefined();
+    expect(configurator.toolDefinition('crm_skill')).toBeDefined();
     expect(resolvers).toHaveLength(1);
-    const scope = (await scopes.get(ASSISTANT_SCOPE)?.({
-      user: { id: 'rep' },
-    })) as {
-      agentId: string;
-      tool: string[];
-      model: string[];
-      systemPromptTemplate: string;
-    };
+    const context = assistantActor(service, 'rep');
+    const scope = await configurator.resolve(context, {
+      scope: [ASSISTANT_SCOPE],
+    });
     expect(scope).toMatchObject({
       agentId: 'online',
       tool: ['crm', 'crm_skill'],
       model: ['deepseek/flash', 'qwen/max'],
     });
-    const prompt = scope.systemPromptTemplate;
+    const prompt = scope.systemPrompt;
     // Who it works for, how it reaches the CRM, how changes are proposed,
     // and the time where the CRM works.
     expect(prompt).toContain('You work for rep:');
@@ -12354,6 +12358,9 @@ describe("The assistant's conversations on the Agents plugin", () => {
     expect(prompt).toContain('<crm-news>');
     expect(prompt).toContain('Asia/Shanghai');
     expect(prompt).not.toContain('--file /tmp/plan.json');
+    // The CRM's explicit tools replace native defaults (including bash).
+    // Reopening a saved conversation preserves its prompt and tool snapshot.
+    expect(await configurator.resolve(context, {}, scope)).toEqual(scope);
   });
 
   it('takes over once what an administrator set on the work agents an earlier release made', async () => {

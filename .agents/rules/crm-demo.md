@@ -5,6 +5,11 @@ through `server/config/demo-mode.ts` and `NOCOBASE_DEMO_MODE`. Follow the
 [Demo Mode Skill](../skills/nocobase-app-plugin-demo-mode/SKILL.md) for deployment
 configuration, quick sign-in and daily reset.
 
+Demo Mode `0.2.0-beta.1` is paired with Agents `1.0.0-beta.26`, satisfying
+its Agents peer dependency. The compatible authentication group is Authentication
+`2.0.0-beta.15`, Authorization `1.0.0-beta.32`, and Users `2.0.0-beta.10`. See [the Agents upgrade notes](crm-assistant.md)
+before applying the plugin's data migrations to an existing deployment.
+
 The CRM registers its existing story as the `crm` dataset in
 `server/providers/crm/demo-presentation.ts`; `demo-lifecycle.ts` adapts generation
 and cleanup. Registration does not generate data. The dataset creates four sales
@@ -15,10 +20,10 @@ business records, fictional mail, conversations and files.
 In Demo Mode, `/settings/demo-data` uses `DemoModeSettings` through
 `demoModeRoutes()` with `demoMode.data/read`. Ordinary installations retain their
 sample importer with `crm/manage`. The sample-import banner is hidden in Demo Mode.
-The page shows the data card without its actions (`CardAction: () => null`):
-any visitor may enter a demo site as its administrator, and its language,
-Generate, Clear and Reset would wipe the demo for everyone. The counts, the
-daily reset and the accounts stay; reset by hand with `POST
+The plugin's settings page is read-only for every account. The CRM only hides
+its duplicate header and supplies translated count labels; data operations and
+the language selector are absent by default. The counts, the daily reset and
+the accounts remain; reset by hand with `POST
 <base path>/api/demoMode/data/reset` as an administrator, or `pnpm nocobase
 demo-mode data reset --force` on the server.
 
