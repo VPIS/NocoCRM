@@ -72,26 +72,33 @@ the existing CRM story through **Settings → Demo environment**. For SQLite,
 the default database lives under `APP_STORAGE_DIR`; an explicit `DB_FILENAME`
 must also point to the demo database.
 
-In Demo Mode, **Settings → Demo environment** shows the plugin's data, daily
-reset and visitor accounts together on one page. Existing plugin-owned accounts appear in the account menu
-when `demoMode.quickSignIn` is true (the default). This does not enroll ordinary
-CRM-imported accounts or recreate data. Visitors may switch between those
-existing demo identities; the plugin reloads the page and retains the current
-path. Pages remain readable; mutations,
-uploads, mail actions and Agent actions return `DEMO_READ_ONLY`, including for
-administrators. Authorized plugin generation, clear, reset and schedule changes
-remain available. Clear and failed-reset cleanup preserve the executing
-administrator's access; quick sign-in returns once the dataset is ready again.
-Upgrading does not regenerate an existing deployment's data. The CRM's
-background follow-ups, reminder scans and timeline
-synchronization are paused. Use only the existing fictional mail provider and
-no real integration credentials in this deployment: the Mail plugin's own
+In Demo Mode, **Settings → Demo environment** shows data, the daily reset schedule
+and system accounts together. When `demoMode.quickSignIn` is true (the default),
+all enabled person accounts are available from the account menu, including
+existing administrators. Anonymous home-page visitors automatically enter an
+existing Super Admin; existing sessions remain unchanged. This works before
+generating data and changes neither passwords nor permissions. Switching accounts
+reloads the page and retains the current path.
+
+Pages remain readable. Business writes, uploads, mail actions and Agent actions
+return `DEMO_READ_ONLY`, including for administrators. Authorized plugin
+generation, clear, reset and policy management remain available. Cleanup preserves
+the executing administrator's access, and enabled accounts remain enterable.
+The CRM's background follow-ups, reminders and timeline synchronization are paused.
+Use only the fictional mail provider and no real integration credentials: Mail's
 background synchronization is independent of request write protection.
 
-The plugin lifecycle adapter reuses the existing dataset generator. Manage
-generation, cleanup and reset through the plugin while Demo Mode stays enabled.
-Preserve the deployment's saved daily-reset setting during upgrades. Do not add
-writable collection exceptions to a read-only showcase.
+Daily reset is always enabled and configured by deployment, not by the page.
+Set `NOCOBASE_DEMO_RESET_HOUR` (default `3`), `NOCOBASE_DEMO_RESET_MINUTE` (`0`),
+`NOCOBASE_DEMO_RESET_TIMEZONE` (`UTC`), and `NOCOBASE_DEMO_RESET_LANGUAGE` (`en-US`),
+then restart. When upgrading beta.2, transfer its saved time, zone and language to
+these values; beta.3 ignores saved schedules. Other saved policies remain effective.
+Upgrading does not regenerate data. Do not add writable collection exceptions to
+a read-only showcase.
+
+The plugin management component is registered only in Demo Mode through
+`demoModeRoutes()`. Ordinary installations retain their separate CRM sample-data
+importer at **Settings → Demo data**, without automatic sign-in or daily reset.
 
 ### Roles
 

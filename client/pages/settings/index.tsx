@@ -15,7 +15,8 @@ import {
 import { PageFrameContext } from '../../components/page-frame.js';
 import { LinkTabs } from '../../components/crm/link-tabs.js';
 import { Loading } from '../../components/crm/common.js';
-import { useCrmQuery, useCrmText } from '../../components/crm/api.js';
+import { useCrmText } from '../../components/crm/api.js';
+import { demoEnvironmentEnabled } from '../../lib/demo-environment.js';
 
 // Settings, the menu's one entry for them: the pages that configure the CRM
 // and its people, a tab each, at the addresses they had as entries of their
@@ -52,8 +53,7 @@ const TABS: readonly Tab[] = [
 export default function SettingsPage(): ReactElement {
   const { text } = useCrmText();
   const { t: demoText } = useTranslation('@nocobase/app-plugin-demo-mode');
-  const demoMode = useCrmQuery<{ enabled: boolean }>('demoMode/status').data
-    ?.enabled;
+  const demoMode = demoEnvironmentEnabled();
   const { pathname } = useLocation();
   // The same checks as the tabs' routes in client/routes.ts; API keys are
   // everyone's own.
@@ -63,8 +63,8 @@ export default function SettingsPage(): ReactElement {
       action: 'manage',
     }),
     'demo-data': useCan({
-      resource: { type: 'settings', id: 'crm' },
-      action: 'manage',
+      resource: { type: 'settings', id: demoMode ? 'demoMode.data' : 'crm' },
+      action: demoMode ? 'read' : 'manage',
     }),
     'approval-flow': useCan({
       resource: { type: 'settings', id: 'crm' },

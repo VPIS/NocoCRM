@@ -2,32 +2,45 @@
 
 Read-only deployments use `@nocobase/app-plugin-demo-mode`, configured by
 `server/config/demo-mode.ts` and `NOCOBASE_DEMO_MODE`. It is off by default.
-The existing importer and dataset remain unchanged. `demo-presentation.ts` registers
-the already imported plugin dataset `crm` for status and visitor identities,
-without generating data or adopting untracked accounts. Its lifecycle callbacks use `demo-lifecycle.ts`: the plugin owns identities
-and lifecycle, and the existing `populateDemo` writes the same CRM story.
-Clear removes all CRM business records, fictional mail, conversations and files,
-including partial imports and visitor additions. Authorized plugin management
-(reset, clear, generate and configuration) remains available; ordinary business
-writes are refused. Preserve the saved automatic reset setting. Beta.2 keeps
-the executing administrator enabled, with their current permissions and session,
-after clear or failed-reset cleanup. Leave identity cleanup to the plugin; quick
-sign-in stays unavailable until generation completes. An ordinary CRM import is not plugin-owned and does not gain
-quick sign-in merely by being described by this adapter.
+`demo-presentation.ts` registers the `crm` dataset without generating records;
+`demo-lifecycle.ts` connects it to the existing CRM story generator and cleanup.
+The plugin owns generated identities and lifecycle. Clear removes all CRM
+business records, fictional mail, conversations and files, including partial
+imports and visitor additions. Ordinary writes are refused; authorized plugin
+generation, clear, reset and policy management remain available. The plugin
+preserves the executing administrator's account, permissions and session during
+clear and failed reset. Leave identity cleanup to the plugin.
 
-Dedicated demos use `DemoModeSettings` at `/settings/demo-data`; ordinary
-deployments retain the original importer there. Since Demo Mode beta.2, data,
-daily reset and visitor accounts appear together on one page; do not add the
-removed Overview/Daily reset tabs or pass their removed component slots. The host
-supplies a stable, empty `Header` slot to omit the duplicate page title and Refresh
-row under the Settings tab. The existing CRM administrator
-route gate remains, and the plugin checks its own settings permissions within
-the page. `DemoAccountMenu` is mounted before sign-out in the Base UI account
-menu, with `accountSwitcher: 'menu'`; guests retain the plugin entry. Keep
-`demoMode.quickSignIn: true` on the dedicated deployment. Only the existing
-plugin-owned visitor accounts are offered, including its public demo admin;
-normal system administrators are never adopted. Switching reloads the page to
-clear the previous account's state.
+Since beta.3, quick sign-in lists all enabled person accounts independently of
+dataset ownership or readiness, including existing Super Admins and ordinary
+CRM-imported accounts. Trusted session creation leaves passwords and permissions
+unchanged. Anonymous home-page entry selects an existing unrestricted account;
+existing sessions remain unchanged. Disabled and service accounts are excluded.
+`DemoAccountMenu` remains before sign-out in the Base UI account menu with
+`accountSwitcher: 'menu'`; the plugin preloads the shared list even when the
+floating entry is hidden. Add no application prefetch or password-based entry.
+Keep `demoMode.quickSignIn: true` on the dedicated deployment. Switching reloads
+the page and clears the previous account's client state.
+
+Dedicated demos use `DemoModeSettings` in `pages/settings/demo-environment.tsx`
+at `/settings/demo-data`. `client/routes.ts` registers it with `demoModeRoutes()`
+and `demoMode.data/read`. Ordinary installations retain their independent sample
+importer (`pages/settings/demo-data.tsx`) at that URL under `crm/manage`; the
+plugin management component is not registered there. Settings tabs read the
+published deployment flag and use the same permission as the selected route.
+The plugin's data, daily reset and account cards stay together on one page. Keep
+the stable empty `Header` slot because Settings already names the page.
+
+Beta.3 requires Authentication `2.0.0-beta.14` and Agents `1.0.0-beta.24`.
+Daily reset is always enabled and deployment-owned. Set
+`NOCOBASE_DEMO_RESET_HOUR`, `NOCOBASE_DEMO_RESET_MINUTE`,
+`NOCOBASE_DEMO_RESET_TIMEZONE`, and `NOCOBASE_DEMO_RESET_LANGUAGE`, or the matching
+`demoMode.dailyReset` properties in config.yml, then restart. Defaults are 03:00
+UTC and en-US. Before upgrading beta.2, read its effective saved schedule and
+transfer its time, zone and language to deployment configuration: beta.3 ignores
+old saved schedules and removes schedule writes. The page shows the resolved
+schedule and next run read-only. Preserve other saved policies. The 252 deployment
+was configured for 04:00 Asia/Shanghai, zh-CN before this upgrade.
 
 The plugin guards SQL. `server/providers/demo-mode.ts` additionally refuses
 mutating Mail and Agents requests before external
@@ -65,9 +78,10 @@ the old CRM and preview reset definitions and removes their persisted job rules;
 otherwise the jobs backend can keep warning about definitions no longer present.
 The initial preview migration's compatible schema and the Agents creation
 migration were reviewed before the supported checksum repair. Deployment backups
-retain the original history, configuration and storage together. Saved collection
-exceptions, online chat and automatic reset are disabled through the plugin's
-configuration service; the `crmUserPreferences` environment exception is removed.
+retain the original history, configuration and storage together. The original
+preview disabled collection exceptions, online chat and automatic reset and
+removed the `crmUserPreferences` environment exception. Later deployments enabled
+daily reset; use the current deployment configuration described above.
 
 Demo Mode `0.1.0-beta.1` removes the built-in write, simulation and AI settings
 tabs; it preserves their configuration APIs and saved policies. Its default
@@ -75,7 +89,8 @@ integrated chat and registered simulation adapters are now enabled, and tools
 use a supplied mock or an explicitly declared local read. CRM does not register
 those integrations: keep the early request guard even when the default chat
 policy is enabled. Read and preserve the deployment's actual saved policies on
-each upgrade; do not assert historical defaults in the deployment smoke check.
+each upgrade; beta.3 moves the schedule into deployment configuration as described
+above. Do not assert historical defaults in deployment smoke checks.
 On 2026-10-24, the deployment had `chat.enabled: false`, empty collection
 exceptions and daily reset enabled. Beta.2 requires Agents `1.0.0-beta.23` and App Client `4.0.0-beta.3`; the
 latter supplies the HTTP-compatible UUID and clipboard helpers imported by both

@@ -12,6 +12,7 @@ import {
   skillsRoute,
   usageRoute,
 } from '@nocobase/app-plugin-agents/client/routes';
+import { demoModeRoutes } from '@nocobase/app-plugin-demo-mode/client';
 import {
   BookOpen,
   Cpu,
@@ -67,6 +68,20 @@ const page = (name: string) =>
     resource: { type: 'page', id: name },
     action: 'access',
   }) as const;
+
+// Only the dedicated deployment registers the plugin's management page.
+// Ordinary installations keep the existing CRM sample-data importer at this URL.
+const demoEnvironmentRoutes = demoModeRoutes([
+  {
+    name: 'settings-demo-data',
+    path: 'demo-data',
+    authz: {
+      resource: { type: 'settings', id: 'demoMode.data' },
+      action: 'read',
+    },
+    componentLoader: () => import('./pages/settings/demo-environment.js'),
+  },
+]);
 
 // The /crm addresses' segments below /crm, each a level of its own.
 const LEGACY_DEPTH = 5;
@@ -426,18 +441,20 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
         },
         componentLoader: () => import('./pages/crm-settings.js'),
       },
-      {
-        // The demo dataset, imported and removed (pages/settings/
-        // demo-data.tsx); the administrators', as the General tab is,
-        // whose last card it was.
-        name: 'settings-demo-data',
-        path: 'demo-data',
-        authz: {
-          resource: { type: 'settings', id: 'crm' },
-          action: 'manage',
-        },
-        componentLoader: () => import('./pages/settings/demo-data.js'),
-      },
+      ...(demoEnvironmentRoutes.length
+        ? demoEnvironmentRoutes
+        : [
+            {
+              // Ordinary sample data is independent of the dedicated Demo Mode page.
+              name: 'settings-demo-data',
+              path: 'demo-data',
+              authz: {
+                resource: { type: 'settings', id: 'crm' },
+                action: 'manage',
+              },
+              componentLoader: () => import('./pages/settings/demo-data.js'),
+            },
+          ]),
       {
         // How an approval moves, read only; the administrators', as the
         // General tab is.

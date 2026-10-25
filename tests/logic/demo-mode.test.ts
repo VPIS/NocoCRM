@@ -19,7 +19,15 @@ const test = createAppTest({
       trustedOrigins: ['http://localhost'],
     },
     users: { initialAdmin: DEFAULT_ADMIN_CREDENTIALS },
-    demoMode: { enabled: true },
+    demoMode: {
+      enabled: true,
+      dailyReset: {
+        hour: 4,
+        minute: 25,
+        timezone: 'Asia/Shanghai',
+        language: 'zh-CN',
+      },
+    },
     secrets: { keys: [{ version: 1, key: 'a'.repeat(64) }] },
     notification: {
       channels: {
@@ -50,7 +58,17 @@ test('demo keeps reads available and refuses mutations even for root', async ({
   const policy = await admin.fetch('/demoMode/configuration');
   expect(policy.status).toBe(200);
   expect(await policy.json()).toMatchObject({
-    data: { collections: [], chat: { enabled: true } },
+    data: {
+      collections: [],
+      chat: { enabled: true },
+      schedule: {
+        enabled: true,
+        hour: 4,
+        minute: 25,
+        timezone: 'Asia/Shanghai',
+        language: 'zh-CN',
+      },
+    },
   });
   const dataset = await admin
     .fetch('/demoMode/data')
@@ -58,10 +76,18 @@ test('demo keeps reads available and refuses mutations even for root', async ({
   expect(dataset).toMatchObject({
     data: { available: true, datasetId: 'crm', present: false },
   });
-  // Registration describes the existing dataset, without creating identities or records.
+  // System accounts are enterable even before the CRM dataset is generated.
   expect(
     await request('/demoMode/accounts').then((response) => response.json()),
-  ).toEqual({ data: [] });
+  ).toMatchObject({
+    data: [{ username: DEFAULT_ADMIN_CREDENTIALS.username }],
+  });
+  const entered = await request(
+    `/demoMode/accounts/${DEFAULT_ADMIN_CREDENTIALS.username}/signIn`,
+    { method: 'POST', headers: { origin: 'http://localhost' } },
+  );
+  expect(entered.status).toBe(200);
+  expect(entered.headers.get('set-cookie')).toBeTruthy();
   const beforeUsers = await connection.query
     .selectFrom('user')
     .select('id')
@@ -149,12 +175,12 @@ test('demo keeps reads available and refuses mutations even for root', async ({
   const current = await admin
     .fetch('/demoMode/configuration')
     .then((r) => r.json());
-  const saved = await admin.fetch('/demoMode/configuration/schedule', {
+  const saved = await admin.fetch('/demoMode/configuration/chat', {
     method: 'PUT',
     headers: { 'content-type': 'application/json', origin: 'http://localhost' },
     body: JSON.stringify({
       expectedRevision: current.data.revision,
-      value: { ...current.data.schedule, enabled: false },
+      value: { ...current.data.chat, enabled: false },
     }),
   });
   expect({ status: saved.status, body: await saved.text() }).toMatchObject({

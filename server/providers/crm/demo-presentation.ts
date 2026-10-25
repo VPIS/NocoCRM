@@ -23,9 +23,8 @@ export function existingCrmDemo(
           role: demoRoleTitles[role][locale === 'zh-CN' ? 0 : 1],
           password: demoPassword(username),
         })),
-        // The preview dataset created this public demo administrator. The
-        // plugin only offers identities already recorded as owned by 'crm';
-        // an unrelated initial administrator is never exposed by this entry.
+        // Keep this dataset administrator for regeneration. Quick sign-in is
+        // now supplied by the plugin for all enabled person accounts.
         ...(adminName
           ? [
               {

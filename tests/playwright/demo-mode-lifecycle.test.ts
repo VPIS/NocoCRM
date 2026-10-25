@@ -37,6 +37,11 @@ test('reset regenerates the existing story, preserves sessions and leaves busine
   const before = (
     await (await context.request.get(`${api}/leads`)).json()
   ).data.map((row: { id: string }) => row.id);
+  const accountsBefore = (
+    await (await context.request.get(`${api}/demoMode/accounts`)).json()
+  ).data
+    .map((account: { username: string }) => account.username)
+    .sort();
   const status = async () =>
     (
       await (
@@ -90,8 +95,10 @@ test('reset regenerates the existing story, preserves sessions and leaves busine
   expect(blocked.status()).toBe(400);
   expect((await blocked.json()).error.reason).toBe('DEMO_READ_ONLY');
   expect(
-    (await (await context.request.get(`${api}/demoMode/accounts`)).json()).data,
-  ).toHaveLength(5);
+    (await (await context.request.get(`${api}/demoMode/accounts`)).json()).data
+      .map((account: { username: string }) => account.username)
+      .sort(),
+  ).toEqual(accountsBefore);
   const firstCounts = (await status()).counts;
   // A second reset must work too, without losing identities or leaking old rows.
   expect(
@@ -167,16 +174,18 @@ test('clear keeps its administrator signed in and able to generate the dataset a
   const empty = await context.request.get(`${api}/leads`);
   expect(empty.status()).toBe(200);
   expect((await empty.json()).data).toEqual([]);
+  const accountsAfterClear = (
+    await (await context.request.get(`${api}/demoMode/accounts`)).json()
+  ).data as { username: string }[];
   expect(
-    (await (await context.request.get(`${api}/demoMode/accounts`)).json()).data,
-  ).toEqual([]);
-  // Quick entry is hidden while empty; ordinary password sign-in still works.
+    accountsAfterClear.some((account) => account.username === 'admin'),
+  ).toBe(true);
+  // The preserved administrator remains enterable without dataset records.
   const fresh = await playwright.request.newContext();
   expect(
     (
-      await fresh.post(`${api}/auth/sign-in/username`, {
+      await fresh.post(`${api}/demoMode/accounts/admin/signIn`, {
         headers: { Origin: origin! },
-        data: { username: 'admin', password: 'Demo@2026' },
       })
     ).status(),
   ).toBe(200);
@@ -207,8 +216,10 @@ test('clear keeps its administrator signed in and able to generate the dataset a
     .toBe('ready');
   await expect(page.getByText('已就绪', { exact: true })).toBeVisible();
   expect(
-    (await (await context.request.get(`${api}/demoMode/accounts`)).json()).data,
-  ).toHaveLength(5);
+    (
+      await (await context.request.get(`${api}/demoMode/accounts`)).json()
+    ).data.map((account: { username: string }) => account.username),
+  ).toEqual(expect.arrayContaining(['admin', 'wangxiaofang']));
   await page.screenshot({
     path: 'storage/demo-mode-verification/beta2-clear-regenerate.png',
     fullPage: true,

@@ -17,7 +17,8 @@ test('plugin settings and account menu use the existing dataset and preserve rea
     username: string;
     name: string;
   }[];
-  expect(visitors).toHaveLength(5);
+  const admin = visitors.find((account) => account.username === 'admin')!;
+  expect(admin).toBeDefined();
   const sales = visitors.find((account) =>
     ['sophie', 'wangxiaofang'].includes(account.username),
   )!;
@@ -53,7 +54,7 @@ test('plugin settings and account menu use the existing dataset and preserve rea
     }),
   );
   const copy = page.getByRole('button', {
-    name: '复制 孙洋 的进入链接',
+    name: `复制 ${admin.name} 的进入链接`,
     exact: true,
   });
   await copy.click();
@@ -71,12 +72,20 @@ test('plugin settings and account menu use the existing dataset and preserve rea
   await expect(
     page.getByRole('tab', { name: '概览', exact: true }),
   ).toHaveCount(0);
-  await expect(page.getByRole('switch').first()).not.toBeChecked();
+  const configuration = (
+    await (await context.request.get(`${api}/demoMode/configuration`)).json()
+  ).data;
+  expect(configuration.schedule.enabled).toBe(true);
+  const schedule = page.locator('dl').filter({ hasText: '时区' });
+  await expect(schedule).toContainText(configuration.schedule.timezone);
+  await expect(schedule).toContainText(
+    `${String(configuration.schedule.hour).padStart(2, '0')}:${String(configuration.schedule.minute).padStart(2, '0')}`,
+  );
 
   await page.goto(`${origin}/main/leads`);
   await page.getByRole('button', { name: '打开账户菜单' }).click();
-  await page.getByRole('menuitem', { name: /演示账号/ }).hover();
-  await expect(page.getByRole('menuitemradio')).toHaveCount(5);
+  await page.getByRole('menuitem', { name: /^账号：/ }).hover();
+  await expect(page.getByRole('menuitemradio')).toHaveCount(visitors.length);
   await page.screenshot({
     path: 'storage/demo-mode-verification/account-menu.png',
   });
@@ -113,9 +122,9 @@ test('plugin settings and account menu use the existing dataset and preserve rea
   expect(write.status()).toBe(400);
   expect((await write.json()).error.reason).toBe('DEMO_READ_ONLY');
   await page.getByRole('button', { name: '打开账户菜单' }).click();
-  await page.getByRole('menuitem', { name: /演示账号/ }).hover();
+  await page.getByRole('menuitem', { name: /^账号：/ }).hover();
   const adminLoaded = page.waitForEvent('load');
-  await page.getByRole('menuitemradio', { name: /孙洋/ }).click();
+  await page.getByRole('menuitemradio').filter({ hasText: admin.name }).click();
   await adminLoaded;
   await expect
     .poll(
@@ -163,9 +172,57 @@ test('plugin settings remain readable in English and on a narrow dark screen', a
     fullPage: true,
   });
   await page.getByRole('button', { name: 'Open account menu' }).click();
-  await page.getByRole('menuitem', { name: /Demo account/ }).hover();
-  await expect(page.getByRole('menuitemradio')).toHaveCount(5);
+  await page.getByRole('menuitem', { name: /^Account:/ }).hover();
+  const accounts = (
+    await (
+      await context.request.get(`${origin}/main/api/demoMode/accounts`)
+    ).json()
+  ).data;
+  await expect(page.getByRole('menuitemradio')).toHaveCount(accounts.length);
   await page.screenshot({
     path: 'storage/demo-mode-verification/account-menu-mobile-dark.png',
   });
+});
+
+test('anonymous home entry opens Super Admin and preserves an existing salesperson session', async ({
+  page,
+  context,
+}) => {
+  const api = `${origin}/main/api`;
+  await context.addInitScript(() =>
+    localStorage.setItem('nocobase.locale:/main/', 'en-US'),
+  );
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto(`${origin}/main/`);
+  await expect(
+    page.getByRole('button', { name: 'Open account menu' }),
+  ).toBeVisible({ timeout: 90000 });
+  expect((await context.request.get(`${api}/users`)).status()).toBe(200);
+  const accounts = (
+    await (await context.request.get(`${api}/demoMode/accounts`)).json()
+  ).data as { username: string; current: boolean }[];
+  expect(accounts.some((account) => account.current)).toBe(true);
+  const sales = accounts.find((account) =>
+    ['sophie', 'wangxiaofang'].includes(account.username),
+  )!;
+  expect(sales).toBeDefined();
+  expect(
+    (
+      await context.request.post(
+        `${api}/demoMode/accounts/${sales.username}/signIn`,
+        { headers: { Origin: origin! } },
+      )
+    ).status(),
+  ).toBe(200);
+  await page.goto(`${origin}/main/`);
+  await expect(
+    page.getByRole('button', { name: 'Open account menu' }),
+  ).toBeVisible({ timeout: 60000 });
+  const current = (
+    await (await context.request.get(`${api}/demoMode/accounts`)).json()
+  ).data.find((account: { current: boolean }) => account.current);
+  expect(current.username).toBe(sales.username);
+  expect((await context.request.get(`${api}/users`)).status()).toBe(403);
+  expect(errors).toEqual([]);
 });
