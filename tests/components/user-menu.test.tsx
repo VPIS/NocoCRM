@@ -118,8 +118,8 @@ it('reports a network sign-out failure and allows retry', async () => {
 it('offers the plugin account switcher and preserves the current page', async () => {
   state.accounts = [
     {
-      username: 'admin',
-      name: 'Demo admin',
+      username: 'nocobase',
+      name: 'Super Admin',
       role: 'Administrator',
       current: true,
     },

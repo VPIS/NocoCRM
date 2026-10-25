@@ -5,10 +5,7 @@ import { demoRoleTitles } from '../../locales/crm-ai/demo-mode.js';
 import { demoAccountsIn, demoPassword } from './demo.js';
 
 /** The plugin owns lifecycle and identities; the CRM retains its existing story. */
-export function existingCrmDemo(
-  app: Application,
-  adminName?: string,
-): DemoDataset {
+export function existingCrmDemo(app: Application): DemoDataset {
   return {
     id: 'crm',
     languages: ['zh-CN', 'en-US'],
@@ -16,26 +13,12 @@ export function existingCrmDemo(
       language === 'en-US' ? 'America/New_York' : 'Asia/Shanghai',
     accounts: (language) => {
       const locale = language === 'en-US' ? 'en-US' : 'zh-CN';
-      return [
-        ...demoAccountsIn(locale).map(({ username, name, role }) => ({
-          username,
-          name,
-          role: demoRoleTitles[role][locale === 'zh-CN' ? 0 : 1],
-          password: demoPassword(username),
-        })),
-        // Keep this dataset administrator for regeneration. Quick sign-in is
-        // now supplied by the plugin for all enabled person accounts.
-        ...(adminName
-          ? [
-              {
-                username: 'admin',
-                name: adminName,
-                role: demoRoleTitles.administrator[locale === 'zh-CN' ? 0 : 1],
-                password: 'Demo@2026',
-              },
-            ]
-          : []),
-      ];
+      return demoAccountsIn(locale).map(({ username, name, role }) => ({
+        username,
+        name,
+        role: demoRoleTitles[role][locale === 'zh-CN' ? 0 : 1],
+        password: demoPassword(username),
+      }));
     },
     counts: async ({ records }) => {
       const visible = new Set([
@@ -54,7 +37,7 @@ export function existingCrmDemo(
       }
       return counts;
     },
-    generate: (context) => generateDemo(app, context, adminName),
+    generate: (context) => generateDemo(app, context),
     clear: () => clearDemoBusiness(app),
   };
 }

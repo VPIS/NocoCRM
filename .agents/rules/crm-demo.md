@@ -11,6 +11,11 @@ generation, clear, reset and policy management remain available. The plugin
 preserves the executing administrator's account, permissions and session during
 clear and failed reset. Leave identity cleanup to the plugin.
 
+The dataset creates only its four sales accounts. Use `context.actorId` as the
+story's importing administrator; do not create, adopt or assign root to an extra
+`admin` account. Existing administrators are available through the plugin's
+quick sign-in independently of the dataset.
+
 Since beta.3, quick sign-in lists all enabled person accounts independently of
 dataset ownership or readiness, including existing Super Admins and ordinary
 CRM-imported accounts. Trusted session creation leaves passwords and permissions

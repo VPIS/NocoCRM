@@ -17,7 +17,6 @@ import { whatsappToken } from './whatsapp/service.js';
 export async function generateDemo(
   app: Application,
   context: DemoImportContext,
-  adminName?: string,
 ): Promise<void> {
   const crm = app.container.resolve(crmToken);
   const authz = app.container.resolve(authorizationToken);
@@ -34,21 +33,11 @@ export async function generateDemo(
       roleScopes: { app: [roleKey(account.role)] },
     });
   }
-  let ownerId = context.actorId;
-  if (adminName) {
-    ownerId = await context.createAccount({
-      username: 'admin',
-      name: adminName,
-      email: 'admin@demo.example',
-      password: 'Demo@2026',
-      roleScopes: { app: ['root'] },
-    });
-  }
   await context.progress(0.05);
   await populateDemo(
     crm,
     authz,
-    crmActor(authz, { id: ownerId, locale: language }),
+    crmActor(authz, { id: context.actorId, locale: language }),
     services.demoAccounts,
     language,
     services.demoMailboxes,

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { demoAdminUsername } from './support/demo-mode.js';
 
 // Destructive lifecycle verification is restricted to the isolated local copy.
 const origin = process.env.DEMO_TEST_ORIGIN;
@@ -26,9 +27,12 @@ test('reset regenerates the existing story, preserves sessions and leaves busine
   ).toBe(200);
   expect(
     (
-      await context.request.post(`${api}/demoMode/accounts/admin/signIn`, {
-        headers: { Origin: origin! },
-      })
+      await context.request.post(
+        `${api}/demoMode/accounts/${demoAdminUsername}/signIn`,
+        {
+          headers: { Origin: origin! },
+        },
+      )
     ).status(),
   ).toBe(200);
   await context.addInitScript(() =>
@@ -145,9 +149,12 @@ test('clear keeps its administrator signed in and able to generate the dataset a
   const api = `${origin}/main/api`;
   expect(
     (
-      await context.request.post(`${api}/demoMode/accounts/admin/signIn`, {
-        headers: { Origin: origin! },
-      })
+      await context.request.post(
+        `${api}/demoMode/accounts/${demoAdminUsername}/signIn`,
+        {
+          headers: { Origin: origin! },
+        },
+      )
     ).status(),
   ).toBe(200);
   await context.addInitScript(() =>
@@ -178,13 +185,15 @@ test('clear keeps its administrator signed in and able to generate the dataset a
     await (await context.request.get(`${api}/demoMode/accounts`)).json()
   ).data as { username: string }[];
   expect(
-    accountsAfterClear.some((account) => account.username === 'admin'),
+    accountsAfterClear.some(
+      (account) => account.username === demoAdminUsername,
+    ),
   ).toBe(true);
   // The preserved administrator remains enterable without dataset records.
   const fresh = await playwright.request.newContext();
   expect(
     (
-      await fresh.post(`${api}/demoMode/accounts/admin/signIn`, {
+      await fresh.post(`${api}/demoMode/accounts/${demoAdminUsername}/signIn`, {
         headers: { Origin: origin! },
       })
     ).status(),
@@ -219,7 +228,7 @@ test('clear keeps its administrator signed in and able to generate the dataset a
     (
       await (await context.request.get(`${api}/demoMode/accounts`)).json()
     ).data.map((account: { username: string }) => account.username),
-  ).toEqual(expect.arrayContaining(['admin', 'wangxiaofang']));
+  ).toEqual(expect.arrayContaining([demoAdminUsername, 'wangxiaofang']));
   await page.screenshot({
     path: 'storage/demo-mode-verification/beta2-clear-regenerate.png',
     fullPage: true,

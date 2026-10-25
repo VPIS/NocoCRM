@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { demoAdminUsername } from './support/demo-mode.js';
 
 const origin = process.env.DEMO_TEST_ORIGIN;
 test.skip(!origin, 'Set DEMO_TEST_ORIGIN to a dedicated read-only demo.');
@@ -33,9 +34,12 @@ test('demo refusals restore autosaved fields and leave submitted drafts with one
   const api = `${origin}/main/api`;
   expect(
     (
-      await context.request.post(`${api}/demoMode/accounts/admin/signIn`, {
-        headers: { Origin: origin! },
-      })
+      await context.request.post(
+        `${api}/demoMode/accounts/${demoAdminUsername}/signIn`,
+        {
+          headers: { Origin: origin! },
+        },
+      )
     ).ok(),
   ).toBeTruthy();
   const document = await (await context.request.get(`${api}/swagger`)).json();

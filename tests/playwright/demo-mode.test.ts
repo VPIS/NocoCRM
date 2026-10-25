@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { demoAdminUsername } from './support/demo-mode.js';
 
 const origin = process.env.DEMO_TEST_ORIGIN;
 test.skip(!origin, 'Set DEMO_TEST_ORIGIN to the dedicated demo deployment.');
@@ -17,14 +18,16 @@ test('plugin settings and account menu use the existing dataset and preserve rea
     username: string;
     name: string;
   }[];
-  const admin = visitors.find((account) => account.username === 'admin')!;
+  const admin = visitors.find(
+    (account) => account.username === demoAdminUsername,
+  )!;
   expect(admin).toBeDefined();
   const sales = visitors.find((account) =>
     ['sophie', 'wangxiaofang'].includes(account.username),
   )!;
   expect(sales).toBeDefined();
   const login = await context.request.post(
-    `${api}/demoMode/accounts/admin/signIn`,
+    `${api}/demoMode/accounts/${demoAdminUsername}/signIn`,
     { headers: { Origin: origin! } },
   );
   expect(login.status()).toBe(200);
@@ -137,7 +140,7 @@ test('plugin settings and account menu use the existing dataset and preserve rea
           ).json()
         ).data.find((a: { current: boolean }) => a.current)?.username,
     )
-    .toBe('admin');
+    .toBe(demoAdminUsername);
   expect(errors).toEqual([]);
 });
 
@@ -146,7 +149,7 @@ test('plugin settings remain readable in English and on a narrow dark screen', a
   context,
 }) => {
   const login = await context.request.post(
-    `${origin}/main/api/demoMode/accounts/admin/signIn`,
+    `${origin}/main/api/demoMode/accounts/${demoAdminUsername}/signIn`,
     { headers: { Origin: origin! } },
   );
   expect(login.status()).toBe(200);

@@ -3,7 +3,6 @@ import { apiErrorHandler } from '@nocobase/app-server/router';
 import type { Context } from 'hono';
 import { DemoReadOnlyError } from '@nocobase/app-plugin-demo-mode/server';
 import { ServiceProvider } from '@nocobase/service-provider';
-import { databaseManagerToken } from '@nocobase/db';
 import { demoDataToken } from '@nocobase/app-plugin-demo-mode/server/tokens';
 import { existingCrmDemo } from './crm/demo-presentation.js';
 import { isDemoMode } from './crm/demo-mode.js';
@@ -13,21 +12,9 @@ export default class DemoModeProvider extends ServiceProvider<Application> {
   name = 'crm-demo-mode';
   override async boot(): Promise<void> {
     if (!isDemoMode(this.app)) return;
-    const admin = await this.app.container
-      .resolve(databaseManagerToken)
-      .query()
-      .selectFrom('user')
-      .select('name')
-      .where('username', '=', 'admin')
-      .executeTakeFirst();
     this.app.container
       .resolve(demoDataToken)
-      .register(
-        existingCrmDemo(
-          this.app,
-          typeof admin?.name === 'string' ? admin.name : undefined,
-        ),
-      );
+      .register(existingCrmDemo(this.app));
   }
 
   override register(): void {
