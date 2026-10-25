@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactElement } from 'react';
+import { isDemoReadOnlyError } from '#lib/demo-mode';
 import { Input } from '../ui/input.js';
 import { Label } from '../ui/label.js';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover.js';
@@ -78,6 +79,12 @@ export function MoneyField({
       setError('');
       return true;
     } catch (cause) {
+      if (isDemoReadOnlyError(cause)) {
+        setDraft({ currency, amount: blank ? '' : toText(amount) });
+        setError('');
+        setOpen(false);
+        return false;
+      }
       setError(text(`errors.${errorCode(cause).code}`, { defaultValue: '' }));
       return false;
     } finally {

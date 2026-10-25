@@ -1,5 +1,20 @@
 # Copy this file to config.yml before starting the application.
 
+# Read-only showcase deployment. Use its own database and storage directory.
+# Generate the existing CRM story through Settings after enabling.
+# NOCOBASE_DEMO_MODE=true enables the same plugin setting.
+# demoMode:
+#   enabled: true
+#   quickSignIn: true
+#   dailyReset:
+#     hour: 3
+#     minute: 0
+#     timezone: UTC
+#     language: en-US
+# Daily reset is always enabled in Demo Mode. Deployment environment overrides:
+# NOCOBASE_DEMO_RESET_HOUR, NOCOBASE_DEMO_RESET_MINUTE,
+# NOCOBASE_DEMO_RESET_TIMEZONE, NOCOBASE_DEMO_RESET_LANGUAGE.
+
 # app:
 #   Public origin used for callbacks and redirects in production.
 #   publicOrigin: https://apps.example.com

@@ -34,8 +34,8 @@ export function LongTextField({
   // Greyed in place of an empty value the reader may fill.
   placeholder?: string;
   error?: string;
-  // Saves the text; whether it was saved.
-  onSave: (text: string) => Promise<boolean>;
+  // True when saved, false to keep editing, or reverted to discard a demo edit.
+  onSave: (text: string) => Promise<boolean | 'reverted'>;
 }): ReactElement {
   const { language } = useCrmText();
   const [open, setOpen] = useState(false);
@@ -48,7 +48,7 @@ export function LongTextField({
     setDraft(value);
     setEditing(true);
   };
-  // Whether the text now stands as written (saved, or unchanged).
+  // Whether editing can finish (saved, unchanged, or reverted).
   const save = async (): Promise<boolean> => {
     if (draft === value) {
       setEditing(false);
@@ -57,6 +57,12 @@ export function LongTextField({
     setSaving(true);
     try {
       const saved = await onSave(draft);
+      if (saved === 'reverted') {
+        setDraft(value);
+        setEditing(false);
+        setOpen(false);
+        return true;
+      }
       if (saved) setEditing(false);
       return saved;
     } finally {

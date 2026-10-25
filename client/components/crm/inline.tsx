@@ -1,4 +1,5 @@
 import { PencilLine } from 'lucide-react';
+import { isDemoReadOnlyError } from '#lib/demo-mode';
 import {
   LONG_TEXT_LIMIT,
   TEXT_LIMIT,
@@ -156,8 +157,9 @@ export function InlineField({
     return parsed.toISOString().slice(0, 10);
   };
 
-  // Whether the value now stands as given (saved, or unchanged).
-  const save = async (raw: unknown): Promise<boolean> => {
+  // A demo refusal ends editing by restoring the record, without reporting a
+  // successful save. LongTextField also owns a draft and handles this result.
+  const save = async (raw: unknown): Promise<boolean | 'reverted'> => {
     const next =
       field.type === 'boolean'
         ? raw === 'true'
@@ -197,6 +199,15 @@ export function InlineField({
       setEditing(false);
       return true;
     } catch (cause) {
+      if (isDemoReadOnlyError(cause)) {
+        draftRef.current = toInputValue(record[field.key]);
+        setDraft(draftRef.current);
+        setListDraft(arrayValues(record[field.key]).map(toText));
+        popupOpenRef.current = false;
+        setError('');
+        setEditing(false);
+        return 'reverted';
+      }
       setError(text(`errors.${errorCode(cause).code}`, { defaultValue: '' }));
       return false;
     } finally {

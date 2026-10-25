@@ -1,3 +1,4 @@
+import { isDemoReadOnlyError } from '#lib/demo-mode';
 import {
   isEndOfDay,
   DEFAULT_TIME_ZONE,
@@ -137,7 +138,7 @@ export function ErrorNotice({
   error: unknown;
 }): ReactElement | null {
   const { text } = useCrmText();
-  if (!error) return null;
+  if (!error || isDemoReadOnlyError(error)) return null;
   const { code, field, detail } = errorCode(error);
   return (
     <Alert variant='destructive' role='alert'>
