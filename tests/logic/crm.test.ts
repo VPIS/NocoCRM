@@ -7280,8 +7280,9 @@ describe('demo dataset', () => {
         .execute(),
     ).toHaveLength(demoSignals.length);
     // The company's WhatsApp numbers, the demo's own (demo-whatsapp.ts),
-    // with their conversations: five with demo records, which carry their
-    // lines (H World's two people both on its company and deal), three
+    // with their conversations: twenty with demo records, which carry
+    // their lines (H World's two people both on its company and deal), a
+    // person at every other company and the followed-up leads, three
     // with people nobody linked, one of them set aside. They
     // are never the connection's, and the records offer their WhatsApp tab.
     const waNumbers = await database
@@ -7301,7 +7302,7 @@ describe('demo dataset', () => {
       '+1 555 010 0199',
       '+44 7700 900123',
     ]);
-    expect(view.demoNumbers.map((n) => n.conversations)).toEqual([6, 2]);
+    expect(view.demoNumbers.map((n) => n.conversations)).toEqual([21, 2]);
     await expect(
       whatsapp.updateNumber(view.demoNumbers[0].id, {}),
     ).rejects.toMatchObject({ code: 'notFound' });
@@ -7379,11 +7380,7 @@ describe('demo dataset', () => {
       .execute();
     expect(waConversations.map((row) => toText(row.state)).sort()).toEqual([
       'dismissed',
-      'linked',
-      'linked',
-      'linked',
-      'linked',
-      'linked',
+      ...Array<string>(20).fill('linked'),
       'unlinked',
       'unlinked',
     ]);
@@ -11123,6 +11120,57 @@ describe('agents and plans', () => {
     expect(planOutcomes.at(-1)).toMatchObject({ decision: 'voided' });
     const listed = await (await request('/plans?status=voided', 'rep')).json();
     expect(listed.data.map((p: { id: string }) => p.id)).toContain(second.id);
+  });
+
+  it('lists a plan past its time as expired without writing, and stores it so on a decision', async () => {
+    const created = await (
+      await asRun('/plans', ['crm.plans/create'], 'POST', {
+        title: 'A lead from the fair',
+        steps: [
+          {
+            op: 'record.create',
+            params: {
+              entity: 'leads',
+              values: { name: 'Fair visitor', source: 'exhibition' },
+            },
+          },
+        ],
+      })
+    ).json();
+    const plan = created.data as PlanOutcome['plan'];
+    const stored = () =>
+      service.database
+        .query()
+        .selectFrom('crmPlans')
+        .select('status')
+        .where('id', '=', plan.id)
+        .executeTakeFirstOrThrow()
+        .then((row) => row.status);
+    await service.database
+      .query()
+      .updateTable('crmPlans')
+      .set({ expiresAt: new Date(Date.now() - 60_000).toISOString() })
+      .where('id', '=', plan.id)
+      .execute();
+    const ids = async (status: string): Promise<string[]> =>
+      (
+        (await (await request(`/plans?status=${status}`, 'rep')).json())
+          .data as { id: string }[]
+      ).map((p) => p.id);
+    expect(await ids('pending')).not.toContain(plan.id);
+    expect(await ids('expired')).toContain(plan.id);
+    expect(
+      (await (await request(`/plans/${plan.id}`, 'rep')).json()).data.status,
+    ).toBe('expired');
+    // Only read: the row still says pending.
+    expect(await stored()).toBe('pending');
+    const late = await request(`/plans/${plan.id}/execute`, 'rep', 'POST', {
+      revision: plan.revision,
+    });
+    expect(await late.json()).toMatchObject({
+      error: { reason: 'PLAN_EXPIRED' },
+    });
+    expect(await stored()).toBe('expired');
   });
 
   it('lets the person change a waiting step on the card, rehearsing the plan again', async () => {
