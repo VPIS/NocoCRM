@@ -10,8 +10,8 @@ vi.mock('../../client/theme/index.js', () => ({
 vi.mock('../../client/layouts/components/user-menu.js', () => ({
   UserMenu: () => null,
 }));
-vi.mock('../../client/layouts/components/demo-mode-badge.js', () => ({
-  DemoModeBadge: () => null,
+vi.mock('@nocobase/app-plugin-demo-mode/client/menu', () => ({
+  DemoModeMenu: () => null,
 }));
 
 const state = vi.hoisted(() => ({

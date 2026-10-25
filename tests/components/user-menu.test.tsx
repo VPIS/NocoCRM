@@ -4,20 +4,10 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import { UserMenu } from '../../client/layouts/components/user-menu.js';
 const state = vi.hoisted(() => ({
-  accounts: [] as {
-    username: string;
-    name: string;
-    role: string;
-    current: boolean;
-  }[],
-  signIn: vi.fn(),
   signOut: vi.fn(),
   refresh: vi.fn(),
   error: vi.fn(),
   resolveError: vi.fn(),
-}));
-vi.mock('@nocobase/app-plugin-demo-mode/client/accounts', () => ({
-  useDemoAccounts: () => ({ accounts: state.accounts, signIn: state.signIn }),
 }));
 vi.mock('@nocobase/app-plugin-authentication/client', () => ({
   useAuthentication: () => ({
@@ -44,8 +34,6 @@ vi.mock('../../client/layouts/components/language-switcher.js', () => ({
   LanguageSwitcher: () => null,
 }));
 beforeEach(() => {
-  state.accounts = [];
-  state.signIn.mockReset().mockResolvedValue(undefined);
   state.signOut.mockReset();
   state.refresh.mockReset();
   state.error.mockReset();
@@ -113,28 +101,4 @@ it('reports a network sign-out failure and allows retry', async () => {
     await screen.findByRole('menuitem', { name: 'Sign out' }),
   );
   await waitFor(() => expect(state.refresh).toHaveBeenCalledOnce());
-});
-
-// The header's Demo Mode badge switches accounts (demo-mode-badge.tsx), so
-// the account menu offers none, even on a demo site.
-it('offers no account switcher, the header badge doing that', async () => {
-  state.accounts = [
-    {
-      username: 'nocobase',
-      name: 'Super Admin',
-      role: 'Administrator',
-      current: true,
-    },
-    { username: 'sales', name: 'Demo sales', role: 'Sales', current: false },
-  ];
-  render(
-    <MemoryRouter initialEntries={['/leads']}>
-      <UserMenu />
-    </MemoryRouter>,
-  );
-  screen.getByRole('button', { name: 'Open account menu' }).focus();
-  await userEvent.keyboard('{Enter}');
-  expect(await screen.findByRole('menu')).toBeTruthy();
-  expect(screen.queryByRole('menuitem', { name: 'accounts.menu' })).toBeNull();
-  expect(screen.queryByText('Demo sales')).toBeNull();
 });

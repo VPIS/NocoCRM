@@ -77,6 +77,7 @@ async function renderUsers(
   actions: string[] = [],
   initialRoles: Record<string, string[]> = {},
   requiredRole = false,
+  defaultRoles?: string[],
 ) {
   let current = { ...original, roleScopes: initialRoles };
   let roleFailure = false;
@@ -114,7 +115,9 @@ async function renderUsers(
                     label: 'Application',
                     selection: 'multiple',
                     requiredOnCreate: requiredRole,
+                    defaultValue: defaultRoles,
                     options: [
+                      { value: 'member', label: 'Member' },
                       { value: 'sales', label: 'Sales team' },
                       { value: 'finance', label: 'Finance team' },
                       {
@@ -147,6 +150,10 @@ async function renderUsers(
             roleScopes: { ...current.roleScopes, ...json?.roleScopes },
           };
         }
+        return { data: current };
+      }
+      if (path === 'users' && method === 'POST') {
+        current = { ...current, ...json };
         return { data: current };
       }
       return { data: [current], meta: { total: 41 } };
@@ -543,4 +550,94 @@ it('focuses and describes the required role dropdown when creating without a rol
   expect(
     view.calls.mock.calls.filter(([call]) => call.method === 'POST'),
   ).toHaveLength(0);
+});
+
+it.each([false, true])(
+  'shows creation defaults and preserves an explicitly cleared role list (%s)',
+  async (clear) => {
+    const user = userEvent.setup();
+    const view = await renderUsers(
+      '/users',
+      '/create',
+      true,
+      true,
+      [],
+      {},
+      false,
+      ['member'],
+    );
+    const roles = await screen.findByRole('combobox', {
+      name: 'Application',
+      exact: true,
+    });
+    expect(roles).toHaveTextContent('Member');
+    if (clear) {
+      await user.click(roles);
+      await user.click(
+        await screen.findByRole('option', { name: 'Member', exact: true }),
+      );
+      await user.keyboard('{Escape}');
+      expect(roles).not.toHaveTextContent('Member');
+    }
+    await user.type(
+      screen.getByRole('textbox', { name: 'Name *' }),
+      'New user',
+    );
+    await user.type(
+      screen.getByRole('textbox', { name: 'Email *' }),
+      'new@example.test',
+    );
+    await user.type(
+      screen.getByLabelText(`${enUS.settings.password} *`),
+      'long-enough-password',
+    );
+    await user.click(
+      screen.getByRole('button', { name: 'Create', exact: true }),
+    );
+    await waitFor(() =>
+      expect(view.calls).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'POST',
+          path: 'users',
+          json: expect.objectContaining({
+            roleScopes: { app: clear ? [] : ['member'] },
+          }),
+        }),
+      ),
+    );
+  },
+);
+
+it('does not restore creation defaults when editing a roleless account', async () => {
+  const user = userEvent.setup();
+  const view = await renderUsers(
+    '/users',
+    '/alice/edit',
+    true,
+    true,
+    [],
+    { app: [] },
+    false,
+    ['member'],
+  );
+  const name = await screen.findByRole('textbox', { name: 'Name *' });
+  await waitFor(() => expect(name).toHaveValue('Alice'));
+  expect(
+    screen.getByRole('combobox', { name: 'Application', exact: true }),
+  ).not.toHaveTextContent('Member');
+  await user.type(name, ' updated');
+  await user.click(screen.getByRole('button', { name: 'Save', exact: true }));
+  await waitFor(() =>
+    expect(view.calls).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'PATCH',
+        path: 'users/alice',
+        json: {
+          name: 'Alice updated',
+          username: 'alice',
+          email: 'alice@example.test',
+        },
+      }),
+    ),
+  );
 });

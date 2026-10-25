@@ -223,7 +223,17 @@ function UserEditor(): ReactElement {
     password: '',
   };
   const [roleDraft, setRoleDraft] = useState<Record<string, UserRoleValue>>({});
-  const roles = { ...(initial?.roleScopes ?? {}), ...roleDraft };
+  // Creation defaults are visible drafts; clearing one must stay explicitly
+  // empty, and editing an existing account must never restore a removed role.
+  const creationDefaults = Object.fromEntries(
+    (options.data?.data.roleScopes ?? [])
+      .filter((scope) => scope.defaultValue !== undefined)
+      .map((scope) => [scope.key, scope.defaultValue!]),
+  );
+  const roles = {
+    ...(creating ? creationDefaults : (initial?.roleScopes ?? {})),
+    ...roleDraft,
+  };
   const changedRoles = Object.fromEntries(
     Object.entries(roleDraft).filter(
       ([key, value]) =>

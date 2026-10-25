@@ -66,8 +66,7 @@ test('plugin settings and account menu use the existing dataset and preserve rea
     path: 'storage/demo-mode-verification/plugin-settings.png',
     fullPage: true,
   });
-  // The data card offers no Generate, Clear or Reset: any visitor may be
-  // its administrator (demo-environment.tsx).
+  // The plugin keeps the data card read-only even for administrators.
   for (const name of ['生成', '清空', '重置'])
     await expect(page.getByRole('button', { name, exact: true })).toHaveCount(
       0,
@@ -85,8 +84,8 @@ test('plugin settings and account menu use the existing dataset and preserve rea
     `${String(configuration.schedule.hour).padStart(2, '0')}:${String(configuration.schedule.minute).padStart(2, '0')}`,
   );
 
-  await page.goto(`${origin}/main/leads`);
-  // The header's Demo Mode badge switches accounts (demo-mode-badge.tsx).
+  await page.goto(`${origin}/main/leads?view=board#selected`);
+  // The plugin's header menu switches accounts while keeping the current page.
   await page.getByRole('button', { name: /演示模式/ }).click();
   await expect(page.getByRole('menuitemradio')).toHaveCount(visitors.length);
   await page.screenshot({
@@ -104,7 +103,7 @@ test('plugin settings and account menu use the existing dataset and preserve rea
   await expect(page.getByRole('button', { name: '打开账户菜单' })).toBeVisible({
     timeout: 60_000,
   });
-  await expect(page).toHaveURL(`${origin}/main/leads`);
+  await expect(page).toHaveURL(`${origin}/main/leads?view=board#selected`);
   await expect
     .poll(
       async () =>
@@ -124,8 +123,7 @@ test('plugin settings and account menu use the existing dataset and preserve rea
   });
   expect(write.status()).toBe(400);
   expect((await write.json()).error.reason).toBe('DEMO_READ_ONLY');
-  await page.getByRole('button', { name: '打开账户菜单' }).click();
-  await page.getByRole('menuitem', { name: /^账号：/ }).hover();
+  await page.getByRole('button', { name: /演示模式/ }).click();
   const adminLoaded = page.waitForEvent('load');
   await page.getByRole('menuitemradio').filter({ hasText: admin.name }).click();
   await adminLoaded;

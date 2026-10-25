@@ -8,8 +8,8 @@ import {
 // and INITIAL_ADMIN_PASSWORD, read once while the user table is empty.
 //
 // Application change: the Users plugin would register its own permission-set
-// role scope on the Users page; the CRM registers a replacement (one or more
-// CRM roles per user, the last administrator protected) from CrmProvider, so
+// role scope on the Users page; the CRM registers a replacement (visible
+// Member and CRM roles, the last administrator protected) from CrmProvider, so
 // the plugin's default scope is switched off here.
 const users: AppConfigFactory<UsersConfig> = defineUsersConfig({
   defaults: { permissionSets: false },

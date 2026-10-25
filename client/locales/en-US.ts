@@ -7,6 +7,11 @@ const enUS = {
   // The template's own copy: the shell, the sign-in pages, shared components and the homepage. Keep it in
   // `./system/` so a template upgrade can replace it without touching the application's copy below.
   ...systemEnUS,
+  settings: {
+    ...systemEnUS.settings,
+    usersDescription:
+      'Manage accounts, roles and sessions. New accounts start with Member selected; you can replace or remove it. Accounts without roles retain account basics only.',
+  },
   // The application's copy goes here, one group per feature. A shared group such as `navigation` is extended by
   // spreading the system one first, `navigation: { ...systemEnUS.navigation, orders: 'Orders' }`, since a group
   // written here replaces the system group of the same name rather than merging with it.
@@ -112,14 +117,6 @@ const enUS = {
       approved: { who: 'Daniel Brooks', what: 'approved the 60-day terms' },
       won: { who: 'Sophie Bennett', what: 'the signed contract is back' },
     },
-  },
-  // The header's Demo Mode badge (client/layouts/components/demo-mode-badge.tsx).
-  demoMode: {
-    badge: 'Demo mode',
-    title: 'This is a demo',
-    hint: 'The data resets every day and changes are not saved. Switch to any account below to see what each role sees.',
-    accounts: 'Switch account',
-    switchFailed: 'Could not switch accounts. Please try again.',
   },
   navigation: { ...systemEnUS.navigation, home: 'Overview' },
 };

@@ -395,8 +395,15 @@ minimumReleaseAgeExclude:
   - '@nocobase/app-plugin-agents@1.0.0-beta.24'
   - '@nocobase/app-plugin-authentication@2.0.0-beta.14'
   - '@nocobase/app-plugin-demo-mode@0.1.0-beta.3'
+  - '@nocobase/app-plugin-demo-mode@0.2.0-beta.1'
+  - '@nocobase/app-plugin-agents@1.0.0-beta.26'
+  - '@nocobase/app-plugin-authentication@2.0.0-beta.15'
+  - '@nocobase/app-plugin-authorization@1.0.0-beta.32'
+  - '@nocobase/app-plugin-users@2.0.0-beta.10'
 
 # One SQLite binding for the whole tree: the NocoBase packages accept 12 or 13,
 # and loading two builds of the native addon in one process crashes it.
 overrides:
   better-sqlite3: 13.0.3
+  # Agents beta.26 pins the AI SDK release set; Ollama must use the same utilities.
+  'ollama-ai-provider-v2>@ai-sdk/provider-utils': 5.0.54

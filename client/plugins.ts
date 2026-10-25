@@ -39,9 +39,7 @@ const clientPlugins: AppClientPlugins = defineClientPlugins([
   mail(),
   agents(),
   foundation(),
-  // 'menu' keeps the plugin's floating switcher away; the header's Demo
-  // Mode badge (demo-mode-badge.tsx) switches accounts instead.
-  demoMode({ accountSwitcher: 'menu' }),
+  demoMode(),
 ]);
 
 export default clientPlugins;
