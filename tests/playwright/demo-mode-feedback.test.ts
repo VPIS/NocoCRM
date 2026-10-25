@@ -87,7 +87,7 @@ test('demo refusals restore autosaved fields and leave submitted drafts with one
       })
       .click(),
   );
-  await expect(source).toHaveText(oldSource);
+  await expect(source).toHaveText(oldSource, { useInnerText: true });
 
   const introduction = page.locator(
     '[data-edit-trigger][aria-label="Introduction"]',
@@ -102,14 +102,16 @@ test('demo refusals restore autosaved fields and leave submitted drafts with one
   await longText.pressSequentially(' demo introduction');
   await refused(page, () => longText.press('Control+Enter'));
   await expect(longText).toHaveCount(0);
-  await expect(introduction).toHaveText(oldIntroduction);
+  await expect(introduction).toHaveText(oldIntroduction, {
+    useInnerText: true,
+  });
   const status = page.locator('[data-edit-trigger][aria-label="Status"]');
   const oldStatus = await status.innerText();
   await status.click();
   await refused(page, () =>
     page.getByRole('menuitem', { name: 'Working', exact: true }).click(),
   );
-  await expect(status).toHaveText(oldStatus);
+  await expect(status).toHaveText(oldStatus, { useInnerText: true });
 
   const amount = page.locator(
     '[data-edit-trigger][aria-label="Annual revenue"]',
@@ -123,7 +125,7 @@ test('demo refusals restore autosaved fields and leave submitted drafts with one
   await amountInput.fill('123456789');
   await refused(page, () => amountInput.press('Enter'));
   await expect(amountInput).toHaveCount(0);
-  await expect(amount).toHaveText(oldAmount);
+  await expect(amount).toHaveText(oldAmount, { useInnerText: true });
 
   const location = page.locator('[data-edit-trigger][aria-label="Location"]');
   const oldLocation = await location.innerText();
@@ -134,7 +136,7 @@ test('demo refusals restore autosaved fields and leave submitted drafts with one
     page.getByRole('tab', { name: 'Timeline', exact: true }).click(),
   );
   await expect(city).toHaveCount(0);
-  await expect(location).toHaveText(oldLocation);
+  await expect(location).toHaveText(oldLocation, { useInnerText: true });
 
   const after = (
     await (await context.request.get(`${api}/leads/${lead.id}`)).json()
