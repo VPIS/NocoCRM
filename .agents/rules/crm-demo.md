@@ -36,6 +36,15 @@ published deployment flag and use the same permission as the selected route.
 The plugin's data, daily reset and account cards stay together on one page. Keep
 the stable empty `Header` slot because Settings already names the page.
 
+Before stopping a shared demo for deployment, temporarily take its public route
+out of service, then require `/api/demoMode/data` to report `state: ready` with
+no failure through the local container endpoint. A visitor can start a reset
+while a deployment is being prepared; stopping during it can interrupt generation
+and leave the stop-time backup incomplete. Preserve and restore the original
+proxy configuration on every exit, and keep public traffic paused until the
+update, restart and data-preservation checks finish. Never treat a successful
+code rollback as recovery of an interrupted dataset operation.
+
 Beta.3 requires Authentication `2.0.0-beta.14` and Agents `1.0.0-beta.24`.
 Daily reset is always enabled and deployment-owned. Set
 `NOCOBASE_DEMO_RESET_HOUR`, `NOCOBASE_DEMO_RESET_MINUTE`,
