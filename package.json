@@ -2,7 +2,7 @@
   "name": "crm",
   "displayName": "NocoCRM",
   "version": "1.0.0-beta.80",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/nocobase/NocoCRM.git"
@@ -111,6 +111,8 @@
     "ecosystem.config.js",
     "config.example.yml",
     "README.MD",
+    "README.zh-CN.md",
+    "docs",
     "AGENTS.md",
     ".agents/rules",
     "CLAUDE.md",

@@ -20,7 +20,7 @@ The Vitest configuration resolves the installed `@nocobase/app-client` package r
 
 Tailwind lists plugin files when Vite starts, so restart `pnpm dev` after installing a plugin, or its classes are missing until then.
 
-See `README.MD` for running the application, demo data, configuration and deployment.
+See `README.MD` for the quick start, and `docs/guide.md` for the demo data, configuration and deployment.
 
 The sidebar's footer (`client/layouts/components/sidebar-footer.tsx`) shows the application's name and version from what the server publishes, `app.displayName` and `app.version`, read from the `package.json` beside the running server, and otherwise from the `package.json` the client was built from (its two fields alone, inlined by Vite), because a host that starts the application elsewhere, as NocoBase Studio's app host does, publishes neither and the footer read v0.0.0.
 
