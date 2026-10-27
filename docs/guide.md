@@ -1,7 +1,5 @@
 # NocoCRM guide
 
-English | [中文](guide.zh-CN.md)
-
 What comes after the [quick start](../README.MD#quick-start): the next steps, the demo data, roles, the agents, configuration, deployment and development.
 
 ## Next steps

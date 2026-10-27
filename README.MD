@@ -1,8 +1,6 @@
 # NocoCRM
 
-English | [中文](README.zh-CN.md)
-
-**Your sales team just gained a 24/7 agent team.**
+English | [简体中文](docs/README.zh-CN.md) | [繁體中文](docs/README.zh-TW.md) | [日本語](docs/README.ja-JP.md) | [한국어](docs/README.ko-KR.md) | [Deutsch](docs/README.de-DE.md) | [Français](docs/README.fr-FR.md) | [Español](docs/README.es-ES.md) | [Português](docs/README.pt-BR.md) | [Русский](docs/README.ru-RU.md) | [Bahasa Indonesia](docs/README.id-ID.md) | [Tiếng Việt](docs/README.vi-VN.md)
 
 NocoCRM is an open-source B2B sales CRM built on [NocoBase 3](https://www.nocobase.com). It comes with 6 sales agents and integrates your email and WhatsApp: following up on leads and opportunities, replying to messages right away, and reviewing approvals with you. Agents suggest; you decide.
 
@@ -17,7 +15,7 @@ https://github.com/user-attachments/assets/4ce7965d-f030-4239-b5f3-0dae7c975496
 - **A sales agent team.** Sales Expert to talk to, plus lead follow-up, opportunity follow-up, approval review, task preparation and company research, each with its triggers, skills and a record of runs.
 - **Approvals stop stalling.** The approval agent checks a discount or a term against your rules and past decisions, and drafts a recommendation and a comment for the approver.
 - **Your rules, your code.** Write your prices, discount limits and follow-up cadence as business guidance in plain text, and every agent follows it. Ask a coding agent to change the CRM's own source. Open source, self-hosted, and yours.
-- **The full sales cycle.** Leads, companies, contacts, opportunities, tasks, approvals and reports, with roles enforced per record by the server, in 12 interface languages.
+- **The full sales cycle.** Leads, companies, contacts, opportunities, tasks, approvals and reports, with roles enforced per record by the server.
 
 ## Quick start
 
