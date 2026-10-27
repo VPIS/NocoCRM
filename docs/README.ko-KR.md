@@ -4,7 +4,7 @@
 
 NocoCRM은 [NocoBase 3](https://www.nocobase.com)으로 만든 오픈소스 B2B 영업 CRM입니다. 영업 에이전트 6종이 내장되어 있고 이메일과 WhatsApp이 연동됩니다. 리드와 영업 기회를 후속 조치하고, 메시지에 바로 답하고, 승인 검토를 함께합니다. 제안은 에이전트가, 결정은 사람이 합니다.
 
-https://github.com/user-attachments/assets/4ce7965d-f030-4239-b5f3-0dae7c975496
+https://github.com/user-attachments/assets/ac3df8c9-dc36-4e0b-9775-ebf6c70c7f3c
 
 [온라인 체험](https://solutions.nocobase.com/crm/) · [웹사이트](https://www.nocobase.com/ko-KR/solution-crm/)
 

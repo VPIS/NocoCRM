@@ -4,7 +4,7 @@
 
 NocoCRM est un CRM open source pour la vente B2B, construit sur [NocoBase 3](https://www.nocobase.com). Il intègre 6 agents commerciaux et se connecte à votre messagerie et à WhatsApp : ils relancent leads et opportunités, répondent aux messages sans attendre et examinent les validations avec vous. Les agents proposent, vous décidez.
 
-https://github.com/user-attachments/assets/4ce7965d-f030-4239-b5f3-0dae7c975496
+https://github.com/user-attachments/assets/8d637ac6-4bed-4286-83d6-27856ae10bce
 
 [Essayer en ligne](https://solutions.nocobase.com/crm/) · [Site web](https://www.nocobase.com/fr-FR/solution-crm/)
 

@@ -4,7 +4,7 @@
 
 NocoCRM は [NocoBase 3](https://www.nocobase.com) で構築されたオープンソースの B2B 営業 CRM です。6 種の営業エージェントを搭載し、メールと WhatsApp に連携します。リードや商談を自動でフォローし、届いたメッセージにすぐ返信し、承認では一緒に検討します。エージェントが提案し、人が判断します。
 
-https://github.com/user-attachments/assets/4ce7965d-f030-4239-b5f3-0dae7c975496
+https://github.com/user-attachments/assets/575c9b19-4437-47a8-9c59-d428f90efa5a
 
 [オンラインで試す](https://solutions.nocobase.com/crm/) · [公式サイト](https://www.nocobase.com/ja-JP/solution-crm/)
 

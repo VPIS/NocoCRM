@@ -4,7 +4,7 @@
 
 NocoCRM adalah CRM penjualan B2B open source yang dibangun di atas [NocoBase 3](https://www.nocobase.com). Dilengkapi 6 agen penjualan dan terhubung dengan email serta WhatsApp Anda: menindaklanjuti prospek dan peluang, langsung membalas pesan, dan meninjau persetujuan bersama Anda. Agen memberi saran, Anda yang memutuskan.
 
-https://github.com/user-attachments/assets/4ce7965d-f030-4239-b5f3-0dae7c975496
+https://github.com/user-attachments/assets/004dc069-299b-43e4-b515-825e9e71de55
 
 [Coba online](https://solutions.nocobase.com/crm/) · [Situs web](https://www.nocobase.com/id-ID/solution-crm/)
 

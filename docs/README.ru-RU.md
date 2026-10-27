@@ -4,7 +4,7 @@
 
 NocoCRM — CRM с открытым исходным кодом для B2B-продаж, построенная на [NocoBase 3](https://www.nocobase.com). В неё встроены 6 агентов продаж, а ваша почта и WhatsApp подключаются к ней: агенты ведут лиды и сделки, сразу отвечают на сообщения и разбирают согласования вместе с вами. Агенты советуют, решаете вы.
 
-https://github.com/user-attachments/assets/4ce7965d-f030-4239-b5f3-0dae7c975496
+https://github.com/user-attachments/assets/2d3e9f21-78b3-464d-8f6a-8268fcf2370f
 
 [Попробовать онлайн](https://solutions.nocobase.com/crm/) · [Сайт](https://www.nocobase.com/ru-RU/solution-crm/)
 

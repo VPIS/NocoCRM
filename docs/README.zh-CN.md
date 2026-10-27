@@ -4,7 +4,7 @@
 
 NocoCRM 是基于 [NocoBase 3](https://www.nocobase.com) 的开源 B2B 销售 CRM。它内置 6 个销售 Agent，并集成邮箱与 WhatsApp：自动跟进线索与商机，即时回复来信，审批时帮你分析。Agent 给建议，人来拍板。
 
-https://github.com/user-attachments/assets/00beda1b-878e-42d8-8bf6-d986831a0a23
+https://github.com/user-attachments/assets/1941589c-4597-41d6-b4e3-5f5ca807b213
 
 [在线体验](https://solutions-cn.nocobase.com/crm/) · [官网介绍](https://www.nocobase.com/zh-CN/solution-crm/)
 

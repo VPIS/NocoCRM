@@ -4,7 +4,7 @@
 
 NocoCRM là CRM bán hàng B2B mã nguồn mở, xây dựng trên [NocoBase 3](https://www.nocobase.com). Có sẵn 6 agent bán hàng và kết nối email, WhatsApp của bạn: theo dõi khách hàng tiềm năng và cơ hội, trả lời tin nhắn ngay lập tức, cùng bạn xem xét phê duyệt. Agent đề xuất, bạn quyết định.
 
-https://github.com/user-attachments/assets/4ce7965d-f030-4239-b5f3-0dae7c975496
+https://github.com/user-attachments/assets/f79d109f-ce33-47ac-b08e-b6a55373ef5f
 
 [Dùng thử trực tuyến](https://solutions.nocobase.com/crm/) · [Trang web](https://www.nocobase.com/vi-VN/solution-crm/)
 
