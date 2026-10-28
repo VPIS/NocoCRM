@@ -1280,8 +1280,11 @@ export const crmJaJP: CrmWording = {
   guidanceShipped:
     '既定のガイダンスです。リマインダーの日数と AI 作業言語に従います。',
   guidanceCustom:
-    '独自のガイダンスです。リマインダーの日数や AI 作業言語を変えても内容は変わりません。',
+    '保存したガイダンスを使用中です。「既定に戻す」で既定のガイダンスに戻せます。',
   guidanceRestore: '既定に戻す',
+  guidanceRestoreTitle: '業務ガイダンスを既定に戻しますか？',
+  guidanceRestoreHint:
+    'ここに書いた内容は既定のテンプレートに置き換えられ、すぐに保存されます。元に戻すことはできません。',
   notifications: {
     heading: 'アプリ内通知',
     notifyApprovals: '承認の通知',
@@ -2473,6 +2476,7 @@ export const crmJaJP: CrmWording = {
     actorId: '操作者',
     timeZone: '業務タイムゾーン',
     aiLanguage: 'AI の作業言語',
+    businessGuidance: '業務ガイダンス',
     assistantDock: 'ページ下部の質問ボックス',
     assistantDockHint:
       '全員に適用されます。オフにすると、右上の ✨ ボタンから AI に質問します。',

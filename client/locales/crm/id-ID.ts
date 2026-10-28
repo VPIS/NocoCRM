@@ -1290,8 +1290,11 @@ export const crmIdID: CrmWording = {
   guidanceShipped:
     'Panduan default: mengikuti jumlah hari di pengingat dan bahasa kerja AI.',
   guidanceCustom:
-    'Panduan Anda sendiri: jumlah hari di pengingat dan bahasa kerja AI tidak lagi mengubahnya.',
+    'Panduan yang disimpan sedang digunakan. Klik "Pulihkan default" untuk kembali ke panduan default.',
   guidanceRestore: 'Pulihkan default',
+  guidanceRestoreTitle: 'Pulihkan panduan bisnis default?',
+  guidanceRestoreHint:
+    'Isi yang ditulis di sini diganti dengan templat default dan langsung disimpan. Tindakan ini tidak dapat dibatalkan.',
   notifications: {
     heading: 'Notifikasi dalam aplikasi',
     notifyApprovals: 'Notifikasi persetujuan',
@@ -2495,6 +2498,7 @@ export const crmIdID: CrmWording = {
     actorId: 'Operator',
     timeZone: 'Zona waktu bisnis',
     aiLanguage: 'Bahasa kerja AI',
+    businessGuidance: 'Panduan bisnis',
     assistantDock: 'Kotak tanya di bagian bawah halaman',
     assistantDockHint:
       'Untuk semua orang. Jika nonaktif, AI ditanya dari tombol ✨ di kanan atas.',

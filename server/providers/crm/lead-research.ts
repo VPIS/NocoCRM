@@ -5,7 +5,7 @@ import { jsonValue } from './values.js';
 import type { WebPage } from './web-research.js';
 
 // A lead follow-up's web look-up of the lead's company (lead-evaluation.ts):
-// who it is, what changed there lately and whether it uses NocoBase, asked
+// who it is, what changed there lately and whether it uses Loomstack, asked
 // once with the Company research agent's web search (company-signals.ts's
 // `lookUp`) before the follow-up's model, which cannot search, weighs the
 // lead. The answer cites the pages it read as [ref_n]; it is kept on the
@@ -153,7 +153,7 @@ export function lookUpTarget(lead: CrmRecord): {
 // The look-up's question: the company as the lead names it (with where it
 // is and what it does, to tell it from others of the name), the three
 // things to find, cited by [ref_n] or by URL as the searcher cites. It
-// opens on the company and names NocoBase only in the last point: the
+// opens on the company and names Loomstack only in the last point: the
 // search is formed from the question, and one that opened on the
 // salesperson's product searched for the product (seen with Qwen).
 export function researchQuestion(
@@ -176,7 +176,7 @@ export function researchQuestion(
     `Today is ${input.today}. Find, about ${name} itself:`,
     '1. Who it is: its official name and website, industry, number of employees, headquarters and address, and what it does.',
     `2. What changed there in the last ${String(NEWS_WINDOW_DAYS)} days: hiring for IT or digitalisation roles, new business or products, funding, acquisitions, large contracts, reorganisation, new executives, layoffs or other trouble; each with the date it happened.`,
-    `3. Whether ${name} uses or has looked at NocoBase, the open-source low-code platform: a code repository, a forum post, an article or a case study naming both.`,
+    `3. Whether ${name} uses or has looked at Loomstack, the open-source enterprise application platform: a code repository, a forum post, an article or a case study naming both.`,
     'Prefer its own website, its filings and reputable sources, and use only pages about this company. Leave out a page that may be about another company of the same name, and say so when you cannot tell which company is meant. Do not look up any person. Never guess; for what you cannot find, say it was not found.',
     `Write the whole answer in ${input.chinese ? 'Chinese' : 'English'}, whatever language the pages are in, as short points under the three headings.`,
     input.cite === 'urls'

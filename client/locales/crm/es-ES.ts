@@ -1306,8 +1306,12 @@ export const crmEsES: CrmWording = {
   guidanceShipped:
     'Las directrices predeterminadas: siguen los días de los recordatorios y el idioma de trabajo de la IA.',
   guidanceCustom:
-    'Tus propias directrices: los días de los recordatorios y el idioma de trabajo de la IA ya no las modifican.',
+    'Se usan las directrices guardadas. Con «Restablecer las predeterminadas» vuelves a las predeterminadas.',
   guidanceRestore: 'Restablecer las predeterminadas',
+  guidanceRestoreTitle:
+    '¿Restablecer las directrices comerciales predeterminadas?',
+  guidanceRestoreHint:
+    'Lo escrito aquí se sustituye por la plantilla predeterminada y se guarda de inmediato. No se puede deshacer.',
   notifications: {
     heading: 'Notificaciones en la aplicación',
     notifyApprovals: 'Notificaciones de aprobación',
@@ -2513,6 +2517,7 @@ export const crmEsES: CrmWording = {
     actorId: 'Operador',
     timeZone: 'Zona horaria de la empresa',
     aiLanguage: 'Idioma de trabajo de la IA',
+    businessGuidance: 'Directrices comerciales',
     assistantDock: 'Cuadro de preguntas en la parte inferior de las páginas',
     assistantDockHint:
       'Para todos. Si está desactivado, se pregunta a la IA desde el botón ✨ de la esquina superior derecha.',

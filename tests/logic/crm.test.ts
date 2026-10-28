@@ -4206,7 +4206,7 @@ describe('CRM lead evaluation', () => {
                         message: {
                           content: [
                             {
-                              text: '1. 调研精工做精密零件 [ref_1]\n2. 最近招聘数字化经理 [ref_2]\n3. 没有找到使用 NocoBase 的记录',
+                              text: '1. 调研精工做精密零件 [ref_1]\n2. 最近招聘数字化经理 [ref_2]\n3. 没有找到使用 Loomstack 的记录',
                             },
                           ],
                         },
@@ -7032,6 +7032,7 @@ describe('demo dataset', () => {
       currency: settingsBefore.currency,
       timeZone: settingsBefore.timeZone,
       aiLanguage: settingsBefore.aiLanguage,
+      businessGuidance: settingsBefore.businessGuidance,
     });
   });
   const count = async (entity: string): Promise<number> =>
@@ -7101,12 +7102,23 @@ describe('demo dataset', () => {
     expect((await meta('admin')).demoPresent).toBe(true);
     expect(status.language).toBe('zh-CN');
     expect(status.records).toBeGreaterThan(100);
-    expect(status.settings).toEqual(['timeZone', 'aiLanguage']);
+    expect(status.settings).toEqual([
+      'timeZone',
+      'aiLanguage',
+      'businessGuidance',
+    ]);
     expect(await service.settings()).toMatchObject({
       currency: 'EUR',
       timeZone: 'Asia/Shanghai',
       aiLanguage: 'zh-CN',
     });
+    // The fictional company's guidance over the shipped template, with the
+    // settings' reminders' days.
+    const demoGuidanceText = (await service.settings()).businessGuidance;
+    expect(demoGuidanceText).toContain('公司名称：Loomstack');
+    expect(demoGuidanceText).toContain(
+      `新线索超过 ${String(settingsBefore.uncontactedDays)} 天未首次联系`,
+    );
     // The team's eight companies and the importer's three projects' (SF
     // Express is a lead alone).
     expect(await count('companies')).toBe(before.companies + 11);
@@ -7624,6 +7636,8 @@ describe('demo dataset', () => {
     ]);
     await service.remove(actor('admin'), 'leads', toText(kept.id));
     expect((await reset.json()).data.present).toBe(false);
+    // The guidance it wrote, unchanged, goes back to the shipped template.
+    expect((await service.settings()).businessGuidance).toBe('');
     // The demo companies' signals go with them.
     expect(
       await database
@@ -7780,7 +7794,10 @@ describe('demo dataset', () => {
     expect(populated.status).toBe(200);
     const status = (await populated.json()).data;
     expect(status.language).toBe('en-US');
-    expect(status.settings).toEqual(['currency']);
+    expect(status.settings).toEqual(['currency', 'businessGuidance']);
+    expect((await service.settings()).businessGuidance).toContain(
+      'Company: Loomstack',
+    );
     expect(await service.settings()).toMatchObject({
       currency: 'CNY',
       timeZone: 'Asia/Shanghai',
@@ -7838,9 +7855,15 @@ describe('demo dataset', () => {
     expect(
       status.accounts.map((a: { username: string }) => a.username),
     ).toEqual(demoAccountsIn('en-US').map((a) => a.username));
+    // Guidance someone edited after the import stays when it is removed.
+    await service.saveSettings(actor('admin'), {
+      businessGuidance: '# Our rules',
+    });
     expect(
       (await request('/demoData/remove', 'admin', 'POST', {})).status,
     ).toBe(200);
+    expect((await service.settings()).businessGuidance).toBe('# Our rules');
+    await service.saveSettings(actor('admin'), { businessGuidance: '' });
   }, 120000);
 });
 
@@ -12308,8 +12331,10 @@ describe("The assistant's conversations on the Agents plugin", () => {
         businessGuidance: '  ',
       });
       expect(cleared.businessGuidance).toBe('');
-      // (in the AI language these tests run with)
-      expect(settingsGuidance(cleared)).toContain('NocoBase');
+      // The template, in the AI language these tests run with.
+      expect(settingsGuidance(cleared)).toMatch(
+        /Company: \(fill in\)|公司名称：（请填写）/,
+      );
       expect(settingsGuidance(cleared)).not.toContain('# Our rules');
     } finally {
       await service.saveSettings(actor('admin'), { businessGuidance: '' });

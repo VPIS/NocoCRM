@@ -1225,8 +1225,11 @@ export const crmZhTW: CrmWording = {
     'AI 在每段對話和每次跟進、審批輔助、任務準備時遵循的業務指引：公司定位、版本和價格、跟進節奏、何時需要審批。支援 Markdown。',
   guidanceShipped:
     '目前是預設指引：跟進天數取自提醒設定，語言跟隨 AI 工作語言。',
-  guidanceCustom: '目前是自訂指引：提醒設定的天數和 AI 工作語言不再影響它。',
+  guidanceCustom:
+    '目前使用的是已儲存的業務指引，點「恢復預設」可以換回預設指引。',
   guidanceRestore: '恢復預設',
+  guidanceRestoreTitle: '恢復預設的業務指引？',
+  guidanceRestoreHint: '這裡寫的內容會被預設範本取代並立即儲存，無法復原。',
   notifications: {
     heading: '站內通知',
     notifyApprovals: '審批通知',
@@ -2361,6 +2364,7 @@ export const crmZhTW: CrmWording = {
     actorId: '操作人',
     timeZone: '業務時區',
     aiLanguage: 'AI 工作語言',
+    businessGuidance: '業務指引',
     assistantDock: '頁面底部的 AI 對話框',
     assistantDockHint: '對所有人生效。關閉後，從右上角的 ✨ 按鈕使用 AI。',
     decision: '處理',

@@ -145,7 +145,7 @@ describe('the settings page', () => {
     );
     const box = screen.getByRole('textbox', { name: crmEn.guidance });
     // The shipped guidance, in the AI language (English by default).
-    expect((box as HTMLTextAreaElement).value).toContain('Company: NocoBase');
+    expect((box as HTMLTextAreaElement).value).toContain('Company: (fill in)');
     expect(screen.getByText(crmEn.guidanceShipped)).toBeTruthy();
     const restore = screen.getByRole('button', {
       name: crmEn.guidanceRestore,
@@ -162,15 +162,31 @@ describe('the settings page', () => {
         businessGuidance: '# Our rules\n- Quote list prices only',
       }),
     );
-    // Back to the shipped one: saved as empty.
+    // Back to the shipped one, after a confirmation: cancelled, nothing
+    // changes; confirmed, it is saved as empty at once.
+    const calls = state.api.mock.calls.length;
     await user.click(restore);
-    expect((box as HTMLTextAreaElement).value).toContain('Company: NocoBase');
-    await user.click(screen.getByRole('button', { name: crmEn.save }));
+    let dialog = screen.getByRole('dialog', {
+      name: crmEn.guidanceRestoreTitle,
+    });
+    await user.click(
+      within(dialog).getByRole('button', { name: crmEn.cancel }),
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect((box as HTMLTextAreaElement).value).toContain('# Our rules');
+    expect(state.api.mock.calls.length).toBe(calls);
+    await user.click(restore);
+    dialog = screen.getByRole('dialog', { name: crmEn.guidanceRestoreTitle });
+    await user.click(
+      within(dialog).getByRole('button', { name: crmEn.guidanceRestore }),
+    );
     expect(state.api).toHaveBeenLastCalledWith(
       'systemSettings',
       'PUT',
       expect.objectContaining({ businessGuidance: '' }),
     );
+    expect((box as HTMLTextAreaElement).value).toContain('Company: (fill in)');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
   it('takes an import a gateway cut off for done once the dataset is there, and hides the banner', async () => {
@@ -239,6 +255,10 @@ describe('the settings page', () => {
     const client = new QueryClient();
     // The menu's unread count, as the in-app plugin keeps it.
     client.setQueryData([...inboxKeys.unread], { count: 5 });
+    // The settings as a page read them before, the demo's guidance in them.
+    client.setQueryData(['crm', 'systemSettings'], {
+      businessGuidance: '# Company profile\n- Company: Loomstack',
+    });
     render(
       <QueryClientProvider client={client}>
         <MemoryRouter initialEntries={['/settings/demo-data']}>
@@ -261,6 +281,9 @@ describe('the settings page', () => {
         true,
       ),
     );
+    // The settings the removal took back are dropped, so the guidance page
+    // loads them afresh instead of filling its form from the cached ones.
+    expect(client.getQueryData(['crm', 'systemSettings'])).toBeUndefined();
     state.demoPresent = false;
   });
 });

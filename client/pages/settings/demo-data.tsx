@@ -90,9 +90,14 @@ export default function DemoDataPage(): ReactElement {
       // The inbox's notifications too: the removal deletes those about the
       // demo's records, which the menu's count would otherwise keep until
       // the in-app plugin's realtime event arrives, if it does.
+      // The settings it set or took back (the currency, the time zone, the
+      // AI language, the business guidance) are dropped rather than marked
+      // stale: the guidance and settings pages fill their forms from the
+      // first answer they get, which would otherwise be the cached one.
       await Promise.all([
         refresh(),
         queryClient.invalidateQueries({ queryKey: inboxKeys.all }),
+        queryClient.resetQueries({ queryKey: [...scopeKey, 'systemSettings'] }),
       ]);
     };
     // Under way at once in what the banner reads, which then follows the

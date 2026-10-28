@@ -64,9 +64,9 @@ export function DemoBanner(): ReactElement | null {
       <div
         role='region'
         aria-label={text('demoData')}
-        className='flex items-center gap-3 border-b bg-info/8 px-4 py-2 text-sm sm:px-6'
+        className='flex items-center gap-3 border-b bg-primary/8 px-4 py-2 text-sm sm:px-6'
       >
-        <Database className='size-4 shrink-0 text-info' aria-hidden />
+        <Database className='size-4 shrink-0 text-primary' aria-hidden />
         <p className='min-w-0 flex-1 text-foreground'>
           {text('demoImporting')}
         </p>
@@ -74,7 +74,7 @@ export function DemoBanner(): ReactElement | null {
         <Progress
           value={importing.percent}
           aria-label={text('demoImporting')}
-          className='w-40 shrink-0 sm:w-56 [&_[data-slot=progress-indicator]]:bg-info [&_[data-slot=progress-track]]:bg-info/15'
+          className='w-40 shrink-0 sm:w-56 [&_[data-slot=progress-indicator]]:bg-primary [&_[data-slot=progress-track]]:bg-primary/15'
         />
         {importing.percent !== null ? (
           <span className='w-9 shrink-0 text-right text-xs text-muted-foreground tabular-nums'>
@@ -87,9 +87,9 @@ export function DemoBanner(): ReactElement | null {
     <div
       role='region'
       aria-label={text('demoData')}
-      className='flex items-center gap-3 border-b bg-info/8 px-4 py-2 text-sm sm:px-6'
+      className='flex items-center gap-3 border-b bg-primary/8 px-4 py-2 text-sm sm:px-6'
     >
-      <Database className='size-4 shrink-0 text-info' aria-hidden />
+      <Database className='size-4 shrink-0 text-primary' aria-hidden />
       <p className='min-w-0 flex-1 text-foreground'>{text('demoBanner')}</p>
       {/* A link drawn as a button: it goes to another page. */}
       <Link

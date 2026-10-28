@@ -1293,8 +1293,11 @@ export const crmPtBR: CrmWording = {
   guidanceShipped:
     'As orientações padrão: seguem os dias dos lembretes e o idioma de trabalho da IA.',
   guidanceCustom:
-    'Suas próprias orientações: os dias dos lembretes e o idioma de trabalho da IA não as alteram mais.',
+    'As orientações salvas estão em uso. "Restaurar o padrão" volta às orientações padrão.',
   guidanceRestore: 'Restaurar o padrão',
+  guidanceRestoreTitle: 'Restaurar as orientações de negócio padrão?',
+  guidanceRestoreHint:
+    'O que está escrito aqui é substituído pelo modelo padrão e salvo na hora. Não é possível desfazer.',
   notifications: {
     heading: 'Notificações no app',
     notifyApprovals: 'Notificações de aprovação',
@@ -2495,6 +2498,7 @@ export const crmPtBR: CrmWording = {
     actorId: 'Operador',
     timeZone: 'Fuso horário da empresa',
     aiLanguage: 'Idioma de trabalho da IA',
+    businessGuidance: 'Orientações de negócio',
     assistantDock: 'Caixa de perguntas na parte inferior das páginas',
     assistantDockHint:
       'Para todos. Desativada, a IA é acionada pelo botão ✨ no canto superior direito.',

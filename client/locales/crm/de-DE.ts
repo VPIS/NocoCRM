@@ -1313,8 +1313,11 @@ export const crmDeDE: CrmWording = {
   guidanceShipped:
     'Der Standardleitfaden: Er folgt den Tagen aus den Erinnerungen und der KI-Arbeitssprache.',
   guidanceCustom:
-    'Ihr eigener Leitfaden: Die Tage aus den Erinnerungen und die KI-Arbeitssprache ändern ihn nicht mehr.',
+    'Ein gespeicherter Leitfaden ist in Gebrauch. Mit „Standard wiederherstellen“ kehren Sie zum Standard zurück.',
   guidanceRestore: 'Standard wiederherstellen',
+  guidanceRestoreTitle: 'Standard-Geschäftsleitfaden wiederherstellen?',
+  guidanceRestoreHint:
+    'Der hier geschriebene Text wird durch die Standardvorlage ersetzt und sofort gespeichert. Das lässt sich nicht rückgängig machen.',
   notifications: {
     heading: 'In-App-Benachrichtigungen',
     notifyApprovals: 'Genehmigungsbenachrichtigungen',
@@ -2528,6 +2531,7 @@ export const crmDeDE: CrmWording = {
     actorId: 'Ausgeführt von',
     timeZone: 'Geschäftszeitzone',
     aiLanguage: 'Arbeitssprache der KI',
+    businessGuidance: 'Geschäftsleitfaden',
     assistantDock: 'Eingabefeld unten auf den Seiten',
     assistantDockHint:
       'Für alle. Ist es aus, wird die KI über die Schaltfläche ✨ oben rechts gefragt.',

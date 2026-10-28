@@ -4,14 +4,14 @@ import { enWhatsAppFiles } from './whatsapp-files-en-US.js';
 // The demo's WhatsApp conversations in English (demo-whatsapp.ts), in the
 // order of its schedule.
 export const enWhatsApp: DemoContent['whatsapp'] = {
-  displayNames: ['NocoBase Sales', 'NocoBase International'],
+  displayNames: ['Loomstack Sales', 'Loomstack International'],
   files: enWhatsAppFiles,
   conversations: [
     // Shanghai Electric's decision maker, about the deal at proposal.
     {
       messages: [
         "Hello, this is Sarah Collins from Shanghai Electric's information centre. I picked up your brochure at the industrial expo.",
-        'Hi Sarah, thanks for your interest in NocoBase. Could you tell me what you are looking to solve?',
+        'Hi Sarah, thanks for your interest in Loomstack. Could you tell me what you are looking to solve?',
         'Our plants still have shift leaders filling in production reports in Excel, and month-end reconciliation is painful.',
         'Equipment inspections are on paper too, and the problems found are never followed through.',
         'Understood. Those are the two things our manufacturing customers build most often. Reports can be totalled by shift the same day, and scanning an equipment QR code opens its checklist, with any fault becoming a to-do until it is closed.',
@@ -325,7 +325,7 @@ export const enWhatsApp: DemoContent['whatsapp'] = {
     // An invalid lead, looking for freelance work.
     {
       messages: [
-        'Hi, I have two years of NocoBase plugin development experience. Do you have any freelance or contract work?',
+        'Hi, I have two years of Loomstack plugin development experience. Do you have any freelance or contract work?',
         'Hello, thanks for your interest. We have no freelance openings at the moment; please follow the careers and partner pages on our website.',
       ],
     },

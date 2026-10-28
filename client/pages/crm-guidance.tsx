@@ -4,6 +4,7 @@ import { PageHeader } from '../components/page-header.js';
 import { Button } from '../components/ui/button.js';
 import { Textarea } from '../components/ui/textarea.js';
 import { Loading, ErrorNotice } from '../components/crm/common.js';
+import { ConfirmDialog } from '../components/crm/confirm-dialog.js';
 import { settingsGuidance } from '../../server/providers/crm/guidance.js';
 import { LONG_TEXT_LIMIT } from '../../server/providers/crm/limits.js';
 import {
@@ -46,16 +47,19 @@ function GuidanceForm({ settings }: { settings: CrmSettings }): ReactElement {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<unknown>();
+  // Restoring the default replaces what was written, so it asks first and
+  // then saves at once.
+  const [restoring, setRestoring] = useState(false);
   const custom = Boolean(value.trim());
   const change = (next: string): void => {
     setValue(next);
     setSaved(false);
   };
-  const save = async (): Promise<void> => {
+  const save = async (businessGuidance = value): Promise<void> => {
     setBusy(true);
     setError(undefined);
     try {
-      await api('systemSettings', 'PUT', { businessGuidance: value });
+      await api('systemSettings', 'PUT', { businessGuidance });
       await refresh();
       setSaved(true);
     } catch (cause) {
@@ -101,16 +105,27 @@ function GuidanceForm({ settings }: { settings: CrmSettings }): ReactElement {
           <Button
             variant='outline'
             size='sm'
-            disabled={!custom && draft === null}
-            onClick={() => {
-              setDraft(null);
-              change('');
-            }}
+            disabled={busy || (!custom && draft === null)}
+            onClick={() => setRestoring(true)}
           >
             {text('guidanceRestore')}
           </Button>
         </div>
       </div>
+      {restoring && (
+        <ConfirmDialog
+          title={text('guidanceRestoreTitle')}
+          description={text('guidanceRestoreHint')}
+          confirmLabel={text('guidanceRestore')}
+          busy={busy}
+          onCancel={() => setRestoring(false)}
+          onConfirm={() => {
+            setDraft(null);
+            change('');
+            void save('').then(() => setRestoring(false));
+          }}
+        />
+      )}
     </PageContainer>
   );
 }

@@ -1268,8 +1268,11 @@ export const crmKoKR: CrmWording = {
     '모든 대화와 모든 후속 조치, 검토, 준비에서 AI가 참고하는 내용입니다. 회사 소개, 에디션과 가격, 후속 조치 시점과 승인 요청 시점 등을 작성하세요. Markdown 형식입니다.',
   guidanceShipped: '기본 가이드입니다. 알림 일수와 AI 작업 언어를 따릅니다.',
   guidanceCustom:
-    '직접 작성한 가이드입니다. 알림 일수와 AI 작업 언어가 더 이상 이 가이드를 변경하지 않습니다.',
+    '저장한 가이드를 사용 중입니다. "기본값으로 복원"을 누르면 기본 가이드로 돌아갑니다.',
   guidanceRestore: '기본값으로 복원',
+  guidanceRestoreTitle: '비즈니스 가이드를 기본값으로 복원할까요?',
+  guidanceRestoreHint:
+    '여기에 작성한 내용이 기본 템플릿으로 바뀌고 즉시 저장됩니다. 되돌릴 수 없습니다.',
   notifications: {
     heading: '앱 내 알림',
     notifyApprovals: '승인 알림',
@@ -2453,6 +2456,7 @@ export const crmKoKR: CrmWording = {
     actorId: '작업자',
     timeZone: '비즈니스 시간대',
     aiLanguage: 'AI 작업 언어',
+    businessGuidance: '비즈니스 가이드',
     assistantDock: '페이지 하단의 질문 상자',
     assistantDockHint:
       '모든 사용자에게 적용됩니다. 끄면 오른쪽 위의 ✨ 버튼으로 AI에게 질문합니다.',

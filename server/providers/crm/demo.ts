@@ -34,6 +34,7 @@ import {
   type Actor,
 } from './authorization.js';
 import { DEFAULT_TIME_ZONE } from './zone-time.js';
+import { demoGuidance } from './demo-content/guidance.js';
 import {
   populateDemoWhatsApp,
   removeDemoWhatsApp,
@@ -41,10 +42,10 @@ import {
 } from './demo-whatsapp.js';
 import type { WhatsAppService } from './whatsapp/service.js';
 
-// The demo dataset: NocoBase selling its own licences and services (the
-// editions and prices of nocobase.com/cn/commercial) to fictional customers,
-// with companies, contacts, leads, opportunities, tasks and approvals
-// dated relative to the day it is imported. It follows the business guidance
+// The demo dataset: Loomstack, a fictional software company, selling its
+// licences and services to fictional customers, with companies, contacts,
+// leads, opportunities, tasks and approvals dated relative to the day it is
+// imported. It follows the business guidance
 // in server/providers/crm/guidance.ts. Imported and removed from the settings
 // page by an administrator; a manifest row in crm_settings records exactly
 // which rows the import created, so removal touches nothing else.
@@ -202,16 +203,28 @@ export interface DemoStatus {
 }
 
 // The business settings a dataset is written for: its amounts are in yuan,
-// its people work in Shanghai or in New York, and the AI writes in its
-// language. The import sets only those still at their shipped default, so
-// an administrator's own choice stands; a removal leaves them as they are.
-type DemoSetting = 'currency' | 'timeZone' | 'aiLanguage';
+// its people work in Shanghai or in New York, the AI writes in its language
+// and works from its fictional company's business guidance, with the
+// reminders' days the settings have. The import sets only those still at
+// their shipped default, so an administrator's own choice stands; a removal
+// leaves them as they are, except the guidance, which goes back to the
+// shipped template unless someone has edited it since (resetDemo).
+type DemoSetting = 'currency' | 'timeZone' | 'aiLanguage' | 'businessGuidance';
 const demoSettings = (
   language: DemoLanguage,
+  settings: CrmSettings,
 ): Pick<CrmSettings, DemoSetting> => ({
   currency: 'CNY',
   timeZone: language === 'zh-CN' ? 'Asia/Shanghai' : 'America/New_York',
   aiLanguage: language,
+  businessGuidance: demoGuidance(
+    {
+      uncontacted: settings.uncontactedDays,
+      stale: settings.leadStaleDays,
+      closing: settings.closeReminderDays,
+    },
+    language,
+  ),
 });
 
 // How far the import this process runs has got, 0 to 100, for the banner
@@ -252,6 +265,9 @@ interface Manifest {
   // The business settings the import set; absent on one made before it set
   // any.
   settings?: DemoSetting[];
+  // The business guidance the import wrote, which removal takes back while
+  // it is unchanged; absent when it wrote none.
+  guidance?: string;
 }
 
 // Whether a demo dataset is imported, for the banner that offers one to
@@ -544,7 +560,7 @@ async function populate(
   // the business time zone.
   const before = await service.settings();
   const adopted = Object.fromEntries(
-    Object.entries(demoSettings(language)).filter(
+    Object.entries(demoSettings(language, before)).filter(
       ([key, value]) =>
         before[key as DemoSetting] === service.defaults[key as DemoSetting] &&
         before[key as DemoSetting] !== value,
@@ -585,6 +601,7 @@ async function populate(
     ownerId: actor.id,
     ...(importerManager ? { importerManager } : {}),
     ...(settingsSet.length ? { settings: settingsSet } : {}),
+    ...(adopted.businessGuidance ? { guidance: adopted.businessGuidance } : {}),
     records: [],
   };
   claim.manifest = manifest;
@@ -2643,6 +2660,13 @@ export async function resetDemo(
     .execute();
   setDemoMailLanguage(undefined);
   if (accounts) await disableDemoAccounts(service, actor, accounts);
+  // The guidance the import wrote goes back to the shipped template, unless
+  // someone has edited it since.
+  if (
+    manifest.guidance &&
+    (await service.settings()).businessGuidance === manifest.guidance
+  )
+    await service.saveSettings(actor, { businessGuidance: '' });
   // The sales manager role the import gave its importer goes with it.
   if (manifest.importerManager)
     await service.authz.permissionSets.replaceSubjectAssignments({

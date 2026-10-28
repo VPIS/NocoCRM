@@ -10,7 +10,7 @@ export const enProjects: DemoProjects = {
       jobTitle: 'Operations Digitalisation Manager, South China',
     },
     message:
-      "Hello, this is SF Express's South China operations centre. Inspection records and incident tickets for our 300+ outlets still move through spreadsheets and group chats, and regional managers can't see the whole picture. We'd like to know whether NocoBase can be deployed privately in our own data centre and connected to our existing single sign-on. I'm presenting a plan to the regional head next month, so a call this week would be great.",
+      "Hello, this is SF Express's South China operations centre. Inspection records and incident tickets for our 300+ outlets still move through spreadsheets and group chats, and regional managers can't see the whole picture. We'd like to know whether Loomstack can be deployed privately in our own data centre and connected to our existing single sign-on. I'm presenting a plan to the regional head next month, so a call this week would be great.",
   },
   hworld: {
     company: {
@@ -117,7 +117,7 @@ export const enProjects: DemoProjects = {
       linkedin:
         'https://www.linkedin.com/company/%E6%96%B0%E5%B8%8C%E6%9C%9B%E9%9B%86%E5%9B%A2-new-hope-group/',
       description:
-        'New Hope Group is an agriculture and food company with many livestock farms and feed mills.\n\nThis year its information centre launched a farm inspection system on NocoBase Professional: the first 12 farms went live within three weeks, the inspection submission rate holds above 90%, and farm managers find it much easier than the paper forms.\n\nBuilding on that, the information centre plans to bring feed mill quality checks and equipment inspections onto the same platform, linking quality data with the farms. Quality requirement interviews are under way and a renewal and expansion proposal is being prepared.',
+        'New Hope Group is an agriculture and food company with many livestock farms and feed mills.\n\nThis year its information centre launched a farm inspection system on Loomstack Professional: the first 12 farms went live within three weeks, the inspection submission rate holds above 90%, and farm managers find it much easier than the paper forms.\n\nBuilding on that, the information centre plans to bring feed mill quality checks and equipment inspections onto the same platform, linking quality data with the farms. Quality requirement interviews are under way and a renewal and expansion proposal is being prepared.',
       address: 'Jinjiang District, Chengdu\nNew Hope Group, Information Centre',
     },
     people: [
@@ -442,7 +442,7 @@ export const enProjects: DemoProjects = {
       changes: [],
       email: {
         subject: 'Your outlet inspection and incident ticket platform',
-        body: "Dear Kevin,\n\nThank you for your message. Moving inspections and incident tickets for 300+ outlets from spreadsheets onto one platform is exactly what many NocoBase customers do: it deploys privately in your own data centre and connects to your existing single sign-on through OIDC or SAML.\n\nTo help you prepare the regional presentation, could we have a 30-minute call on Wednesday or Thursday afternoon this week? I'd like to understand the outlets, your single sign-on and the data centre, and I can show a sample inspection ticket app.\n\nWhich time suits you?\n\nNocoBase Sales",
+        body: "Dear Kevin,\n\nThank you for your message. Moving inspections and incident tickets for 300+ outlets from spreadsheets onto one platform is exactly what many Loomstack customers do: it deploys privately in your own data centre and connects to your existing single sign-on through OIDC or SAML.\n\nTo help you prepare the regional presentation, could we have a 30-minute call on Wednesday or Thursday afternoon this week? I'd like to understand the outlets, your single sign-on and the data centre, and I can show a sample inspection ticket app.\n\nWhich time suits you?\n\nLoomstack Sales",
       },
       enrich: [
         {

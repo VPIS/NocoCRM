@@ -1283,8 +1283,11 @@ export const crmViVN: CrmWording = {
   guidanceShipped:
     'Hướng dẫn mặc định: theo số ngày trong phần nhắc nhở và ngôn ngữ làm việc của AI.',
   guidanceCustom:
-    'Hướng dẫn tùy chỉnh của bạn: số ngày trong phần nhắc nhở và ngôn ngữ làm việc của AI không còn thay đổi nó.',
+    'Đang dùng hướng dẫn đã lưu. Nhấn "Khôi phục mặc định" để quay lại hướng dẫn mặc định.',
   guidanceRestore: 'Khôi phục mặc định',
+  guidanceRestoreTitle: 'Khôi phục hướng dẫn nghiệp vụ mặc định?',
+  guidanceRestoreHint:
+    'Nội dung viết ở đây sẽ được thay bằng mẫu mặc định và lưu ngay. Không thể hoàn tác.',
   notifications: {
     heading: 'Thông báo trong ứng dụng',
     notifyApprovals: 'Thông báo phê duyệt',
@@ -2482,6 +2485,7 @@ export const crmViVN: CrmWording = {
     actorId: 'Người thao tác',
     timeZone: 'Múi giờ kinh doanh',
     aiLanguage: 'Ngôn ngữ làm việc của AI',
+    businessGuidance: 'Hướng dẫn nghiệp vụ',
     assistantDock: 'Ô hỏi ở cuối trang',
     assistantDockHint:
       'Áp dụng cho mọi người. Khi tắt, hỏi AI bằng nút ✨ ở góc trên bên phải.',

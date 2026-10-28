@@ -4,14 +4,14 @@ import { zhWhatsAppFiles } from './whatsapp-files-zh-CN.js';
 // The demo's WhatsApp conversations in Chinese (demo-whatsapp.ts), in the
 // order of its schedule.
 export const zhWhatsApp: DemoContent['whatsapp'] = {
-  displayNames: ['NocoBase 销售', 'NocoBase 海外'],
+  displayNames: ['Loomstack 销售', 'Loomstack 海外'],
   files: zhWhatsAppFiles,
   conversations: [
     // Shanghai Electric's decision maker, about the deal at proposal.
     {
       messages: [
         '您好，我是上海电气信息中心的陈曼云，前两天在工业展上拿了你们的资料。',
-        '陈主任您好！感谢关注 NocoBase。方便说一下这次想解决哪些问题吗？',
+        '陈主任您好！感谢关注 Loomstack。方便说一下这次想解决哪些问题吗？',
         '我们下面几家工厂的报工还是班组长手工填 Excel，月底对账很痛苦。',
         '设备点检也是纸质的，发现的问题没人跟到底。',
         '明白，这两块都是我们制造业客户最常做的。报工可以按班组当天汇总；点检扫设备二维码就能打开点检表，发现异常自动生成待办，一直跟到关闭。',
@@ -325,7 +325,7 @@ export const zhWhatsApp: DemoContent['whatsapp'] = {
     // An invalid lead, looking for freelance work.
     {
       messages: [
-        '你好，我有两年 NocoBase 插件开发经验，你们有外包或者兼职的需求吗？',
+        '你好，我有两年 Loomstack 插件开发经验，你们有外包或者兼职的需求吗？',
         '您好，感谢关注。我们目前没有兼职需求，可以关注官网的招聘和合作伙伴页面。',
       ],
     },

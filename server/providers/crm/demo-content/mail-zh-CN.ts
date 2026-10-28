@@ -626,7 +626,7 @@ export const zhMail: DemoContent['mail'] = {
     messages: [
       {
         from: 'owner',
-        body: '{{customer}}您好，\n\n季度问候。附上一份地产行业客户的案例：他们用 NocoBase 做了工程进度和供应商管理，上线三个月，供您调研参考。\n\n{{owner}}',
+        body: '{{customer}}您好，\n\n季度问候。附上一份地产行业客户的案例：他们用 Loomstack 做了工程进度和供应商管理，上线三个月，供您调研参考。\n\n{{owner}}',
       },
       {
         from: 'other',
@@ -639,7 +639,7 @@ export const zhMail: DemoContent['mail'] = {
     messages: [
       {
         from: 'other',
-        body: '您好，\n\n我有三年的 NocoBase 插件开发经验，附上简历，想了解贵司是否有兼职或外包开发的机会。\n\n{{customer}}',
+        body: '您好，\n\n我有三年的 Loomstack 插件开发经验，附上简历，想了解贵司是否有兼职或外包开发的机会。\n\n{{customer}}',
       },
       {
         from: 'owner',
@@ -652,7 +652,7 @@ export const zhMail: DemoContent['mail'] = {
     messages: [
       {
         from: 'owner',
-        body: '{{customer}}您好，\n\n我是 NocoBase 的{{owner}}，看到您在官网留下的联系方式，想了解一下贵司的系统需求。\n\n{{owner}}',
+        body: '{{customer}}您好，\n\n我是 Loomstack 的{{owner}}，看到您在官网留下的联系方式，想了解一下贵司的系统需求。\n\n{{owner}}',
       },
       {
         from: 'postmaster',
@@ -701,11 +701,11 @@ export const zhMail: DemoContent['mail'] = {
     ],
   },
   newsletter: {
-    subject: '低代码周刊 · 第 86 期',
+    subject: '企业应用周刊 · 第 86 期',
     messages: [
       {
         from: 'other',
-        body: '本期要点：\n\n· 企业如何评估低代码平台的总拥有成本\n· AI 员工在销售流程中的三个落地场景\n· 案例：一家制造企业用三个月替换了十套 Excel\n\n阅读全文请访问周刊网站。如不想再收到本周刊，可随时退订。\n\n低代码周刊编辑部',
+        body: '本期要点：\n\n· 企业如何评估应用平台的总拥有成本\n· AI 员工在销售流程中的三个落地场景\n· 案例：一家制造企业用三个月替换了十套 Excel\n\n阅读全文请访问周刊网站。如不想再收到本周刊，可随时退订。\n\n企业应用周刊编辑部',
       },
     ],
   },
@@ -741,8 +741,8 @@ export const zhMail: DemoContent['mail'] = {
 // Who sends the mail that concerns no record, and the bounces.
 export const zhMailSenders: DemoContent['mailSenders'] = {
   newsletter: {
-    name: '低代码周刊',
-    address: 'newsletter@lowcode-weekly.example',
+    name: '企业应用周刊',
+    address: 'newsletter@apps-weekly.example',
   },
   events: {
     name: '企业数字化峰会组委会',

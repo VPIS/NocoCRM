@@ -1301,8 +1301,11 @@ export const crmFrFR: CrmWording = {
   guidanceShipped:
     "Les directives par défaut : elles suivent les jours des rappels et la langue de travail de l'IA.",
   guidanceCustom:
-    "Vos propres directives : les jours des rappels et la langue de travail de l'IA ne les modifient plus.",
+    'Les directives enregistrées sont utilisées. « Rétablir les valeurs par défaut » revient à celles par défaut.',
   guidanceRestore: 'Rétablir les valeurs par défaut',
+  guidanceRestoreTitle: 'Rétablir les directives commerciales par défaut ?',
+  guidanceRestoreHint:
+    'Le texte écrit ici est remplacé par le modèle par défaut et enregistré aussitôt. Cette action est irréversible.',
   notifications: {
     heading: "Notifications dans l'application",
     notifyApprovals: "Notifications d'approbation",
@@ -2516,6 +2519,7 @@ export const crmFrFR: CrmWording = {
     actorId: 'Auteur',
     timeZone: "Fuseau horaire de l'entreprise",
     aiLanguage: "Langue de travail de l'IA",
+    businessGuidance: 'Directives commerciales',
     assistantDock: 'Zone de question en bas des pages',
     assistantDockHint:
       "Pour tous. Désactivée, l'IA s'interroge depuis le bouton ✨ en haut à droite.",

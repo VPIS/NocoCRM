@@ -2009,10 +2009,18 @@ const wording = {
     '当前是默认指导：跟进天数取自提醒设置，语言跟随 AI 工作语言。',
   ],
   guidanceCustom: [
-    "Your own guidance: the reminders' days and the AI working language no longer change it.",
-    '当前是自定义指导：提醒设置的天数和 AI 工作语言不再影响它。',
+    'Your saved guidance is in use. Restore the default to go back to the default guidance.',
+    '当前使用的是已保存的业务指导，点“恢复默认”可以换回默认指导。',
   ],
   guidanceRestore: ['Restore the default', '恢复默认'],
+  guidanceRestoreTitle: [
+    'Restore the default business guidance?',
+    '恢复默认的业务指导？',
+  ],
+  guidanceRestoreHint: [
+    'What is written here is replaced by the default template and saved at once. This cannot be undone.',
+    '这里写的内容会被默认模板替换并立即保存，无法撤销。',
+  ],
   // The settings' switches for the in-app messages the CRM sends.
   notifications: {
     heading: ['In-app notifications', '站内通知'],
@@ -3173,6 +3181,7 @@ const wording = {
     actorId: ['Operator', '操作人'],
     timeZone: ['Business timezone', '业务时区'],
     aiLanguage: ['AI working language', 'AI 工作语言'],
+    businessGuidance: ['Business guidance', '业务指导'],
     assistantDock: ['Ask box at the bottom of pages', '页面底部的 AI 对话框'],
     assistantDockHint: [
       'For everyone. Off, the AI is asked from the ✨ button at the top right.',

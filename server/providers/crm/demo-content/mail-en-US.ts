@@ -626,7 +626,7 @@ export const enMail: DemoContent['mail'] = {
     messages: [
       {
         from: 'owner',
-        body: 'Hi {{customer}},\n\nA quarterly hello. Attached is a case study from a real estate customer who runs construction progress and supplier management on NocoBase, live for three months now. It may help your research.\n\n{{owner}}',
+        body: 'Hi {{customer}},\n\nA quarterly hello. Attached is a case study from a real estate customer who runs construction progress and supplier management on Loomstack, live for three months now. It may help your research.\n\n{{owner}}',
       },
       {
         from: 'other',
@@ -639,7 +639,7 @@ export const enMail: DemoContent['mail'] = {
     messages: [
       {
         from: 'other',
-        body: 'Hello,\n\nI have three years of experience building NocoBase plugins. My CV is attached; do you have any freelance or contract development work?\n\n{{customer}}',
+        body: 'Hello,\n\nI have three years of experience building Loomstack plugins. My CV is attached; do you have any freelance or contract development work?\n\n{{customer}}',
       },
       {
         from: 'owner',
@@ -652,7 +652,7 @@ export const enMail: DemoContent['mail'] = {
     messages: [
       {
         from: 'owner',
-        body: "Hi {{customer}},\n\nI'm {{owner}} from NocoBase. I saw the contact details you left on our website and would like to hear about your company's system needs.\n\n{{owner}}",
+        body: "Hi {{customer}},\n\nI'm {{owner}} from Loomstack. I saw the contact details you left on our website and would like to hear about your company's system needs.\n\n{{owner}}",
       },
       {
         from: 'postmaster',
@@ -701,11 +701,11 @@ export const enMail: DemoContent['mail'] = {
     ],
   },
   newsletter: {
-    subject: 'Low-Code Weekly, issue 86',
+    subject: 'Enterprise Apps Weekly, issue 86',
     messages: [
       {
         from: 'other',
-        body: 'In this issue:\n\n· How companies weigh the total cost of a low-code platform\n· Three ways AI employees fit into the sales process\n· Case study: a manufacturer replaced ten spreadsheets in three months\n\nRead the full issue on our website. You can unsubscribe at any time.\n\nThe Low-Code Weekly team',
+        body: 'In this issue:\n\n· How companies weigh the total cost of an application platform\n· Three ways AI employees fit into the sales process\n· Case study: a manufacturer replaced ten spreadsheets in three months\n\nRead the full issue on our website. You can unsubscribe at any time.\n\nThe Enterprise Apps Weekly team',
       },
     ],
   },
@@ -741,8 +741,8 @@ export const enMail: DemoContent['mail'] = {
 // Who sends the mail that concerns no record, and the bounces.
 export const enMailSenders: DemoContent['mailSenders'] = {
   newsletter: {
-    name: 'Low-Code Weekly',
-    address: 'newsletter@lowcode-weekly.example',
+    name: 'Enterprise Apps Weekly',
+    address: 'newsletter@apps-weekly.example',
   },
   events: {
     name: 'Enterprise Digital Summit',

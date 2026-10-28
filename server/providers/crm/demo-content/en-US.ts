@@ -4,7 +4,7 @@ import { enProjects } from './projects-en-US.js';
 import { enWhatsApp } from './whatsapp-en-US.js';
 
 export const enUS: DemoContent = {
-  label: 'NocoBase sales demo data',
+  label: 'Loomstack sales demo data',
   accounts: {
     manager: { username: 'daniel', name: 'Daniel Brooks' },
     secondManager: { username: 'emily', name: 'Emily Carter' },
@@ -29,7 +29,7 @@ export const enUS: DemoContent = {
       linkedin:
         'https://www.linkedin.com/company/shanghai-electric-group-co.-ltd/',
       description:
-        "Shanghai Electric is one of China's largest industrial equipment groups, headquartered in Shanghai, making power generation equipment, industrial equipment and integrated solutions, with a workforce in the tens of thousands and annual revenue of over RMB 100 billion.\n\nThe IT centre of one of its manufacturing businesses wants production reporting, equipment inspections and quality issues for several factories in one system:\n\n- each factory's output should be totalled on the same day, without collecting spreadsheets by hand;\n- equipment checks should be filled in on the phone, with every issue followed to closure;\n- a quality issue should reach the person responsible quickly, with a complete trail for customer audits.\n\nThe IT centre plans a unified production management platform on NocoBase. Phase one covers production reporting and inspections on the pilot lines; phase two connects the MES and the ERP so that work orders, materials and costs line up.\n\nIt must be deployed in their own data centre on an Enterprise cluster, keep an audit log of every change, and import the historical production reports. The project budget is approved; the head of the IT centre decides and the production manager joins the requirement reviews. We met them at the Shanghai industrial trade show; the deal is at proposal, competing with another low-code vendor.",
+        "Shanghai Electric is one of China's largest industrial equipment groups, headquartered in Shanghai, making power generation equipment, industrial equipment and integrated solutions, with a workforce in the tens of thousands and annual revenue of over RMB 100 billion.\n\nThe IT centre of one of its manufacturing businesses wants production reporting, equipment inspections and quality issues for several factories in one system:\n\n- each factory's output should be totalled on the same day, without collecting spreadsheets by hand;\n- equipment checks should be filled in on the phone, with every issue followed to closure;\n- a quality issue should reach the person responsible quickly, with a complete trail for customer audits.\n\nThe IT centre plans a unified production management platform on Loomstack. Phase one covers production reporting and inspections on the pilot lines; phase two connects the MES and the ERP so that work orders, materials and costs line up.\n\nIt must be deployed in their own data centre on an Enterprise cluster, keep an audit log of every change, and import the historical production reports. The project budget is approved; the head of the IT centre decides and the production manager joins the requirement reviews. We met them at the Shanghai industrial trade show; the deal is at proposal, competing with another platform vendor.",
       address: 'Shanghai\nShanghai Electric, IT Centre',
     },
     {
@@ -37,7 +37,7 @@ export const enUS: DemoContent = {
       domain: 'intime',
       website: 'https://www.intime.com.cn',
       description:
-        'Intime Department Store is a department store and shopping centre chain headquartered in Hangzhou, with stores in Zhejiang and other provinces.\n\nTwo years ago its IT team built a store inspection app on NocoBase Community: floor managers submit inspections from their phones and store managers follow the fixes. It has run smoothly for over a year, with thousands of inspections a month.\n\nThis year they want to extend the same platform to two new areas:\n\n1. Membership: points, coupon redemption and in-store event sign-ups managed in one place;\n2. Supplier collaboration: brand suppliers confirming orders, uploading delivery notes and reconciling statements in a portal, saving purchasing many confirmation calls a day.\n\nThe users will grow from a few dozen to over a thousand, so they need single sign-on with the company directory and multi-level approval workflows for orders and reconciliation, which is why they are upgrading from Community to Professional.\n\nThe customer came through a referral and likes the product; its concerns are the price and whether the existing data carries over smoothly. Finance would like to pay the upgrade on 60-day terms, which is in approval.',
+        'Intime Department Store is a department store and shopping centre chain headquartered in Hangzhou, with stores in Zhejiang and other provinces.\n\nTwo years ago its IT team built a store inspection app on Loomstack Community: floor managers submit inspections from their phones and store managers follow the fixes. It has run smoothly for over a year, with thousands of inspections a month.\n\nThis year they want to extend the same platform to two new areas:\n\n1. Membership: points, coupon redemption and in-store event sign-ups managed in one place;\n2. Supplier collaboration: brand suppliers confirming orders, uploading delivery notes and reconciling statements in a portal, saving purchasing many confirmation calls a day.\n\nThe users will grow from a few dozen to over a thousand, so they need single sign-on with the company directory and multi-level approval workflows for orders and reconciliation, which is why they are upgrading from Community to Professional.\n\nThe customer came through a referral and likes the product; its concerns are the price and whether the existing data carries over smoothly. Finance would like to pay the upgrade on 60-day terms, which is in approval.',
       address: 'Hangzhou\nIntime Department Store headquarters, IT department',
     },
     {
@@ -56,7 +56,7 @@ export const enUS: DemoContent = {
       website: 'https://www.digitalchina.com',
       linkedin: 'https://www.linkedin.com/company/digital-china/',
       description:
-        'Digital China is a major Chinese IT services group based in Shenzhen, offering cloud, digital transformation and system integration services to enterprise and public-sector customers.\n\nOne of its solution delivery teams uses NocoBase as its delivery base, so that custom management systems start from a platform rather than from scratch. Since last year the team has launched equipment registers, project management and contract approval apps for three end customers on it, with shorter delivery and lighter maintenance than fully custom code.\n\nIt buys Professional licences per project and expects three new projects this year. Each contract has to state:\n\n- whether Digital China or the end customer holds the licence;\n- whether Digital China may keep developing for the customer after delivery;\n- who owns the source code and the plugins the team writes, and whether they can be reused in other projects.\n\nThose terms are in contract review. Digital China is also our partner and has referred two customers to us, so the relationship is close.',
+        'Digital China is a major Chinese IT services group based in Shenzhen, offering cloud, digital transformation and system integration services to enterprise and public-sector customers.\n\nOne of its solution delivery teams uses Loomstack as its delivery base, so that custom management systems start from a platform rather than from scratch. Since last year the team has launched equipment registers, project management and contract approval apps for three end customers on it, with shorter delivery and lighter maintenance than fully custom code.\n\nIt buys Professional licences per project and expects three new projects this year. Each contract has to state:\n\n- whether Digital China or the end customer holds the licence;\n- whether Digital China may keep developing for the customer after delivery;\n- who owns the source code and the plugins the team writes, and whether they can be reused in other projects.\n\nThose terms are in contract review. Digital China is also our partner and has referred two customers to us, so the relationship is close.',
       address: 'Shenzhen\nDigital China, solution delivery team',
     },
     {
@@ -74,7 +74,7 @@ export const enUS: DemoContent = {
       website: 'https://www.xgimi.com',
       linkedin: 'https://www.linkedin.com/company/xgimitech/',
       description:
-        "XGIMI Technology is a Chengdu-based maker of smart projectors and home entertainment devices, selling in China and abroad.\n\nIts commercial projects and after-sales team built an internal workbench on NocoBase to manage customer and partner requests, delivery milestones, timesheets and service tickets, replacing a set of shared spreadsheets. Since then, project managers' weekly reports take half an hour instead of half a day.\n\nIt started on Standard with a dozen users. Next it wants a portal where customers and partners follow delivery progress and download reports themselves, which needs Professional; that upgrade is signed.",
+        "XGIMI Technology is a Chengdu-based maker of smart projectors and home entertainment devices, selling in China and abroad.\n\nIts commercial projects and after-sales team built an internal workbench on Loomstack to manage customer and partner requests, delivery milestones, timesheets and service tickets, replacing a set of shared spreadsheets. Since then, project managers' weekly reports take half an hour instead of half a day.\n\nIt started on Standard with a dozen users. Next it wants a portal where customers and partners follow delivery progress and download reports themselves, which needs Professional; that upgrade is signed.",
       address:
         'High-tech Zone, Chengdu\nXGIMI Technology, project delivery team',
     },
@@ -85,7 +85,7 @@ export const enUS: DemoContent = {
       linkedin:
         'https://www.linkedin.com/company/nari-technology-development-co-ltd-/',
       description:
-        "NARI Technology is a Nanjing-based supplier of power grid automation, control and energy information systems.\n\nOne of its project delivery units evaluated NocoBase for a field inspection and project collaboration platform: field engineers log and photograph issues on tablets at project sites, the project office tracks the fixes and management sees an overall dashboard. The unit wants every issue followed from discovery to closure in one place, instead of across group chats and a weekly spreadsheet.\n\nThe technical evaluation is done and the operations team liked the demo; the customer also wants the contract to commit to the inspection dashboard going live within six weeks, which is in internal review.\n\nThe purchase has moved to the next budget cycle, so the project is paused. The customer's contact says it will restart when the new cycle opens and suggests we keep in touch monthly.",
+        "NARI Technology is a Nanjing-based supplier of power grid automation, control and energy information systems.\n\nOne of its project delivery units evaluated Loomstack for a field inspection and project collaboration platform: field engineers log and photograph issues on tablets at project sites, the project office tracks the fixes and management sees an overall dashboard. The unit wants every issue followed from discovery to closure in one place, instead of across group chats and a weekly spreadsheet.\n\nThe technical evaluation is done and the operations team liked the demo; the customer also wants the contract to commit to the inspection dashboard going live within six weeks, which is in internal review.\n\nThe purchase has moved to the next budget cycle, so the project is paused. The customer's contact says it will restart when the new cycle opens and suggests we keep in touch monthly.",
       address:
         'Jiangning District, Nanjing\nNARI Technology, project delivery unit',
     },
@@ -193,13 +193,13 @@ export const enUS: DemoContent = {
     [
       {
         heading: 'Partner quarterly review',
-        body: "Quarterly review with the general manager and the technical lead of Digital China's solution delivery team. They have delivered three projects on NocoBase this year, and their customers are happy.\n\nThey expect three more projects this year, want to buy licences annually, and want the contract to state who holds the licence and who owns the plugins they write. We promised a partner licensing proposal.",
+        body: "Quarterly review with the general manager and the technical lead of Digital China's solution delivery team. They have delivered three projects on Loomstack this year, and their customers are happy.\n\nThey expect three more projects this year, want to buy licences annually, and want the contract to state who holds the licence and who owns the plugins they write. We promised a partner licensing proposal.",
       },
       {
         heading: 'Licence terms',
         body: "Went through Digital China's three licence terms one by one: Digital China buys the licence and hands it to the end customer, may keep developing after delivery, and owns and may reuse the plugins it writes.\n\nThe first two match our partner policy; the third goes beyond the standard licence agreement, so it is in contract terms review, waiting for legal's wording.",
         reply:
-          'Legal leans towards "Digital China owns the IP of the plugins it writes; the NocoBase licence terms are unchanged". Please run that direction past the customer first.',
+          'Legal leans towards "Digital China owns the IP of the plugins it writes; the Loomstack licence terms are unchanged". Please run that direction past the customer first.',
       },
       {
         heading: 'Client project kick-off',
@@ -316,7 +316,7 @@ export const enUS: DemoContent = {
       message:
         'We already run our store inspections on Community; our store managers use it every day and it has been very stable.\n\nWe now plan to put membership and supplier collaboration on the same platform, which will bring many more users and needs single sign-on with our company directory. Two questions: how is the Professional upgrade priced, per user or per instance? And how is SSO set up in Professional; does it need an extra plugin?\n\nAlso, will our existing data and pages carry over after the upgrade?',
       companyDescription:
-        'Intime Department Store is a department store and shopping centre chain headquartered in Hangzhou, with stores in Zhejiang and other provinces.\n\nIts IT team built its store inspection app on NocoBase Community and plans to extend the platform to membership and supplier collaboration this year.\n\nChloe Adams leads the digital rollout to the stores from the Hangzhou head office.',
+        'Intime Department Store is a department store and shopping centre chain headquartered in Hangzhou, with stores in Zhejiang and other provinces.\n\nIts IT team built its store inspection app on Loomstack Community and plans to extend the platform to membership and supplier collaboration this year.\n\nChloe Adams leads the digital rollout to the stores from the Hangzhou head office.',
       address: 'Hangzhou\nIntime Department Store headquarters, IT department',
     },
     {
@@ -334,7 +334,7 @@ export const enUS: DemoContent = {
       mailbox: 'hannah.price',
       company: 'Freshippo (Hema)',
       message:
-        'Downloaded the white paper "Building Internal Business Systems with NocoBase" from the website; the form gave the purpose as "learning about low-code platforms for next year\'s digital plan".\n\nThe company is Freshippo (Hema); the department and needs were left blank, and there has been no other contact yet.',
+        'Downloaded the white paper "Building Internal Business Systems with Loomstack" from the website; the form gave the purpose as "learning about application platforms for next year\'s digital plan".\n\nThe company is Freshippo (Hema); the department and needs were left blank, and there has been no other contact yet.',
       companyDescription:
         "Freshippo (Hema) is a fresh-food grocery retailer headquartered in Shanghai, with stores in many Chinese cities and online ordering with home delivery.\n\nWe know little about the contact's team yet. The white paper form gave the purpose as preparing next year's digital plan.",
       address: 'Shanghai\nFreshippo (Hema)',
@@ -354,7 +354,7 @@ export const enUS: DemoContent = {
       mailbox: 'laura.hughes',
       company: 'United Family Healthcare',
       message:
-        "Hello, I am Laura Hughes from the IT department of United Family Healthcare. We are choosing one platform for the administrative processes of our hospitals and clinics, and NocoBase is on our shortlist.\n\nBefore the next round we need to confirm a few hard requirements:\n\n1. Permissions. Data visibility controlled by site, department and role, and some form fields hidden from certain roles; purchase prices, for example, only for the equipment department and finance.\n\n2. Approval workflows. Equipment repairs and supply requests need multi-level approval, larger amounts need a hospital director's countersignature, approvers should be able to act from their phones, and overdue approvals should send reminders.\n\n3. Audit. Every create, update, delete and export logged and kept for at least six years, searchable by person and time and exportable for security assessments.\n\n4. Database. Support for a domestic database such as Kingbase is mandatory for this project, ideally with a deployment reference on Kylin OS.\n\nIf all of these are met, we would like an on-site technical session next month with the IT department and the equipment managers of several sites. We would also like to understand the implementation timeline: we hope to have the first processes live before the end of next year's first quarter.",
+        "Hello, I am Laura Hughes from the IT department of United Family Healthcare. We are choosing one platform for the administrative processes of our hospitals and clinics, and Loomstack is on our shortlist.\n\nBefore the next round we need to confirm a few hard requirements:\n\n1. Permissions. Data visibility controlled by site, department and role, and some form fields hidden from certain roles; purchase prices, for example, only for the equipment department and finance.\n\n2. Approval workflows. Equipment repairs and supply requests need multi-level approval, larger amounts need a hospital director's countersignature, approvers should be able to act from their phones, and overdue approvals should send reminders.\n\n3. Audit. Every create, update, delete and export logged and kept for at least six years, searchable by person and time and exportable for security assessments.\n\n4. Database. Support for a domestic database such as Kingbase is mandatory for this project, ideally with a deployment reference on Kylin OS.\n\nIf all of these are met, we would like an on-site technical session next month with the IT department and the equipment managers of several sites. We would also like to understand the implementation timeline: we hope to have the first processes live before the end of next year's first quarter.",
       companyDescription:
         "United Family Healthcare is a private healthcare network headquartered in Beijing, with hospitals and clinics in several Chinese cities.\n\nLaura Hughes leads the workflow platform selection in the IT department; the project's requirements include support for a domestic database.\n\nThe decision goes through the group's IT committee and is expected next quarter.",
       address:
@@ -365,9 +365,9 @@ export const enUS: DemoContent = {
       mailbox: 'kevin.foster',
       company: 'Kingsoft Office',
       message:
-        "Hello, I lead an enterprise solutions team at Kingsoft Office. Our enterprise customers often ask us for custom business applications alongside their office suite deployments.\n\nWe recently evaluated NocoBase and think it suits us well as a delivery platform for those applications. Some questions about the Professional licence for client applications:\n\n1. Is the licence for an application we deliver bought in our name or the client's?\n2. Can one licence cover several client projects?\n3. Can the plugins we write be reused in other client projects, and who owns them?\n4. Do you have partner pricing?\n\nWe expect several such projects this year and are looking for a long-term partnership.",
+        "Hello, I lead an enterprise solutions team at Kingsoft Office. Our enterprise customers often ask us for custom business applications alongside their office suite deployments.\n\nWe recently evaluated Loomstack and think it suits us well as a delivery platform for those applications. Some questions about the Professional licence for client applications:\n\n1. Is the licence for an application we deliver bought in our name or the client's?\n2. Can one licence cover several client projects?\n3. Can the plugins we write be reused in other client projects, and who owns them?\n4. Do you have partner pricing?\n\nWe expect several such projects this year and are looking for a long-term partnership.",
       companyDescription:
-        "Kingsoft Office is a Beijing-based office software company, best known for WPS Office, serving individuals, enterprises and public-sector organisations.\n\nKevin Foster leads an enterprise solutions team that wants a low-code platform for the custom applications its enterprise customers request; Ethan Walsh, the team's technical lead, is on the same evaluation.\n\nThe team expects several client projects this year and wants a long-term platform partner.",
+        "Kingsoft Office is a Beijing-based office software company, best known for WPS Office, serving individuals, enterprises and public-sector organisations.\n\nKevin Foster leads an enterprise solutions team that wants an application platform for the custom applications its enterprise customers request; Ethan Walsh, the team's technical lead, is on the same evaluation.\n\nThe team expects several client projects this year and wants a long-term platform partner.",
       address:
         'Haidian District, Beijing\nKingsoft Office, enterprise solutions team',
     },
@@ -376,9 +376,9 @@ export const enUS: DemoContent = {
       mailbox: 'rachel.morgan',
       company: 'New Oriental',
       message:
-        "Head of academic affairs in one of New Oriental's training businesses, comparing three low-code platforms (NocoBase and two others) for course management and teacher evaluation.\n\nStill gathering information; the budget waits for next quarter's planning meeting. She would like product material and a price range first and does not need a demo yet.",
+        "Head of academic affairs in one of New Oriental's training businesses, comparing three application platforms (Loomstack and two others) for course management and teacher evaluation.\n\nStill gathering information; the budget waits for next quarter's planning meeting. She would like product material and a price range first and does not need a demo yet.",
       companyDescription:
-        "New Oriental is an education company headquartered in Beijing, offering language training, test preparation and other education services across China.\n\nRachel Morgan heads academic affairs in one of its training businesses and is comparing three low-code platforms for course management and teacher evaluation. The budget waits for next quarter's planning meeting.",
+        "New Oriental is an education company headquartered in Beijing, offering language training, test preparation and other education services across China.\n\nRachel Morgan heads academic affairs in one of its training businesses and is comparing three application platforms for course management and teacher evaluation. The budget waits for next quarter's planning meeting.",
       address: 'Haidian District, Beijing\nNew Oriental, academic affairs',
     },
     {
@@ -396,7 +396,7 @@ export const enUS: DemoContent = {
       mailbox: 'megan.ward',
       company: 'Vanke',
       message:
-        'IT manager at Vanke, doing early research on digitalising property and construction management while looking at several SaaS and low-code products.\n\nHer department plans its formal budget for next year. She would like industry case studies and product updates once a quarter, without frequent calls.',
+        'IT manager at Vanke, doing early research on digitalising property and construction management while looking at several SaaS products and application platforms.\n\nHer department plans its formal budget for next year. She would like industry case studies and product updates once a quarter, without frequent calls.',
       companyDescription:
         "Vanke is one of China's best-known property developers, headquartered in Shenzhen, with residential and commercial projects and property services.\n\nMegan Ward is an IT manager doing early research on digitalising property and construction management. Her department plans its formal budget for next year.",
       address: 'Yantian District, Shenzhen\nVanke, IT department',
@@ -406,9 +406,9 @@ export const enUS: DemoContent = {
       mailbox: 'tyler.grant',
       company: 'Deloitte China',
       message:
-        'A personal website enquiry from someone with two years of NocoBase plugin development experience looking for part-time or contract development work, with a link to his portfolio.\n\nThis is not a purchase; we replied pointing him to our partner programme and the community job board.',
+        'A personal website enquiry from someone with two years of Loomstack plugin development experience looking for part-time or contract development work, with a link to his portfolio.\n\nThis is not a purchase; we replied pointing him to our partner programme and the community job board.',
       companyDescription:
-        'Deloitte China is a professional services firm offering audit, tax, consulting and advisory services, with offices in Shanghai and other Chinese cities.\n\nThe form named Deloitte China as the company, but the enquiry is a personal one: Tyler Grant says he has two years of NocoBase plugin development experience and is looking for part-time or contract work; this is not a purchase.',
+        'Deloitte China is a professional services firm offering audit, tax, consulting and advisory services, with offices in Shanghai and other Chinese cities.\n\nThe form named Deloitte China as the company, but the enquiry is a personal one: Tyler Grant says he has two years of Loomstack plugin development experience and is looking for part-time or contract work; this is not a purchase.',
       address: 'Shanghai',
     },
     {
@@ -426,7 +426,7 @@ export const enUS: DemoContent = {
       mailbox: 'ethan.walsh',
       company: 'Kingsoft Office',
       message:
-        "I am Ethan Walsh, technical lead of an enterprise solutions team at Kingsoft Office, on the same project as Kevin.\n\nI am evaluating the technical side: can plugins be developed, built and released independently in TypeScript? Does Enterprise include the source code? We need to customise on the client's site, so I would like to know how to set up the development environment and how our plugins stay compatible when NocoBase is upgraded.",
+        "I am Ethan Walsh, technical lead of an enterprise solutions team at Kingsoft Office, on the same project as Kevin.\n\nI am evaluating the technical side: can plugins be developed, built and released independently in TypeScript? Does Enterprise include the source code? We need to customise on the client's site, so I would like to know how to set up the development environment and how our plugins stay compatible when Loomstack is upgraded.",
       companyDescription:
         'Kingsoft Office is a Beijing-based office software company, best known for WPS Office.\n\nEthan Walsh is the technical lead of an enterprise solutions team, evaluating plugin development and source code delivery on the same evaluation as the team lead, Kevin Foster.',
       address:

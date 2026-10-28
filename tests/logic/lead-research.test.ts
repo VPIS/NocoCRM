@@ -68,7 +68,7 @@ describe("a lead follow-up's look-up question", () => {
     expect(lookUpTarget({ id: 'l', name: 'Someone' })).toBeNull();
   });
 
-  it('asks who it is, what changed lately and whether it uses NocoBase', () => {
+  it('asks who it is, what changed lately and whether it uses Loomstack', () => {
     const lead = { id: 'l', company: '调研精工', city: '杭州' };
     const target = { company: '调研精工', website: '', domain: 'r.example' };
     const refs = researchQuestion(lead, target, {
@@ -83,7 +83,7 @@ describe("a lead follow-up's look-up question", () => {
     expect(refs).toContain('Its email domain: r.example');
     expect(refs).toContain('Today is 2026-10-19');
     expect(refs).toContain('last 90 days');
-    expect(refs).toContain('NocoBase');
+    expect(refs).toContain('Loomstack');
     expect(refs).toContain('Do not look up any person');
     expect(refs).toContain('Write the whole answer in Chinese');
     expect(refs).toContain('as [ref_n]');
