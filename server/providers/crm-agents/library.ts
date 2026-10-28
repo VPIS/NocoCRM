@@ -15,8 +15,10 @@ import { METHOD_SKILLS } from './skill.js';
 // from its SKILL.md as shipped (the assistant reads them with its
 // `crm_skill` tool, assistant.ts); the marker
 // keeps their ids, so a skill an administrator edited, detached or deleted
-// stays as they left it, and a later SKILL.md shipped with the code does not
-// replace the library's. The background runs read the library's current
+// stays as they left it. One nobody has changed, every version of it the
+// CRM's own (made with no person), is brought up to the SKILL.md shipped with
+// the code at each start (`updateShipped`), so an existing deployment gets a
+// release's new method. The background runs read the library's current
 // version (`readSkill` in crm/ai-model.ts), so an edit there is what they follow.
 
 export const SKILLS_MARKER = 'agents-skills-v1';
@@ -52,6 +54,7 @@ export async function provisionSkills(
   // read at an earlier start (a deployment built without the files) is added
   // now.
   const known = skillIdsOf(marker?.value);
+  await updateShipped(agents, known, dir);
   const missing = METHOD_SKILLS.filter((slug) => !known[slug]);
   if (!missing.length) return;
   // One a person added under the same name before is taken as it is.
@@ -80,6 +83,36 @@ export async function provisionSkills(
     })
     .where('id', '=', SKILLS_MARKER)
     .execute();
+}
+
+// The skills the marker holds that no person has changed, made the SKILL.md
+// shipped now: one deleted, renamed, holding files, or with a version a
+// person saved or restored is left as it is. Another instance starting
+// beside this one may save first; its 409 is taken as done.
+async function updateShipped(
+  agents: Agents,
+  ids: Record<string, string>,
+  dir: string,
+): Promise<void> {
+  for (const [slug, id] of Object.entries(ids)) {
+    const content = await readFile(join(dir, slug, 'SKILL.md'), 'utf8').catch(
+      () => null,
+    );
+    if (!content) continue;
+    const skill = await agents.skills.get(id).catch(() => null);
+    if (
+      !skill ||
+      skill.slug !== slug ||
+      skill.files.length ||
+      skill.content === content
+    )
+      continue;
+    const versions = await agents.skills.versions(id);
+    if (versions.some((version) => version.createdById !== null)) continue;
+    await agents.skills
+      .save(id, null, { content, files: [], expectedRevision: skill.version })
+      .catch(() => undefined);
+  }
 }
 
 function skillIdsOf(value: unknown): Record<string, string> {

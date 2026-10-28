@@ -35,7 +35,7 @@ import legacyTimestampsMigration from '../../database/main/migrations/2026092000
 import salesSetsSeed from '../../database/main/seeds/202610040001_crm_sales_permission_sets.js';
 // @vitest-environment node
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { type DatabaseManager } from '@nocobase/db';
@@ -12796,6 +12796,7 @@ describe("The assistant's conversations on the Agents plugin", () => {
       skills: {
         // A person added a lead follow-up skill of their own already.
         list: () => Promise.resolve([{ id: 'mine', slug: 'lead-follow-up' }]),
+        get: () => Promise.reject(new Error('not found')),
         create: (_by: null, input: { content: string }) => {
           created.push(/^name:\s*(\S+)$/mu.exec(input.content)?.[1] ?? '');
           return Promise.resolve({ id: `skill-${String(created.length)}` });
@@ -12832,6 +12833,7 @@ describe("The assistant's conversations on the Agents plugin", () => {
     const fakeAgents = {
       skills: {
         list: () => Promise.resolve([]),
+        get: () => Promise.reject(new Error('not found')),
         create: (_by: null, input: { content: string }) => {
           created.push(/^name:\s*(\S+)$/mu.exec(input.content)?.[1] ?? '');
           return Promise.resolve({ id: `skill-${String(created.length)}` });
@@ -12891,6 +12893,121 @@ describe("The assistant's conversations on the Agents plugin", () => {
         'company-signals': 'skill-4',
       },
     });
+  });
+
+  it("brings the skills nobody changed up to the shipped SKILL.md, and leaves a person's edits alone", async () => {
+    const dir = resolve(process.cwd(), 'ai/skills');
+    const shipped = (slug: string): Promise<string> =>
+      readFile(resolve(dir, slug, 'SKILL.md'), 'utf8');
+    const old = (slug: string): string => `---\nname: ${slug}\n---\nOld`;
+    // In the library: lead follow-up and task preparation as an earlier
+    // release put them; opportunity follow-up edited by a person; approval
+    // review renamed; company signals already current.
+    const library: Record<
+      string,
+      { slug: string; content: string; version: number; by: (string | null)[] }
+    > = {
+      lead: {
+        slug: 'lead-follow-up',
+        content: old('lead-follow-up'),
+        version: 1,
+        by: [null],
+      },
+      task: {
+        slug: 'task-preparation',
+        content: old('task-preparation'),
+        version: 2,
+        by: [null, null],
+      },
+      opp: {
+        slug: 'opportunity-follow-up',
+        content: old('opportunity-follow-up'),
+        version: 2,
+        by: [null, 'u1'],
+      },
+      approval: {
+        slug: 'our-approvals',
+        content: old('our-approvals'),
+        version: 1,
+        by: [null],
+      },
+      signals: {
+        slug: 'company-signals',
+        content: await shipped('company-signals'),
+        version: 1,
+        by: [null],
+      },
+    };
+    const saved: string[] = [];
+    const fakeAgents = {
+      skills: {
+        list: () => Promise.resolve([]),
+        create: () => Promise.reject(new Error('nothing to add')),
+        get: (id: string) => {
+          const skill = library[id];
+          return skill
+            ? Promise.resolve({ ...skill, id, files: [] })
+            : Promise.reject(new Error('not found'));
+        },
+        versions: (id: string) =>
+          Promise.resolve(
+            (library[id]?.by ?? []).map((createdById, i) => ({
+              version: i + 1,
+              createdById,
+            })),
+          ),
+        save: (
+          id: string,
+          by: string | null,
+          input: {
+            content: string;
+            files: unknown[];
+            expectedRevision: number;
+          },
+        ) => {
+          const skill = library[id];
+          expect(by).toBeNull();
+          expect(input.expectedRevision).toBe(skill.version);
+          skill.content = input.content;
+          skill.version += 1;
+          skill.by.push(null);
+          saved.push(id);
+          return Promise.resolve({ ...skill, id, files: [] });
+        },
+      },
+    } as never;
+    await database
+      .query()
+      .deleteFrom('crmSettings')
+      .where('id', '=', 'agents-skills-v1')
+      .execute();
+    await database
+      .query()
+      .insertInto('crmSettings')
+      .values({
+        id: 'agents-skills-v1',
+        value: JSON.stringify({
+          version: 1,
+          skillIds: {
+            'lead-follow-up': 'lead',
+            'task-preparation': 'task',
+            'opportunity-follow-up': 'opp',
+            'approval-review': 'approval',
+            'company-signals': 'signals',
+          },
+        }),
+        updatedAt: new Date(),
+      })
+      .execute();
+    await provisionSkills(fakeAgents, database, dir);
+    expect(saved).toEqual(['lead', 'task']);
+    expect(library.lead.content).toBe(await shipped('lead-follow-up'));
+    expect(library.task.content).toBe(await shipped('task-preparation'));
+    expect(library.opp.content).toBe(old('opportunity-follow-up'));
+    expect(library.approval.content).toBe(old('our-approvals'));
+    // Current now, so the next start saves nothing.
+    await provisionSkills(fakeAgents, database, dir);
+    expect(saved).toEqual(['lead', 'task']);
   });
 });
 
