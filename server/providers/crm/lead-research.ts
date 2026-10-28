@@ -153,13 +153,20 @@ export function lookUpTarget(lead: CrmRecord): {
 // The look-up's question: the company as the lead names it (with where it
 // is and what it does, to tell it from others of the name), the three
 // things to find, cited by [ref_n] or by URL as the searcher cites. It
-// opens on the company and names Loomstack only in the last point: the
-// search is formed from the question, and one that opened on the
-// salesperson's product searched for the product (seen with Qwen).
+// opens on the company and names the selling company (`seller`, from the
+// business guidance's company line) only in the last point: the search is
+// formed from the question, and one that opened on the salesperson's
+// product searched for the product (seen with Qwen). Without a seller the
+// guidance has not named one yet, and that point is left out.
 export function researchQuestion(
   lead: CrmRecord,
   target: { company: string; website: string; domain: string },
-  input: { chinese: boolean; cite: 'refs' | 'urls'; today: string },
+  input: {
+    chinese: boolean;
+    cite: 'refs' | 'urls';
+    today: string;
+    seller?: string | null;
+  },
 ): string {
   const name = target.company || target.website || target.domain;
   const known = [
@@ -176,9 +183,10 @@ export function researchQuestion(
     `Today is ${input.today}. Find, about ${name} itself:`,
     '1. Who it is: its official name and website, industry, number of employees, headquarters and address, and what it does.',
     `2. What changed there in the last ${String(NEWS_WINDOW_DAYS)} days: hiring for IT or digitalisation roles, new business or products, funding, acquisitions, large contracts, reorganisation, new executives, layoffs or other trouble; each with the date it happened.`,
-    `3. Whether ${name} uses or has looked at Loomstack, the open-source enterprise application platform: a code repository, a forum post, an article or a case study naming both.`,
+    input.seller &&
+      `3. Whether ${name} uses or has looked at the products of ${input.seller}: a code repository, a forum post, an article or a case study naming both.`,
     'Prefer its own website, its filings and reputable sources, and use only pages about this company. Leave out a page that may be about another company of the same name, and say so when you cannot tell which company is meant. Do not look up any person. Never guess; for what you cannot find, say it was not found.',
-    `Write the whole answer in ${input.chinese ? 'Chinese' : 'English'}, whatever language the pages are in, as short points under the three headings.`,
+    `Write the whole answer in ${input.chinese ? 'Chinese' : 'English'}, whatever language the pages are in, as short points under the ${input.seller ? 'three' : 'two'} headings.`,
     input.cite === 'urls'
       ? 'After each point write the full URL of every page that states it, exactly as the search returned it.'
       : 'After each point cite the pages that state it as [ref_n].',

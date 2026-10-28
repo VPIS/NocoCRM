@@ -55,6 +55,17 @@ export const settingsGuidance = (
         )
       : crmGuidance();
 
+// The selling company's name as the guidance's company line gives it
+// ("- Company: Loomstack (…)", "- 公司名称：Loomstack（…）"), for the lead
+// research's question whether a lead's company already uses it; none while
+// the template's placeholder stands or the guidance has no such line.
+export const guidanceCompany = (guidance: string): string | null => {
+  const name = /^\s*[-*]\s*(?:Company|公司名称)\s*[:：]\s*([^(（\n]*)/im
+    .exec(guidance)?.[1]
+    ?.trim();
+  return name || null;
+};
+
 // The company's profile, for the administrator to fill in: what the AI
 // knows of the company is only what is written here.
 const chineseProfile = `# 公司定位

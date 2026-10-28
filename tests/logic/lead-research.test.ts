@@ -1,6 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import {
+  crmGuidance,
+  guidanceCompany,
+} from '../../server/providers/crm/guidance.js';
+import { demoGuidance } from '../../server/providers/crm/demo-content/guidance.js';
+import {
   citedFindings,
   keptResearch,
   lookUpTarget,
@@ -68,13 +73,14 @@ describe("a lead follow-up's look-up question", () => {
     expect(lookUpTarget({ id: 'l', name: 'Someone' })).toBeNull();
   });
 
-  it('asks who it is, what changed lately and whether it uses Loomstack', () => {
+  it("asks who it is, what changed lately and whether it uses the guidance's company's products", () => {
     const lead = { id: 'l', company: '调研精工', city: '杭州' };
     const target = { company: '调研精工', website: '', domain: 'r.example' };
     const refs = researchQuestion(lead, target, {
       chinese: true,
       cite: 'refs',
       today: '2026-10-19',
+      seller: 'Loomstack',
     });
     expect(refs.split('\n')[0]).toBe(
       'Look up this company on the web: 调研精工',
@@ -83,7 +89,10 @@ describe("a lead follow-up's look-up question", () => {
     expect(refs).toContain('Its email domain: r.example');
     expect(refs).toContain('Today is 2026-10-19');
     expect(refs).toContain('last 90 days');
-    expect(refs).toContain('Loomstack');
+    expect(refs).toContain(
+      '3. Whether 调研精工 uses or has looked at the products of Loomstack',
+    );
+    expect(refs).toContain('under the three headings');
     expect(refs).toContain('Do not look up any person');
     expect(refs).toContain('Write the whole answer in Chinese');
     expect(refs).toContain('as [ref_n]');
@@ -94,6 +103,9 @@ describe("a lead follow-up's look-up question", () => {
     });
     expect(urls).toContain('full URL of every page');
     expect(urls).not.toContain('[ref_n]');
+    // No company named in the guidance yet: two points only.
+    expect(urls).not.toContain('3. Whether');
+    expect(urls).toContain('under the two headings');
   });
 });
 
@@ -167,5 +179,19 @@ describe('what a look-up leaves on the card', () => {
     ]);
     // No look-up this time: nothing from the web at all.
     expect(citedFindings(found, [])).toEqual([found[5]]);
+  });
+});
+
+describe("the guidance's company, which the look-up asks about", () => {
+  const days = { uncontacted: 2, stale: 14, closing: 7 };
+  it('reads the company line in either language, none while it is unfilled', () => {
+    expect(guidanceCompany(demoGuidance(days, 'zh-CN'))).toBe('Loomstack');
+    expect(guidanceCompany(demoGuidance(days, 'en-US'))).toBe('Loomstack');
+    expect(guidanceCompany('# Who we are\n- Company: Acme Tools Ltd')).toBe(
+      'Acme Tools Ltd',
+    );
+    expect(guidanceCompany(crmGuidance(days, 'zh-CN'))).toBeNull();
+    expect(guidanceCompany(crmGuidance(days, 'en-US'))).toBeNull();
+    expect(guidanceCompany('# Our rules\n- Quote list prices only')).toBeNull();
   });
 });
