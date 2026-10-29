@@ -1,23 +1,46 @@
-# NocoCRM
+<p align="center">
+  <img src="../public/assets/favicon.svg" width="72" alt="NocoCRM">
+</p>
 
-[English](../README.MD) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md) | [Deutsch](README.de-DE.md) | [Français](README.fr-FR.md) | Español | [Português](README.pt-BR.md) | [Русский](README.ru-RU.md) | [Bahasa Indonesia](README.id-ID.md) | [Tiếng Việt](README.vi-VN.md)
+<h1 align="center">NocoCRM</h1>
 
-NocoCRM es un CRM de código abierto para ventas B2B, construido sobre [NocoBase 3](https://www.nocobase.com). Incluye 6 agentes de ventas e integra tu correo y WhatsApp: hacen seguimiento de leads y oportunidades, responden los mensajes al instante y revisan contigo las aprobaciones. Los agentes sugieren; tú decides.
+<p align="center"><strong>Tus ventas ya tienen un equipo de agentes 24/7.</strong></p>
+
+<p align="center">CRM de código abierto para ventas B2B · Construido sobre NocoBase Core</p>
+
+<p align="center">
+  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0"></a>
+  <a href="https://github.com/nocobase/NocoCRM/tags"><img src="https://img.shields.io/github/v/tag/nocobase/NocoCRM?label=version&sort=semver&include_prereleases" alt="version"></a>
+  <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase%20Core-1f6feb" alt="Built on NocoBase Core"></a>
+</p>
+
+<p align="center">
+  <a href="https://solutions.nocobase.com/crm/"><strong>Pruébalo en línea</strong></a> · <a href="https://www.nocobase.com/es-ES/solution-crm/">Sitio web</a>
+</p>
+
+<p align="center">
+  <a href="../README.MD">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ja-JP.md">日本語</a> · <a href="README.ko-KR.md">한국어</a> · <a href="README.de-DE.md">Deutsch</a> · <a href="README.fr-FR.md">Français</a> · <strong>Español</strong> · <a href="README.pt-BR.md">Português</a> · <a href="README.ru-RU.md">Русский</a> · <a href="README.id-ID.md">Bahasa Indonesia</a> · <a href="README.vi-VN.md">Tiếng Việt</a>
+</p>
+
+NocoCRM es un CRM de código abierto para ventas B2B, construido sobre [NocoBase Core](https://www.nocobase.com). Incluye 6 agentes de ventas e integra tu correo y WhatsApp: hacen seguimiento de leads y oportunidades, responden los mensajes al instante y revisan contigo las aprobaciones. Los agentes sugieren; tú decides.
 
 https://github.com/user-attachments/assets/d56b50ed-a7f6-4012-95ee-7eece46d4271
 
-[Pruébalo en línea](https://solutions.nocobase.com/crm/) · [Sitio web](https://www.nocobase.com/es-ES/solution-crm/)
+## Funcionalidades
 
-## Qué hace
-
-- **Nada se queda sin seguimiento.** Un lead o una oportunidad nuevos, la respuesta de un cliente, una tarea terminada, la revisión de la mañana: un agente lee todo el contexto y deja el siguiente paso en tu bandeja de entrada, con su recomendación, su confianza y sus razones. Los registros solo cambian cuando aceptas.
-- **Todos los canales en una sola línea de tiempo.** Cada persona conecta su propio buzón y la empresa su número de WhatsApp Business. Los mensajes se vinculan a leads y contactos, y las respuestas se redactan para salir desde tu propia cuenta.
-- **Un equipo de agentes de ventas.** Sales Expert para conversar, además de seguimiento de leads, seguimiento de oportunidades, revisión de aprobaciones, preparación de tareas e investigación de empresas, cada uno con sus disparadores, sus habilidades y un registro de sus ejecuciones.
+- **Seguimiento automático.** Un lead o una oportunidad nuevos, la respuesta de un cliente, una tarea terminada, la revisión de la mañana: un agente lee todo el contexto y deja el siguiente paso en tu bandeja de entrada, con su recomendación, su confianza y sus razones. Los registros solo cambian cuando aceptas.
+- **Todos los canales en una sola línea de tiempo.** Cada persona conecta su propio buzón (Gmail, Microsoft 365 o cualquier servidor IMAP/SMTP) y la empresa su número de WhatsApp Business. Los mensajes se vinculan a leads y contactos, y las respuestas se redactan para salir desde tu propia cuenta.
+- **6 agentes de ventas.** Sales Expert para conversar desde cualquier página, además de cinco que trabajan en segundo plano: seguimiento de leads, seguimiento de oportunidades, revisión de aprobaciones, preparación de tareas e investigación de empresas, cada uno con sus disparadores, sus habilidades y un registro de sus ejecuciones.
+- **Registro inteligente.** Pega un correo, un chat o una tarjeta de visita: la IA lo compara con los registros existentes y lo convierte en leads o en una oportunidad, que revisas antes de guardar. Para una empresa nueva basta con el nombre: la IA completa sus datos desde la web. Los leads duplicados se detectan y se fusionan.
+- **Señales de empresas.** Cada mañana, la investigación de empresas busca en la web noticias de las empresas con oportunidades abiertas o que sigues: rondas de financiación, contrataciones, cambios en la dirección, movimientos del negocio y riesgos, con sus fuentes. Una señal importante pone en marcha el seguimiento de sus oportunidades abiertas.
 - **Las aprobaciones ya no se atascan.** El agente de aprobaciones contrasta un descuento o una condición con tus reglas y decisiones anteriores, y redacta una recomendación y un comentario para quien aprueba.
-- **Tus reglas, tu código.** Escribe tus precios, límites de descuento y ritmo de seguimiento como guía de negocio en texto llano, y todos los agentes la siguen. Pide a un agente de programación que cambie el propio código fuente del CRM. Código abierto, autoalojado y tuyo.
-- **Todo el ciclo de ventas.** Leads, empresas, contactos, oportunidades, tareas, aprobaciones e informes, con roles que el servidor aplica registro a registro.
+- **Todo el ciclo de ventas.** Leads, empresas, contactos, oportunidades, tareas, aprobaciones e informes, con un tablero de oportunidades, un calendario de tareas, búsqueda en todos los registros (⌘K / Ctrl+K) y roles que el servidor aplica registro a registro.
+- **Personalizable.** Escribe tus precios, límites de descuento y ritmo de seguimiento en texto llano en las directrices de negocio, y todos los agentes las siguen; el método de cada agente es una habilidad que puedes editar. El código es abierto, así que un agente de programación puede cambiar el resto.
+- **Autoalojado.** Tus datos se quedan en tus servidores, con los modelos que elijas: DeepSeek, OpenAI, Claude, Gemini, Qwen y otros. Apache-2.0.
 
 ## Inicio rápido
+
+¿Solo quieres echar un vistazo? [Pruébalo en línea](https://solutions.nocobase.com/crm/): entras con una cuenta de demostración y todos los datos son inventados.
 
 ### 1. Instalar
 
@@ -51,6 +74,8 @@ Añade un servicio de modelos con su clave en **Equipo de Agents → Modelos**, 
 
 La [guía](guide.md) (en inglés) cubre los siguientes pasos, las cuentas de demostración, los roles, la configuración (IA, correo, WhatsApp, bases de datos), el despliegue y el desarrollo.
 
+Para producción, consulta [Despliegue](guide.md#deployment); para PostgreSQL y MySQL, consulta [Configuración](guide.md#configuration).
+
 ## Licencia
 
-[Apache License 2.0](../LICENSE)
+NocoCRM está construido sobre NocoBase Core y se publica bajo la licencia [Apache-2.0](../LICENSE).
