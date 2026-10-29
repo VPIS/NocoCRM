@@ -1,17 +1,18 @@
-<p align="center">
-  <img src="../public/assets/favicon.svg" width="72" alt="NocoCRM">
-</p>
-
-<h1 align="center">NocoCRM</h1>
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/nococrm-logo-dark.svg">
+    <img src="images/nococrm-logo.svg" width="240" alt="NocoCRM">
+  </picture>
+</h1>
 
 <p align="center"><strong>Đội bán hàng của bạn vừa có thêm đội agent 24/7.</strong></p>
 
-<p align="center">CRM bán hàng B2B mã nguồn mở · Xây dựng trên NocoBase Core</p>
+<p align="center">CRM bán hàng B2B mã nguồn mở · Xây dựng trên NocoBase</p>
 
 <p align="center">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0"></a>
   <a href="https://github.com/nocobase/NocoCRM/tags"><img src="https://img.shields.io/github/v/tag/nocobase/NocoCRM?label=version&sort=semver&include_prereleases" alt="version"></a>
-  <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase%20Core-1f6feb" alt="Built on NocoBase Core"></a>
+  <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase-1f6feb" alt="Built on NocoBase"></a>
 </p>
 
 <p align="center">
@@ -22,7 +23,7 @@
   <a href="../README.MD">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ja-JP.md">日本語</a> · <a href="README.ko-KR.md">한국어</a> · <a href="README.de-DE.md">Deutsch</a> · <a href="README.fr-FR.md">Français</a> · <a href="README.es-ES.md">Español</a> · <a href="README.pt-BR.md">Português</a> · <a href="README.ru-RU.md">Русский</a> · <a href="README.id-ID.md">Bahasa Indonesia</a> · <strong>Tiếng Việt</strong>
 </p>
 
-NocoCRM là CRM bán hàng B2B mã nguồn mở, xây dựng trên [NocoBase Core](https://www.nocobase.com). Có sẵn 6 agent bán hàng và kết nối email, WhatsApp của bạn: theo dõi khách hàng tiềm năng và cơ hội, trả lời tin nhắn ngay lập tức, cùng bạn xem xét phê duyệt. Agent đề xuất, bạn quyết định.
+NocoCRM là CRM bán hàng B2B mã nguồn mở, xây dựng trên [NocoBase](https://www.nocobase.com). Có sẵn 6 agent bán hàng và kết nối email, WhatsApp của bạn: theo dõi khách hàng tiềm năng và cơ hội, trả lời tin nhắn ngay lập tức, cùng bạn xem xét phê duyệt. Agent đề xuất, bạn quyết định.
 
 https://github.com/user-attachments/assets/f79d109f-ce33-47ac-b08e-b6a55373ef5f
 
@@ -78,4 +79,4 @@ Triển khai thực tế, xem [Triển khai](guide.md#deployment); dùng Postgre
 
 ## Giấy phép
 
-NocoCRM được xây dựng trên NocoBase Core và phát hành theo giấy phép [Apache-2.0](../LICENSE).
+NocoCRM được xây dựng trên NocoBase và phát hành theo giấy phép [Apache-2.0](../LICENSE).

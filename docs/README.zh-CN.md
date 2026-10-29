@@ -1,17 +1,18 @@
-<p align="center">
-  <img src="../public/assets/favicon.svg" width="72" alt="NocoCRM">
-</p>
-
-<h1 align="center">NocoCRM</h1>
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/nococrm-logo-dark.svg">
+    <img src="images/nococrm-logo.svg" width="240" alt="NocoCRM">
+  </picture>
+</h1>
 
 <p align="center"><strong>给你的销售，配一支 7×24 的 Agent 团队。</strong></p>
 
-<p align="center">开源 B2B 销售 CRM · 基于 NocoBase Core 构建</p>
+<p align="center">开源 B2B 销售 CRM · 基于 NocoBase 构建</p>
 
 <p align="center">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0"></a>
   <a href="https://github.com/nocobase/NocoCRM/tags"><img src="https://img.shields.io/github/v/tag/nocobase/NocoCRM?label=version&sort=semver&include_prereleases" alt="version"></a>
-  <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase%20Core-1f6feb" alt="Built on NocoBase Core"></a>
+  <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase-1f6feb" alt="Built on NocoBase"></a>
 </p>
 
 <p align="center">
@@ -22,7 +23,7 @@
   <a href="../README.MD">English</a> · <strong>简体中文</strong> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ja-JP.md">日本語</a> · <a href="README.ko-KR.md">한국어</a> · <a href="README.de-DE.md">Deutsch</a> · <a href="README.fr-FR.md">Français</a> · <a href="README.es-ES.md">Español</a> · <a href="README.pt-BR.md">Português</a> · <a href="README.ru-RU.md">Русский</a> · <a href="README.id-ID.md">Bahasa Indonesia</a> · <a href="README.vi-VN.md">Tiếng Việt</a>
 </p>
 
-NocoCRM 是基于 [NocoBase Core](https://www.nocobase.com) 的开源 B2B 销售 CRM。它内置 6 个销售 Agent，并集成邮箱与 WhatsApp：自动跟进线索与商机，即时回复来信，审批时帮你分析。Agent 给建议，人来拍板。
+NocoCRM 是基于 [NocoBase](https://www.nocobase.com) 的开源 B2B 销售 CRM。它内置 6 个销售 Agent，并集成邮箱与 WhatsApp：自动跟进线索与商机，即时回复来信，审批时帮你分析。Agent 给建议，人来拍板。
 
 https://github.com/user-attachments/assets/1941589c-4597-41d6-b4e3-5f5ca807b213
 
@@ -78,4 +79,4 @@ pnpm dev
 
 ## 许可证
 
-NocoCRM 基于 NocoBase Core 构建，以 [Apache-2.0](../LICENSE) 许可证发布。
+NocoCRM 基于 NocoBase 构建，以 [Apache-2.0](../LICENSE) 许可证发布。

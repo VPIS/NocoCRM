@@ -1,17 +1,18 @@
-<p align="center">
-  <img src="../public/assets/favicon.svg" width="72" alt="NocoCRM">
-</p>
-
-<h1 align="center">NocoCRM</h1>
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/nococrm-logo-dark.svg">
+    <img src="images/nococrm-logo.svg" width="240" alt="NocoCRM">
+  </picture>
+</h1>
 
 <p align="center"><strong>Ihr Vertrieb bekommt ein 24/7-Agenten-Team.</strong></p>
 
-<p align="center">Open-Source-CRM für den B2B-Vertrieb · Gebaut auf NocoBase Core</p>
+<p align="center">Open-Source-CRM für den B2B-Vertrieb · Gebaut auf NocoBase</p>
 
 <p align="center">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0"></a>
   <a href="https://github.com/nocobase/NocoCRM/tags"><img src="https://img.shields.io/github/v/tag/nocobase/NocoCRM?label=version&sort=semver&include_prereleases" alt="version"></a>
-  <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase%20Core-1f6feb" alt="Built on NocoBase Core"></a>
+  <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase-1f6feb" alt="Built on NocoBase"></a>
 </p>
 
 <p align="center">
@@ -22,7 +23,7 @@
   <a href="../README.MD">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ja-JP.md">日本語</a> · <a href="README.ko-KR.md">한국어</a> · <strong>Deutsch</strong> · <a href="README.fr-FR.md">Français</a> · <a href="README.es-ES.md">Español</a> · <a href="README.pt-BR.md">Português</a> · <a href="README.ru-RU.md">Русский</a> · <a href="README.id-ID.md">Bahasa Indonesia</a> · <a href="README.vi-VN.md">Tiếng Việt</a>
 </p>
 
-NocoCRM ist ein Open-Source-CRM für den B2B-Vertrieb, gebaut auf [NocoBase Core](https://www.nocobase.com). Es bringt 6 Vertriebs-Agenten mit und bindet Ihre E-Mail und WhatsApp ein: Die Agenten fassen bei Leads und Deals nach, beantworten Nachrichten sofort und prüfen Freigaben gemeinsam mit Ihnen. Agenten schlagen vor, Sie entscheiden.
+NocoCRM ist ein Open-Source-CRM für den B2B-Vertrieb, gebaut auf [NocoBase](https://www.nocobase.com). Es bringt 6 Vertriebs-Agenten mit und bindet Ihre E-Mail und WhatsApp ein: Die Agenten fassen bei Leads und Deals nach, beantworten Nachrichten sofort und prüfen Freigaben gemeinsam mit Ihnen. Agenten schlagen vor, Sie entscheiden.
 
 https://github.com/user-attachments/assets/64f9cc69-f126-469d-9f81-bfb1116f2cca
 
@@ -78,4 +79,4 @@ Für den Produktivbetrieb siehe [Deployment](guide.md#deployment); für PostgreS
 
 ## Lizenz
 
-NocoCRM ist auf NocoBase Core gebaut und unter der Lizenz [Apache-2.0](../LICENSE) veröffentlicht.
+NocoCRM ist auf NocoBase gebaut und unter der Lizenz [Apache-2.0](../LICENSE) veröffentlicht.

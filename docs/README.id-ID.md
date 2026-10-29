@@ -1,17 +1,18 @@
-<p align="center">
-  <img src="../public/assets/favicon.svg" width="72" alt="NocoCRM">
-</p>
-
-<h1 align="center">NocoCRM</h1>
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/nococrm-logo-dark.svg">
+    <img src="images/nococrm-logo.svg" width="240" alt="NocoCRM">
+  </picture>
+</h1>
 
 <p align="center"><strong>Tim penjualan Anda kini punya tim agen 24/7.</strong></p>
 
-<p align="center">CRM penjualan B2B open source · Dibangun di atas NocoBase Core</p>
+<p align="center">CRM penjualan B2B open source · Dibangun di atas NocoBase</p>
 
 <p align="center">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0"></a>
   <a href="https://github.com/nocobase/NocoCRM/tags"><img src="https://img.shields.io/github/v/tag/nocobase/NocoCRM?label=version&sort=semver&include_prereleases" alt="version"></a>
-  <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase%20Core-1f6feb" alt="Built on NocoBase Core"></a>
+  <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase-1f6feb" alt="Built on NocoBase"></a>
 </p>
 
 <p align="center">
@@ -22,7 +23,7 @@
   <a href="../README.MD">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ja-JP.md">日本語</a> · <a href="README.ko-KR.md">한국어</a> · <a href="README.de-DE.md">Deutsch</a> · <a href="README.fr-FR.md">Français</a> · <a href="README.es-ES.md">Español</a> · <a href="README.pt-BR.md">Português</a> · <a href="README.ru-RU.md">Русский</a> · <strong>Bahasa Indonesia</strong> · <a href="README.vi-VN.md">Tiếng Việt</a>
 </p>
 
-NocoCRM adalah CRM penjualan B2B open source yang dibangun di atas [NocoBase Core](https://www.nocobase.com). Dilengkapi 6 agen penjualan dan terhubung dengan email serta WhatsApp Anda: menindaklanjuti prospek dan peluang, langsung membalas pesan, dan meninjau persetujuan bersama Anda. Agen memberi saran, Anda yang memutuskan.
+NocoCRM adalah CRM penjualan B2B open source yang dibangun di atas [NocoBase](https://www.nocobase.com). Dilengkapi 6 agen penjualan dan terhubung dengan email serta WhatsApp Anda: menindaklanjuti prospek dan peluang, langsung membalas pesan, dan meninjau persetujuan bersama Anda. Agen memberi saran, Anda yang memutuskan.
 
 https://github.com/user-attachments/assets/004dc069-299b-43e4-b515-825e9e71de55
 
@@ -78,4 +79,4 @@ Untuk produksi, lihat [Deployment](guide.md#deployment); untuk PostgreSQL dan My
 
 ## Lisensi
 
-NocoCRM dibangun di atas NocoBase Core dan dirilis dengan lisensi [Apache-2.0](../LICENSE).
+NocoCRM dibangun di atas NocoBase dan dirilis dengan lisensi [Apache-2.0](../LICENSE).

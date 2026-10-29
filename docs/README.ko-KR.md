@@ -1,17 +1,18 @@
-<p align="center">
-  <img src="../public/assets/favicon.svg" width="72" alt="NocoCRM">
-</p>
-
-<h1 align="center">NocoCRM</h1>
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/nococrm-logo-dark.svg">
+    <img src="images/nococrm-logo.svg" width="240" alt="NocoCRM">
+  </picture>
+</h1>
 
 <p align="center"><strong>영업팀에 24시간 에이전트 팀을.</strong></p>
 
-<p align="center">오픈소스 B2B 영업 CRM · NocoBase Core 기반</p>
+<p align="center">오픈소스 B2B 영업 CRM · NocoBase 기반</p>
 
 <p align="center">
   <a href="../LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0"></a>
   <a href="https://github.com/nocobase/NocoCRM/tags"><img src="https://img.shields.io/github/v/tag/nocobase/NocoCRM?label=version&sort=semver&include_prereleases" alt="version"></a>
-  <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase%20Core-1f6feb" alt="Built on NocoBase Core"></a>
+  <a href="https://www.nocobase.com"><img src="https://img.shields.io/badge/built%20on-NocoBase-1f6feb" alt="Built on NocoBase"></a>
 </p>
 
 <p align="center">
@@ -22,7 +23,7 @@
   <a href="../README.MD">English</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ja-JP.md">日本語</a> · <strong>한국어</strong> · <a href="README.de-DE.md">Deutsch</a> · <a href="README.fr-FR.md">Français</a> · <a href="README.es-ES.md">Español</a> · <a href="README.pt-BR.md">Português</a> · <a href="README.ru-RU.md">Русский</a> · <a href="README.id-ID.md">Bahasa Indonesia</a> · <a href="README.vi-VN.md">Tiếng Việt</a>
 </p>
 
-NocoCRM은 [NocoBase Core](https://www.nocobase.com)로 만든 오픈소스 B2B 영업 CRM입니다. 영업 에이전트 6종이 내장되어 있고 이메일과 WhatsApp이 연동됩니다. 리드와 영업 기회를 후속 조치하고, 메시지에 바로 답하고, 승인 검토를 함께합니다. 제안은 에이전트가, 결정은 사람이 합니다.
+NocoCRM은 [NocoBase](https://www.nocobase.com)로 만든 오픈소스 B2B 영업 CRM입니다. 영업 에이전트 6종이 내장되어 있고 이메일과 WhatsApp이 연동됩니다. 리드와 영업 기회를 후속 조치하고, 메시지에 바로 답하고, 승인 검토를 함께합니다. 제안은 에이전트가, 결정은 사람이 합니다.
 
 https://github.com/user-attachments/assets/ac3df8c9-dc36-4e0b-9775-ebf6c70c7f3c
 
@@ -78,4 +79,4 @@ pnpm dev
 
 ## 라이선스
 
-NocoCRM은 NocoBase Core로 만들어졌으며 [Apache-2.0](../LICENSE) 라이선스로 배포됩니다.
+NocoCRM은 NocoBase로 만들어졌으며 [Apache-2.0](../LICENSE) 라이선스로 배포됩니다.
